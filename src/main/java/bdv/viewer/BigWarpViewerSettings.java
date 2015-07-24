@@ -92,8 +92,6 @@ public class BigWarpViewerSettings  {
 	public void toggleNamesVisible(){
 		displaySettings.put( KEY_DISPLAY_SPOT_NAMES, 
 				!((Boolean)displaySettings.get( KEY_DISPLAY_SPOT_NAMES )).booleanValue());
-		
-		//System.out.println(((Boolean)displaySettings.get( KEY_DISPLAY_SPOT_NAMES )));
 	}
 
 	public Object get( String key ){

@@ -37,6 +37,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
+import net.imglib2.ui.TransformListener;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.sequence.TimePoint;
@@ -106,7 +107,7 @@ public class BigWarp {
 	MouseLandmarkTableListener landmarkTableListenerP;
 	MouseLandmarkTableListener landmarkTableListenerQ;
 	
-	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
+	
 	// protected ThinPlateR2LogRSplineKernelTransform estimatedXfmInv;
 
 	/*
@@ -174,7 +175,6 @@ public class BigWarp {
 		brightnessDialog = new BrightnessDialog( viewerFrameP, setupAssignments );
 		
 		setUpLandmarkMenus();
-
 		
 		/* Set the locations of frames */
 		Point viewerFramePloc = viewerFrameP.getLocation();
@@ -212,6 +212,7 @@ public class BigWarp {
 		viewerFrameQ.setVisible(true);
 		landmarkFrame.setVisible(true);
 		
+		System.out.println("face");
 	}
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
@@ -381,32 +382,10 @@ public class BigWarp {
 //        });
 	}
 	
-	protected void importTransformation( File ffwd, File finv ) throws IOException
-	{
-		byte[] data = FileUtils.readFileToByteArray( ffwd );
-		estimatedXfm = (ThinPlateR2LogRSplineKernelTransform) SerializationUtils.deserialize( data );
-	}
-	
-	protected void exportTransformation( File ffwd, File finv ) throws IOException
-	{
-	    byte[] data    = SerializationUtils.serialize( estimatedXfm );
-	    FileUtils.writeByteArrayToFile( ffwd, data );
-	}
-	
 	protected void exportMovingImage( File f ) throws IOException, InterruptedException
 	{
 		// Source< ? > movingSrc = sources.get( 1 ).getSpimSource();
 		final RandomAccessibleInterval<?> interval = sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		
-		/*
-		RandomAccessibleInterval< ? > imgout = 
-				Views.interval(
-						Views.raster( 
-								movingSrc.getInterpolatedSource( 0, 0, Interpolation.NLINEAR )),
-						interval );
-		
-		ImageJFunctions.wrap( imgout, "moving_image_transformed" );
-		*/
 		
 		// stolen from bdv.tools.RecordMovieDialog
 		class MyTarget implements RenderTarget
@@ -526,34 +505,38 @@ public class BigWarp {
 	
 	protected void restimateTransformation()
 	{
-		// move landmark positions into the xfm
-		ArrayList<Double[]> pts = landmarkModel.getPoints();
-		double[][] mvgPts = new double[ 3 ][ pts.size() ];
-		double[][] tgtPts = new double[ 3 ][ pts.size() ];
+//		// move landmark positions into the xfm
+//		ArrayList<Double[]> pts = landmarkModel.getPoints();
+//		double[][] mvgPts = new double[ 3 ][ pts.size() ];
+//		double[][] tgtPts = new double[ 3 ][ pts.size() ];
+//		
+//		// TODO make this more efficient by not reallocating and re-copying every time
+//		for( int i = 0; i < pts.size(); i++ )
+//		{
+//			for( int j = 0; j < 3; j++ )
+//			{
+//				// need to find the "inverse TPS" so exchange moving and tgt
+//				mvgPts[ j ][ i ] = pts.get( i )[ j ];
+//				tgtPts[ j ][ i ] = pts.get( i )[ j + 3 ];
+//			}
+//		}
 		
-		// TODO make this more efficient by not reallocating and re-copying every time
-		for( int i = 0; i < pts.size(); i++ )
-		{
-			for( int j = 0; j < 3; j++ )
-			{
-				// need to find the "inverse TPS" so exchange moving and tgt
-				mvgPts[ j ][ i ] = pts.get( i )[ j ];
-				tgtPts[ j ][ i ] = pts.get( i )[ j + 3 ];
-			}
-		}
+		if( landmarkModel.getTransform() == null )
+			landmarkModel.initTransformation();
+		
 		// estimate the forward transformation
-		estimatedXfm.setLandmarks( tgtPts, mvgPts );
-		estimatedXfm.solve();
+//		landmarkModel.getTransform().setLandmarks( tgtPts, mvgPts );
+		landmarkModel.getTransform().solve();
+		landmarkModel.resetWarpedPoints();
 		
-		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( estimatedXfm );
-		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( estimatedXfm );
+		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
+		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		
 		fidipOverlayP.setIsTransformed( true );
 		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 		
-		landmarkModel.resetWarpedPoints();
 	}
 	
 	public static void main( final String[] args )
@@ -591,8 +574,8 @@ public class BigWarp {
 			if( !fnLandmarks.isEmpty() )
 			{
 				fidip.landmarkModel.load( new File( fnLandmarks ));
-				fidip.restimateTransformation();
-				fidip.viewerP.requestRepaint();
+				//fidip.restimateTransformation();
+				//fidip.viewerP.requestRepaint();
 			}
 		}
 		catch ( final Exception e )
@@ -623,11 +606,79 @@ public class BigWarp {
 		return viewerFrame;
 	}
 	
+	protected class DummyTransformEventHandler implements TransformEventHandler<AffineTransform3D>
+	{
+
+		@Override
+		public AffineTransform3D getTransform() {
+			return null;
+		}
+
+		@Override
+		public void setTransform(AffineTransform3D transform) {}
+
+		@Override
+		public void setCanvasSize(int width, int height, boolean updateTransform) {}
+
+		@Override
+		public void setTransformListener(
+				TransformListener<AffineTransform3D> transformListener) {	
+		}
+
+		@Override
+		public String getHelpString() {
+			return null;
+		}
+		
+		public String toString(){
+			return "Dummy Transform Handler";
+		}
+		
+	}
+	
+
+	
 	protected class LandmarkKeyboardProcessor implements KeyEventPostProcessor 
 	{
 
 		TransformEventHandler<AffineTransform3D> handlerQ;
 		TransformEventHandler<AffineTransform3D> handlerP;
+		
+		DummyTransformEventHandler dummyHandler = new DummyTransformEventHandler();
+		
+		protected void disableTransformHandlers()
+		{
+			System.out.println( "DISABLE TRANSFORMS");
+//			System.out.println( "BEFORE viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
+			
+			// disable navigation listeners
+			handlerP = BigWarp.this.viewerP.getDisplay().getTransformEventHandler();
+			BigWarp.this.viewerP.getDisplay().setTransformEventHandler( dummyHandler );
+			
+			BigWarp.this.viewerP.setTransformEnabled( false );
+			BigWarp.this.viewerQ.setTransformEnabled( false );
+			
+//			handlerQ = BigWarp.this.viewerQ.getDisplay().getTransformEventHandler();
+//			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( dummyHandler );
+			
+			
+//			System.out.println( "AFTER viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
+		}
+		
+		protected void enableTransformHandlers()
+		{
+			System.out.println( "ENABLE TRANSFORMS");
+//			System.out.println( "BEFORE viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
+			
+			// enable navigation listeners
+			BigWarp.this.viewerP.getDisplay().setTransformEventHandler( handlerP );
+//			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( handlerQ );
+			
+			BigWarp.this.viewerP.setTransformEnabled( true );
+			BigWarp.this.viewerQ.setTransformEnabled( true );
+			
+//			System.out.println( "AFTER viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
+		}
 		
 		@Override
 		public boolean postProcessKeyEvent(KeyEvent ke ) {
@@ -640,34 +691,23 @@ public class BigWarp {
 				if( ke.getID() == KeyEvent.KEY_PRESSED )
 				{
 					if( !BigWarp.this.inLandmarkMode  ){
-						//System.out.println("LANDMARK MODE ON");
 						BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Landmark mode on ( Moving image )");
 						BigWarp.this.viewerFrameQ.getViewerPanelP().showMessage("Landmark mode on ( Fixed image )");
-						//Fidip.this.viewerFrame.getViewerPanelQ().showMessage("Landmark mode on");
 						BigWarp.this.inLandmarkMode = true;
 						
-						// enable navigation listeners
-						handlerP = BigWarp.this.viewerP.getDisplay().getTransformEventHandler();
-						BigWarp.this.viewerP.getDisplay().removeHandler( handlerP );
+						disableTransformHandlers();
 						
-						handlerQ = BigWarp.this.viewerQ.getDisplay().getTransformEventHandler();
-						BigWarp.this.viewerQ.getDisplay().removeHandler( handlerQ );
 					}
 					return false;
 				}
 				else if( ke.getID() == KeyEvent.KEY_RELEASED  )
 				{
-					//System.out.println("LANDMARK MODE OFF");
 					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Landmark mode off ( Moving image )");
 					BigWarp.this.viewerFrameQ.getViewerPanelP().showMessage("Landmark mode off ( Fixed image )");
-					//Fidip.this.viewerFrame.getViewerPanelQ().showMessage("Landmark mode off");
 					
 					BigWarp.this.inLandmarkMode = false;
 					
-					// enable navigation listeners
-					BigWarp.this.viewerP.getDisplay().addHandler( handlerP );
-					BigWarp.this.viewerQ.getDisplay().addHandler( handlerQ );
-					
+					enableTransformHandlers();
 					return false;
 				}
 			}
@@ -701,10 +741,10 @@ public class BigWarp {
 					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Estimating transformation...");
 					BigWarp.this.viewerFrameQ.getViewerPanelP().showMessage("Estimating transformation...");
 					
-					if( estimatedXfm == null )
+					if( landmarkModel.getTransform() == null )
 					{
 						// TODO generalize this
-						estimatedXfm = new ThinPlateR2LogRSplineKernelTransform( 3 );
+						landmarkModel.initTransformation();
 					}
 					restimateTransformation();
 					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("done.");
@@ -748,9 +788,6 @@ public class BigWarp {
 			else if( ke.getKeyCode() == KeyEvent.VK_R && ke.getID() == KeyEvent.KEY_RELEASED  )
 			{ 
 				final RandomAccessibleInterval<?> interval = sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-				
-				// enable navigation listeners
-				// TransformEventHandler<AffineTransform3D> xfmHandlerP = BigWarp.this.viewerP.getDisplay().getTransformEventHandler();
 				
 				AffineTransform3D viewXfm = new AffineTransform3D();
 				viewXfm.identity();
@@ -803,10 +840,10 @@ public class BigWarp {
 				dist = 0;
 				
 				Double[] lmpt = BigWarp.this.landmarkModel.getPoints().get(n);
-				// String type = "FIXED";
+				String type = "FIXED";
 				if( isMoving )
 				{
-					// type = "MOVING";
+					type = "MOVING";
 					for( int i = 0; i<3; i++ )
 					{
 						dist += (pt[i] - lmpt[i]) * (pt[i] - lmpt[i]);
@@ -825,7 +862,8 @@ public class BigWarp {
 							continue landmarkLoop;
 					}
 				}
-				//System.out.println( type + ": SELECTED LANDMARK " + n );
+				
+				System.out.println( type + ": SELECTED LANDMARK " + n );
 				if( BigWarp.this.landmarkFrame.isVisible() ){
 					BigWarp.this.landmarkTable.setEditingRow( n );
 					BigWarp.this.landmarkFrame.repaint();
@@ -849,10 +887,21 @@ public class BigWarp {
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				BigWarp.this.currentLandmark.localize( ptarray );
 				
-				if( isMoving && estimatedXfm != null )
-					ptarray = estimatedXfm.apply( ptarray );
-
+				if( isMoving && landmarkModel.getTransform() != null )
+					ptarray = landmarkModel.getTransform().apply( ptarray );
+				
+				
 				selectedPointIndex = selectedLandmark( ptarray, isMoving );
+				
+				// if we move the fixed point, we need to update the warped 
+				// point for the moving image
+				// since the point renderer uses the transformed points
+				if( selectedPointIndex >=0 && 
+						!isMoving && landmarkModel.getTransform() != null )
+				{
+					BigWarp.this.landmarkModel.updateWarpedPoint( 
+							selectedPointIndex, ptarray );
+				}
 			}
 		}
 
@@ -866,9 +915,9 @@ public class BigWarp {
 				currentLandmark.localize( ptarray );
 				
 				double[] ptBack = null;
-				if( isMoving && estimatedXfm != null )
+				if( isMoving && landmarkModel.getTransform() != null )
 				{
-					ptBack = estimatedXfm.apply( ptarray );
+					ptBack = landmarkModel.getTransform().apply( ptarray );
 				}
 				
 				String message = "";
@@ -879,7 +928,7 @@ public class BigWarp {
 					message = BigWarp.this.landmarkModel.add(  ptBack, isMoving );
 				
 				// if its moving and 
-				if( isMoving && estimatedXfm != null )
+				if( isMoving && landmarkModel.getTransform() != null )
 				{
 					BigWarp.this.landmarkModel.updateWarpedPoint( 
 							BigWarp.this.landmarkModel.nextRow( isMoving ) - 1, 
@@ -902,33 +951,27 @@ public class BigWarp {
 		{
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
 			{
-				//System.out.println("mouse dragged while point is selected");
 				
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarray );
 				
 				double[] ptBack = null;
-				if( isMoving && estimatedXfm != null )
+				if( landmarkModel.getTransform() != null )
 				{
-					ptBack = estimatedXfm.apply( ptarray );
+					ptBack = new double[ 3 ];
+					//System.out.println("WARPED POINT BEFORE: " + ptarray[0] + " " + ptarray[1] + " " + ptarray[2]);
+					landmarkModel.getTransform().apply( ptarray, ptBack );
 					BigWarp.this.landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
+					//System.out.println("AFTER: " + ptBack[0] + " " + ptBack[1] + " " + ptBack[2]);
 				}
-				
-				int addme = 0;
-				if( !isMoving )
-					addme = 3;
 				
 				if( ptBack == null )
 				{
-					BigWarp.this.landmarkModel.setValueAt( ptarray[ 0 ], selectedPointIndex, 2 + addme );
-					BigWarp.this.landmarkModel.setValueAt( ptarray[ 1 ], selectedPointIndex, 3 + addme );
-					BigWarp.this.landmarkModel.setValueAt( ptarray[ 2 ], selectedPointIndex, 4 + addme );
+					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray );
 				}
 				else
 				{
-					BigWarp.this.landmarkModel.setValueAt( ptBack[ 0 ], selectedPointIndex, 2 + addme );
-					BigWarp.this.landmarkModel.setValueAt( ptBack[ 1 ], selectedPointIndex, 3 + addme );
-					BigWarp.this.landmarkModel.setValueAt( ptBack[ 2 ], selectedPointIndex, 4 + addme );
+					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
 				}
 			}
 			if( BigWarp.this.landmarkFrame.isVisible() ){

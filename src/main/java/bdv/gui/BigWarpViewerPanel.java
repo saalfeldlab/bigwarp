@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.util.List;
 
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.ui.TransformListener;
 import bdv.img.cache.Cache;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerSettings;
@@ -21,6 +22,8 @@ public class BigWarpViewerPanel extends ViewerPanel{
 	protected BigWarpOverlay overlay;
 	
 	protected boolean isMoving;
+	
+	protected boolean transformEnabled = true;
 	
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, boolean isMoving )
 	{
@@ -83,5 +86,17 @@ public class BigWarpViewerPanel extends ViewerPanel{
     {
     	animateTransformation( destinationXfm, 300 );
     }
+    
+    public void setTransformEnabled( boolean enabled )
+    {
+    	transformEnabled = enabled;
+    }
+    
+	@Override
+	public synchronized void transformChanged( final AffineTransform3D transform )
+	{
+		if( transformEnabled )
+			super.transformChanged( transform );
+	}
 	
 }

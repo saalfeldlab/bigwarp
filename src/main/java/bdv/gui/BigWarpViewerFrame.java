@@ -18,10 +18,10 @@ import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.Options;
 
-public class BigWarpViewerFrame extends JFrame{
+public class BigWarpViewerFrame extends JFrame
+{
 
 	protected final BigWarpViewerPanel viewerP;
-//	protected final FidipViewerPanel viewerQ;
 	
 	private final InputActionBindings keybindings;
 	
@@ -49,14 +49,6 @@ public class BigWarpViewerFrame extends JFrame{
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		
-//		viewerP = new FidipViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-
-//		viewerQ = null;
-//		ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
-//		flippedList.add( sources.get( 1 ));
-//		flippedList.add( sources.get( 0 ));
-//		viewerQ = new FidipViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-		
 		if( !isMoving )
 		{
 			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
@@ -74,10 +66,6 @@ public class BigWarpViewerFrame extends JFrame{
 		getRootPane().setDoubleBuffered( true );
 		setPreferredSize( new Dimension( width, height ) );
 		add( viewerP, BorderLayout.CENTER);
-		
-		/* If there are two panels per viewer */
-//		add( viewerP, BorderLayout.WEST );
-//		add( viewerQ, BorderLayout.EAST );
 		
 		pack();
 		setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
@@ -103,11 +91,6 @@ public class BigWarpViewerFrame extends JFrame{
 	{
 		return viewerP;
 	}
-	
-//	public FidipViewerPanel getViewerPanelQ()
-//	{
-//		return viewerQ;
-//	}
 	
 	public InputActionBindings getKeybindings()
 	{

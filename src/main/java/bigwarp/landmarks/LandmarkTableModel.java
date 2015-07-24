@@ -14,6 +14,10 @@ import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.SerializationUtils;
+
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -48,6 +52,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	// keeps track of whether points have been updated
 	protected ArrayList<Boolean> changedPositionSinceWarpEstimation; 
 	
+	// the transformation 
+	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
+	
 	// keeps track of warped points so we don't always have to do it on the fly
 	protected ArrayList<Double[]> warpedPoints;
 	
@@ -68,6 +75,23 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		warpedPoints = new ArrayList<Double[]>();
 		changedPositionSinceWarpEstimation = new ArrayList<Boolean>();
+	}
+	
+	public ThinPlateR2LogRSplineKernelTransform getTransform()
+	{
+		return estimatedXfm;
+	}
+	
+	protected void importTransformation( File ffwd, File finv ) throws IOException
+	{
+		byte[] data = FileUtils.readFileToByteArray( ffwd );
+		estimatedXfm = (ThinPlateR2LogRSplineKernelTransform) SerializationUtils.deserialize( data );
+	}
+	
+	protected void exportTransformation( File ffwd, File finv ) throws IOException
+	{
+	    byte[] data    = SerializationUtils.serialize( estimatedXfm );
+	    FileUtils.writeByteArrayToFile( ffwd, data );
 	}
 	
 	public void setPointToUpdate( int i, boolean isMoving )
@@ -255,6 +279,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		warpedPoints.get( i )[ 1 ] = pt[ 1 ];
 		warpedPoints.get( i )[ 2 ] = pt[ 2 ];
 		changedPositionSinceWarpEstimation.set( i, true );
+		System.out.println("updateWarpedPoint " + i + ": " + pt[0] + " " + pt[1] + " " + pt[2] );
 	}
 	
 	public ArrayList<Double[]> getWarpedPoints( )
@@ -308,6 +333,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 				warpedPoints.get( nextRowP )[ 1 ] = pt[ 1 ];
 				warpedPoints.get( nextRowP )[ 2 ] = pt[ 2 ];
 				
+				if( estimatedXfm != null )
+				{
+					double[] tgt = new double[]{ 
+							pts.get(nextRowQ)[3],
+							pts.get(nextRowQ)[4],
+							pts.get(nextRowQ)[5]};
+					
+					estimatedXfm.addMatch( tgt, pt );
+				}
+				// estimatedXfm.updateTargetLandmark( nextRowP, pt );
+				
 				fireTableCellUpdated( nextRowP, 1 );
 				fireTableCellUpdated( nextRowP, 2 );
 				fireTableCellUpdated( nextRowP, 3 );
@@ -343,6 +379,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 				
 				pts.set( nextRowQ, exPts );
 				activeList.set( nextRowQ, true );
+				
+				if( estimatedXfm != null )
+				{
+					double[] tgt = new double[]{ 
+							pts.get(nextRowQ)[0],
+							pts.get(nextRowQ)[1],
+							pts.get(nextRowQ)[2]};
+					
+					estimatedXfm.addMatch( pt, tgt );
+				}
+				//estimatedXfm.updateSourceLandmark( nextRowQ, pt );
 				
 				fireTableCellUpdated( nextRowQ, 1 );
 				fireTableCellUpdated( nextRowQ, 5 );
@@ -464,6 +511,39 @@ public class LandmarkTableModel extends AbstractTableModel {
 		nextRowQ = nextRow( false );
 	}
 	
+	public void initTransformation()
+	{
+		//TODO: better to pass a factory here so the transformation can be arbitrary
+		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( 3 );
+		
+		int numLandmarks = 0;
+		for( int i = 0; i < this.numRows; i++ )
+			if( activeList.get( i ))
+				numLandmarks++;
+		
+		double[][] mvgPts = new double[ 3 ][ numLandmarks ];
+		double[][] tgtPts = new double[ 3 ][ numLandmarks ];
+		
+		int k = 0;
+		for( int i = 0; i < this.numRows; i++ ) 
+		{
+			if( activeList.get( i ))
+			{
+				for( int d = 0; d < 3; d++ )
+				{
+					mvgPts[ d ][ k ] = pts.get( i )[ d ];
+					tgtPts[ d ][ k ] = pts.get( i )[ 3 + d ];
+				}
+				k++;
+			}
+			
+		}
+		
+		// need to find the "inverse TPS" so exchange moving and tgt
+		estimatedXfm.setLandmarks( tgtPts, mvgPts );
+	}
+	
+	
 	/**
 	 * Saves the table to a file
 	 * @param f the file
@@ -496,7 +576,43 @@ public class LandmarkTableModel extends AbstractTableModel {
 		csvWriter.close();
 		
 	}
-
+	
+	public void setPoint( int row, boolean isMoving, double[] pt )
+	{
+		
+		//System.out.println( "LTM BEFORE - " + pts.get(row));
+		int addme = 0;
+		if( !isMoving )
+			addme = 3;
+		
+		for( int i = 0; i < 3; i++ )
+		{
+			pts.get(row)[addme + i] = new Double( pt[i]);
+			fireTableCellUpdated(row, 3 + addme + i );
+		}
+		
+		if(( estimatedXfm != null ))
+        {
+			// moving and target are "switched" since we need an "inverse tps"
+			if( isMoving )
+				estimatedXfm.updateTargetLandmark( row, pt );
+			else
+				estimatedXfm.updateSourceLandmark( row, pt );
+				
+        }
+		
+		//System.out.println( "LTM AFTER - " + print(pts.get(row)));
+	}
+	
+	public static String print( Double[] d )
+	{
+		String out = "";
+		for( int i=0; i<d.length; i++)
+			out += d[i] + " ";
+		
+		return out;
+	}
+	
 	public void setValueAt(Object value, int row, int col) {
         if (DEBUG) {
             System.out.println("Setting value at " + row + "," + col
@@ -513,6 +629,9 @@ public class LandmarkTableModel extends AbstractTableModel {
         	Double[] thesePts = pts.get(row);
         	thesePts[col-2] = ((Double)value).doubleValue();
         }
+        
+        
+        
         fireTableCellUpdated(row, col);
 
     }
