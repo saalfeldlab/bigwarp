@@ -106,9 +106,9 @@ public class BigWarp {
 	
 	MouseLandmarkTableListener landmarkTableListenerP;
 	MouseLandmarkTableListener landmarkTableListenerQ;
+
+	// protected ThinPlateR2LogRSplineKernelTransform estimatedXfmCopy;
 	
-	
-	// protected ThinPlateR2LogRSplineKernelTransform estimatedXfmInv;
 
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode
@@ -505,27 +505,14 @@ public class BigWarp {
 	
 	protected void restimateTransformation()
 	{
-//		// move landmark positions into the xfm
-//		ArrayList<Double[]> pts = landmarkModel.getPoints();
-//		double[][] mvgPts = new double[ 3 ][ pts.size() ];
-//		double[][] tgtPts = new double[ 3 ][ pts.size() ];
-//		
-//		// TODO make this more efficient by not reallocating and re-copying every time
-//		for( int i = 0; i < pts.size(); i++ )
-//		{
-//			for( int j = 0; j < 3; j++ )
-//			{
-//				// need to find the "inverse TPS" so exchange moving and tgt
-//				mvgPts[ j ][ i ] = pts.get( i )[ j ];
-//				tgtPts[ j ][ i ] = pts.get( i )[ j + 3 ];
-//			}
-//		}
 		
 		if( landmarkModel.getTransform() == null )
 			landmarkModel.initTransformation();
 		
+//		System.out.println( "are landmark points ok? " + landmarkModel.validateTransformPoints()); 
+//		landmarkModel.printDistances();
+		
 		// estimate the forward transformation
-//		landmarkModel.getTransform().setLandmarks( tgtPts, mvgPts );
 		landmarkModel.getTransform().solve();
 		landmarkModel.resetWarpedPoints();
 		
@@ -648,7 +635,7 @@ public class BigWarp {
 		
 		protected void disableTransformHandlers()
 		{
-			System.out.println( "DISABLE TRANSFORMS");
+//			System.out.println( "DISABLE TRANSFORMS");
 //			System.out.println( "BEFORE viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
 			
 			// disable navigation listeners
@@ -658,8 +645,8 @@ public class BigWarp {
 			BigWarp.this.viewerP.setTransformEnabled( false );
 			BigWarp.this.viewerQ.setTransformEnabled( false );
 			
-//			handlerQ = BigWarp.this.viewerQ.getDisplay().getTransformEventHandler();
-//			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( dummyHandler );
+			handlerQ = BigWarp.this.viewerQ.getDisplay().getTransformEventHandler();
+			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( dummyHandler );
 			
 			
 //			System.out.println( "AFTER viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
@@ -667,12 +654,12 @@ public class BigWarp {
 		
 		protected void enableTransformHandlers()
 		{
-			System.out.println( "ENABLE TRANSFORMS");
+//			System.out.println( "ENABLE TRANSFORMS");
 //			System.out.println( "BEFORE viewerP handler" + BigWarp.this.viewerP.getDisplay().getTransformEventHandler() );
 			
 			// enable navigation listeners
 			BigWarp.this.viewerP.getDisplay().setTransformEventHandler( handlerP );
-//			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( handlerQ );
+			BigWarp.this.viewerQ.getDisplay().setTransformEventHandler( handlerQ );
 			
 			BigWarp.this.viewerP.setTransformEnabled( true );
 			BigWarp.this.viewerQ.setTransformEnabled( true );
@@ -956,7 +943,7 @@ public class BigWarp {
 				currentLandmark.localize( ptarray );
 				
 				double[] ptBack = null;
-				if( landmarkModel.getTransform() != null )
+				if( isMoving && landmarkModel.getTransform() != null )
 				{
 					ptBack = new double[ 3 ];
 					//System.out.println("WARPED POINT BEFORE: " + ptarray[0] + " " + ptarray[1] + " " + ptarray[2]);
@@ -965,7 +952,7 @@ public class BigWarp {
 					//System.out.println("AFTER: " + ptBack[0] + " " + ptBack[1] + " " + ptBack[2]);
 				}
 				
-				if( ptBack == null )
+				if( !isMoving )
 				{
 					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray );
 				}
@@ -977,6 +964,10 @@ public class BigWarp {
 			if( BigWarp.this.landmarkFrame.isVisible() ){
 				BigWarp.this.landmarkFrame.repaint();
 			}
+			
+			// final AffineTransform3D transform = viewerP.getDisplay().getTransformEventHandler().getTransform();
+			// System.out.println("xfm: " + transform );
+
 		}
 
 		@Override
@@ -1013,7 +1004,7 @@ public class BigWarp {
 	    		
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
-	    		// System.out.println("LANDMARK CLICKED TABLE! row: " + row + "  col: " + column );
+	    		System.out.println("LANDMARK CLICKED TABLE! row: " + row + "  col: " + column );
 	    		
 	    		boolean isMoving = ( column > 1 && column < 5 );
 	    		
@@ -1025,7 +1016,7 @@ public class BigWarp {
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
 
-				// System.out.println("CLICKED TABLE! row: " + row + "  col: " + column );
+				System.out.println("CLICKED TABLE! row: " + row + "  col: " + column );
 				
 				double[] pt = null;
 				if( column >= 2 && column <= 4 )

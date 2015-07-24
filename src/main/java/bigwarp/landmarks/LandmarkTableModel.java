@@ -82,6 +82,29 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return estimatedXfm;
 	}
 	
+	public void printDistances()
+	{
+		for( int i = 0; i < numRows; i++ )
+		{
+			System.out.print( pts.get( i )[ 3 ].doubleValue() - estimatedXfm.getSourceLandmarks()[ 0 ][ i ] );
+			System.out.print( " " + (pts.get( i )[ 4 ].doubleValue() - estimatedXfm.getSourceLandmarks()[ 1 ][ i ]) );
+			System.out.print( " " + (pts.get( i )[ 5 ].doubleValue() - estimatedXfm.getSourceLandmarks()[ 2 ][ i ]) + "\n");
+		}
+	}
+	
+	public boolean validateTransformPoints()
+	{
+		for( int i = 0; i < numRows; i++ )
+		{
+			if( pts.get( i )[ 0 ].doubleValue() != estimatedXfm.getSourceLandmarks()[ i ][ 0 ] ||
+				pts.get( i )[ 1 ].doubleValue() != estimatedXfm.getSourceLandmarks()[ i ][ 1 ] ||
+				pts.get( i )[ 2 ].doubleValue() != estimatedXfm.getSourceLandmarks()[ i ][ 2 ])
+					return false;
+		}
+		
+		return true;
+	}
+	
 	protected void importTransformation( File ffwd, File finv ) throws IOException
 	{
 		byte[] data = FileUtils.readFileToByteArray( ffwd );
@@ -279,7 +302,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		warpedPoints.get( i )[ 1 ] = pt[ 1 ];
 		warpedPoints.get( i )[ 2 ] = pt[ 2 ];
 		changedPositionSinceWarpEstimation.set( i, true );
-		System.out.println("updateWarpedPoint " + i + ": " + pt[0] + " " + pt[1] + " " + pt[2] );
+		// System.out.println("updateWarpedPoint " + i + ": " + pt[0] + " " + pt[1] + " " + pt[2] );
 	}
 	
 	public ArrayList<Double[]> getWarpedPoints( )
