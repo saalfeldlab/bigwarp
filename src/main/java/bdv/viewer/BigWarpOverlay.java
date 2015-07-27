@@ -70,9 +70,16 @@ public class BigWarpOverlay {
 			Stroke stroke;
 			stroke = BigWarpViewerSettings.NORMAL_STROKE;
 			
+			boolean is3d = true;
+			int offset = 3;
+			
 			int index = 0;
 			for ( final Double[] spot : landmarkModel.getPoints()) 
 			{
+				if( spot.length == 4 ){
+					is3d = false;
+					offset = 2;
+				}
 				
 				if( landmarkModel.isActive(index) ){
 					color  = (Color)viewer.getSettings().get( BigWarpViewerSettings.KEY_COLOR );
@@ -83,14 +90,15 @@ public class BigWarpOverlay {
 				g.setColor( color );
 				g.setStroke( stroke );
 
-				double x, y, z;
+				double x=0.0, y=0.0, z=0.0;
 				if( viewer.getIsMoving() && spot[0] != null )
 				{
 					if( !isTransformed )
 					{
 						x = spot[0];
 						y = spot[1];
-						z = spot[2];
+						
+						if( is3d ) z = spot[2];
 					}
 					else if( isTransformed && landmarkModel.isWarpedPositionChanged( index ) )
 					{
@@ -101,7 +109,9 @@ public class BigWarpOverlay {
 						
 						x = landmarkModel.getWarpedPoints().get( index )[ 0 ];
 						y = landmarkModel.getWarpedPoints().get( index )[ 1 ];
-						z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
+						
+						if( is3d )
+							z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
 					}
 					else if( isTransformed && spot[ 0 ] < Double.MAX_VALUE )
 					{
@@ -109,20 +119,24 @@ public class BigWarpOverlay {
 						// and we're displaying a transformed version, then
 						// the landmark should be at the target location.
 						
-						x = spot[ 3 ];
-						y = spot[ 4 ];
-						z = spot[ 5 ];
+						x = spot[ offset ];
+						y = spot[ offset + 1];
+						
+						if( is3d ) 
+							z = spot[ offset + 2 ];
 					}
 					else
 					{
 						continue;
 					}
 				}
-				else if( !viewer.getIsMoving() && spot[3] != null )
+				else if( !viewer.getIsMoving() && spot[offset] != null )
 				{
-					x = spot[3];
-					y = spot[4];
-					z = spot[5];
+					x = spot[ offset ];
+					y = spot[ offset + 1];
+					
+					if( is3d ) 
+						z = spot[ offset + 2 ];
 				}
 				else
 				{
@@ -154,6 +168,7 @@ public class BigWarpOverlay {
 						g.drawString( landmarkModel.getNames().get(index), tx, ty );
 					}
 				}
+				
 				index++;
 			}
 		}

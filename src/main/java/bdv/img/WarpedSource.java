@@ -19,12 +19,12 @@ import net.imglib2.view.Views;
 public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCacheHints
 {
 
-	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name )
+	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name, int ndims )
 	{
 		return new SourceAndConverter< T >(
 				new WarpedSource< T >( wrap.getSpimSource(), name ),
 				wrap.getConverter(),
-				wrap.asVolatile() == null ? null : wrap( wrap.asVolatile(), name ) );
+				wrap.asVolatile() == null ? null : wrap( wrap.asVolatile(), name, ndims ) );
 	}
 
 	/**
@@ -53,13 +53,14 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	{
 		this.source = source;
 		this.name = name;
+		
 		this.tpsXfm = new TpsTransformWrapper( 3 );
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
 
-				sourceSetCacheHints = SetCacheHints.class.isInstance( source ) ?
-						( SetCacheHints ) source : SetCacheHints.empty;
+		sourceSetCacheHints = SetCacheHints.class.isInstance( source ) ?
+				( SetCacheHints ) source : SetCacheHints.empty;
 	}
 
 	@Override
@@ -76,11 +77,9 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )
 	{
-		
 		return Views.interval(
 				Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
-				estimateBoundingInterval( t, level )
-				);
+				estimateBoundingInterval( t, level ));
 	}
 
 	private Interval estimateBoundingInterval( final int t, final int level )
@@ -93,6 +92,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
+		// System.out.println("WS: getInterpolatedSource");
 		final AffineTransform3D transform = new AffineTransform3D();
 		source.getSourceTransform( t, level, transform );
 		final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
@@ -121,13 +121,13 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public String getName()
 	{
-		return name;
+		return source.getName() + "_" + name;
 	}
 
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return null;
+		return source.getVoxelDimensions();
 	}
 
 	@Override

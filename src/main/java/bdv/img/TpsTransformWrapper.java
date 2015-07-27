@@ -31,8 +31,9 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	
 	public void setTps( ThinPlateR2LogRSplineKernelTransform tps )
 	{
-		if( tps.getNumDims() == ndims )
-			this.tps = tps;
+		assert( tps.getNumDims() == 2 || tps.getNumDims() == 3 );
+		
+		this.tps = tps;
 	}
 
 	@Override
@@ -48,24 +49,19 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	}
 
 	@Override
-	public void apply( final double[] source, final double[] target )
-	{}
+	public void apply( final double[] source, final double[] target ){}
 
 	@Override
-	public void apply( final float[] source, final float[] target )
-	{}
+	public void apply( final float[] source, final float[] target ){}
 
 	@Override
-	public void apply( final RealLocalizable source, final RealPositionable target )
-	{}
+	public void apply( final RealLocalizable source, final RealPositionable target ){}
 
 	@Override
-	public void applyInverse( final double[] source, final double[] target )
-	{}
+	public void applyInverse( final double[] source, final double[] target ){}
 
 	@Override
-	public void applyInverse( final float[] source, final float[] target )
-	{}
+	public void applyInverse( final float[] source, final float[] target ){}
 
 	@Override
 	public void applyInverse( final RealPositionable source, final RealLocalizable target )
@@ -85,7 +81,10 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 			pt[ d ] = target.getDoublePosition( d );
 		
 		double[] ptxfm = tps.apply( pt );
-		source.setPosition( ptxfm );
+		
+		for ( int d = 0; d < tps.getNumDims(); ++d )
+			source.setPosition( ptxfm[ d ], d);
+		
 	}
 
 	@Override
@@ -103,13 +102,7 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 			return new TpsTransformWrapper( this.ndims, this.tps.deepCopy() );
 	}
 
-	public void write( File f )
-	{
-		
-	}
+	public void write( File f ){}
 	
-	public void read( File f )
-	{
-		
-	}
+	public void read( File f ){}
 }

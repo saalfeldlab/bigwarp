@@ -50,128 +50,21 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put( BRIGHTNESS_SETTINGS, "S" );
-//		map.put( VISIBILITY_AND_GROUPING, "F6" );
-//		map.put( MANUAL_TRANSFORM, "T" );
-//		map.put( SHOW_HELP, "F1", "H" );
-//		map.put( SAVE_SETTINGS, "F11" );
-//		map.put( LOAD_SETTINGS, "F12" );
-//		map.put( GO_TO_BOOKMARK, "B" );
-//		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
-//		map.put( SET_BOOKMARK, "shift B" );
+		map.put( SHOW_HELP, "F1", "H" );
 
 		return inputMap;
 	}
 
-	public static ActionMap createActionMap( final BigWarp bdv )
+	public static ActionMap createActionMap( final BigWarp bw )
 	{
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bdv.brightnessDialog ) );
-//		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bdv.activeSourcesDialog ) );
-//		map.put( new ToggleDialogAction( SHOW_HELP, bdv.helpDialog ) );
-//		map.put( new SetBookmarkAction( bdv ) );
-//		map.put( new GoToBookmarkAction( bdv ) );
-//		map.put( new GoToBookmarkRotationAction( bdv ) );
-//		map.put( new SaveSettingsAction( bdv ) );
-//		map.put( new LoadSettingsAction( bdv ) );
+		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
+		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
 		return actionMap;
 	}
-
-	private static abstract class ViewerAction extends AbstractNamedAction
-	{
-		protected final BigWarp bdv;
-
-		public ViewerAction( final String name, final BigWarp bdv )
-		{
-			super( name );
-			this.bdv = bdv;
-		}
-
-		private static final long serialVersionUID = 1L;
-	}
-
-
-//	public static class SetBookmarkAction extends ViewerAction
-//	{
-//		public SetBookmarkAction( final Fidip bdv )
-//		{
-//			super( SET_BOOKMARK, bdv );
-//		}
-//
-//		@Override
-//		public void actionPerformed( final ActionEvent e )
-//		{
-//			bdv.initSetBookmark();
-//		}
-//
-//		private static final long serialVersionUID = 1L;
-//	}
-//
-//	public static class GoToBookmarkAction extends ViewerAction
-//	{
-//		public GoToBookmarkAction( final Fidip bdv )
-//		{
-//			super( GO_TO_BOOKMARK, bdv );
-//		}
-//
-//		@Override
-//		public void actionPerformed( final ActionEvent e )
-//		{
-//			bdv.initGoToBookmark();
-//		}
-//
-//		private static final long serialVersionUID = 1L;
-//	}
-//
-//	public static class GoToBookmarkRotationAction extends ViewerAction
-//	{
-//		public GoToBookmarkRotationAction( final Fidip bdv )
-//		{
-//			super( GO_TO_BOOKMARK_ROTATION, bdv );
-//		}
-//
-//		@Override
-//		public void actionPerformed( final ActionEvent e )
-//		{
-//			bdv.initGoToBookmarkRotation();
-//		}
-//
-//		private static final long serialVersionUID = 1L;
-//	}
-//
-//	public static class SaveSettingsAction extends ViewerAction
-//	{
-//		public SaveSettingsAction( final Fidip bdv )
-//		{
-//			super( SAVE_SETTINGS, bdv );
-//		}
-//
-//		@Override
-//		public void actionPerformed( final ActionEvent e )
-//		{
-//			bdv.saveSettings();
-//		}
-//
-//		private static final long serialVersionUID = 1L;
-//	}
-//
-//	public static class LoadSettingsAction extends ViewerAction
-//	{
-//		public LoadSettingsAction( final Fidip bdv )
-//		{
-//			super( LOAD_SETTINGS, bdv );
-//		}
-//
-//		@Override
-//		public void actionPerformed( final ActionEvent e )
-//		{
-//			bdv.loadSettings();
-//		}
-//
-//		private static final long serialVersionUID = 1L;
-//	}
 
 	private BigWarpActions()
 	{}
