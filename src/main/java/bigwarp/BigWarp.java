@@ -217,7 +217,6 @@ public class BigWarp {
 		viewerFrameP.setVisible(true);
 		viewerFrameQ.setVisible(true);
 		landmarkFrame.setVisible(true);
-		
 	}
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
@@ -523,9 +522,12 @@ public class BigWarp {
 	
 	protected void restimateTransformation()
 	{
-		
+		boolean isFirst = false;
 		if( landmarkModel.getTransform() == null )
+		{
 			landmarkModel.initTransformation();
+			isFirst = true;
+		}
 		
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
@@ -534,11 +536,21 @@ public class BigWarp {
 		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		
-		fidipOverlayP.setIsTransformed( true );
+		// display the warped version automatically if this is the first
+		// time the transform was computed
+		if( isFirst )
+			setIsTransformed( true );
 		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 		
+	}
+	
+	protected void setIsTransformed( boolean isTransformed )
+	{
+		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).setIsTransformed( isTransformed );
+		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		fidipOverlayP.setIsTransformed( isTransformed );
 	}
 	
 	protected int detectNumDims()
@@ -774,11 +786,6 @@ public class BigWarp {
 					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Estimating transformation...");
 					BigWarp.this.viewerFrameQ.getViewerPanelP().showMessage("Estimating transformation...");
 					
-					if( landmarkModel.getTransform() == null )
-					{
-						// TODO generalize this
-						landmarkModel.initTransformation();
-					}
 					restimateTransformation();
 					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("done.");
 					BigWarp.this.viewerFrameQ.getViewerPanelP().showMessage("done.");
@@ -863,6 +870,20 @@ public class BigWarp {
 					BigWarp.this.viewerQ.transformChanged( viewXfm );
 					BigWarp.this.viewerQ.getState().setViewerTransform( viewXfm );
 				}
+			}
+			else if( ke.getKeyCode() == KeyEvent.VK_T && ke.getID() == KeyEvent.KEY_RELEASED  )
+			{ 
+				boolean newState =  !BigWarp.this.fidipOverlayP.getIsTransformed();
+				
+				if( newState )
+					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Displaying warped");
+				else
+					BigWarp.this.viewerFrameP.getViewerPanelP().showMessage("Displaying raw");
+				
+				// Toggle whether moving image isdisplayed as transformed or not
+				BigWarp.this.setIsTransformed( newState );
+				BigWarp.this.viewerP.requestRepaint();
+				
 			}
 			
 			return false;

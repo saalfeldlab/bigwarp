@@ -193,6 +193,11 @@ public class BigWarpOverlay {
 		this.estimatedXfm = estimatedXfm.deepCopy();
 	}
 	
+	public boolean getIsTransformed()
+	{
+		return isTransformed;
+	}
+	
 	public void setIsTransformed( boolean isTransformed )
 	{
 		this.isTransformed = isTransformed;

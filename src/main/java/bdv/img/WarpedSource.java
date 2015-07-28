@@ -49,6 +49,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	
 	private final TpsTransformWrapper tpsXfm;
 
+	private boolean isTransformed;
+	
 	public WarpedSource( final Source< T > source, final String name )
 	{
 		this.source = source;
@@ -72,6 +74,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	public void updateTransform( ThinPlateR2LogRSplineKernelTransform tps )
 	{
 		tpsXfm.setTps( tps );
+	}
+	
+	public void setIsTransformed( boolean isTransformed )
+	{
+		this.isTransformed = isTransformed;
 	}
 
 	@Override
@@ -97,7 +104,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 		source.getSourceTransform( t, level, transform );
 		final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 
-		return RealViews.transformReal( sourceRealAccessible, tpsXfm );
+		if( isTransformed )
+			return RealViews.transformReal( sourceRealAccessible, tpsXfm );
+		else
+			return sourceRealAccessible;
 	}
 
 	@Override
