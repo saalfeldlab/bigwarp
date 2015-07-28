@@ -527,9 +527,6 @@ public class BigWarp {
 		if( landmarkModel.getTransform() == null )
 			landmarkModel.initTransformation();
 		
-		System.out.println( "are landmark points ok? " + landmarkModel.validateTransformPoints()); 
-		landmarkModel.printDistances();
-		
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
 		landmarkModel.resetWarpedPoints();
@@ -935,7 +932,6 @@ public class BigWarp {
 					}
 				}
 				
-				System.out.println( type + ": SELECTED LANDMARK " + n );
 				if( BigWarp.this.landmarkFrame.isVisible() ){
 					BigWarp.this.landmarkTable.setEditingRow( n );
 					BigWarp.this.landmarkFrame.repaint();
@@ -1027,10 +1023,8 @@ public class BigWarp {
 				
 				if( isMoving && landmarkModel.getTransform() != null )
 				{
-					//System.out.println("WARPED POINT BEFORE: " + ptarray[0] + " " + ptarray[1] + " " + ptarray[2]);
 					landmarkModel.getTransform().apply( ptarray, ptBack );
 					BigWarp.this.landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
-					//System.out.println("AFTER: " + ptBack[0] + " " + ptBack[1] + " " + ptBack[2]);
 				}
 				
 				if( !isMoving || landmarkModel.getTransform() == null )
@@ -1085,7 +1079,6 @@ public class BigWarp {
 	    		
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
-	    		System.out.println("LANDMARK CLICKED TABLE! row: " + row + "  col: " + column );
 	    		
 	    		boolean isMoving = ( column > 1 && column < 5 );
 	    		
@@ -1097,7 +1090,6 @@ public class BigWarp {
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
 
-				System.out.println("CLICKED TABLE! row: " + row + "  col: " + column );
 				
 				double[] pt = null;
 				if( column >= 2 && column <= 4 )
