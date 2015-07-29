@@ -57,8 +57,9 @@ import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpOverlay;
-import bdv.viewer.NavigationActions;
+import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerPanel.AlignPlane;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.ViewerState;
@@ -147,8 +148,6 @@ public class BigWarp {
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
 		
-		set2dTransformations();
-		
 		/* Set up LandmarkTableModel, holds the data and 
 		 * interfaces with the LandmarkPanel */
 		landmarkModel = new LandmarkTableModel( ndims );
@@ -197,11 +196,13 @@ public class BigWarp {
 
 		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
 		
-		NavigationActions.installActionBindings( viewerFrameP.getKeybindings(), viewerP, keyProperties );
+		WarpNavigationActions.installActionBindings( viewerFrameP.getKeybindings(), viewerP, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameP.getKeybindings(), this, keyProperties);
 		
-		NavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties );
+		WarpNavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameQ.getKeybindings(), this, keyProperties);
+		
+		set2dTransformations( );
 		
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
