@@ -1,5 +1,8 @@
 package bigwarp;
 
+import ij.IJ;
+import ij.ImagePlus;
+
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
@@ -43,7 +46,7 @@ import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
-import bdv.gui.BigWarpViewerPanel;
+import bdv.ij.BigWarpImagePlusPlugIn;
 import bdv.img.WarpedSource;
 import bdv.img.cache.Cache;
 import bdv.spimdata.SpimDataMinimal;
@@ -57,8 +60,11 @@ import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpOverlay;
-import bdv.viewer.NavigationActions;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerPanel;
+import bdv.viewer.ViewerPanel.Options;
+import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.ViewerState;
@@ -72,8 +78,9 @@ public class BigWarp {
 	
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
-	protected final SetupAssignments setupAssignments;
-	protected final BrightnessDialog brightnessDialog;
+//	protected final SetupAssignments setupAssignments;
+	protected final BrightnessDialog brightnessDialogP;
+	protected final BrightnessDialog brightnessDialogQ;
 	protected final HelpDialog helpDialog;
 	
 	protected final BigWarpViewerFrame viewerFrameP;
@@ -114,40 +121,38 @@ public class BigWarp {
 	 */
 	protected boolean inLandmarkMode;
 	
-	public BigWarp( final String xmlFilenameP, final String xmlFilenameQ, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
+	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 
-		/* Load the first source */
-		final SpimDataMinimal spimData = loadSpimData( xmlFilenameP );
-		final AbstractSequenceDescription< ?, ?, ? > seq = spimData.getSequenceDescription();
-		final List< TimePoint > timepoints = seq.getTimePoints().getTimePointsOrdered();
-		
-		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-		
-		sources = new ArrayList< SourceAndConverter< ? > >();
-		BigDataViewer.initSetups( spimData, converterSetups, sources );
-
-		/* Load the second source */
-		BigDataViewer.initSetups( loadSpimData( xmlFilenameQ ), converterSetups, sources );
+		sources = data.sources;
+		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
+		ArrayList<ConverterSetup> converterSetups = data.converterSetups;
 		
 		ndims = 3;
 		ndims = detectNumDims();
 		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
 
+		// If the images are 2d, use a transform handler that limits transformations to 
+		// rotations and scalings of the 2d plane ( z = 0 )
+		Options options = ViewerPanel.options();
+		if( ndims == 2 )
+		{
+			options.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
+		}
+		
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, timepoints.size(),
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip moving", true );
+		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip moving", true );
 		viewerP = viewerFrameP.getViewerPanelP();
 
+		
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, timepoints.size(),
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip fixed", false );
+		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip fixed", false );
 		viewerQ = viewerFrameQ.getViewerPanelP();
 		
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
-		
-		set2dTransformations();
 		
 		/* Set up LandmarkTableModel, holds the data and 
 		 * interfaces with the LandmarkPanel */
@@ -171,15 +176,21 @@ public class BigWarp {
 		landmarkFrame.setContentPane( landmarkPanel );
 		landmarkFrame.pack();
 		
-		setupAssignments = new SetupAssignments( converterSetups, 0, 512 );
-		if ( setupAssignments.getMinMaxGroups().size() > 0 )
-		{
-			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
-			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
-				setupAssignments.moveSetupToGroup( setup, group );
-		}
+		ArrayList<ConverterSetup> csetupsP = new ArrayList<ConverterSetup>();
+		csetupsP.add( converterSetups.get(0) );
+		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(0) ))
+			( ( RealARGBColorConverterSetup ) converterSetups.get(0) ).setViewer( viewerP );
 		
-		brightnessDialog = new BrightnessDialog( viewerFrameP, setupAssignments );
+		ArrayList<ConverterSetup> csetupsQ = new ArrayList<ConverterSetup>();
+		csetupsQ.add( converterSetups.get(1) );
+		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(1) ))
+			( ( RealARGBColorConverterSetup ) converterSetups.get(1) ).setViewer( viewerQ );
+		
+		SetupAssignments setupAssignmentsP = new SetupAssignments( csetupsP, 0, 512 );
+		SetupAssignments setupAssignmentsQ = new SetupAssignments( csetupsQ, 0, 512 );
+		
+		brightnessDialogP = new BrightnessDialog( viewerFrameP, setupAssignmentsP );
+		brightnessDialogQ = new BrightnessDialog( viewerFrameQ, setupAssignmentsQ );
 		helpDialog = new HelpDialog( viewerFrameP );
 		
 		setUpLandmarkMenus();
@@ -190,17 +201,13 @@ public class BigWarp {
 		viewerFrameQ.setLocation( viewerFramePloc );
 		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
 		landmarkFrame.setLocation( viewerFramePloc );
-		
-		for ( final ConverterSetup cs : converterSetups )
-			if ( RealARGBColorConverterSetup.class.isInstance( cs ) )
-				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerP );
 
 		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
 		
-		NavigationActions.installActionBindings( viewerFrameP.getKeybindings(), viewerP, keyProperties );
+		WarpNavigationActions.installActionBindings( viewerFrameP.getKeybindings(), viewerP, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameP.getKeybindings(), this, keyProperties);
 		
-		NavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties );
+		WarpNavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameQ.getKeybindings(), this, keyProperties);
 		
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
@@ -229,8 +236,12 @@ public class BigWarp {
 		JMenu settingsMenu    = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
 		
-		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
-			
+		final JMenuItem miBrightness;
+		if( vframe.isMoving() )
+			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_P ) );
+		else
+			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_Q ) );
+		
 		miBrightness.setText( "Brightness & Color" );
 		settingsMenu.add( miBrightness );
 		
@@ -496,7 +507,7 @@ public class BigWarp {
 		}
 	}
 		 
-	private SpimDataMinimal loadSpimData( String xmlPath ){
+	private static SpimDataMinimal loadSpimData( String xmlPath ){
 		SpimDataMinimal spimData = null;
 		try {
 			spimData = new XmlIoSpimDataMinimal().load( xmlPath );
@@ -534,7 +545,9 @@ public class BigWarp {
 		landmarkModel.resetWarpedPoints();
 		
 		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
-		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
+		
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -549,7 +562,10 @@ public class BigWarp {
 	protected void setIsTransformed( boolean isTransformed )
 	{
 		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).setIsTransformed( isTransformed );
-		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		
 		fidipOverlayP.setIsTransformed( isTransformed );
 	}
 	
@@ -565,19 +581,6 @@ public class BigWarp {
 			ndims = 2;
 		
 		return ndims;
-	}
-	
-	protected void set2dTransformations()
-	{
-		if( ndims == 2 )
-		{
-			TransformEventHandler< AffineTransform3D > handlerP = TransformHandler3DWrapping2D.factory().create( viewerP.getDisplay() );
-			viewerP.getDisplay().setTransformEventHandler( handlerP );
-			
-			TransformEventHandler< AffineTransform3D > handlerQ = TransformHandler3DWrapping2D.factory().create( viewerQ.getDisplay() );
-			viewerQ.getDisplay().setTransformEventHandler( handlerQ );
-		}
-		
 	}
 	
 	
@@ -603,25 +606,39 @@ public class BigWarp {
 //		
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/cell2mr/pts2.lnmk";
 		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
-		
+		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
+		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
+		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
+				
 		// A 2d example
-		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
-		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
-		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
-		
+//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
+//		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
+
 //		final String fnLandmarks = "";
 		
 		try
 		{
 			System.setProperty( "apple.laf.useScreenMenuBar", "true" );
 			new RepeatingReleasedEventsFixer().install();
-			BigWarp fidip = new BigWarp( fnP, fnQ, new File( fnP ).getName(), new ProgressWriterConsole() );
+			
+//			ArrayList< SourceAndConverter< ? >> sources = loadSourcesFromXmls( fnP, fnQ );
+			
+			BigWarp bw;
+			if( fnP.endsWith("xml") && fnQ.endsWith("xml"))
+				bw = new BigWarp( loadSourcesFromXmls( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+			else if( fnP.endsWith("png") && fnQ.endsWith("png") )
+				bw = new BigWarp( loadSourcesFromImages( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+			else{
+				System.err.println("Error reading files");
+				return;
+			}
 			
 			if( !fnLandmarks.isEmpty() )
 			{
-				fidip.landmarkModel.load( new File( fnLandmarks ));
+				bw.landmarkModel.load( new File( fnLandmarks ));
 				//fidip.restimateTransformation();
 				//fidip.viewerP.requestRepaint();
 			}
@@ -632,6 +649,49 @@ public class BigWarp {
 		}
 		
 		System.out.println("done");
+	}
+	
+	public static BigWarpData loadSourcesFromImages( final String filenameP, final String filenameQ )
+	{
+		ImagePlus moving_imp = IJ.openImage( filenameP );
+		ImagePlus target_imp = IJ.openImage( filenameQ );
+		
+		System.out.println( "moving_imp: " + moving_imp );
+		System.out.println( "target_imp: " + target_imp );
+		
+		return BigWarpImagePlusPlugIn.buildData(moving_imp, target_imp);
+	}
+	
+	public static BigWarpData loadSourcesFromXmls( final String xmlFilenameP, final String xmlFilenameQ )
+	{
+		/* Load the first source */
+		final SpimDataMinimal spimData = loadSpimData( xmlFilenameP );
+		final AbstractSequenceDescription< ?, ?, ? > seq = spimData.getSequenceDescription();
+		
+		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
+		
+		ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
+		BigDataViewer.initSetups( spimData, converterSetups, sources );
+
+		/* Load the second source */
+		BigDataViewer.initSetups( loadSpimData( xmlFilenameQ ), converterSetups, sources );
+		
+		return new BigWarpData( sources, seq, converterSetups );
+	}
+	
+	public static class BigWarpData
+	{
+		public final ArrayList< SourceAndConverter< ? >> sources;
+		public final AbstractSequenceDescription< ?, ?, ? > seq;
+		public final ArrayList< ConverterSetup > converterSetups;
+		
+		public BigWarpData( ArrayList< SourceAndConverter< ? >> sources,
+				AbstractSequenceDescription< ?, ?, ? > seq, ArrayList< ConverterSetup > converterSetups )
+		{
+			this.sources = sources;
+			this.seq = seq;
+			this.converterSetups = converterSetups;
+		}
 	}
 	
 	public static BigWarpViewerFrame frameFromXml( String xmlFilePath ) throws SpimDataException{

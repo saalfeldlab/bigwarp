@@ -70,6 +70,11 @@ public class TransformHandler3DWrapping2D extends MouseAdapter implements KeyLis
 					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 3 ), 
 					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 3 ),
 					0.0, 0.0, 1.0, 0.0);
+			
+			AffineTransform2D tmp2dxfm = new AffineTransform2D();
+			tmp2dxfm.set( 	transform.get( 0, 0 ), transform.get( 0, 1 ), transform.get( 0, 3 ),
+							transform.get( 1, 0 ), transform.get( 1, 1 ), transform.get( 1, 3 ));
+			handler2d.setTransform(tmp2dxfm);
 		}
 	}
 

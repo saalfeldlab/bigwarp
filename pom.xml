@@ -53,7 +53,12 @@
   	<dependency>
   		<groupId>jitk</groupId>
   		<artifactId>jitk-tps</artifactId>
-  		<version>1.1.2-SNAPSHOT</version>
+  		<version>1.1.2</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>sc.fiji</groupId>
+  		<artifactId>bigdataviewer_fiji</artifactId>
+  		<version>1.0.16</version>
   	</dependency>
   </dependencies>
 </project>

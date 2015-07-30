@@ -12,7 +12,8 @@ import bdv.viewer.InputActionBindings;
 
 public class BigWarpActions
 {
-	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
+	public static final String BRIGHTNESS_SETTINGS_P = "brightness settings p";
+	public static final String BRIGHTNESS_SETTINGS_Q = "brightness settings q";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping";
 	public static final String SHOW_HELP = "help";
 	public static final String CROP = "crop";
@@ -49,7 +50,8 @@ public class BigWarpActions
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
-		map.put( BRIGHTNESS_SETTINGS, "S" );
+		map.put( BRIGHTNESS_SETTINGS_P, "S" );
+		map.put( BRIGHTNESS_SETTINGS_Q, "D" );
 		map.put( SHOW_HELP, "F1", "H" );
 
 		return inputMap;
@@ -60,7 +62,8 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
+		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS_P, bw.brightnessDialogP ) );
+		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS_Q, bw.brightnessDialogQ ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
 		return actionMap;

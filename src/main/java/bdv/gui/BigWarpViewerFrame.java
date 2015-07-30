@@ -13,6 +13,7 @@ import javax.swing.SwingUtilities;
 
 import net.imglib2.ui.util.GuiUtil;
 import bdv.img.cache.Cache;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
@@ -45,10 +46,10 @@ public class BigWarpViewerFrame extends JFrame
 			final Cache cache,
 			final Options optional,
 			final String title,
-			final boolean isMoving  )
+			final boolean isMoving )
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
-		
+			
 		if( !isMoving )
 		{
 			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
