@@ -539,7 +539,9 @@ public class BigWarp {
 		landmarkModel.resetWarpedPoints();
 		
 		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
-//		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
+		
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -554,7 +556,10 @@ public class BigWarp {
 	protected void setIsTransformed( boolean isTransformed )
 	{
 		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).setIsTransformed( isTransformed );
-//		( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		
 		fidipOverlayP.setIsTransformed( isTransformed );
 	}
 	
@@ -570,19 +575,6 @@ public class BigWarp {
 			ndims = 2;
 		
 		return ndims;
-	}
-	
-	protected void set2dTransformations()
-	{
-		if( ndims == 2 )
-		{
-			TransformEventHandler< AffineTransform3D > handlerP = TransformHandler3DWrapping2D.factory().create( viewerP.getDisplay() );
-			viewerP.getDisplay().setTransformEventHandler( handlerP );
-			
-			TransformEventHandler< AffineTransform3D > handlerQ = TransformHandler3DWrapping2D.factory().create( viewerQ.getDisplay() );
-			viewerQ.getDisplay().setTransformEventHandler( handlerQ );
-		}
-		
 	}
 	
 	
@@ -610,15 +602,16 @@ public class BigWarp {
 		
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
-		
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
+				
 		// A 2d example
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
 		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
 		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
+		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
 
-		final String fnLandmarks = "";
+//		final String fnLandmarks = "";
 		
 		try
 		{

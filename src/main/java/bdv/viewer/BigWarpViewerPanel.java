@@ -31,11 +31,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
-//	public static final double[] qpX = new double[]{  1.0,  0.0,  0.0,  0.0 };
-//	public static final double[] qpY = new double[]{  0.0,  0.0,  0.0,  1.0 };
-//	public static final double[] qnX = new double[]{ -1.0,  0.0,  0.0,  0.0 };
-//	public static final double[] qnY = new double[]{  0.0,  0.0,  0.0, -1.0 };
-	
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, boolean isMoving )
 	{
 		this( sources, numTimePoints, cache, options(), isMoving );
@@ -148,11 +143,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
 		
 		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
-//		 System.out.println( transform );
 		
 		// avoid computing angle explicitly ( and thus avoid expensive inverse tan op )
 		// and instead do a verbose, but faster if statements
-		
 		double m00 = transform.get( 0, 0 );
 		double m01 = transform.get( 0, 1 );
 		double m10 = transform.get( 1, 0 );
@@ -160,16 +153,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		boolean xpos = ( m00 + m10 > 0 );
 		boolean ypos = ( m01 + m11 > 0 );
-		
-//		boolean xzero = ( m00 + m10 == 0 );
-//		boolean yzero = ( m01 + m11 == 0 );
-//		System.out.println( m00 + " " + m01 );
-//		System.out.println( m10 + " " + m11 + "\n");
-//		System.out.println(" m11: " + m11 + "   m00: " + m00 );
-//		System.out.println(" xpos: " + xpos + "   ypos: " + ypos );
-		
-//		boolean yxpos = ( m10 >= 0 );
-//		boolean yypos = ( m11 >= 0 );
 		
 		RotatePlane2d qTarget;
 		if( isClockwise )
@@ -213,21 +196,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerY = getHeight() / 2.0;
 			centerX = getWidth() / 2.0;
 		}
-//		System.out.println( qTarget.getName() );
-		
-		double[][] Rnew = new double[4][4];
-		LinAlgHelpers.quaternionToR( qTarget.qAlign, Rnew );
-		
-//		System.out.println( Rnew[0][0] + " " + Rnew[0][1] );
-//		System.out.println( Rnew[1][0] + " " + Rnew[1][1] + "\n");
-//		System.out.println( qTarget.qAlign[0] + " " + qTarget.qAlign[1] + " " + qTarget.qAlign[2] + " " + qTarget.qAlign[3] +"\n\n");
-		
 		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget.qAlign, 300 );
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
-		
-//		System.out.println( transform );
-//		System.out.println("\n\n\n\n");
 	}
 	
     public synchronized void animateTransformation( AffineTransform3D destinationXfm, int millis )
