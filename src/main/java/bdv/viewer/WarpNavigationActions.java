@@ -5,11 +5,12 @@ import java.awt.event.ActionEvent;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
-import bdv.gui.BigWarpViewerPanel;
 import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
+import bdv.viewer.InputActionBindings;
+import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.AlignPlane;
 
 public class WarpNavigationActions 
@@ -46,7 +47,6 @@ public class WarpNavigationActions
 	{
 		inputActionBindings.addActionMap( "navigation", createActionMap( viewer ) );
 		inputActionBindings.addInputMap( "navigation", createInputMap( keyProperties, is2d ) );
-		System.out.println("done installing");
 		
 		viewer.getActionMap().get( "navigation" );
 	}
@@ -77,8 +77,9 @@ public class WarpNavigationActions
 		}
 		else
 		{
-			map.put(  String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), 		"shift Z" );
-			map.put(  String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), 	"shift X" );
+			map.put( String.format( ALIGN_PLANE, AlignPlane.XY ), "shift A" );
+			map.put( String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), "shift X" );
+			map.put( String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), "shift Z" );
 		}
 		return inputMap;
 	}
@@ -225,7 +226,8 @@ public class WarpNavigationActions
 		}
 
 		@Override
-		public void actionPerformed( final ActionEvent e ) {
+		public void actionPerformed( final ActionEvent e ) 
+		{
 			((BigWarpViewerPanel) viewer).rotateView2d( direction == rotationDirections2d.CLOCKWISE );
 		}
 		

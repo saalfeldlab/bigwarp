@@ -43,7 +43,6 @@ import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
-import bdv.gui.BigWarpViewerPanel;
 import bdv.img.WarpedSource;
 import bdv.img.cache.Cache;
 import bdv.spimdata.SpimDataMinimal;
@@ -57,8 +56,11 @@ import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpOverlay;
-import bdv.viewer.WarpNavigationActions;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerPanel;
+import bdv.viewer.ViewerPanel.Options;
+import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.ViewerPanel.AlignPlane;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.render.MultiResolutionRenderer;
@@ -135,14 +137,21 @@ public class BigWarp {
 		ndims = detectNumDims();
 		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
 
+		Options options = ViewerPanel.options();
+		if( ndims == 2 )
+		{
+			options.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
+		}
+		
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, timepoints.size(),
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip moving", true );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip moving", true );
 		viewerP = viewerFrameP.getViewerPanelP();
 
+		
 		// Viewer frame for the fixed image
 		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, timepoints.size(),
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip fixed", false );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip fixed", false );
 		viewerQ = viewerFrameQ.getViewerPanelP();
 		
 		setUpViewerMenu( viewerFrameP );
@@ -202,7 +211,7 @@ public class BigWarp {
 		WarpNavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameQ.getKeybindings(), this, keyProperties);
 		
-		set2dTransformations( );
+		// set2dTransformations( );
 		
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
@@ -610,9 +619,9 @@ public class BigWarp {
 		// A 2d example
 		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
 		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
-		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
 		
-//		final String fnLandmarks = "";
+		final String fnLandmarks = "";
 		
 		try
 		{

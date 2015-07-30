@@ -8,7 +8,6 @@ import java.awt.Stroke;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.CoordinateTransform;
 import net.imglib2.realtransform.AffineTransform3D;
-import bdv.gui.BigWarpViewerPanel;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 
