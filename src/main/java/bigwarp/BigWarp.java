@@ -78,8 +78,9 @@ public class BigWarp {
 	
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
-	protected final SetupAssignments setupAssignments;
-	protected final BrightnessDialog brightnessDialog;
+//	protected final SetupAssignments setupAssignments;
+	protected final BrightnessDialog brightnessDialogP;
+	protected final BrightnessDialog brightnessDialogQ;
 	protected final HelpDialog helpDialog;
 	
 	protected final BigWarpViewerFrame viewerFrameP;
@@ -131,6 +132,8 @@ public class BigWarp {
 		ndims = detectNumDims();
 		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
 
+		// If the images are 2d, use a transform handler that limits transformations to 
+		// rotations and scalings of the 2d plane ( z = 0 )
 		Options options = ViewerPanel.options();
 		if( ndims == 2 )
 		{
@@ -144,7 +147,6 @@ public class BigWarp {
 
 		
 		// Viewer frame for the fixed image
-
 		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip fixed", false );
 		viewerQ = viewerFrameQ.getViewerPanelP();
@@ -174,15 +176,21 @@ public class BigWarp {
 		landmarkFrame.setContentPane( landmarkPanel );
 		landmarkFrame.pack();
 		
-		setupAssignments = new SetupAssignments( converterSetups, 0, 512 );
-		if ( setupAssignments.getMinMaxGroups().size() > 0 )
-		{
-			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
-			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
-				setupAssignments.moveSetupToGroup( setup, group );
-		}
+		ArrayList<ConverterSetup> csetupsP = new ArrayList<ConverterSetup>();
+		csetupsP.add( converterSetups.get(0) );
+		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(0) ))
+			( ( RealARGBColorConverterSetup ) converterSetups.get(0) ).setViewer( viewerP );
 		
-		brightnessDialog = new BrightnessDialog( viewerFrameP, setupAssignments );
+		ArrayList<ConverterSetup> csetupsQ = new ArrayList<ConverterSetup>();
+		csetupsQ.add( converterSetups.get(1) );
+		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(1) ))
+			( ( RealARGBColorConverterSetup ) converterSetups.get(1) ).setViewer( viewerQ );
+		
+		SetupAssignments setupAssignmentsP = new SetupAssignments( csetupsP, 0, 512 );
+		SetupAssignments setupAssignmentsQ = new SetupAssignments( csetupsQ, 0, 512 );
+		
+		brightnessDialogP = new BrightnessDialog( viewerFrameP, setupAssignmentsP );
+		brightnessDialogQ = new BrightnessDialog( viewerFrameQ, setupAssignmentsQ );
 		helpDialog = new HelpDialog( viewerFrameP );
 		
 		setUpLandmarkMenus();
@@ -193,10 +201,6 @@ public class BigWarp {
 		viewerFrameQ.setLocation( viewerFramePloc );
 		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
 		landmarkFrame.setLocation( viewerFramePloc );
-		
-		for ( final ConverterSetup cs : converterSetups )
-			if ( RealARGBColorConverterSetup.class.isInstance( cs ) )
-				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerP );
 
 		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
 		
@@ -205,8 +209,6 @@ public class BigWarp {
 		
 		WarpNavigationActions.installActionBindings( viewerFrameQ.getKeybindings(), viewerQ, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( viewerFrameQ.getKeybindings(), this, keyProperties);
-		
-		// set2dTransformations( );
 		
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
@@ -234,8 +236,12 @@ public class BigWarp {
 		JMenu settingsMenu    = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
 		
-		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
-			
+		final JMenuItem miBrightness;
+		if( vframe.isMoving() )
+			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_P ) );
+		else
+			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_Q ) );
+		
 		miBrightness.setText( "Brightness & Color" );
 		settingsMenu.add( miBrightness );
 		
@@ -600,16 +606,16 @@ public class BigWarp {
 //		
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/cell2mr/pts2.lnmk";
 		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
+		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
+		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
+		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
 				
 		// A 2d example
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
-		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
-		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
-		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
+//		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
 
 //		final String fnLandmarks = "";
 		
