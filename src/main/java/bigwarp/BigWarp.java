@@ -139,14 +139,14 @@ public class BigWarp {
 		
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip moving", true );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip moving", true );
 		viewerP = viewerFrameP.getViewerPanelP();
 
 		
 		// Viewer frame for the fixed image
 
 		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip fixed", false );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), options, "Fidip fixed", false );
 		viewerQ = viewerFrameQ.getViewerPanelP();
 		
 		setUpViewerMenu( viewerFrameP );
