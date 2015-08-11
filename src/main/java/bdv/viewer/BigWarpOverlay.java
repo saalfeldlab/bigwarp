@@ -2,6 +2,7 @@ package bdv.viewer;
 
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 
@@ -72,6 +73,16 @@ public class BigWarpOverlay {
 			boolean is3d = true;
 			int offset = 3;
 			
+			FontMetrics fm = null;
+			int fonthgt = 0;
+			Color textBoxColor = null;
+			if ( viewer.getSettings().areNamesVisible() )
+			{
+				fm = g.getFontMetrics( g.getFont() );
+				fonthgt = fm.getHeight();
+				textBoxColor = Color.BLACK;
+			}
+			
 			int index = 0;
 			for ( final Double[] spot : landmarkModel.getPoints()) 
 			{
@@ -106,8 +117,11 @@ public class BigWarpOverlay {
 						// ( as a result, we can't use the target point ) 
 						// so use the stored warped point
 						
+						
 						x = landmarkModel.getWarpedPoints().get( index )[ 0 ];
 						y = landmarkModel.getWarpedPoints().get( index )[ 1 ];
+						
+						//System.out.println( "rendering warped point" + index  + "   " + x + " " + y );
 						
 						if( is3d )
 							z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
@@ -164,7 +178,18 @@ public class BigWarpOverlay {
 					{
 						final int tx = ( int ) ( viewerCoords[ 0 ] + arad + 5 );
 						final int ty = ( int ) viewerCoords[ 1 ];
-						g.drawString( landmarkModel.getNames().get(index), tx, ty );
+						
+						String name = landmarkModel.getNames().get(index);
+						int strwidth = fm.stringWidth( name );
+						
+						textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
+						
+						g.setColor( textBoxColor );
+						g.fillRect( tx - 1, ty - fonthgt + 2, strwidth + 2, fonthgt);
+						
+						g.setColor( Color.BLACK );
+						g.drawString( name, tx, ty );
+						
 					}
 				}
 				

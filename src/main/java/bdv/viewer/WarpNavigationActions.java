@@ -23,9 +23,9 @@ public class WarpNavigationActions
 	public static final String TOGGLE_SOURCE_VISIBILITY = "toggle source visibility %d";
 	public static final String ALIGN_PLANE = "align %s plane";
 	public static final String ROTATE_PLANE = "rotate %s";
-	public static final String NEXT_TIMEPOINT = "next timepoint";
-	public static final String PREVIOUS_TIMEPOINT = "previous timepoint";
 
+	public static final String DISPLAY_XFMS = "display transforms";
+	
 	public static enum rotationDirections2d { CLOCKWISE, COUNTERCLOCKWISE }; 
 	
 	/**
@@ -59,8 +59,6 @@ public class WarpNavigationActions
 		map.put( TOGGLE_INTERPOLATION, "I" );
 		map.put( TOGGLE_FUSED_MODE, "F" );
 		map.put( TOGGLE_GROUPING, "G" );
-		map.put( NEXT_TIMEPOINT, "CLOSE_BRACKET", "M" );
-		map.put( PREVIOUS_TIMEPOINT, "OPEN_BRACKET", "N" );
 
 		final String[] numkeys = new String[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" };
 		for ( int i = 0; i < numkeys.length; ++i )
@@ -77,7 +75,7 @@ public class WarpNavigationActions
 		}
 		else
 		{
-			map.put( String.format( ALIGN_PLANE, AlignPlane.XY ), "shift A" );
+			map.put( DISPLAY_XFMS, "shift A" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), "shift X" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), "shift Z" );
 		}
@@ -114,6 +112,8 @@ public class WarpNavigationActions
 		
 		map.put( new RotatePlaneAction( viewer, rotationDirections2d.CLOCKWISE ) ); // clockwise
 		map.put( new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ) ); // counterclockwise
+		
+		map.put( new DisplayXfmAction( viewer ) );
 	}
 
 	private static abstract class NavigationAction extends AbstractNamedAction
@@ -212,6 +212,23 @@ public class WarpNavigationActions
 			viewer.getVisibilityAndGrouping().toggleActiveGroupOrSource( sourceIndex );
 		}
 
+		private static final long serialVersionUID = 1L;
+	}
+	
+	public static class DisplayXfmAction extends NavigationAction
+	{
+		
+		public DisplayXfmAction( final BigWarpViewerPanel viewer )
+		{
+			super( DISPLAY_XFMS, viewer );
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e ) 
+		{
+			((BigWarpViewerPanel) viewer).displayViewerTransforms();
+		}
+		
 		private static final long serialVersionUID = 1L;
 	}
 

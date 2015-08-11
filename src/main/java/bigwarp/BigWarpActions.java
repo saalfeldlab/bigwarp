@@ -1,5 +1,7 @@
 package bigwarp;
 
+import java.awt.event.ActionEvent;
+
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
@@ -12,18 +14,15 @@ import bdv.viewer.InputActionBindings;
 
 public class BigWarpActions
 {
+	public static final String TOGGLE_LANDMARK_MODE = "toggle landmark mode";
+	
 	public static final String BRIGHTNESS_SETTINGS_P = "brightness settings p";
 	public static final String BRIGHTNESS_SETTINGS_Q = "brightness settings q";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping";
 	public static final String SHOW_HELP = "help";
 	public static final String CROP = "crop";
-	public static final String MANUAL_TRANSFORM = "toggle manual transformation";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
-	public static final String RECORD_MOVIE = "record movie";
-	public static final String SET_BOOKMARK = "set bookmark";
-	public static final String GO_TO_BOOKMARK = "go to bookmark";
-	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
 
 	/**
 	 * Create BigDataViewer actions and install them in the specified
@@ -50,6 +49,7 @@ public class BigWarpActions
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
+		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS_P, "S" );
 		map.put( BRIGHTNESS_SETTINGS_Q, "D" );
 		map.put( SHOW_HELP, "F1", "H" );
@@ -62,6 +62,7 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
+		map.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS_P, bw.brightnessDialogP ) );
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS_Q, bw.brightnessDialogQ ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
@@ -71,4 +72,26 @@ public class BigWarpActions
 
 	private BigWarpActions()
 	{}
+	
+	public static class ToggleLandmarkModeAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 7370813069619338918L;
+		
+		private BigWarp bw;
+		
+		public ToggleLandmarkModeAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.toggleInLandmarkMode( );
+			
+		}
+		
+	}
+	
 }

@@ -1,17 +1,22 @@
 package bdv.viewer;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.ArrayList;
 import java.util.List;
 
+import jitk.spline.XfmUtils;
+import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.ui.TransformListener;
 import net.imglib2.util.LinAlgHelpers;
 import bdv.img.cache.Cache;
 import bdv.util.Affine3DHelpers;
+import bdv.util.Prefs;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.ViewerPanel.AlignPlane;
+import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator;
 import bdv.viewer.state.SourceState;
@@ -28,6 +33,10 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected boolean isMoving;
 	
 	protected boolean transformEnabled = true;
+	
+	protected AffineTransform3D destXfm;
+	
+	protected int ndims;
 
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
@@ -41,6 +50,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		super( sources, numTimePoints, cache, optional );
 		viewerSettings = new BigWarpViewerSettings();
 		this.isMoving = isMoving;
+		destXfm = new AffineTransform3D();
 	}
 	
 	public void addOverlay( BigWarpOverlay overlay ){
@@ -56,23 +66,76 @@ public class BigWarpViewerPanel extends ViewerPanel
 		return isMoving;
 	}
 	
+	public void setNumDim( int ndim )
+	{
+		this.ndims = ndim;
+	}
+	
 	@Override
 	public void paint()
 	{
+		if ( currentAnimator!=null && currentAnimator.isComplete() )
+		{
+			System.out.println("asdfasdfasdfasdfasdfasdf");
+			transformChanged( destXfm );
+		}
+			
 		super.paint();
 	}
 	
 	@Override
-	public void drawOverlays( final Graphics g2 )
+	public void drawOverlays( final Graphics g )
 	{
-		super.drawOverlays( g2 );
+		multiBoxOverlayRenderer.setViewerState( state );
+		multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
+		multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
+
+		sourceInfoOverlayRenderer.setViewerState( state );
+		sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
+
+		if ( Prefs.showScaleBar() )
+		{
+			scaleBarOverlayRenderer.setViewerState( state );
+			scaleBarOverlayRenderer.paint( ( Graphics2D ) g );
+		}
+
+		final RealPoint gPos = new RealPoint( 3 );
+		getGlobalMouseCoordinates( gPos );
+		
+		final String mousePosGlobalString;
+		if( ndims == 2 )
+			mousePosGlobalString = String.format( "(%6.1f,%6.1f)", gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ));
+		else
+			mousePosGlobalString = String.format( "(%6.1f,%6.1f,%6.1f)", gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ), gPos.getDoublePosition( 2 ) );
+			
+		g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+		g.setColor( Color.white );
+		g.drawString( mousePosGlobalString, ( int ) g.getClipBounds().getWidth() - 170, 12 );
+
+		boolean requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
+
+		final long currentTimeMillis = System.currentTimeMillis();
+		final ArrayList< OverlayAnimator > overlayAnimatorsToRemove = new ArrayList< OverlayAnimator >();
+		for ( final OverlayAnimator animator : overlayAnimators )
+		{
+			animator.paint( ( Graphics2D ) g, currentTimeMillis );
+			requiresRepaint |= animator.requiresRepaint();
+			if ( animator.isComplete() )
+				overlayAnimatorsToRemove.add( animator );
+		}
+		overlayAnimators.removeAll( overlayAnimatorsToRemove );
+
+		if ( requiresRepaint )
+			display.repaint();
+		
 		if ( null != overlay ) {
 			overlay.setViewerState( state );
-			overlay.paint( ( Graphics2D ) g2 );
+			overlay.paint( ( Graphics2D ) g );
 		}
 	}
 	
-	public BigWarpViewerSettings getSettings(){
+	public BigWarpViewerSettings getSettings()
+	{
 		return viewerSettings;
 	}
 	
@@ -108,8 +171,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if( angle < PI2 / 16 )
 			angle = PI2;
 		
-		System.out.println( "angle: " + angle );
-		
 		double[] rot = new double[ 4 ];
 		LinAlgHelpers.quaternionFromAngleAxis( axis, angle, rot );
 		
@@ -133,7 +194,27 @@ public class BigWarpViewerPanel extends ViewerPanel
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
 		
-		System.out.println( qTarget[0] + " " + qTarget[1] + " " + qTarget[2] + " " + qTarget[3] );
+//		System.out.println( qTarget[0] + " " + qTarget[1] + " " + qTarget[2] + " " + qTarget[3] );
+	}
+
+	public void displayViewerTransforms(  )
+	{
+//		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
+//		final AffineTransform3D sourceTransform = new AffineTransform3D();
+//		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
+		
+		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
+		
+//		final AffineTransform3D stateTransform = new AffineTransform3D();
+//		state.getViewerTransform( stateTransform );
+		
+		final double[] q = new double[ 4 ];
+		Affine3DHelpers.extractRotationAnisotropic( transform, q );
+		
+//		System.out.println( "sourceTransform: " + sourceTransform );
+		System.out.println( "display transform: " + transform );
+//		System.out.println( "state transform: " + stateTransform );
+		System.out.println( "q: " + q[0] + " " + q[1] + " " + q[2] + " " + q[3] );
 	}
 	
 	public void rotateView2d( boolean isClockwise )
@@ -142,7 +223,12 @@ public class BigWarpViewerPanel extends ViewerPanel
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
 		
+//		final double[] qSource = new double[ 4 ];
+//		Affine3DHelpers.extractRotationAnisotropic( sourceTransform, qSource );
+//		
 		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
+//		Affine3DHelpers.extractApproximateRotationAffine( sourceTransform, qSource, 2 );
+		
 		
 		// avoid computing angle explicitly ( and thus avoid expensive inverse tan op )
 		// and instead do a verbose, but faster if statements
@@ -184,6 +270,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 		
 		if( qTarget == null ) return;
 		
+//		final double[] qTmpSource = new double[ 4 ];
+//		LinAlgHelpers.quaternionMultiply( qSource, qTarget.qAlign, qTmpSource );
+//		
+//		final double[] q = new double[ 4 ];
+//		LinAlgHelpers.quaternionInvert( qTmpSource, q );
+		
+		double[][] R = new double[4][4];
+		LinAlgHelpers.quaternionToR( qTarget.qAlign, R );
+		R[3][3] = 1.0;
+		System.out.println( "R:\n" + XfmUtils.printArray( R ) );
+		
+		destXfm.set( R );
+		
 		double centerX;
 		double centerY;
 		if ( mouseCoordinates.isMouseInsidePanel() )
@@ -196,6 +295,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerY = getHeight() / 2.0;
 			centerX = getWidth() / 2.0;
 		}
+		
+//		currentAnimator = new RotationAnimator( transform, centerX, centerY, q, 300 );
 		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget.qAlign, 300 );
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
@@ -223,6 +324,11 @@ public class BigWarpViewerPanel extends ViewerPanel
     	transformEnabled = enabled;
     }
     
+    public boolean getTransformEnabled()
+    {
+    	return transformEnabled;
+    }
+    
 	@Override
 	public synchronized void transformChanged( final AffineTransform3D transform )
 	{
@@ -233,11 +339,11 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public static enum RotatePlane2d
 	{
 		
-		qpX( "pX", new double[]{   1.0, 0.0, 0.0,  0.0 }),
-		qpY( "pY", new double[]{  R2o2, 0.0, 0.0, R2o2 }),
-		qnX( "nX", new double[]{   0.0, 0.0, 0.0,  1.0 }),
-		qnY( "nY", new double[]{ -R2o2, 0.0, 0.0, R2o2 });
-
+		qpX( "pX", new double[]{   1.0, 0.0, 0.0,   0.0 }),
+		qpY( "pY", new double[]{  R2o2, 0.0, 0.0,  R2o2 }),
+		qnX( "nX", new double[]{   0.0, 0.0, 0.0,   1.0 }),
+		qnY( "nY", new double[]{  R2o2, 0.0, 0.0, -R2o2 });
+		
 		private final String name;
 
 		public String getName()

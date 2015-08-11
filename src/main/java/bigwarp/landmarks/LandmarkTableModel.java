@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.io.FileUtils;
@@ -52,7 +54,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected Double[] pointToOverride;	// hold a backup of a point for fallback
 	
 	// keeps track of whether points have been updated
-	protected ArrayList<Boolean> changedPositionSinceWarpEstimation; 
+	protected ArrayList<Boolean> changedPositionSinceWarpEstimation;
+	protected ArrayList<Integer> wereUpdated;
+	protected ArrayList<Boolean> needsInverse;
 	
 	// the transformation 
 	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
@@ -96,6 +100,10 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		warpedPoints = new ArrayList<Double[]>();
 		changedPositionSinceWarpEstimation = new ArrayList<Boolean>();
+		wereUpdated  = new ArrayList<Integer>();
+		needsInverse = new ArrayList<Boolean>();
+		
+		setTableListener();
 	}
 	
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
@@ -121,12 +129,49 @@ public class LandmarkTableModel extends AbstractTableModel {
 		{
 			for( int d = 0; d < ndims; d++ )
 			{
-				if ( pts.get( i )[ ndims + d ].doubleValue() != estimatedXfm.getSourceLandmarks()[ d ][ i ] )
+				if ( pts.get( i )[ ndims + d ].doubleValue() != estimatedXfm.getSourceLandmarks()[ d ][ i ] ){
+					System.out.println("Wrong for pt: " + i );
 					return false;
+				}
 			}
 		}
 		
 		return true;
+	}
+	
+	public void setTableListener()
+	{
+//		addTableModelListener( new TableModelListener()
+//		{
+//			@Override
+//			public void tableChanged( TableModelEvent e )
+//			{
+//				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
+//				{
+//					int row = e.getFirstRow();
+//					System.out.println("updating active for row: " + row );
+//					if( activeList.get(row) )
+//						estimatedXfm.enableLandmarkPair( row );
+//					else
+//						estimatedXfm.disableLandmarkPair( row );
+//				}
+//			}
+//			
+//		});
+		addTableModelListener( new TableModelListener()
+		{
+			@Override
+			public void tableChanged( TableModelEvent e )
+			{
+				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
+				{
+					int row = e.getFirstRow();
+					System.out.println("updating active for row: " + row );
+					wereUpdated.add( row );
+				}
+			}
+			
+		});
 	}
 	
 	protected void importTransformation( File ffwd, File finv ) throws IOException
@@ -164,6 +209,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		changedPositionSinceWarpEstimation.set( i, true );
 		activeList.set( i, false );
+		estimatedXfm.disableLandmarkPair( i );
 		
 		pointUpdatePending = true;
 		fireTableRowsUpdated( i, i );
@@ -252,6 +298,34 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 	}
 	
+	public void deleteRow( int i )
+	{
+		if( i >= names.size() ) return;
+		
+		names.remove( i );
+		pts.remove( i );
+		activeList.remove( i );
+		fireTableRowsDeleted( i, i );
+		
+		numRows--;
+		nextRowP = nextRow( true  );
+		nextRowQ = nextRow( false );
+		pointUpdatePending = isUpdatePending();
+		
+		// TODO deal with deletes correctly in the model
+		
+	}
+	
+	public boolean isUpdatePending()
+	{	
+		for( int i = 0; i < pts.size(); i++ )
+			for( int d = 0; d <  6; d++ )
+				if( Double.isInfinite( pts.get( i )[ d ] ))
+						return true;
+		
+		return false;
+	}
+	
 	public int nextRow( boolean isMoving )
 	{
 		if( pts.size() == 0 ){
@@ -322,6 +396,15 @@ public class LandmarkTableModel extends AbstractTableModel {
 		Collections.fill( changedPositionSinceWarpEstimation, false );
 	}
 	
+	public void resetNeedsInverse(){
+		Collections.fill( needsInverse, false );
+	}
+	
+	public void setNeedsInverse( int i )
+	{
+		needsInverse.set( i, true );
+	}
+	
 	protected void firePointUpdated( int row, boolean isMoving )
 	{
 		for( int d = 0; d < ndims; d++ )
@@ -361,6 +444,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		else
 		{
+			System.out.println("Add redundant" );
+			
 			Double[] exPts = pts.get( nextRow );
 			for( int i = 0; i < ndims; i++ )
 				exPts[ i + offset ] = pt[ i ];
@@ -369,38 +454,57 @@ public class LandmarkTableModel extends AbstractTableModel {
 			activeList.set( nextRow, true );
 			
 			
-			double[] tgtpt = null;
-			double[] srcpt = null;
-			double[] pointerPt = null;
+//			double[] tgtpt = null;
+//			double[] srcpt = null;
+//			double[] pointerPt = null;
 			
-			int copyOffset = 0;
+//			int copyOffset = 0;
 			if( isMoving )
 			{
 				changedPositionSinceWarpEstimation.set( nextRow, false );
 				for( int d = 0; d < ndims; d++ )
 					warpedPoints.get( nextRowP )[ d ] = pt[ d ];
 				
-				copyOffset = ndims;
+//				copyOffset = ndims;
 				
-				srcpt = pt;
-				tgtpt = new double[ ndims ];
-				pointerPt  = tgtpt; 
+//				srcpt = pt;
+//				tgtpt = new double[ ndims ];
+//				pointerPt  = tgtpt; 
 			}
-			else
-			{
-				tgtpt = pt;
-				srcpt = new double[ ndims ];
-				pointerPt  = srcpt;
-			}
+//			else
+//			{
+//				tgtpt = pt;
+//				srcpt = new double[ ndims ];
+//				pointerPt  = srcpt;
+//			}
 			
-			if( estimatedXfm != null )
-			{
-				for( int i = 0; i < ndims; i++ )
-					pointerPt[ i ] = pts.get( nextRow )[ copyOffset + i ];
-				
-				estimatedXfm.addMatch( tgtpt, srcpt );
-			}
+//			if( estimatedXfm != null )
+//			{
+//				if( nextRow == estimatedXfm.getNumLandmarks() ) // its a new point for estimatedXfm 
+//				{
+//					for( int i = 0; i < ndims; i++ )
+//						pointerPt[ i ] = pts.get( nextRow )[ copyOffset + i ];
+//					
+////					estimatedXfm.addMatch( tgtpt, srcpt );
+////					estimatedXfm.disableLandmarkPair( nextRow );
+//					
+//				}
+//				else
+//				{
+//					for( int i = 0; i < ndims; i++ )
+//						pointerPt[ i ] = pts.get( nextRow )[ copyOffset + i ];
+//					
+////					if( isMoving )
+////						estimatedXfm.updateSourceLandmark( nextRow, tgtpt );
+////					else
+////						estimatedXfm.updateTargetLandmark( nextRow, srcpt );
+//				}
+//				
+//			}
 		}
+		
+		if( !wereUpdated.contains( nextRow ))
+			wereUpdated.add( nextRow );
 		
 		if( isMoving )
 			nextRowP = nextRow( isMoving );
@@ -409,6 +513,48 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		firePointUpdated( nextRowP, isMoving );
 		return "";
+	}
+	
+	public void resetUpdated()
+	{
+		wereUpdated.clear();
+	}
+	
+	public void transferUpdatesToModel()
+	{
+		// TODO transferUpdatesToModel
+		
+		if( estimatedXfm == null )
+			return;
+		
+		double[] source = new double[ ndims ];
+		double[] target = new double[ ndims ];
+		for( Integer i : wereUpdated )
+		{
+			System.out.println( "updating point: " + i );
+			
+			// 'source' and 'target' are swapped to get inverse transform
+			for( int d = 0; d < ndims; d++ )
+			{
+				target[ d ] = pts.get( i )[ d ];
+				source[ d ] = pts.get( i )[ d + ndims ];
+			}
+				
+			if( i < estimatedXfm.getNumLandmarks() )
+			{
+				estimatedXfm.updateSourceLandmark( i, source );
+				estimatedXfm.updateTargetLandmark( i, target );
+			}
+			else
+			{
+				estimatedXfm.addMatch( source, target ); 
+			}
+			
+			if( activeList.get( i ))
+				estimatedXfm.enableLandmarkPair( i );
+			else
+				estimatedXfm.disableLandmarkPair( i );
+		}
 	}
 	
 	/**
@@ -547,8 +693,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setPoint( int row, boolean isMoving, double[] pt )
 	{
-		
-		//System.out.println( "LTM BEFORE - " + pts.get(row));
 		int offset = 0;
 		if( !isMoving )
 			offset = ndims;
@@ -561,15 +705,21 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		if(( estimatedXfm != null ))
         {
-			// moving and target are "switched" since we need an "inverse tps"
-			if( isMoving )
-				estimatedXfm.updateTargetLandmark( row, pt );
-			else
-				estimatedXfm.updateSourceLandmark( row, pt );
+			if( !wereUpdated.contains( row ))
+				wereUpdated.add( row );
+		
+//			if( !isMoving && !isWarpedPositionChanged( row ))
+//				updateWarpedPoint( row, pt );
+//			else if( isMoving )
+//				updateWarpedPoint( row, pt );
+			
+//			// moving and target are "switched" since we need an "inverse tps"
+//			if( isMoving )
+//				estimatedXfm.updateTargetLandmark( row, pt );
+//			else
+//				estimatedXfm.updateSourceLandmark( row, pt );
 				
         }
-		
-		//System.out.println( "LTM AFTER - " + print(pts.get(row)));
 	}
 	
 	public static String print( Double[] d )
@@ -597,8 +747,6 @@ public class LandmarkTableModel extends AbstractTableModel {
         	Double[] thesePts = pts.get(row);
         	thesePts[col-2] = ((Double)value).doubleValue();
         }
-        
-        
         
         fireTableCellUpdated(row, col);
 

@@ -22,7 +22,7 @@ import bdv.viewer.ViewerPanel.Options;
 public class BigWarpViewerFrame extends JFrame
 {
 
-	protected final BigWarpViewerPanel viewerP;
+	protected final BigWarpViewerPanel viewer;
 	
 	private final InputActionBindings keybindings;
 	
@@ -55,18 +55,18 @@ public class BigWarpViewerFrame extends JFrame
 			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
 			flippedList.add( sources.get( 1 ));
 			flippedList.add( sources.get( 0 ));
-			viewerP = new BigWarpViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
+			viewer = new BigWarpViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
 		}
 		else
 		{
-			viewerP = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
+			viewer = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
 		}
 		
 		keybindings = new InputActionBindings();
 
 		getRootPane().setDoubleBuffered( true );
 		setPreferredSize( new Dimension( width, height ) );
-		add( viewerP, BorderLayout.CENTER);
+		add( viewer, BorderLayout.CENTER);
 		
 		pack();
 		setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
@@ -75,7 +75,7 @@ public class BigWarpViewerFrame extends JFrame
 			@Override
 			public void windowClosing( final WindowEvent e )
 			{
-				viewerP.stop();
+				viewer.stop();
 			}
 		} );
 
@@ -85,12 +85,12 @@ public class BigWarpViewerFrame extends JFrame
 	
 	public boolean isMoving()
 	{
-		return viewerP.getIsMoving();
+		return viewer.getIsMoving();
 	}
 	
-	public BigWarpViewerPanel getViewerPanelP()
+	public BigWarpViewerPanel getViewerPanel()
 	{
-		return viewerP;
+		return viewer;
 	}
 	
 	public InputActionBindings getKeybindings()

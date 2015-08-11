@@ -80,6 +80,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	{
 		this.isTransformed = isTransformed;
 	}
+	
+	public boolean isTransformed( )
+	{
+		return isTransformed;
+	}
 
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )

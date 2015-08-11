@@ -9,7 +9,6 @@ import javax.swing.JTable;
 
 import bigwarp.landmarks.LandmarkTableModel;
 
-
 public class BigWarpLandmarkPanel extends JPanel {
 	
 	private static final long serialVersionUID = 8470689265638231579L;
@@ -43,6 +42,5 @@ public class BigWarpLandmarkPanel extends JPanel {
     public JTable getJTable(){
     	return table;
     }
-	
 	
 }
