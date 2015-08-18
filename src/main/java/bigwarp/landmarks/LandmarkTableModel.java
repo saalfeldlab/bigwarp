@@ -80,7 +80,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	final String[] columnNames;
 	
-	public LandmarkTableModel( int ndims ){
+	public LandmarkTableModel( int ndims )
+	{
 		super();
 		this.ndims = ndims;
 		
@@ -188,33 +189,31 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setPointToUpdate( int i, boolean isMoving )
 	{
-		System.out.println("setPointToUpdate: " + i  + " " + isMoving );
 		int offset = 0;
-		if( isMoving )
+		if ( isMoving )
 		{
 			nextRowP = i;
 			pointUpdatePendingMoving = true;
-		}
-		else 
+		} else
 		{
 			nextRowQ = i;
 			offset = ndims;
 			pointUpdatePendingMoving = false;
 		}
-		
-		for( int d = 0; d < ndims; d++ )
+
+		for ( int d = 0; d < ndims; d++ )
 		{
 			pointToOverride[ d ] = pts.get( i )[ offset + d ];
 			pts.get( i )[ offset + d ] = Double.POSITIVE_INFINITY;
 			warpedPoints.get( i )[ d ] = Double.POSITIVE_INFINITY;
 		}
-		
+
 		changedPositionSinceWarpEstimation.set( i, false );
 		activeList.set( i, false );
-		
+
 		pointUpdatePending = true;
 		fireTableRowsUpdated( i, i );
-		
+
 	}
 	
 	public boolean isPointUpdatePending()
@@ -344,8 +343,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return i;
 	}
 	
-	public void addOld( String name, Double[] pt ){
-		names.add(name);
+	public void addOld( String name, Double[] pt )
+	{
+		names.add( name );
 		pts.add( pt );
 		activeList.add( true );
 		fireTableRowsInserted( numRows, numRows );
@@ -377,17 +377,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		return changedPositionSinceWarpEstimation.get( i );
 	}
-	
-	public void updateWarpedPoint( int i , double[] pt )
+
+	public void updateWarpedPoint( int i, double[] pt )
 	{
-		for( int d = 0; d < ndims; d++ )
+		for ( int d = 0; d < ndims; d++ )
 			warpedPoints.get( i )[ d ] = pt[ d ];
-		
+
 		changedPositionSinceWarpEstimation.set( i, true );
-		// System.out.println("updateWarpedPoint " + i + ": " + pt[0] + " " + pt[1] + " " + pt[2] );
 	}
-	
-	public ArrayList<Double[]> getWarpedPoints( )
+
+	public ArrayList< Double[] > getWarpedPoints()
 	{
 		return warpedPoints;
 	}
@@ -445,7 +444,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		else
 		{
-//			System.out.println("Add redundant" );
 			
 			Double[] exPts = pts.get( nextRow );
 			for( int i = 0; i < ndims; i++ )
@@ -532,7 +530,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		double[] target = new double[ ndims ];
 		for( Integer i : wereUpdated )
 		{
-//			System.out.println( "updating point: " + i );
 			
 			// 'source' and 'target' are swapped to get inverse transform
 			for( int d = 0; d < ndims; d++ )
@@ -754,22 +751,24 @@ public class LandmarkTableModel extends AbstractTableModel {
     }
 	
 	@Override
-	public Object getValueAt(int rowIndex, int columnIndex) {
-		if( columnIndex == 0 ){
+	public Object getValueAt( int rowIndex, int columnIndex )
+	{
+		if ( columnIndex == 0 )
 			return names.get( rowIndex );
-		}else if( columnIndex == 1 ){
+		else if ( columnIndex == 1 )
 			return activeList.get( rowIndex );
-		}else{
-			return new Double(pts.get(rowIndex)[columnIndex-2]);
-		}
+		else
+			return new Double( pts.get( rowIndex )[ columnIndex - 2 ] );
+
 	}
-	
+
 	/**
 	 * Only allow editing of the first ("Name") and 
 	 * second ("Active") column
 	 */
-	public boolean isCellEditable( int row, int col ){
-		return ( col <= 1 );
+	public boolean isCellEditable( int row, int col )
+	{
+		return (col <= 1);
 	}
 
 }

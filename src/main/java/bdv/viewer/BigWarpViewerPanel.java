@@ -21,9 +21,7 @@ import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.RotationAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator2D;
-import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.SourceState;
-import bigwarp.util.Rotation2DHelpers;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {

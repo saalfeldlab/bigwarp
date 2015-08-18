@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.swing.JComponent;
@@ -49,19 +48,9 @@ public class BigWarpViewerFrame extends JFrame
 			final boolean isMoving )
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
-			
-//		if( !isMoving )
-//		{
-//			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
-//			flippedList.add( sources.get( 1 ));
-//			flippedList.add( sources.get( 0 ));
-//			viewer = new BigWarpViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-//		}
-//		else
-//		{
-			viewer = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-//		}
 		
+		viewer = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
+
 		if( !isMoving )
 			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
 		
@@ -69,7 +58,7 @@ public class BigWarpViewerFrame extends JFrame
 
 		getRootPane().setDoubleBuffered( true );
 		setPreferredSize( new Dimension( width, height ) );
-		add( viewer, BorderLayout.CENTER);
+		add( viewer, BorderLayout.CENTER );
 		
 		pack();
 		setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
