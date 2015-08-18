@@ -50,17 +50,20 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 			
-		if( !isMoving )
-		{
-			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
-			flippedList.add( sources.get( 1 ));
-			flippedList.add( sources.get( 0 ));
-			viewer = new BigWarpViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-		}
-		else
-		{
+//		if( !isMoving )
+//		{
+//			ArrayList< SourceAndConverter< ? >> flippedList = new ArrayList< SourceAndConverter< ? >>();
+//			flippedList.add( sources.get( 1 ));
+//			flippedList.add( sources.get( 0 ));
+//			viewer = new BigWarpViewerPanel( flippedList, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
+//		}
+//		else
+//		{
 			viewer = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
-		}
+//		}
+		
+		if( !isMoving )
+			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
 		
 		keybindings = new InputActionBindings();
 

@@ -76,6 +76,7 @@ import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.Options;
+import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
@@ -83,6 +84,8 @@ import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.source.GridSource;
+import bigwarp.source.WarpMagnitudeSource;
 
 public class BigWarp {
 	
@@ -92,9 +95,10 @@ public class BigWarp {
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
 //	protected final SetupAssignments setupAssignments;
-	protected final BrightnessDialog brightnessDialogP;
-	protected final BrightnessDialog brightnessDialogQ;
+	protected final BrightnessDialog brightnessDialog;
 	protected final HelpDialog helpDialog;
+	
+	protected final VisibilityAndGroupingDialog activeSourcesDialog;
 	
 	private final BigWarpViewerFrame viewerFrameP;
 	private final BigWarpViewerFrame viewerFrameQ;
@@ -179,6 +183,7 @@ public class BigWarp {
 		viewerP.setNumDim( ndims );
 		viewerQ.setNumDim( ndims );
 		
+		activeSourcesDialog = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		setUpViewerMenu( getViewerFrameP() );
 		setUpViewerMenu( getViewerFrameQ() );
 		
@@ -207,24 +212,40 @@ public class BigWarp {
 		landmarkPopupMenu = new LandmarkPointMenu( landmarkPanel );
 		landmarkPopupMenu.setupListeners( );
 		
-		ArrayList<ConverterSetup> csetupsP = new ArrayList<ConverterSetup>();
-		csetupsP.add( converterSetups.get(0) );
-		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(0) ))
-			( ( RealARGBColorConverterSetup ) converterSetups.get(0) ).setViewer( viewerP );
+		// TODO brightness dialog setup
+		int i = 0;
+		ArrayList<ConverterSetup> csetups = new ArrayList<ConverterSetup>();
+		for ( final ConverterSetup cs : converterSetups )
+		{
+			System.out.println("converter setup: " + (i++) );
+			csetups.add( cs );
+			if ( RealARGBColorConverterSetup.class.isInstance( cs ))
+				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
+		}
 		
-		ArrayList<ConverterSetup> csetupsQ = new ArrayList<ConverterSetup>();
-		csetupsQ.add( converterSetups.get(1) );
-		if ( RealARGBColorConverterSetup.class.isInstance( converterSetups.get(1) ))
-			( ( RealARGBColorConverterSetup ) converterSetups.get(1) ).setViewer( viewerQ );
-		
-		SetupAssignments setupAssignmentsP = new SetupAssignments( csetupsP, 0, 512 );
-		SetupAssignments setupAssignmentsQ = new SetupAssignments( csetupsQ, 0, 512 );
-		
-		brightnessDialogP = new BrightnessDialog( getViewerFrameP(), setupAssignmentsP );
-		brightnessDialogQ = new BrightnessDialog( getViewerFrameQ(), setupAssignmentsQ );
+		SetupAssignments setupAssignments = new SetupAssignments( csetups, 0, 512 );
+		if ( setupAssignments.getMinMaxGroups().size() > 0 )
+		{
+			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
+			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
+				setupAssignments.moveSetupToGroup( setup, group );
+		}
+		brightnessDialog = new BrightnessDialog( getViewerFrameQ(), setupAssignments );
 		helpDialog = new HelpDialog( getViewerFrameP() );
 		
+		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
+		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, (ndims==2) );
+		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties);
+		
+		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerQ, keyProperties, (ndims==2) );
+		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, keyProperties);
+		
+		setUpViewerMenu( viewerFrameP );
+		setUpViewerMenu( viewerFrameQ );
 		setUpLandmarkMenus();
+		
+		// initialize warp base to affine
+		warpMagTypeGroup.getElements().nextElement().doClick();
 		
 		/* Set the locations of frames */
 		Point viewerFramePloc = getViewerFrameP().getLocation();
@@ -232,14 +253,6 @@ public class BigWarp {
 		getViewerFrameQ().setLocation( viewerFramePloc );
 		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
 		landmarkFrame.setLocation( viewerFramePloc );
-
-		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
-		
-		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, (ndims==2) );
-		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties);
-		
-		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerQ, keyProperties, (ndims==2) );
-		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, keyProperties);
 		
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
@@ -252,8 +265,8 @@ public class BigWarp {
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
 		
-		getViewerFrameP().setVisible(true);
-		getViewerFrameQ().setVisible(true);
+		viewerFrameP.setVisible(true);
+		viewerFrameQ.setVisible(true);
 		landmarkFrame.setVisible(true);
 		
 		checkBoxInputMaps();
