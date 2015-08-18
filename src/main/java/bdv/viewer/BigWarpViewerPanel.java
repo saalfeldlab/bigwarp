@@ -18,8 +18,12 @@ import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
+import bdv.viewer.animate.RotationAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator;
+import bdv.viewer.animate.SimilarityTransformAnimator2D;
+import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.SourceState;
+import bigwarp.util.Rotation2DHelpers;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
@@ -40,6 +44,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
+	Options options;
+	
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, boolean isMoving )
 	{
 		this( sources, numTimePoints, cache, options(), isMoving );
@@ -48,6 +54,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, final Options optional, boolean isMoving )
 	{
 		super( sources, numTimePoints, cache, optional );
+		options = optional;
 		viewerSettings = new BigWarpViewerSettings();
 		this.isMoving = isMoving;
 		destXfm = new AffineTransform3D();
@@ -71,15 +78,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.ndims = ndim;
 	}
 	
+
 	@Override
 	public void paint()
 	{
 		if ( currentAnimator!=null && currentAnimator.isComplete() )
-		{
-			System.out.println("asdfasdfasdfasdfasdfasdf");
 			transformChanged( destXfm );
-		}
-			
+		
 		super.paint();
 	}
 	
@@ -194,10 +199,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
 		
-//		System.out.println( qTarget[0] + " " + qTarget[1] + " " + qTarget[2] + " " + qTarget[3] );
 	}
 
-	public void displayViewerTransforms(  )
+	public void displayViewerTransforms()
 	{
 //		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 //		final AffineTransform3D sourceTransform = new AffineTransform3D();
@@ -205,19 +209,15 @@ public class BigWarpViewerPanel extends ViewerPanel
 		
 		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
 		
-//		final AffineTransform3D stateTransform = new AffineTransform3D();
-//		state.getViewerTransform( stateTransform );
+		final AffineTransform3D stateTransform = new AffineTransform3D();
+		state.getViewerTransform( stateTransform );
 		
 		final double[] q = new double[ 4 ];
 		Affine3DHelpers.extractRotationAnisotropic( transform, q );
 		
-//		System.out.println( "sourceTransform: " + sourceTransform );
-		System.out.println( "display transform: " + transform );
-//		System.out.println( "state transform: " + stateTransform );
-		System.out.println( "q: " + q[0] + " " + q[1] + " " + q[2] + " " + q[3] );
 	}
 	
-	public void rotateView2d( boolean isClockwise )
+	public synchronized void rotateView2d( boolean isClockwise )
 	{
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
@@ -270,17 +270,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 		
 		if( qTarget == null ) return;
 		
-//		final double[] qTmpSource = new double[ 4 ];
-//		LinAlgHelpers.quaternionMultiply( qSource, qTarget.qAlign, qTmpSource );
-//		
-//		final double[] q = new double[ 4 ];
-//		LinAlgHelpers.quaternionInvert( qTmpSource, q );
-		
 		double[][] R = new double[4][4];
 		LinAlgHelpers.quaternionToR( qTarget.qAlign, R );
 		R[3][3] = 1.0;
-		System.out.println( "R:\n" + XfmUtils.printArray( R ) );
-		
 		destXfm.set( R );
 		
 		double centerX;
@@ -297,7 +289,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 		}
 		
 //		currentAnimator = new RotationAnimator( transform, centerX, centerY, q, 300 );
-		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget.qAlign, 300 );
+//		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget.qAlign, 300 );
+		currentAnimator = new RotationAnimator2D( transform, centerX, centerY, destXfm, 300 );
+
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
 	}
@@ -307,10 +301,29 @@ public class BigWarpViewerPanel extends ViewerPanel
     	AffineTransform3D startXfm = new AffineTransform3D();
     	getState().getViewerTransform( startXfm );
     	
-    	currentAnimator = 
-    			new SimilarityTransformAnimator( startXfm, destinationXfm, 0, 0, millis);
-    	currentAnimator.setTime( System.currentTimeMillis() );
+		double centerX;
+		double centerY;
+		if ( mouseCoordinates.isMouseInsidePanel() )
+		{
+			centerX = mouseCoordinates.getX();
+			centerY = mouseCoordinates.getY();
+		}
+		else
+		{
+			centerY = getHeight() / 2.0;
+			centerX = getWidth() / 2.0;
+		}
     	
+		if( ndims == 2 )
+			currentAnimator = 
+				new SimilarityTransformAnimator2D( startXfm, destinationXfm, centerX, centerY, millis );
+		else
+		{
+			currentAnimator = 
+    			new SimilarityTransformAnimator( startXfm, destinationXfm, centerX, centerY, millis );
+		}
+    	
+    	currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( destinationXfm );
     }
     
