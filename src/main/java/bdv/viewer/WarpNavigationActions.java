@@ -21,8 +21,10 @@ public class WarpNavigationActions
 	public static final String TOGGLE_GROUPING = "toggle grouping";
 	public static final String SET_CURRENT_SOURCE = "set current source %d";
 	public static final String TOGGLE_SOURCE_VISIBILITY = "toggle source visibility %d";
+	
 	public static final String ALIGN_PLANE = "align %s plane";
 	public static final String ROTATE_PLANE = "rotate %s";
+	
 
 	public static final String DISPLAY_XFMS = "display transforms";
 	
@@ -112,6 +114,7 @@ public class WarpNavigationActions
 		
 		map.put( new RotatePlaneAction( viewer, rotationDirections2d.CLOCKWISE ) ); // clockwise
 		map.put( new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ) ); // counterclockwise
+
 		
 		map.put( new DisplayXfmAction( viewer ) );
 	}
@@ -269,7 +272,9 @@ public class WarpNavigationActions
 
 		private static final long serialVersionUID = 1L;
 	}
-
+	
+	
+	
 	private WarpNavigationActions()
 	{}
 }

@@ -4,6 +4,7 @@ import ij.IJ;
 import ij.ImagePlus;
 
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -23,7 +24,6 @@ import javax.swing.ButtonGroup;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
-import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -82,6 +82,7 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
+import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.LandmarkPointMenu;
@@ -105,9 +106,12 @@ public class BigWarp {
 	protected static final int DEFAULT_WIDTH  = 800;
 	protected static final int DEFAULT_HEIGHT = 600;
 	
+	// descriptive names for indexing sources
+	protected int movingSourceIndex = 0;
+	protected int fixedSourceIndex = 1;
+	
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
-//	protected final SetupAssignments setupAssignments;
 	protected final BrightnessDialog brightnessDialog;
 	protected final HelpDialog helpDialog;
 	
@@ -120,7 +124,7 @@ public class BigWarp {
 	
 	protected final BigWarpLandmarkPanel landmarkPanel;
 	protected final LandmarkPointMenu    landmarkPopupMenu;
-	protected final JFrame landmarkFrame;
+	protected final BigWarpLandmarkFrame landmarkFrame;
 	
 	protected final BigWarpOverlay overlayP;
 	protected final BigWarpOverlay overlayQ;
@@ -143,11 +147,10 @@ public class BigWarp {
 	MouseLandmarkTableListener landmarkTableListenerQ;
 
 	protected int ndims;
-	// protected ThinPlateR2LogRSplineKernelTransform estimatedXfmCopy;
 	
 	protected TransformEventHandler<AffineTransform3D> handlerQ;
 	protected TransformEventHandler<AffineTransform3D> handlerP;
-	final static DummyTransformEventHandler dummyHandler = new DummyTransformEventHandler();
+	final static DummyTransformEventHandler DUMMY_TRANSFORM_HANDLER = new DummyTransformEventHandler();
 
 	protected final int gridSourceIndex;
 	protected final int warpMagSourceIndex;
@@ -238,15 +241,11 @@ public class BigWarp {
 		landmarkPanel.setOpaque( true );
 		addDefaultTableMouseListener();
 		
-		landmarkFrame = new JFrame( "Landmarks" );
-		landmarkFrame.setDefaultCloseOperation( JFrame.HIDE_ON_CLOSE );
-		landmarkFrame.setContentPane( landmarkPanel );
-		landmarkFrame.pack();
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel );
 		
 		landmarkPopupMenu = new LandmarkPointMenu( landmarkPanel );
 		landmarkPopupMenu.setupListeners( );
 		
-		// TODO brightness dialog setup
 		int i = 0;
 		ArrayList<ConverterSetup> csetups = new ArrayList<ConverterSetup>();
 		for ( final ConverterSetup cs : converterSetups )
@@ -273,6 +272,8 @@ public class BigWarp {
 		
 		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerQ, keyProperties, (ndims==2) );
 		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, keyProperties);
+		
+		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, keyProperties );
 		
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
@@ -403,9 +404,7 @@ public class BigWarp {
         
         openItem.addMouseListener( new MouseListener(){
 			@Override
-			public void mouseClicked(MouseEvent e) {
-				 System.out.println( "clicked open  ");
-			}
+			public void mouseClicked(MouseEvent e) {}
 			@Override
 			public void mouseEntered(MouseEvent e) {}
 			@Override
@@ -563,18 +562,21 @@ public class BigWarp {
 
 	public void setInLandmarkMode( boolean inLmMode )
 	{
-		System.out.println( "setInLandmarkMode" );
 		if( inLmMode )
 		{
 			disableTransformHandlers();
 			viewerP.showMessage("Landmark mode on ( Moving image )");
 			viewerQ.showMessage("Landmark mode on ( Fixed image )");
+			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
+			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
 		}
 		else
 		{
 			enableTransformHandlers();
 			viewerP.showMessage("Landmark mode off ( Moving image )");
 			viewerQ.showMessage("Landmark mode off ( Fixed image )");
+			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
+			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
 		}
 		
 		inLandmarkMode = inLmMode;
@@ -589,13 +591,13 @@ public class BigWarp {
 	{
 		// disable navigation listeners
 		handlerP = viewerP.getDisplay().getTransformEventHandler();
-		viewerP.getDisplay().setTransformEventHandler( dummyHandler );
+		viewerP.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
 		
 		viewerP.setTransformEnabled( false );
 		viewerQ.setTransformEnabled( false );
 		
 		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
-		viewerQ.getDisplay().setTransformEventHandler( dummyHandler );
+		viewerQ.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
 	}
 	
 	protected void enableTransformHandlers()
@@ -609,6 +611,100 @@ public class BigWarp {
 		
 		if( handlerQ != null )
 			viewerQ.getDisplay().setTransformEventHandler( handlerQ );
+	}
+	
+	/**
+	 * Changes the view transformation of 'panelToChange' to match that of 'panelToMatch'
+	 * @param panelToChange
+	 * @param panelToMatch
+	 */
+	protected void matchWindowTransforms( BigWarpViewerPanel panelToChange, BigWarpViewerPanel panelToMatch )
+	{
+		panelToChange.showMessage( "Aligning" );
+		panelToMatch.showMessage( "Matching alignment" );
+		
+		// get the transform from panelToMatch
+		AffineTransform3D viewXfm = new AffineTransform3D();
+		panelToMatch.getState().getViewerTransform( viewXfm );
+		
+		// change transform of panelToChange
+		panelToChange.animateTransformation( viewXfm );
+	}
+	
+	public void matchOtherViewerPanelToActive()
+	{
+		BigWarpViewerPanel panelToChange;
+		BigWarpViewerPanel panelToMatch;
+		
+		if( viewerFrameP.isActive() )
+		{
+			panelToChange = viewerQ;
+			panelToMatch  = viewerP;
+		}
+		else if( viewerFrameQ.isActive() )
+		{
+			panelToChange = viewerP;
+			panelToMatch  = viewerQ;
+		}
+		else
+			return;
+		
+		matchWindowTransforms( panelToChange, panelToMatch );
+	}
+	
+	public void matchActiveViewerPanelToOther()
+	{
+		BigWarpViewerPanel panelToChange;
+		BigWarpViewerPanel panelToMatch;
+		
+		if( viewerFrameP.isActive() )
+		{
+			panelToChange = viewerP;
+			panelToMatch  = viewerQ;
+		}
+		else if( viewerFrameQ.isActive() )
+		{
+			panelToChange = viewerQ;
+			panelToMatch  = viewerP;
+		}
+		else
+			return;
+		
+		matchWindowTransforms( panelToChange, panelToMatch );
+	}
+	
+	public void toggleNameVisibility()
+	{
+		viewerP.getSettings().toggleNamesVisible();
+		viewerP.requestRepaint();
+		viewerQ.getSettings().toggleNamesVisible();
+		viewerQ.requestRepaint();
+	}
+	
+	public void togglePointVisibility()
+	{
+		viewerP.getSettings().togglePointsVisible();
+		viewerP.requestRepaint();
+		viewerQ.getSettings().togglePointsVisible();
+		viewerQ.requestRepaint();
+	}
+	
+	/**
+	 * Toggles whether the moving image is displayed after warping
+	 * (in the same space as the fixed image), or in its native space. 
+	 */
+	public void toggleMovingImageDisplay()
+	{
+		boolean newState =  !getOverlayP().getIsTransformed();
+		
+		if( newState )
+			getViewerFrameP().getViewerPanel().showMessage("Displaying warped");
+		else
+			getViewerFrameP().getViewerPanel().showMessage("Displaying raw");
+		
+		// Toggle whether moving image is displayed as transformed or not
+		setIsMovingDisplayTransformed( newState );
+		getViewerFrameP().getViewerPanel().requestRepaint();
 	}
 	
 	protected void exportMovingImage( File f ) throws IOException, InterruptedException
@@ -932,6 +1028,10 @@ public class BigWarp {
 	
 	public void restimateTransformation()
 	{
+		
+		getViewerFrameP().getViewerPanel().showMessage("Estimating transformation...");
+		getViewerFrameQ().getViewerPanel().showMessage("Estimating transformation...");
+		
 		// TODO restimateTransformation
 		boolean isFirst = false;
 		if( landmarkModel.getTransform() == null )
@@ -942,7 +1042,7 @@ public class BigWarp {
 		else
 		{
 			landmarkModel.transferUpdatesToModel();
-			System.out.println( "are point valid? " + landmarkModel.validateTransformPoints());
+			// System.out.println( "are point valid? " + landmarkModel.validateTransformPoints());
 		}
 		
 		// estimate the forward transformation
@@ -967,37 +1067,31 @@ public class BigWarp {
 		gSrc.setWarp( landmarkModel.getTransform().deepCopy() );
 		fitBaselineWarpMagModel();
 		
-//		double[] minmax = wmSrc.minMax();
-//		wmSrc.debug( new double[]{  0.0,   0.0, 0.0 });
-//		wmSrc.debug( new double[]{ 75.0, 230.0, 0.0 });
-		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
 	
-
-	
 	public void setIsMovingDisplayTransformed( boolean isTransformed )
 	{
-		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).setIsTransformed( isTransformed );
+		( (WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).setIsTransformed( isTransformed );
 		
-		if( sources.get(0).asVolatile() != null )
-			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
+		if( sources.get( movingSourceIndex ).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( movingSourceIndex ).asVolatile().getSpimSource())).setIsTransformed( isTransformed );
 		
 		overlayP.setIsTransformed( isTransformed );
 	}
 	
 	public boolean isMovingDisplayTransformed()
 	{
-		return ((WarpedSource<?>)(sources.get( 0 ).getSpimSource())).isTransformed();
+		return ((WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).isTransformed();
 	}
 	
 	protected int detectNumDims()
 	{
 		// System.out.println( "ndim 0: " + sources.get( 0 ).getSpimSource().getSource( 0, 0 ).dimension( 2 ));
 		
-		boolean is1Src2d = sources.get( 0 ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
-		boolean is2Src2d = sources.get( 1 ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
+		boolean is1Src2d = sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
+		boolean is2Src2d = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
 		
 		int ndims = 3;
 		if( is1Src2d && is2Src2d )
