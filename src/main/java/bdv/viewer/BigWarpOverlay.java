@@ -83,13 +83,15 @@ public class BigWarpOverlay {
 				textBoxColor = Color.BLACK;
 			}
 			
-			int index = 0;
-			for ( final Double[] spot : landmarkModel.getPoints()) 
+			if( landmarkModel.getPoints().size() > 0 && landmarkModel.getPoints().get( 0 ).length == 4 ){
+				is3d = false;
+				offset = 2;
+			}
+			
+			for( int index = 0; index < landmarkModel.getRowCount(); index++ )
 			{
-				if( spot.length == 4 ){
-					is3d = false;
-					offset = 2;
-				}
+				
+				Double[] spot = landmarkModel.getPoints().get( index );
 				
 				if( landmarkModel.isActive(index) ){
 					color  = (Color)viewer.getSettings().get( BigWarpViewerSettings.KEY_COLOR );
@@ -101,7 +103,7 @@ public class BigWarpOverlay {
 				g.setStroke( stroke );
 
 				double x=0.0, y=0.0, z=0.0;
-				if( viewer.getIsMoving() && spot[0] != null )
+				if( viewer.getIsMoving() && spot[0] != null && spot[ 0 ] < Double.MAX_VALUE  )
 				{
 					if( !isTransformed )
 					{
@@ -125,7 +127,7 @@ public class BigWarpOverlay {
 						if( is3d )
 							z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
 					}
-					else if( isTransformed && spot[ 0 ] < Double.MAX_VALUE )
+					else if( isTransformed && spot[ offset ] < Double.MAX_VALUE )
 					{
 						// if we've provided a moving landmark here ( spot < double max value )
 						// and we're displaying a transformed version, then
@@ -142,7 +144,7 @@ public class BigWarpOverlay {
 						continue;
 					}
 				}
-				else if( !viewer.getIsMoving() && spot[offset] != null )
+				else if( !viewer.getIsMoving() && spot[offset] != null && spot[offset] < Double.MAX_VALUE )
 				{
 					x = spot[ offset ];
 					y = spot[ offset + 1];
@@ -192,7 +194,6 @@ public class BigWarpOverlay {
 					}
 				}
 				
-				index++;
 			}
 		}
 
