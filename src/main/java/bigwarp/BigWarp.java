@@ -855,7 +855,7 @@ public class BigWarp {
 		
 		return new BigWarpData( sources, seq, converterSetups );
 	}
-	
+
 	public static class BigWarpData
 	{
 		public final ArrayList< SourceAndConverter< ? >> sources;
@@ -928,8 +928,9 @@ public class BigWarp {
 			double dist = 0;
 			double radsq = 100;
 			landmarkLoop:
-			for( int n = 0; n < N; n++ ){
-				
+			for( int n = 0; n < N; n++ )
+			{
+			
 				dist = 0;
 				Double[] lmpt = BigWarp.this.landmarkModel.getPoints().get(n);
 				String type = "FIXED";
@@ -976,26 +977,18 @@ public class BigWarp {
 			if( BigWarp.this.inLandmarkMode )
 			{
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-				
 				BigWarp.this.currentLandmark.localize( ptarray );
-				
-				System.out.println( "isMoving: " + isMoving );
-				System.out.println( "landmarkModel.getTransform(): " + landmarkModel.getTransform() );
-				System.out.println( "viewerP.getTransformEnabled(): " + BigWarp.this.isMovingDisplayTransformed() );
 				
 				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
 				{
-					System.out.println("clicked back: " + isMoving);
-					landmarkModel.getTransform().apply( ptarray, ptBack, true );
+					landmarkModel.getTransform().apply( ptarray, ptBack );
 					selectedPointIndex = selectedLandmark( ptBack, isMoving );
 				}
 				else
 				{
-					System.out.println("clicked raw: " + isMoving);
 					selectedPointIndex = selectedLandmark( ptarray, isMoving );
 				}
-				
-				System.out.println( "HERE: " + isMoving + " selectedPoint: " + selectedPointIndex );
+				//System.out.println( "HERE: " + isMoving + " selectedPoint: " + selectedPointIndex );
 				
 				// if we move the fixed point, we need to update the warped 
 				// point for the moving image
@@ -1019,9 +1012,10 @@ public class BigWarp {
 				currentLandmark.localize( ptarray );
 				
 				String message = "";
-//				if( isMoving && landmarkModel.getTransform() != null && viewerP.getTransformEnabled()  )
-				if( isMoving && landmarkModel.getTransform() != null  )
+				
+				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
 				{
+					
 					ptBack = landmarkModel.getTransform().apply( ptarray );
 					message = BigWarp.this.landmarkModel.add(  ptBack, isMoving );
 					
@@ -1048,15 +1042,12 @@ public class BigWarp {
 		{
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
 			{
-				
 				LandmarkTableModel lmModel = BigWarp.this.landmarkModel;
-				
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				
 				currentLandmark.localize( ptarray );
 				
 				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed())
-//				if( isMoving && landmarkModel.getTransform() != null )
 				{
 					landmarkModel.getTransform().apply( ptarray, ptBack );
 					lmModel.updateWarpedPoint( selectedPointIndex, ptarray );
@@ -1077,10 +1068,6 @@ public class BigWarp {
 			if( BigWarp.this.landmarkFrame.isVisible() ){
 				BigWarp.this.landmarkFrame.repaint();
 			}
-			
-			// final AffineTransform3D transform = viewerP.getDisplay().getTransformEventHandler().getTransform();
-			// System.out.println("xfm: " + transform );
-
 		}
 
 		@Override
@@ -1100,7 +1087,7 @@ public class BigWarp {
 	
 	public class MouseLandmarkTableListener implements MouseListener
 	{
-		
+		// TODO MouseTableListener
 		BigWarpViewerPanel viewer;
 		boolean wasDoubleClick = false;
 	    Timer timer;
@@ -1110,7 +1097,9 @@ public class BigWarp {
 	    	this.viewer = viewer;
 	    }
 	 
-	    public void mouseClicked( MouseEvent e){
+	    public void mouseClicked( MouseEvent e)
+	    {
+	    	
 	    	if( BigWarp.this.inLandmarkMode )
 	    	{
 	    		JTable target = (JTable)e.getSource();
@@ -1118,7 +1107,7 @@ public class BigWarp {
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
 	    		
-	    		boolean isMoving = ( column > 1 && column < 5 );
+	    		boolean isMoving = ( column > 1 && column < ( 2 + ndims ) );
 	    		
 	    		BigWarp.this.landmarkModel.setPointToUpdate( row, isMoving );
 	    		
@@ -1128,9 +1117,8 @@ public class BigWarp {
 				int row = target.getSelectedRow();
 				int column = target.getSelectedColumn();
 
-				
 				double[] pt = null;
-				if( column >= 2 && column <= 4 )
+				if( column >= 2 && column < ( 2 + ndims ))
 				{
 					if( viewer.getIsMoving())
 					{
@@ -1145,7 +1133,7 @@ public class BigWarp {
 						return;
 					}
 				}
-				else if( column >= 5 && column <= 7 )
+				else if( ( 2 + ndims ) >= 5 )
 				{
 					if( viewer.getIsMoving() )
 					{
@@ -1179,7 +1167,7 @@ public class BigWarp {
 				double[] ptxfm = new double[3];
 				xfmCopy.apply( pt, ptxfm );
 				
-				
+				// this should work fine in the 2d case
 				TranslationAnimator animator = new TranslationAnimator( 
 						transform, 
 						new double[]{center[0]-ptxfm[0], center[1]-ptxfm[1], -ptxfm[2]}, 
