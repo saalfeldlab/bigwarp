@@ -11,8 +11,6 @@ import java.util.List;
 import net.imglib2.Interval;
 import net.imglib2.realtransform.AffineTransform3D;
 import bdv.viewer.overlay.MultiBoxOverlay;
-import bdv.viewer.overlay.RenderBoxHelper;
-import bdv.viewer.overlay.MultiBoxOverlay.IntervalAndTransform;
 
 /**
  * Paint an overlay showing multiple transformed boxes (interval + transform).
@@ -25,7 +23,6 @@ import bdv.viewer.overlay.MultiBoxOverlay.IntervalAndTransform;
  */
 public class MultiBoxOverlay2d extends MultiBoxOverlay
 {
-	
 	/**
 	 * This paints the box overlay with perspective and scale set such that it
 	 * fits approximately into the specified screen area.
@@ -214,4 +211,6 @@ public class MultiBoxOverlay2d extends MultiBoxOverlay
 		graphics.drawString( "x", ( float ) renderBoxHelper.perspectiveX( qx ), ( float ) renderBoxHelper.perspectiveY( qx ) - 2 );
 		graphics.drawString( "y", ( float ) renderBoxHelper.perspectiveX( qy ), ( float ) renderBoxHelper.perspectiveY( qy ) - 2 );
 	}
+	
+	
 }

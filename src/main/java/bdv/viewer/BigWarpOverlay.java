@@ -117,7 +117,6 @@ public class BigWarpOverlay {
 						// ( as a result, we can't use the target point ) 
 						// so use the stored warped point
 						
-						
 						x = landmarkModel.getWarpedPoints().get( index )[ 0 ];
 						y = landmarkModel.getWarpedPoints().get( index )[ 1 ];
 						

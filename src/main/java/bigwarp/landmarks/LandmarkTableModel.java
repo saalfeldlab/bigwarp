@@ -166,7 +166,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
 				{
 					int row = e.getFirstRow();
-					System.out.println("updating active for row: " + row );
+					// System.out.println("updating active for row: " + row );
 					wereUpdated.add( row );
 				}
 			}
@@ -188,6 +188,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setPointToUpdate( int i, boolean isMoving )
 	{
+		System.out.println("setPointToUpdate: " + i  + " " + isMoving );
 		int offset = 0;
 		if( isMoving )
 		{
@@ -207,9 +208,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 			pts.get( i )[ offset + d ] = Double.POSITIVE_INFINITY;
 			warpedPoints.get( i )[ d ] = Double.POSITIVE_INFINITY;
 		}
-		changedPositionSinceWarpEstimation.set( i, true );
+		
+		changedPositionSinceWarpEstimation.set( i, false );
 		activeList.set( i, false );
-		estimatedXfm.disableLandmarkPair( i );
 		
 		pointUpdatePending = true;
 		fireTableRowsUpdated( i, i );
@@ -444,7 +445,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		else
 		{
-			System.out.println("Add redundant" );
+//			System.out.println("Add redundant" );
 			
 			Double[] exPts = pts.get( nextRow );
 			for( int i = 0; i < ndims; i++ )
@@ -531,7 +532,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		double[] target = new double[ ndims ];
 		for( Integer i : wereUpdated )
 		{
-			System.out.println( "updating point: " + i );
+//			System.out.println( "updating point: " + i );
 			
 			// 'source' and 'target' are swapped to get inverse transform
 			for( int d = 0; d < ndims; d++ )

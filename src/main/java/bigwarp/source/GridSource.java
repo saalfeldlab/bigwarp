@@ -3,19 +3,19 @@ package bigwarp.source;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
-import mpicbg.models.AbstractModel;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
-import net.imglib2.Cursor;
 import net.imglib2.Interval;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
+import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
-public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T >
+public class GridSource< T extends RealType< T >> implements Source< T >
 {
 	protected final String name;
 	
@@ -23,82 +23,40 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	
 	protected final Interval interval;
 	
-	protected final WarpMagnitudeRandomAccessibleInterval<T> warpMagImg;
+//	protected final GridRandomAccessibleInterval<T> gridImg;
+	protected final GridRealRandomAccessibleRealInterval<T> gridImg;
 	
 	protected T type;
 	
-	public WarpMagnitudeSource( String name, BigWarpData data, T t  )
+	public GridSource( String name, BigWarpData data, T t, CoordinateTransform warp  )
 	{
 		this.name = name;
-		this.type = t;
-		
+		this.type = t.copy();
 		sourceData = data;
 		
 		RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		
-		// use the interval of the fixed image
-//		if( fixedsrc.dimension( 2 ) == 1 )
-//			interval = new FinalInterval( 
-//					new long[]{ fixedsrc.min( 0 ), fixedsrc.min( 1 ) }, 
-//					new long[]{ fixedsrc.max( 0 ), fixedsrc.max( 1 ) });
-//		else
-		
 		interval = fixedsrc;
 		
-		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
+//		gridImg = new GridRandomAccessibleInterval<T>( interval, t, warp );
+		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
+	
+//	public void debug( long[] pt )
+//	{
+////		RandomAccess<T> rra = gridImg.randomAccess();
+////		RealRandomAccess<T> rra = gridImg.randomAccess();
+//		
+//		rra.setPosition( pt );
+//		
+//		System.out.println("at ( 0 0 0 ): ");
+//		System.out.println( "get val: " + rra.get());
+//		
+//	}
 	
 	public void setWarp( CoordinateTransform warp )
 	{
-		warpMagImg.ra.warp = warp;
-	}
-	
-	public void setBaseline( AbstractModel<?> baseline )
-	{
-		warpMagImg.ra.base = baseline;
-	}
-	
-	public AbstractModel<?> getBaseline()
-	{
-		return warpMagImg.ra.base;
-	}
-	
-	public void debug( double[] pt )
-	{
-		RealRandomAccess<T> rra = warpMagImg.realRandomAccess();
-		
-		rra.setPosition( pt );
-		
-		System.out.println("at ( 0 0 0 ): ");
-		System.out.println( "get val: " + rra.get());
-		double[] baseRes = warpMagImg.ra.base.apply( pt );
-		double[] warpRes = warpMagImg.ra.warp.apply( pt );
-		System.out.println( "base res: " + baseRes[0] + " " + baseRes[1]);
-		System.out.println( "warp res: " + warpRes[0] + " " + warpRes[1]);
-		
-	}
-	
-	public double[] minMax()
-	{
-		double[] minmax = new double[ 2 ];
-		minmax[ 0 ] = Double.MAX_VALUE;
-		minmax[ 1 ] = Double.MIN_VALUE;
-		
-		Cursor<T> curs = Views.iterable( this.getSource( 0,0 ) ).cursor();
-		
-		while( curs.hasNext() )
-		{
-			double val = curs.next().getRealDouble();
-			if( val < minmax[ 0 ])
-				minmax[ 0 ] = val;
-			else if( val > minmax[ 1 ])
-				minmax[ 1 ] = val;
-			
-		}
-		
-		System.out.println( "WarpMag min: " + minmax[ 0 ] + "  max: " + minmax[ 1 ]);
-		
-		return minmax;
+		System.out.println(" Grid source SET WARP ");
+		gridImg.ra.warp = warp;
 	}
 	
 	@Override
@@ -118,8 +76,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public RealRandomAccessible<T> getInterpolatedSource( int t, int level, Interpolation method ) 
 	{
-//		return warpMagImg.copy();
-		return warpMagImg;
+		return gridImg;
 	}
 
 	@Override
@@ -127,6 +84,18 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	{
 		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
 	}
+	
+//	@Override
+//	public RealRandomAccessible<T> getInterpolatedSource( int t, int level, Interpolation method ) 
+//	{
+//		return Views.interpolate( getSource( t, level ), new NearestNeighborInterpolatorFactory<T>() );
+//	}
+//
+//	@Override
+//	public void getSourceTransform( int t, int level, AffineTransform3D transform )
+//	{
+//		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+//	}
 
 	@Override
 	public AffineTransform3D getSourceTransform(int t, int level)

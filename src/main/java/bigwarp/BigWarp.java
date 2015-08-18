@@ -4,12 +4,8 @@ import ij.IJ;
 import ij.ImagePlus;
 
 import java.awt.Component;
-import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -17,21 +13,23 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.imageio.ImageIO;
+import javax.swing.AbstractButton;
 import javax.swing.ActionMap;
+import javax.swing.ButtonGroup;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JRadioButton;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -41,11 +39,25 @@ import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
+import mpicbg.models.AbstractModel;
+import mpicbg.models.AffineModel2D;
+import mpicbg.models.AffineModel3D;
+import mpicbg.models.CoordinateTransform;
+import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.NotEnoughDataPointsException;
+import mpicbg.models.RigidModel2D;
+import mpicbg.models.RigidModel3D;
+import mpicbg.models.SimilarityModel2D;
+import mpicbg.models.SimilarityModel3D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.sequence.TimePoint;
@@ -63,6 +75,7 @@ import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.tools.InitializeViewerState;
+import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
@@ -136,6 +149,14 @@ public class BigWarp {
 	protected TransformEventHandler<AffineTransform3D> handlerP;
 	final static DummyTransformEventHandler dummyHandler = new DummyTransformEventHandler();
 
+	protected final int gridSourceIndex;
+	protected final int warpMagSourceIndex;
+	protected final AbstractModel<?>[] baseXfmList;
+	protected JMenuItem warpVisItemP;
+	protected JMenuItem warpVisItemQ;
+	
+	protected ButtonGroup warpMagTypeGroup;
+	
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode
 	 * during the click
@@ -151,7 +172,14 @@ public class BigWarp {
 		
 		ndims = 3;
 		ndims = detectNumDims();
+		
 		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
+		baseXfmList = new AbstractModel<?>[ 3 ];
+		setupWarpMagBaselineOptions( baseXfmList, ndims );
+		
+		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
+		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
+		
 
 		// If the images are 2d, use a transform handler that limits transformations to 
 		// rotations and scalings of the 2d plane ( z = 0 )
@@ -159,12 +187,12 @@ public class BigWarp {
 		Options optionsQ = ViewerPanel.options();
 		if( ndims == 2 )
 		{
-			System.out.println("IS 2D");
 			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
 			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
 			
 			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( 800, 600, new MultiBoxOverlay2d()) );
 			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( 800, 600, new MultiBoxOverlay2d()) );
+			
 		}
 		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
 		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
@@ -184,8 +212,14 @@ public class BigWarp {
 		viewerQ.setNumDim( ndims );
 		
 		activeSourcesDialog = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
-		setUpViewerMenu( getViewerFrameP() );
-		setUpViewerMenu( getViewerFrameQ() );
+		
+		// set warp mag source to inactive at the start
+		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
+		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
+		// set warp grid source to inactive at the start 
+		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
+		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
+		
 		
 		/* Set up LandmarkTableModel, holds the data and 
 		 * interfaces with the LandmarkPanel */
@@ -274,30 +308,71 @@ public class BigWarp {
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
 	{
+		//TODO setupviewermenu
+		
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
-		System.out.println( actionMap );
+		
+		if( warpMagTypeGroup == null )
+		{
+			JRadioButton warpMagAffineButton = new JRadioButton( 
+					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 0 ].getClass().getName() ) ));
+			JRadioButton warpMagSimilarityButton = new JRadioButton( 
+					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 1 ].getClass().getName() ) ));
+			JRadioButton warpMagRigidButton = new JRadioButton( 
+					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 2 ].getClass().getName() ) ));
+			
+			warpMagAffineButton.setText("Affine baseline");
+			warpMagSimilarityButton.setText("Similarity baseline");
+			warpMagRigidButton.setText("Rigid baseline");
+			
+			warpMagTypeGroup = new ButtonGroup();
+			warpMagTypeGroup.add( warpMagAffineButton );
+			warpMagTypeGroup.add( warpMagSimilarityButton );
+			warpMagTypeGroup.add( warpMagRigidButton );
+		}
+		
 		
 		JMenuBar viewerMenuBar = new JMenuBar();
-		
 		JMenu settingsMenu    = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
 		
-		final JMenuItem miBrightness;
-		if( vframe.isMoving() )
-			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_P ) );
-		else
-			miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS_Q ) );
-		
+		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
 		miBrightness.setText( "Brightness & Color" );
 		settingsMenu.add( miBrightness );
 		
+		/* Warp Visualization */
+		final JMenu warpVisMenu = new JMenu( "Warp Visualization" );
+		settingsMenu.add( warpVisMenu );
+		
+		final JMenuItem warpVisItem;
+		if( vframe == viewerFrameP )
+		{
+			warpVisItem = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_WARPMAG_VIS_P ) );
+			warpVisItemP = warpVisItem;
+		}
+		else
+		{
+			warpVisItem = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_WARPMAG_VIS_Q ) );
+			warpVisItemQ = warpVisItem;
+		}
+		
+		warpVisItem.setText("Toggle on");
+		warpVisMenu.add( warpVisItem );
+		warpVisMenu.addSeparator();
+		
+		Enumeration<AbstractButton> grpElems = warpMagTypeGroup.getElements();
+		while( grpElems.hasMoreElements() ){
+			AbstractButton b = grpElems.nextElement() ;
+			// System.out.println( b );
+			warpVisMenu.add( b );
+		}
 		vframe.setJMenuBar( viewerMenuBar );
 		
 		JMenu helpMenu    = new JMenu( "Help" );
 		viewerMenuBar.add( helpMenu );
 		
 		final JMenuItem miHelp = new JMenuItem( actionMap.get( BigWarpActions.SHOW_HELP ) );
-		helpMenu.setText( "Show Help" );
+		miHelp.setText( "Show Help Menu" );
 		helpMenu.add( miHelp );
 	}
 	
@@ -624,6 +699,70 @@ public class BigWarp {
 		return wrappedSource;
 	}
 	
+	/**
+	 * This is the sahnehaubchen :-)
+	 * @param sources
+	 * @param name
+	 * @param data
+	 * @return the index into sources where this source was added
+	 */
+	private static int addWarpMagnitudeSource( ArrayList< SourceAndConverter< ? > > sources, ArrayList<ConverterSetup> converterSetups, String name, BigWarpData data )
+	{
+		// TODO think about whether its worth it to pass a type parameter.
+		// or should we just stick with Doubles?
+		
+		WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
+		
+		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
+		vconverter.setColor( new ARGBType( 0xffffffff ) );
+		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+		
+		int id = (int)(Math.random() * Integer.MAX_VALUE );
+		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		
+//		final SourceAndConverter< FloatType > vsoc = new SourceAndConverter< FloatType >( magSource, null );
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
+		sources.add( soc );
+		
+//		sources.add( new SourceAndConverter< FloatType >( 
+//				magSource, converter, null ));
+		
+		return sources.size() - 1;
+	}
+	
+	/**
+	 * This is the sahnehaubchen :-)
+	 * @param sources
+	 * @param name
+	 * @param data
+	 * @return the index into sources where this source was added
+	 */
+	private static int addGridSource( ArrayList< SourceAndConverter< ? > > sources, ArrayList<ConverterSetup> converterSetups, String name, BigWarpData data )
+	{
+		// TODO think about whether its worth it to pass a type parameter.
+		// or should we just stick with Doubles?
+		
+		GridSource< FloatType > magSource = new GridSource< FloatType >( name, data, new FloatType(), null );
+		
+		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
+		vconverter.setColor( new ARGBType( 0xffffffff ) );
+		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+		
+		int id = (int)(Math.random() * Integer.MAX_VALUE );
+		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		
+//		final SourceAndConverter< FloatType > vsoc = new SourceAndConverter< FloatType >( magSource, null );
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
+		sources.add( soc );
+		
+//		sources.add( new SourceAndConverter< FloatType >( 
+//				magSource, converter, null ));
+		
+		return sources.size() - 1;
+	}
+	
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( SourceAndConverter< T > src, String name, int ndims )
 	{
 		if( src.asVolatile() == null )
@@ -664,6 +803,133 @@ public class BigWarp {
 				new LandmarkKeyboardProcessor( this ));
 	}
 	
+	public void setWarpMagBaseline( AbstractModel<?> baseline )
+	{
+		System.out.println("set WM baseline: " + baseline.getClass().getName() );
+		((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource()).setBaseline( baseline );
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
+	}
+	
+	protected void setupWarpMagBaselineOptions( CoordinateTransform[] xfm, int ndim )
+	{
+		if( ndim == 2 )
+		{
+			xfm[ 0 ] = new AffineModel2D();
+			xfm[ 1 ] = new SimilarityModel2D();
+			xfm[ 2 ] = new RigidModel2D();
+		}
+		else
+		{
+			xfm[ 0 ] = new AffineModel3D();
+			xfm[ 1 ] = new SimilarityModel3D();
+			xfm[ 2 ] = new RigidModel3D();
+		}
+	}
+	
+	protected void fitBaselineWarpMagModel()
+	{
+		double[][] p = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
+		double[][] q = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
+		double[] w   = new double[ landmarkModel.getTransform().getNumLandmarks() ];
+		
+		int k = 0;
+		for( int i = 0; i < landmarkModel.getTransform().getNumLandmarks(); i++ )
+		{
+			if( landmarkModel.getTransform().isActive( i ))
+			{
+				w[ k ] = 1.0;
+				
+				for( int d = 0; d < ndims; d++ )
+				{
+					p[ d ][ k ] = landmarkModel.getTransform().getSourceLandmarks()[ d ][ i ];
+					q[ d ][ k ] = landmarkModel.getTransform().getTargetLandmarks()[ d ][ i ];
+				}
+				k++;
+			}
+		}
+		
+		try 
+		{
+			((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource()).getBaseline().fit( p, q, w );
+		} 
+		catch (NotEnoughDataPointsException e) 
+		{
+			e.printStackTrace();
+		} 
+		catch (IllDefinedDataPointsException e) 
+		{
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void toggleWarpMagMode( BigWarpViewerFrame viewerFrame )
+	{
+		
+		JMenuItem warpVisItem = null;
+		
+		int offImgIndex = 0;
+		int onImgIndex  = 1;
+		if( viewerFrame == null )
+		{
+			if( viewerFrameP.isActive() )
+			{
+				viewerFrame = viewerFrameP;
+				warpVisItem = warpVisItemP;
+			}
+			else if( viewerFrameQ.isActive() )
+			{
+				viewerFrame = viewerFrameQ;
+				warpVisItem = warpVisItemQ;
+			}else
+				return;
+		}
+		
+		if( viewerFrame == viewerFrameP )
+		{
+			offImgIndex = 1;
+			onImgIndex  = 0;
+		}
+		
+		if( landmarkModel.getTransform() == null )
+		{
+			viewerFrame.getViewerPanel().showMessage( "No warp - estimate warp first." );
+			return;
+		}
+		
+		VisibilityAndGrouping vg = viewerFrame.getViewerPanel().getVisibilityAndGrouping();
+		
+		// TODO consider remembering whether fused was on before displaying warpmag
+		// so that its still on or off after we turn it off
+		if( vg.isSourceActive( warpMagSourceIndex )) // warp mag is visible, turn it off
+		{
+			vg.setSourceActive( warpMagSourceIndex, false );
+			
+			vg.setSourceActive( offImgIndex, true );
+//			vg.setSourceActive( onImgIndex , true ); // might be unnecessary
+			
+			vg.setFusedEnabled( false );
+			viewerFrame.getViewerPanel().showMessage( "Removing Warp Magnitude" );
+			warpVisItem.setText("Toggle on");
+		}
+		else // warp mag is invisible, turn it on
+		{
+			vg.setSourceActive( warpMagSourceIndex, true );
+			
+			vg.setSourceActive( offImgIndex, false );
+//			vg.setSourceActive( onImgIndex , true ); // might be unnecessary
+			
+//			vg.setSourceActive( 0, false );
+			
+			vg.setFusedEnabled( true );
+			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
+			warpVisItem.setText("Toggle off");
+		}
+		
+		viewerFrame.getViewerPanel().requestRepaint();
+	}
+	
 	public void restimateTransformation()
 	{
 		// TODO restimateTransformation
@@ -694,9 +960,22 @@ public class BigWarp {
 		if( isFirst )
 			setIsMovingDisplayTransformed( true );
 		
+		WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
+		GridSource<?> gSrc = ((GridSource<?>) sources.get( gridSourceIndex ).getSpimSource());
+		
+		wmSrc.setWarp( landmarkModel.getTransform().deepCopy() );
+		gSrc.setWarp( landmarkModel.getTransform().deepCopy() );
+		fitBaselineWarpMagModel();
+		
+//		double[] minmax = wmSrc.minMax();
+//		wmSrc.debug( new double[]{  0.0,   0.0, 0.0 });
+//		wmSrc.debug( new double[]{ 75.0, 230.0, 0.0 });
+		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
+	
+
 	
 	public void setIsMovingDisplayTransformed( boolean isTransformed )
 	{
@@ -730,6 +1009,7 @@ public class BigWarp {
 	
 	public static void main( final String[] args )
 	{
+		//TODO main
 		
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/openconnectome-bock11-neariso.xml";
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/openconnectome-cardona1-neariso.xml";
@@ -755,19 +1035,25 @@ public class BigWarp {
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
 		
 		// A better 2d example
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks"; 
+		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
+		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
+		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
+		
+//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
+//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
+//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks"; 
 		
 		// A 2d example
 ////		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
 ////		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
-		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
-		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
+//		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
 //		final String fnP = "/Users/bogovicj/tmp/gel0000.png"; // this
 //		final String fnQ = "/Users/bogovicj/tmp/Dot_Blot0000.png";
+//		final String fnLandmarks = "/Users/bogovicj/tmp/gelDotPts";
+		
 ////		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
-		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes2/dotsAndGenes2";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes2/dotsAndGenes2";
 
 		// grid example
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/test/grid.png";
@@ -833,10 +1119,7 @@ public class BigWarp {
 		ImagePlus moving_imp = IJ.openImage( filenameP );
 		ImagePlus target_imp = IJ.openImage( filenameQ );
 		
-		System.out.println( "moving_imp: " + moving_imp );
-		System.out.println( "target_imp: " + target_imp );
-		
-		return BigWarpImagePlusPlugIn.buildData(moving_imp, target_imp);
+		return BigWarpImagePlusPlugIn.buildData( moving_imp, target_imp );
 	}
 	
 	public static BigWarpData loadSourcesFromXmls( final String xmlFilenameP, final String xmlFilenameQ )

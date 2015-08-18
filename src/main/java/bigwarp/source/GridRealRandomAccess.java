@@ -1,7 +1,6 @@
 package bigwarp.source;
 
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Localizable;
@@ -9,25 +8,23 @@ import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.type.numeric.RealType;
 
-public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
+
+public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 
 	CoordinateTransform warp;
-	AbstractModel<?> base; 
-	
 	T value;
 	
-	protected WarpMagnitudeRandomAccess( double[] dimensions )
+	protected GridRealRandomAccess( double[] dimensions )
 	{
-		this( dimensions, null, null, null );
+		this( dimensions, null, null );
 	}
 	
-	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, CoordinateTransform warp, AbstractModel<?> base )
+	protected GridRealRandomAccess( double[] dimensions, T value, CoordinateTransform warp )
 	{
 		super( dimensions.length );
-		this.warp = warp;
-		this.base = base;
 		this.value = value;
+		this.warp = warp;
 	}
 
 	@Override
@@ -37,16 +34,14 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 		this.localize( mypt );
 		
 		double[] warpRes = warp.apply( mypt );
-		double[] baseRes = base.apply( mypt );
-		
-		double dist = 0.0;
-		for( int d = 0; d < warpRes.length; d++ )
-			dist += ( warpRes[ d ] - baseRes[ d ] ) * ( warpRes[ d ] - baseRes[ d ] );  
-		
-		dist = Math.sqrt( dist );
 		 
 		T out = value.copy();
-		out.setReal( dist );
+		
+		double val = 0.0;
+		for( int d = 0; d < warpRes.length; d++ )
+			val += warpRes[ d ] % 50;
+		
+		out.setReal( val );
 		
 		return out;
 	}
@@ -61,19 +56,19 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 		return distSquared  < radSquared;
 	}
 
-	public RealRandomAccess<T> copy() 
-	{
-		return new WarpMagnitudeRandomAccess< T >( new double[ position.length ], value.copy(), 
-				((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy(), base.copy() );
-	}
-
-	public RealRandomAccess<T> copyRandomAccess() 
+	@Override
+	public RealRandomAccess<T> copyRealRandomAccess()
 	{
 		return copy();
 	}
 	
-	@Override
-	public RealRandomAccess<T> copyRealRandomAccess() 
+	public RealRandomAccess<T> copy() 
+	{
+		return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
+				((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy()  );
+	}
+
+	public RealRandomAccess<T> copyRandomAccess() 
 	{
 		return copy();
 	}
