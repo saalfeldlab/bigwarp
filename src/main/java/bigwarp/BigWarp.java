@@ -5,6 +5,7 @@ import ij.ImagePlus;
 
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.FileDialog;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.event.MouseEvent;
@@ -24,6 +25,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -82,6 +84,7 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
+import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
@@ -103,8 +106,8 @@ import bigwarp.source.WarpMagnitudeSource;
 
 public class BigWarp {
 	
-	protected static final int DEFAULT_WIDTH  = 800;
-	protected static final int DEFAULT_HEIGHT = 600;
+	protected static final int DEFAULT_WIDTH  = 600;
+	protected static final int DEFAULT_HEIGHT = 400;
 	
 	// descriptive names for indexing sources
 	protected int movingSourceIndex = 0;
@@ -128,6 +131,8 @@ public class BigWarp {
 	
 	protected final BigWarpOverlay overlayP;
 	protected final BigWarpOverlay overlayQ;
+	protected final BigWarpDragOverlay dragOverlayP;
+	protected final BigWarpDragOverlay dragOverlayQ;
 	
 	protected double rad = 7;
 	protected double LANDMARK_DOT_SIZE = 7; // diameter of dots
@@ -160,11 +165,16 @@ public class BigWarp {
 	
 	protected ButtonGroup warpMagTypeGroup;
 	
+	private final double[] ptBack;
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode
 	 * during the click
 	 */
 	protected boolean inLandmarkMode;
+	
+	// file selection
+	final JFrame	 fileFrame;
+	final FileDialog fileDialog;
 	
 	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -175,6 +185,7 @@ public class BigWarp {
 		
 		ndims = 3;
 		ndims = detectNumDims();
+		ptBack = new double[ 3 ];
 		
 		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
 		baseXfmList = new AbstractModel<?>[ 3 ];
@@ -182,6 +193,7 @@ public class BigWarp {
 		
 		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
+		setGridType( GridSource.GRID_TYPE.LINE );
 		
 
 		// If the images are 2d, use a transform handler that limits transformations to 
@@ -193,8 +205,8 @@ public class BigWarp {
 			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
 			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
 			
-			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( 800, 600, new MultiBoxOverlay2d()) );
-			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( 800, 600, new MultiBoxOverlay2d()) );
+			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
+			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
 			
 		}
 		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
@@ -202,13 +214,13 @@ public class BigWarp {
 		
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsP, "Fidip moving", true );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true );
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		
 		// Viewer frame for the fixed image
 		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsQ, "Fidip fixed", false );
+				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false );
 		viewerQ = getViewerFrameQ().getViewerPanel();
 		
 		viewerP.setNumDim( ndims );
@@ -236,6 +248,11 @@ public class BigWarp {
 		viewerP.addOverlay( overlayP );
 		viewerQ.addOverlay( overlayQ );
 		
+		dragOverlayP = new BigWarpDragOverlay( this, viewerP );
+		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ );
+		viewerP.addDragOverlay( dragOverlayP );
+		viewerQ.addDragOverlay( dragOverlayQ );
+		
 		/* Set up landmark panel */
 		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
 		landmarkPanel.setOpaque( true );
@@ -243,14 +260,12 @@ public class BigWarp {
 		
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel );
 		
-		landmarkPopupMenu = new LandmarkPointMenu( landmarkPanel );
+		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners( );
 		
-		int i = 0;
 		ArrayList<ConverterSetup> csetups = new ArrayList<ConverterSetup>();
 		for ( final ConverterSetup cs : converterSetups )
 		{
-			System.out.println("converter setup: " + (i++) );
 			csetups.add( cs );
 			if ( RealARGBColorConverterSetup.class.isInstance( cs ))
 				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
@@ -305,6 +320,11 @@ public class BigWarp {
 		landmarkFrame.setVisible(true);
 		
 		checkBoxInputMaps();
+		
+		// file selection
+		fileFrame = new JFrame("Select File");
+		fileDialog = new FileDialog(fileFrame);
+		fileFrame.setVisible( false );
 	}
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
@@ -416,10 +436,14 @@ public class BigWarp {
 			public void mouseReleased(MouseEvent e) 
 			{
 				final JFileChooser fc = new JFileChooser();
-				//int returnval = fc.showOpenDialog( landmarkFrame );
 				fc.showOpenDialog( landmarkFrame );
-				
 				File file = fc.getSelectedFile();
+				
+				//fileFrame.setVisible( true );
+//				fileDialog.setVisible( true );
+//				File file = new File( fileDialog.getFile() );
+				//int returnval = fc.showOpenDialog( landmarkFrame );
+				
 				System.out.println("to open file: " + file );
 				try 
 				{
@@ -430,7 +454,9 @@ public class BigWarp {
 					e1.printStackTrace();
 				}
 				
-				landmarkTable.repaint();
+				//landmarkTable.repaint();
+				landmarkFrame.repaint();
+				
 			}
         });
         
@@ -452,9 +478,13 @@ public class BigWarp {
 				System.out.println( "save save save ");
 				final JFileChooser fc = new JFileChooser();
 				// int returnval = fc.showOpenDialog( landmarkFrame );
-				fc.showOpenDialog( landmarkFrame );
+				fc.showSaveDialog( landmarkFrame );
 				
 				File file = fc.getSelectedFile();
+				
+				if( file == null )
+					return;
+				
 				System.out.println("to save file: " + file );
 				try 
 				{
@@ -483,9 +513,11 @@ public class BigWarp {
 			{
 				final JFileChooser fc = new JFileChooser();
 				//int returnval = fc.showOpenDialog( landmarkFrame );
-				fc.showOpenDialog( landmarkFrame );
+				fc.showSaveDialog( landmarkFrame );
 				
 				File file = fc.getSelectedFile();
+				if( file == null )
+					return;
 				
 				try 
 				{
@@ -580,6 +612,237 @@ public class BigWarp {
 		}
 		
 		inLandmarkMode = inLmMode;
+	}
+	
+	/**
+	 * 
+	 * @param ptarray
+	 * @param isMoving
+	 * @param selectedPointIndex
+	 * @param viewer
+	 */
+	public void updatePointLocation( double[] ptarray, boolean isMoving, int selectedPointIndex, BigWarpViewerPanel viewer )
+	{
+		boolean isMovingViewer = viewer.getOverlay().getIsTransformed();
+		
+		if( isMoving && landmarkModel.getTransform() != null && isMovingViewer )
+		{
+			landmarkModel.getTransform().apply( ptarray, ptBack);
+			landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
+		}
+		
+		if( landmarkModel.getTransform() == null || !isMovingViewer )
+		{					
+			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray );
+			
+			if( !isMoving && !landmarkModel.isWarpedPositionChanged( selectedPointIndex ))
+				landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
+		}
+		else
+		{
+			BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
+		}
+		if( landmarkFrame.isVisible() ){
+			landmarkFrame.repaint();
+		}
+	}
+	
+	public void updatePointLocation( double[] ptarray, boolean isMoving, int selectedPointIndex )
+	{
+		if( isMoving )
+			updatePointLocation( ptarray, isMoving, selectedPointIndex, viewerP );
+		else
+			updatePointLocation( ptarray, isMoving, selectedPointIndex, viewerQ );
+	}
+	
+	public void updatePointLocationOLD( double[] ptarray, boolean isMoving, int selectedPointIndex )
+	{
+		if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed())
+		{
+			landmarkModel.getTransform().apply( ptarray, ptBack);
+			landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
+		}
+		
+		if( !isMoving || landmarkModel.getTransform() == null || !BigWarp.this.isMovingDisplayTransformed())
+		{					
+			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray );
+			
+			if( !isMoving && !landmarkModel.isWarpedPositionChanged( selectedPointIndex ))
+				landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
+		}
+		else
+		{
+			BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
+		}
+		if( landmarkFrame.isVisible() ){
+			landmarkFrame.repaint();
+		}
+		
+	}
+	
+	public int updateWarpedPoint( double[] ptarray, boolean isMoving )
+	{
+		System.out.println("bw updateWarpedPoint");
+		int selectedPointIndex = selectedLandmark( ptarray, isMoving );
+		
+		// if a fixed point is changing its location, 
+		// we need to update the warped position for the corresponding moving point
+		// so that it can be rendered correctly
+		if( selectedPointIndex >= 0 && 
+				!isMoving && landmarkModel.getTransform() != null )
+		{
+			landmarkModel.updateWarpedPoint( 
+					selectedPointIndex, ptarray );
+		}
+		
+		return selectedPointIndex;
+	}
+	
+	/**
+	 * Updates the global variable ptBack
+	 * @param ptarray
+	 * @param isMoving
+	 */
+	public String addPoint( double[] ptarray, boolean isMoving, BigWarpViewerPanel viewer )
+	{
+		boolean isViewerTransformed = viewer.getOverlay().getIsTransformed();
+		
+		String message = "";
+		// 	We need to transform the point if:
+		//		Adding a moving point in a viewer in target-image-space
+		//			could be a transformed viewer panel or
+		//			the fixed image viewer panel
+		//
+		//	Adding a fixed point in the space of the moving image requires
+		// 	the inverse transform and is currently not allowed
+		//
+		//	In all other cases, the raw point can be added directly 
+		if( isMoving && 
+				((	landmarkModel.getTransform() != null && isViewerTransformed ) ||
+					!viewer.getIsMoving()))
+		{
+			landmarkModel.getTransform().apply( ptarray, ptBack );
+			
+			message = landmarkModel.add( ptBack, isMoving );
+			
+			// this may not be always necessary, but I think the cost of doing it all the time is small 
+			landmarkModel.updateWarpedPoint( 
+					landmarkModel.nextRow( isMoving ) - 1, 
+					ptarray );
+		}
+		else if( !isMoving && viewer.getIsMoving() && !isViewerTransformed )
+		{
+			return "Adding a fixed point in moving image space not supported";
+		}
+		else
+		{
+			message = landmarkModel.add( ptarray, isMoving );
+		}
+		
+		if( BigWarp.this.landmarkFrame.isVisible() ){
+			BigWarp.this.landmarkFrame.repaint();
+		}
+		
+		return message;
+	}
+	
+	/**
+	 * Updates the global variable ptBack
+	 * @param ptarray
+	 * @param isMoving
+	 */
+	public String addPoint( double[] ptarray, boolean isMoving )
+	{
+		
+		String message = "";
+		if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
+		{
+			
+			landmarkModel.getTransform().apply( ptarray, ptBack );
+			
+			message = BigWarp.this.landmarkModel.add( ptBack, isMoving );
+			
+			// this may not be always necessary, but I think the cost of doing it all the time is small 
+			BigWarp.this.landmarkModel.updateWarpedPoint( 
+					BigWarp.this.landmarkModel.nextRow( isMoving ) - 1, 
+					ptarray );
+		}
+		else
+			message = BigWarp.this.landmarkModel.add( ptarray, isMoving );
+		
+		if( BigWarp.this.landmarkFrame.isVisible() ){
+			BigWarp.this.landmarkFrame.repaint();
+		}
+		
+		return message;
+	}
+	
+	/**
+	 * Updates the global variable ptBack
+	 * @param ptarray
+	 * @param isMoving
+	 * @return
+	 */
+	public int selectedLandmark( double[] ptarray, boolean isMoving )
+	{
+		int selectedPointIndex = -1;
+		if( isMoving && landmarkModel.getTransform() != null && isMovingDisplayTransformed() )
+		{
+			landmarkModel.getTransform().apply( ptarray, ptBack );
+			selectedPointIndex = selectedLandmarkHelper( ptBack, isMoving );
+		}
+		else // check if the clicked point itself is in the table 
+		{
+			selectedPointIndex = selectedLandmarkHelper( ptarray, isMoving );
+		}
+		return selectedPointIndex;
+	}
+	
+	protected int selectedLandmarkHelper( double[] pt, boolean isMoving )
+	{
+		System.out.println("bw selectedLandmarkHelper");
+		// TODO selectedLandmark
+		int N = landmarkModel.getRowCount();
+		
+		double dist = 0;
+		double radsq = 100;
+		landmarkLoop:
+		for( int n = 0; n < N; n++ )
+		{
+		
+			dist = 0;
+			Double[] lmpt = landmarkModel.getPoints().get(n);
+			String type = "FIXED";
+			if( isMoving )
+			{
+				type = "MOVING";
+				for( int i = 0; i < ndims; i++ )
+				{
+					dist += (pt[i] - lmpt[i]) * (pt[i] - lmpt[i]);
+
+					if( dist > radsq )
+						continue landmarkLoop;
+				}
+			}
+			else
+			{
+				for( int i = 0; i < ndims; i++ )
+				{
+					dist += (pt[i] - lmpt[i+ndims]) * (pt[i] - lmpt[i+ndims]);
+
+					if( dist > radsq )
+						continue landmarkLoop;
+				}
+			}
+			
+			if( landmarkFrame.isVisible() )
+			{
+				landmarkTable.setEditingRow( n );
+				landmarkFrame.repaint();
+			}
+			return n;
+		}
+		return -1;
 	}
 	
 	public void toggleInLandmarkMode()
@@ -742,15 +1005,21 @@ public class BigWarp {
 		int minz = (int)interval.min( 2 );
 		int maxz = (int)interval.max( 2 );
 		
+		if( ndims == 2 && maxz == 0 )
+			maxz = 1;
+		
+		
 		final AffineTransform3D viewXfm = new AffineTransform3D();
 		viewXfm.identity();
 		
 		final MyTarget target = new MyTarget();
-		// System.out.println( "target width : " + target.getWidth() );
-		// System.out.println( "target height: " + target.getHeight() );
+		 System.out.println( "target width : " + target.getWidth() );
+		 System.out.println( "target height: " + target.getHeight() );
 		
 		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, new Cache.Dummy() );
 		
+		 System.out.println( "zrange: " + minz + " " + maxz );
+		 
 		// step through z, rendering each slice as an image and writing it to 
 		for( int z = minz; z < maxz; z++ )
 		{			
@@ -772,6 +1041,11 @@ public class BigWarp {
 		landmarkTableListenerQ = new MouseLandmarkTableListener( viewerQ );
 		landmarkPanel.getJTable().addMouseListener( landmarkTableListenerP );
 		landmarkPanel.getJTable().addMouseListener( landmarkTableListenerQ );
+	}
+	
+	public void setGridType( GridSource.GRID_TYPE method )
+	{
+		(( GridSource<?> ) sources.get(  gridSourceIndex ).getSpimSource() ).setMethod( method );
 	}
 	
 	private static ArrayList< SourceAndConverter< ? >> wrapSourcesAsTransformed( ArrayList< SourceAndConverter< ? > > sources, int ndims, int warpUsIndices )
@@ -1042,7 +1316,7 @@ public class BigWarp {
 		else
 		{
 			landmarkModel.transferUpdatesToModel();
-			// System.out.println( "are point valid? " + landmarkModel.validateTransformPoints());
+			 // System.out.println( "are point valid? " + landmarkModel.validateTransformPoints());
 		}
 		
 		// estimate the forward transformation
@@ -1129,13 +1403,14 @@ public class BigWarp {
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
 		
 		// A better 2d example
-		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
-		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
-		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
+//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
 		
-//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
-//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks"; 
+		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
+		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
+//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+		final String fnLandmarks = "/Users/bogovicj/workspaces/bdv/bigwarp/src/main/resources/data/histology/histology_uniform";
 		
 		// A 2d example
 ////		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
@@ -1273,8 +1548,8 @@ public class BigWarp {
 
 		// -1 indicates that no point is selected
 		int selectedPointIndex = -1;
-		double[] ptarray = new double[ 3 ];
-		double[] ptBack = new double[ 3 ];
+		double[] ptarrayLoc = new double[ 3 ];
+		double[] ptBackLoc = new double[ 3 ];
 		
 		private BigWarpViewerPanel thisViewer;
 		private boolean isMoving;
@@ -1294,11 +1569,11 @@ public class BigWarp {
 		@Override
 		public void mouseClicked(MouseEvent arg0) {}
 		
-		/**
-		 * Returns the index of the landmark under the mouse position,
-		 * or -1 if no landmark is at the current position
-		 */
-		protected int selectedLandmark( double[] pt, boolean isMoving ){
+//		/**
+//		 * Returns the index of the landmark under the mouse position,
+//		 * or -1 if no landmark is at the current position
+//		 */
+		protected int selectedLandmarkLocal( double[] pt, boolean isMoving ){
 			// TODO selectedLandmark
 			int N = BigWarp.this.landmarkModel.getRowCount();
 			
@@ -1343,72 +1618,96 @@ public class BigWarp {
 		}
 		
 		@Override
-		public void mouseEntered(MouseEvent arg0) {}
+		public void mouseEntered( MouseEvent arg0 ) {}
 
 		@Override
-		public void mouseExited(MouseEvent arg0) {}
+		public void mouseExited( MouseEvent arg0 ) {}
 
 		@Override
-		public void mousePressed(MouseEvent arg0) 
+		public void mousePressed( MouseEvent e ) 
 		{
+			// shift down is reserved for drag overlay
+	    	if( e.isShiftDown() )
+	    	{
+	    		return;
+	    	}
+	    	
 			if( BigWarp.this.inLandmarkMode )
 			{
+				// TODO landmark pressed
+				
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-				BigWarp.this.currentLandmark.localize( ptarray );
+				BigWarp.this.currentLandmark.localize( ptarrayLoc );	
+				selectedPointIndex = BigWarp.this.updateWarpedPoint( ptarrayLoc, isMoving );
 				
-				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-				{
-					landmarkModel.getTransform().apply( ptarray, ptBack );
-					selectedPointIndex = selectedLandmark( ptBack, isMoving );
-				}
-				else
-				{
-					selectedPointIndex = selectedLandmark( ptarray, isMoving );
-				}
-				//System.out.println( "HERE: " + isMoving + " selectedPoint: " + selectedPointIndex );
 				
-				// if we move the fixed point, we need to update the warped 
-				// point for the moving image
-				// since the point renderer uses the transformed points
-				if( selectedPointIndex >= 0 && 
-						!isMoving && landmarkModel.getTransform() != null )
-				{
-					BigWarp.this.landmarkModel.updateWarpedPoint( 
-							selectedPointIndex, ptarray );
-				}
+//				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
+//				BigWarp.this.currentLandmark.localize( ptarray );	
+//				
+//				// if this is the moving image, than we need to warped the clicked point 
+//				// and check if it is in the table
+//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
+//				{
+//					landmarkModel.getTransform().apply( ptarray, ptBack );
+//					selectedPointIndex = selectedLandmark( ptBack, isMoving );
+//				}
+//				else // check if the clicked point itself is in the table 
+//				{
+//					selectedPointIndex = selectedLandmark( ptarray, isMoving );
+//				}
+				System.out.println( "HERE: " + isMoving + " selectedPoint: " + selectedPointIndex );
+//				
+//				
+//				// if we move the fixed point, we need to update the warped 
+//				// point for the moving image
+//				// since the point renderer uses the transformed points
+//				if( selectedPointIndex >= 0 && 
+//						!isMoving && landmarkModel.getTransform() != null )
+//				{
+//					BigWarp.this.landmarkModel.updateWarpedPoint( 
+//							selectedPointIndex, ptarray );
+//				}
 			}
 		}
 
 		@Override
-		public void mouseReleased(MouseEvent arg0) 
+		public void mouseReleased( MouseEvent e ) 
 		{
+			// shift down is reserved for drag overlay
+	    	if( e.isShiftDown() )
+	    	{
+	    		return;
+	    	}
+	    	
 			// deselect any point that may be selected
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex == -1 )
 			{
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-				currentLandmark.localize( ptarray );
+				currentLandmark.localize( ptarrayLoc );
 				
-				String message = "";
-				
-				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-				{
-					
-					ptBack = landmarkModel.getTransform().apply( ptarray );
-					message = BigWarp.this.landmarkModel.add(  ptBack, isMoving );
-					
-					BigWarp.this.landmarkModel.updateWarpedPoint( 
-							BigWarp.this.landmarkModel.nextRow( isMoving ) - 1, 
-							ptarray );
-				}
-				else
-					message = BigWarp.this.landmarkModel.add( ptarray, isMoving );
+				String message = addPoint( ptarrayLoc, isMoving );
+//				
+//				String message = "";
+//				
+//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
+//				{
+//					
+//					ptBackLoc = landmarkModel.getTransform().apply( ptarrayLoc );
+//					message = BigWarp.this.landmarkModel.add(  ptBack, isMoving );
+//					
+//					BigWarp.this.landmarkModel.updateWarpedPoint( 
+//							BigWarp.this.landmarkModel.nextRow( isMoving ) - 1, 
+//							ptarrayLoc );
+//				}
+//				else
+//					message = BigWarp.this.landmarkModel.add( ptarrayLoc, isMoving );
 				
 				if( !message.isEmpty() )
 					thisViewer.showMessage( message );
-
-				if( BigWarp.this.landmarkFrame.isVisible() ){
-					BigWarp.this.landmarkFrame.repaint();
-				}
+//
+//				if( BigWarp.this.landmarkFrame.isVisible() ){
+//					BigWarp.this.landmarkFrame.repaint();
+//				}
 			}
 			
 			selectedPointIndex = -1;
@@ -1417,34 +1716,42 @@ public class BigWarp {
 		@Override
 		public void mouseDragged(MouseEvent e) 
 		{
+			// shift down is reserved for drag overlay
+	    	if( e.isShiftDown() )
+	    	{
+	    		return;
+	    	}
+	    	
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
 			{
+				
 				LandmarkTableModel lmModel = BigWarp.this.landmarkModel;
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
+				currentLandmark.localize( ptarrayLoc );
 				
-				currentLandmark.localize( ptarray );
-				
-				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed())
-				{
-					landmarkModel.getTransform().apply( ptarray, ptBack );
-					lmModel.updateWarpedPoint( selectedPointIndex, ptarray );
-				}
-				
-				if( !isMoving || landmarkModel.getTransform() == null || !BigWarp.this.isMovingDisplayTransformed())
-				{					
-					lmModel.setPoint( selectedPointIndex, isMoving, ptarray );
-					
-					if( !isMoving && !lmModel.isWarpedPositionChanged( selectedPointIndex ))
-						lmModel.updateWarpedPoint( selectedPointIndex, ptarray );
-				}
-				else
-				{
-					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
-				}
+				updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
+//				
+//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed())
+//				{
+//					landmarkModel.getTransform().apply( ptarrayLoc, ptBackLoc );
+//					lmModel.updateWarpedPoint( selectedPointIndex, ptarrayLoc );
+//				}
+//				
+//				if( !isMoving || landmarkModel.getTransform() == null || !BigWarp.this.isMovingDisplayTransformed())
+//				{					
+//					lmModel.setPoint( selectedPointIndex, isMoving, ptarrayLoc );
+//					
+//					if( !isMoving && !lmModel.isWarpedPositionChanged( selectedPointIndex ))
+//						lmModel.updateWarpedPoint( selectedPointIndex, ptarrayLoc );
+//				}
+//				else
+//				{
+//					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBackLoc );
+//				}
 			}
-			if( BigWarp.this.landmarkFrame.isVisible() ){
-				BigWarp.this.landmarkFrame.repaint();
-			}
+//			if( BigWarp.this.landmarkFrame.isVisible() ){
+//				BigWarp.this.landmarkFrame.repaint();
+//			}
 		}
 
 		@Override
