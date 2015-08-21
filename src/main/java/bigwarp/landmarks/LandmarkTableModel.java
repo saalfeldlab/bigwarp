@@ -56,6 +56,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	// keeps track of whether points have been updated
 	protected ArrayList<Boolean> changedPositionSinceWarpEstimation;
 	protected ArrayList<Integer> wereUpdated;
+	protected boolean			 elementDeleted = false;
 	protected ArrayList<Boolean> needsInverse;
 	
 	// the transformation 
@@ -142,23 +143,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setTableListener()
 	{
-//		addTableModelListener( new TableModelListener()
-//		{
-//			@Override
-//			public void tableChanged( TableModelEvent e )
-//			{
-//				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
-//				{
-//					int row = e.getFirstRow();
-//					System.out.println("updating active for row: " + row );
-//					if( activeList.get(row) )
-//						estimatedXfm.enableLandmarkPair( row );
-//					else
-//						estimatedXfm.disableLandmarkPair( row );
-//				}
-//			}
-//			
-//		});
 		addTableModelListener( new TableModelListener()
 		{
 			@Override
@@ -167,7 +151,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
 				{
 					int row = e.getFirstRow();
-					// System.out.println("updating active for row: " + row );
 					wereUpdated.add( row );
 				}
 			}
@@ -305,21 +288,25 @@ public class LandmarkTableModel extends AbstractTableModel {
 		names.remove( i );
 		pts.remove( i );
 		activeList.remove( i );
-		fireTableRowsDeleted( i, i );
 		
 		numRows--;
 		nextRowP = nextRow( true  );
 		nextRowQ = nextRow( false );
 		pointUpdatePending = isUpdatePending();
 		
+		if( estimatedXfm != null && estimatedXfm.getNumLandmarks() >= (i+1) )
+			estimatedXfm.removePoint( i );
+		
+		fireTableRowsDeleted( i, i );
+		
 		// TODO deal with deletes correctly in the model
 		
 	}
 	
 	public boolean isUpdatePending()
-	{	
+	{
 		for( int i = 0; i < pts.size(); i++ )
-			for( int d = 0; d <  6; d++ )
+			for( int d = 0; d < 2*ndims; d++ )
 				if( Double.isInfinite( pts.get( i )[ d ] ))
 						return true;
 		
@@ -517,6 +504,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public void resetUpdated()
 	{
 		wereUpdated.clear();
+		elementDeleted = false;
 	}
 	
 	public void transferUpdatesToModel()
