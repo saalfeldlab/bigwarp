@@ -1,5 +1,6 @@
 package bigwarp.source;
 
+import bigwarp.source.GridSource.GRID_TYPE;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
@@ -7,24 +8,60 @@ import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.DoubleType;
 
 
 public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 
-	CoordinateTransform warp;
-	T value;
+	protected CoordinateTransform warp;
+
+	private T value;
+	private GRID_TYPE method = GRID_TYPE.MOD;
+
+	private double gridSpacing = 20;
+	private double gridWidth = 2.0;
+	
+	private boolean is2d = false;
 	
 	protected GridRealRandomAccess( double[] dimensions )
 	{
 		this( dimensions, null, null );
 	}
-	
+
 	protected GridRealRandomAccess( double[] dimensions, T value, CoordinateTransform warp )
+	{
+		this( dimensions, value, warp, GRID_TYPE.MOD );
+	}
+
+	protected GridRealRandomAccess( double[] dimensions, T value, CoordinateTransform warp, GRID_TYPE method )
 	{
 		super( dimensions.length );
 		this.value = value;
 		this.warp = warp;
+		this.method = method;
+		is2d = ( dimensions[2] == 0 );
+	}
+	
+	
+	public static void main( String[] args )
+	{
+		GridRealRandomAccess<DoubleType> ra = new GridRealRandomAccess<DoubleType>( new double[]{ 100.0, 100.0}, new DoubleType(), null );
+		ra.setMethod( GRID_TYPE.LINE );
+		
+		for( double x = 2.1; x < 5.0; x+= 1.0 ) for( double y = 0.0; y < 5.0; y+= 0.5 )
+		{
+			ra.setPosition( new double[]{x,y});
+			System.out.println("("+x+","+y+") : " + ra.get() );
+		}
+		
+		
+	}
+	
+
+	public void setMethod( GRID_TYPE method )
+	{
+		this.method = method;
 	}
 
 	@Override
@@ -33,19 +70,71 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 		double[] mypt = new double[ this.numDimensions() ];
 		this.localize( mypt );
 		
-		double[] warpRes = warp.apply( mypt );
-		 
+		switch( method )
+		{
+		case LINE:
+			return getLine( mypt );
+		default:
+			return getMod( mypt );
+		}
+	}
+
+	private T getLine( double[] pt )
+	{
+		double[] warpRes;
+		if( warp != null )
+			warpRes = warp.apply( pt );
+		else
+			warpRes = pt;
+
+		boolean ongrid = false;
+		
+		int nd = warpRes.length;
+		if( is2d )
+			nd = 2;
+		
+		for( int d = 0; d < nd; d++ )
+		{
+			double tmp = warpRes[ d ] % gridSpacing;
+			if( tmp < 0 ) tmp *= -1;
+
+			if( tmp <= gridWidth )
+			{
+				ongrid = true;
+				break;
+			}
+		}
+
 		T out = value.copy();
+		if( ongrid )
+			out.setReal(  255.0 );
+		else
+			out.setZero();
+
+		return out;
+	}
+
+	private T getMod( double[] pt )
+	{
+		double[] warpRes;
+		if( warp != null )
+			warpRes = warp.apply( pt );
+		else
+			warpRes = pt;
 		
 		double val = 0.0;
 		for( int d = 0; d < warpRes.length; d++ )
-			val += warpRes[ d ] % 50;
-		
+		{
+			double tmp = warpRes[ d ] % gridSpacing;
+			if( tmp < 0 ) tmp *= -1;
+
+			val += tmp;
+		}
+		T out = value.copy();
 		out.setReal( val );
-		
 		return out;
 	}
-	
+
 	private boolean withinRad( double[] pt1, double[] pt2, double rad )
 	{
 		double radSquared = rad * rad;
@@ -64,8 +153,17 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	
 	public RealRandomAccess<T> copy() 
 	{
-		return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
-				((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy()  );
+		if( warp == null )
+		{
+			return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
+					null, this.method  );
+		}
+		else
+		{
+			return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
+					((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy(), this.method  );
+		}
+
 	}
 
 	public RealRandomAccess<T> copyRandomAccess() 

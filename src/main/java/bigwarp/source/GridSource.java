@@ -6,17 +6,17 @@ import bigwarp.BigWarp.BigWarpData;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
-import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
 public class GridSource< T extends RealType< T >> implements Source< T >
 {
+	
+	public enum GRID_TYPE { MOD, LINE };
+	
 	protected final String name;
 	
 	protected final BigWarpData sourceData;
@@ -37,7 +37,6 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 		RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
 		interval = fixedsrc;
 		
-//		gridImg = new GridRandomAccessibleInterval<T>( interval, t, warp );
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
 	
@@ -55,7 +54,6 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	
 	public void setWarp( CoordinateTransform warp )
 	{
-		System.out.println(" Grid source SET WARP ");
 		gridImg.ra.warp = warp;
 	}
 	
@@ -63,6 +61,11 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	public boolean isPresent( int t )
 	{
 		return ( t == 0 );
+	}
+	
+	public void setMethod( GRID_TYPE method )
+	{
+		gridImg.ra.setMethod( method );
 	}
 
 	@Override
