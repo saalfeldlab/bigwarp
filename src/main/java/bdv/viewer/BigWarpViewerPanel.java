@@ -7,7 +7,6 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import jitk.spline.XfmUtils;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
@@ -31,6 +30,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpViewerSettings viewerSettings;
 	
 	protected BigWarpOverlay overlay;
+	
+	protected BigWarpDragOverlay dragOverlay;
 	
 	protected boolean isMoving;
 	
@@ -64,6 +65,14 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	public BigWarpOverlay getOverlay( ){
 		return overlay;
+	}
+
+	public void addDragOverlay( BigWarpDragOverlay dragOverlay ){
+		this.dragOverlay = dragOverlay;
+	}
+
+	public BigWarpDragOverlay getDragOverlay(){
+		return dragOverlay;
 	}
 	
 	public boolean getIsMoving()
@@ -134,6 +143,11 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if ( null != overlay ) {
 			overlay.setViewerState( state );
 			overlay.paint( ( Graphics2D ) g );
+		}
+		
+		if ( dragOverlay != null ) {
+			//dragOverlay.setViewerState( state );
+			dragOverlay.paint( ( Graphics2D ) g );
 		}
 	}
 	
