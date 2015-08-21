@@ -1409,8 +1409,8 @@ public class BigWarp {
 		
 		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
 		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
-		final String fnLandmarks = "/Users/bogovicj/workspaces/bdv/bigwarp/src/main/resources/data/histology/histology_uniform";
+		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+//		final String fnLandmarks = "/Users/bogovicj/workspaces/bdv/bigwarp/src/main/resources/data/histology/histology_uniform";
 		
 		// A 2d example
 ////		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
@@ -1804,20 +1804,34 @@ public class BigWarp {
 				double[] pt = null;
 				if( column >= 2 && column < ( 2 + ndims ))
 				{
-					if( viewer.getIsMoving())
+					if( viewer.getIsMoving() )
 					{
-						pt = new double[]{
-								(Double)target.getValueAt( row, 2 ),
-								(Double)target.getValueAt( row, 3 ),
-								(Double)target.getValueAt( row, 4 )
-						};
+						int offset = 0;
+						if( viewer.getOverlay().getIsTransformed() )
+						{
+							offset = ndims;
+						}
+						
+						if( ndims == 3 )
+						{
+							pt = new double[]{
+								(Double)target.getValueAt( row, offset + 2 ),
+								(Double)target.getValueAt( row, offset + 3 ),
+								(Double)target.getValueAt( row, offset + 4 )};
+						}
+						else
+						{
+							pt = new double[]{
+									(Double)target.getValueAt( row, offset + 2 ),
+									(Double)target.getValueAt( row, offset + 3 ), 0.0};
+						}
 					}
 					else
 					{
 						return;
 					}
 				}
-				else if( ( 2 + ndims ) >= 5 )
+				else if( column >= ( 2 + ndims ) )
 				{
 					if( viewer.getIsMoving() )
 					{
@@ -1825,11 +1839,19 @@ public class BigWarp {
 					}
 					else
 					{
-						pt = new double[]{
+						if( ndims == 3 )
+						{
+							pt = new double[]{
 								(Double)target.getValueAt( row, 5 ),
 								(Double)target.getValueAt( row, 6 ),
-								(Double)target.getValueAt( row, 7 )
-						};
+								(Double)target.getValueAt( row, 7 )};
+						}
+						else
+						{
+							pt = new double[]{
+									(Double)target.getValueAt( row, 4 ),
+									(Double)target.getValueAt( row, 5 ), 0.0};
+						}
 					}
 				}else{
 					// we're in a column that doesnt correspond to a point and
