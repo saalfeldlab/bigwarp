@@ -10,6 +10,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 
 import bdv.gui.BigWarpLandmarkPanel;
+import bigwarp.BigWarp;
 
 public class LandmarkPointMenu extends JPopupMenu 
 {
@@ -17,10 +18,17 @@ public class LandmarkPointMenu extends JPopupMenu
 	private static final long serialVersionUID = -3676180390835767585L;
 	
 	protected BigWarpLandmarkPanel landmarkPanel;
+	protected BigWarp bw;
 	
 	protected LandmarkMenuHandler handler;
 	protected MouseListener popupListener;
 	protected JMenuItem deleteItem;
+	
+	public LandmarkPointMenu( BigWarp bw )
+	{
+		this( bw.getLandmarkPanel() );
+		this.bw = bw;
+	}
 	
 	public LandmarkPointMenu( BigWarpLandmarkPanel landmarkPanel )
 	{
@@ -63,13 +71,15 @@ public class LandmarkPointMenu extends JPopupMenu
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
-			System.out.println( e.getSource() );
 			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
 			for( int i = 0; i < selectedRows.length; i++ )
 			{
 				int j = selectedRows[ i ];
 				landmarkPanel.getTableModel().deleteRow( j );
 			}
+			
+			if( bw != null )
+				bw.restimateTransformation();
 		}
 	}
 }
