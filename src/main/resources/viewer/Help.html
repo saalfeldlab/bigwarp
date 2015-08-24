@@ -54,12 +54,16 @@ In <i>fused</i> mode, all <i>active</i> sources are shown overlaid.
   <td class="a"><b>I</b></td>
   <td>Switch between tri-linear and nearest-neighbor interpolation.</td>
 </tr><tr>
+  <td class="a"><b>T&nbsp;</b></td>
+  <td>Toggle whether moving image is displayed warped or raw. </td>
+</tr><tr>
   <td class="a"><b>S</b></td>
   <td>Show Brightness &amp; Color dialog.</td>
 </tr><tr>
-  <td class="a"><b>T&nbsp;</b></td>
-  <td>Toggle whether moving image is displayed warped or raw. </td>
+  <td class="a"><b>M&nbsp;</b></td>
+  <td>Toggle whether the magnitude of the warp is displayed as an overlay.</td>
 </tr>
+
 </table>
 <br/>
 
@@ -108,14 +112,16 @@ Using the keyboard:
   <td class="a"><b>,</b> / <b>.</b></td>
   <td>Move forward / backward along the z-axis.</td>
 </tr><tr>
-  <td class="a"><b>Shift&nbsp;X</b></td>
-  <td>Rotate to the zy-plane of the current source. (Look along the x-axis of the current source.)</td>
-</tr><tr>
   <td class="a"><b>Shift&nbsp;Y</b> or <b>Shift&nbsp;A</b></td>
-  <td>Rotate to the xz-plane of the current source. (Look along the y-axis of the current source.)</td>
+  <td> 3d: Rotate to the xz-plane of the current source. (Look along the y-axis of the current source.)</td>
+</tr><tr>
+  <td class="a"><b>Shift&nbsp;X</b></td>
+  <td> 3d: Rotate to the zy-plane of the current source. (Look along the x-axis of the current source.)<br>
+       2d: Rotate clockwise to the next 90 degree rotation of the image</td>
 </tr><tr>
   <td class="a"><b>Shift&nbsp;Z</b></td>
-  <td>Rotate to the xy-plane of the current source. (Look along the z-axis of the current source.)</td>
+  <td> 3d: Rotate to the xy-plane of the current source. (Look along the z-axis of the current source.)<br>
+       2d: Rotate counterclockwise to the next 90 degree rotation of the image </td>
 </tr>
 </table>
 <p>
@@ -141,6 +147,11 @@ in viewer windows to indicate that you are in landmark mode.
 <tr>
 <td class="a">(<i>landmark mode</i>) + ( mouse drag )</td>
   <td>Drag landmark point.</td>
+</tr>
+<tr>
+  <td class="a"><b>Shift</b> + (<i>landmark mode</i>) + ( mouse drag )</td>
+  <td>"Move" a point. <br>Click to place a landmark in the moving image
+    space, drag to move a landmark in the fixed image, release to set the fixed image landmark.</td>
 </tr>
 <tr>
 <td class="a">(<i>landmark mode</i>) + click point in table.</td>
