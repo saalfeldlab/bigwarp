@@ -40,6 +40,16 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
 	
+	public void setGridSpacing( double spacing )
+	{
+		gridImg.ra.setGridSpacing( spacing );
+	}
+	
+	public void setGridWidth( double width )
+	{
+		gridImg.ra.setGridWidth( width );
+	}
+	
 //	public void debug( long[] pt )
 //	{
 ////		RandomAccess<T> rra = gridImg.randomAccess();

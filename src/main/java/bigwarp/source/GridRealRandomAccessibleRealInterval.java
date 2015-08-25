@@ -27,24 +27,5 @@ public class GridRealRandomAccessibleRealInterval<T extends RealType<T>> extends
 	public RealRandomAccess<T> realRandomAccess(RealInterval interval) {
 		return realRandomAccess();
 	}
-
-//	@Override
-//	public RandomAccess<T> randomAccess() {
-//		return ra.copy();
-//	}
-//
-//	@Override
-//	public RandomAccess<T> randomAccess( Interval interval) {
-//		return randomAccess();
-//	}
-
-//	public RandomAccessibleInterval<T> copy()
-//	{
-//		return new GridRandomAccessibleInterval<T>(
-//					this, this.ra.value.copy(), 
-//					warp );
-//		
-//
-//	}
 	
 }

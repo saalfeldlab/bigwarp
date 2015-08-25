@@ -15,13 +15,10 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
 
 import javax.imageio.ImageIO;
-import javax.swing.AbstractButton;
 import javax.swing.ActionMap;
-import javax.swing.ButtonGroup;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -115,7 +112,9 @@ public class BigWarp {
 	
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
+	protected final SetupAssignments setupAssignments;
 	protected final BrightnessDialog brightnessDialog;
+	protected final WarpVisFrame warpVisDialog;
 	protected final HelpDialog helpDialog;
 	
 	protected final VisibilityAndGroupingDialog activeSourcesDialog;
@@ -142,7 +141,6 @@ public class BigWarp {
 	protected LandmarkTableModel landmarkModel;
 	protected JTable			 landmarkTable;
 	
-	//protected MouseLandmarkListener landmarkClickListener;
 	protected LandmarkTableListener landmarkModellistener;
 	
 	MouseLandmarkListener landmarkClickListenerP;
@@ -160,10 +158,6 @@ public class BigWarp {
 	protected final int gridSourceIndex;
 	protected final int warpMagSourceIndex;
 	protected final AbstractModel<?>[] baseXfmList;
-	protected JMenuItem warpVisItemP;
-	protected JMenuItem warpVisItemQ;
-	
-	protected ButtonGroup warpMagTypeGroup;
 	
 	private final double[] ptBack;
 	/*
@@ -271,15 +265,18 @@ public class BigWarp {
 				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
 		}
 		
-		SetupAssignments setupAssignments = new SetupAssignments( csetups, 0, 512 );
+		setupAssignments = new SetupAssignments( csetups, 0, 512 );
 		if ( setupAssignments.getMinMaxGroups().size() > 0 )
 		{
 			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
 			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
 				setupAssignments.moveSetupToGroup( setup, group );
 		}
+		
 		brightnessDialog = new BrightnessDialog( getViewerFrameQ(), setupAssignments );
 		helpDialog = new HelpDialog( getViewerFrameP() );
+		
+		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have to be constructed before action maps are made
 		
 		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, (ndims==2) );
@@ -290,12 +287,13 @@ public class BigWarp {
 		
 		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, keyProperties );
 		
+		// this call has to come after the actions are set
+		warpVisDialog.setActions();
+		
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
 		setUpLandmarkMenus();
 		
-		// initialize warp base to affine
-		warpMagTypeGroup.getElements().nextElement().doClick();
 		
 		/* Set the locations of frames */
 		Point viewerFramePloc = getViewerFrameP().getLocation();
@@ -333,26 +331,6 @@ public class BigWarp {
 		
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
 		
-		if( warpMagTypeGroup == null )
-		{
-			JRadioButton warpMagAffineButton = new JRadioButton( 
-					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 0 ].getClass().getName() ) ));
-			JRadioButton warpMagSimilarityButton = new JRadioButton( 
-					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 1 ].getClass().getName() ) ));
-			JRadioButton warpMagRigidButton = new JRadioButton( 
-					actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, baseXfmList[ 2 ].getClass().getName() ) ));
-			
-			warpMagAffineButton.setText("Affine baseline");
-			warpMagSimilarityButton.setText("Similarity baseline");
-			warpMagRigidButton.setText("Rigid baseline");
-			
-			warpMagTypeGroup = new ButtonGroup();
-			warpMagTypeGroup.add( warpMagAffineButton );
-			warpMagTypeGroup.add( warpMagSimilarityButton );
-			warpMagTypeGroup.add( warpMagRigidButton );
-		}
-		
-		
 		JMenuBar viewerMenuBar = new JMenuBar();
 		JMenu settingsMenu    = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
@@ -362,31 +340,10 @@ public class BigWarp {
 		settingsMenu.add( miBrightness );
 		
 		/* Warp Visualization */
-		final JMenu warpVisMenu = new JMenu( "Warp Visualization" );
+		final JMenuItem warpVisMenu = new JMenuItem( actionMap.get( BigWarpActions.SHOW_WARPTYPE_DIALOG ) );
+		warpVisMenu.setText( "Warp Visualization" );
 		settingsMenu.add( warpVisMenu );
 		
-		final JMenuItem warpVisItem;
-		if( vframe == viewerFrameP )
-		{
-			warpVisItem = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_WARPMAG_VIS_P ) );
-			warpVisItemP = warpVisItem;
-		}
-		else
-		{
-			warpVisItem = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_WARPMAG_VIS_Q ) );
-			warpVisItemQ = warpVisItem;
-		}
-		
-		warpVisItem.setText("Toggle on");
-		warpVisMenu.add( warpVisItem );
-		warpVisMenu.addSeparator();
-		
-		Enumeration<AbstractButton> grpElems = warpMagTypeGroup.getElements();
-		while( grpElems.hasMoreElements() ){
-			AbstractButton b = grpElems.nextElement() ;
-			// System.out.println( b );
-			warpVisMenu.add( b );
-		}
 		vframe.setJMenuBar( viewerMenuBar );
 		
 		JMenu helpMenu    = new JMenu( "Help" );
@@ -475,7 +432,6 @@ public class BigWarp {
 			@Override
 			public void mouseReleased(MouseEvent e) 
 			{
-				System.out.println( "save save save ");
 				final JFileChooser fc = new JFileChooser();
 				// int returnval = fc.showOpenDialog( landmarkFrame );
 				fc.showSaveDialog( landmarkFrame );
@@ -1091,12 +1047,8 @@ public class BigWarp {
 		int id = (int)(Math.random() * Integer.MAX_VALUE );
 		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
 		
-//		final SourceAndConverter< FloatType > vsoc = new SourceAndConverter< FloatType >( magSource, null );
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
-		
-//		sources.add( new SourceAndConverter< FloatType >( 
-//				magSource, converter, null ));
 		
 		return sources.size() - 1;
 	}
@@ -1123,12 +1075,8 @@ public class BigWarp {
 		int id = (int)(Math.random() * Integer.MAX_VALUE );
 		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
 		
-//		final SourceAndConverter< FloatType > vsoc = new SourceAndConverter< FloatType >( magSource, null );
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
-		
-//		sources.add( new SourceAndConverter< FloatType >( 
-//				magSource, converter, null ));
 		
 		return sources.size() - 1;
 	}
@@ -1173,10 +1121,32 @@ public class BigWarp {
 				new LandmarkKeyboardProcessor( this ));
 	}
 	
-	public void setWarpMagBaseline( AbstractModel<?> baseline )
+	public void setWarpVisGridType( GridSource.GRID_TYPE type )
 	{
-		System.out.println("set WM baseline: " + baseline.getClass().getName() );
+		((GridSource<?>)sources.get( gridSourceIndex ).getSpimSource()).setMethod( type );
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
+	}
+	
+	public void setWarpGridWidth( double width )
+	{
+		((GridSource<?>)sources.get( gridSourceIndex ).getSpimSource()).setGridWidth( width );
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
+	}
+	
+	public void setWarpGridSpacing( double spacing )
+	{
+		((GridSource<?>)sources.get( gridSourceIndex ).getSpimSource()).setGridSpacing( spacing );
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
+	}
+	
+	public void setWarpMagBaseline( int i )
+	{
+		AbstractModel<?> baseline = this.baseXfmList[ i ];
 		((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource()).setBaseline( baseline );
+		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
@@ -1234,7 +1204,91 @@ public class BigWarp {
 		
 	}
 	
-	public void toggleWarpMagMode( BigWarpViewerFrame viewerFrame )
+	public enum WarpVisType { NONE, WARPMAG, GRID };
+	
+	public void setWarpVisMode( WarpVisType type, BigWarpViewerFrame viewerFrame, boolean both )
+	{
+		
+		JMenuItem warpVisItem = null;
+		
+		if( viewerFrame == null )
+		{
+			if( viewerFrameP.isActive() )
+			{
+				viewerFrame = viewerFrameP;
+			}
+			else if( viewerFrameQ.isActive() )
+			{
+				viewerFrame = viewerFrameQ;
+			}else if( both ){
+				setWarpVisMode( type, viewerFrameP, false );
+				setWarpVisMode( type, viewerFrameQ, false );
+				return;
+			}else{
+				return;
+			}
+				
+		}
+		
+		int offImgIndex = 0;
+		int onImgIndex  = 1;
+		
+		if( viewerFrame == viewerFrameP )
+		{
+			offImgIndex = 1;
+			onImgIndex  = 0;
+		}
+		
+		if( landmarkModel.getTransform() == null )
+		{
+			viewerFrame.getViewerPanel().showMessage( "No warp - estimate warp first." );
+			return;
+		}
+		VisibilityAndGrouping vg = viewerFrame.getViewerPanel().getVisibilityAndGrouping();
+		
+		switch( type ) {
+		case WARPMAG: 
+		{
+			// turn warp mag on
+			vg.setSourceActive( warpMagSourceIndex, true );
+			vg.setSourceActive( gridSourceIndex, false);
+			vg.setSourceActive( offImgIndex, false );
+			
+			// estimate the max warp 
+			WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
+			double maxval = wmSrc.getMax( landmarkModel );
+			
+			// set the slider
+			((RealARGBColorConverter< FloatType >)(sources.get( warpMagSourceIndex ).getConverter())).setMax(  maxval );
+			
+			vg.setFusedEnabled( true );
+			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
+			break;
+		}
+		case GRID: 
+		{
+			// turn grid vis on
+			vg.setSourceActive( warpMagSourceIndex, false );
+			vg.setSourceActive( gridSourceIndex, true );
+			vg.setSourceActive( offImgIndex, false );
+						
+			vg.setFusedEnabled( true );
+			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Grid" );
+			break;
+		}
+		default: {
+			vg.setSourceActive( warpMagSourceIndex, false );
+			vg.setSourceActive( gridSourceIndex, false );
+			vg.setSourceActive( offImgIndex, true );
+						
+			vg.setFusedEnabled( false );
+			viewerFrame.getViewerPanel().showMessage( "Turning off warp vis" );
+			break;
+		}
+		}
+	}
+	
+	public void toggleWarpVisMode( BigWarpViewerFrame viewerFrame )
 	{
 		
 		JMenuItem warpVisItem = null;
@@ -1246,12 +1300,10 @@ public class BigWarp {
 			if( viewerFrameP.isActive() )
 			{
 				viewerFrame = viewerFrameP;
-				warpVisItem = warpVisItemP;
 			}
 			else if( viewerFrameQ.isActive() )
 			{
 				viewerFrame = viewerFrameQ;
-				warpVisItem = warpVisItemQ;
 			}else
 				return;
 		}
@@ -1277,7 +1329,6 @@ public class BigWarp {
 			vg.setSourceActive( warpMagSourceIndex, false );
 			
 			vg.setSourceActive( offImgIndex, true );
-//			vg.setSourceActive( onImgIndex , true ); // might be unnecessary
 			
 			vg.setFusedEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Removing Warp Magnitude" );
@@ -1286,11 +1337,14 @@ public class BigWarp {
 		else // warp mag is invisible, turn it on
 		{
 			vg.setSourceActive( warpMagSourceIndex, true );
-			
 			vg.setSourceActive( offImgIndex, false );
-//			vg.setSourceActive( onImgIndex , true ); // might be unnecessary
 			
-//			vg.setSourceActive( 0, false );
+			// estimate the max warp 
+			WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
+			double maxval = wmSrc.getMax( landmarkModel );
+			
+			// set the slider
+			((RealARGBColorConverter< FloatType >)(sources.get( warpMagSourceIndex ).getConverter())).setMax(  maxval );
 			
 			vg.setFusedEnabled( true );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );

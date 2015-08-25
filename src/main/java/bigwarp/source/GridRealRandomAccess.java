@@ -21,6 +21,7 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 
 	private double gridSpacing = 20;
 	private double gridWidth = 2.0;
+	private double gridHalfWidth = gridWidth / 2.0;
 	
 	private boolean is2d = false;
 	
@@ -54,10 +55,18 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 			ra.setPosition( new double[]{x,y});
 			System.out.println("("+x+","+y+") : " + ra.get() );
 		}
-		
-		
 	}
 	
+	public void setGridSpacing( double spacing )
+	{
+		this.gridSpacing = spacing;
+	}
+	
+	public void setGridWidth( double width )
+	{
+		this.gridWidth = width;
+		gridHalfWidth = width / 2.0 ;
+	}
 
 	public void setMethod( GRID_TYPE method )
 	{
@@ -87,28 +96,47 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 		else
 			warpRes = pt;
 
-		boolean ongrid = false;
-		
 		int nd = warpRes.length;
 		if( is2d )
 			nd = 2;
 		
+		double val = -1.0;
+		int i = 0;
 		for( int d = 0; d < nd; d++ )
 		{
 			double tmp = warpRes[ d ] % gridSpacing;
-			if( tmp < 0 ) tmp *= -1;
+			// make sure tmp is positive
+			if( tmp < 0.0 ){ tmp *= -1; }
 
-			if( tmp <= gridWidth )
+			if( tmp <= gridHalfWidth )
 			{
-				ongrid = true;
-				break;
+				tmp = gridHalfWidth - tmp;
 			}
+			else if( tmp >= (gridSpacing - gridHalfWidth ) )
+			{
+				tmp = tmp - gridSpacing + gridHalfWidth;
+			}else
+			{
+				tmp = 0.0;
+			}
+			
+			if( tmp > val ){
+				val = tmp;
+//				val += tmp;
+//				i++;
+			}
+			
 		}
-
+		
+//		if( i > 0 ) val /= i;
+ 
 		T out = value.copy();
-		if( ongrid )
-			out.setReal(  255.0 );
-		else
+		if( val < gridWidth )
+		{
+			// we want out to have a peak value of 255
+			// Note: val takes a max value of gridHalfWidth
+			out.setReal( val * ( 255.0 / gridHalfWidth) );
+		}else
 			out.setZero();
 
 		return out;
@@ -155,13 +183,21 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	{
 		if( warp == null )
 		{
-			return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
+			GridRealRandomAccess< T > ra =  new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
 					null, this.method  );
+			ra.gridSpacing = this.gridSpacing;
+			ra.gridWidth = this.gridWidth;
+			ra.gridHalfWidth = this.gridHalfWidth;
+			return ra;
 		}
 		else
 		{
-			return new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
+			GridRealRandomAccess< T > ra = new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
 					((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy(), this.method  );
+			ra.gridSpacing = this.gridSpacing;
+			ra.gridWidth = this.gridWidth;
+			ra.gridHalfWidth = this.gridHalfWidth;
+			return ra;
 		}
 
 	}

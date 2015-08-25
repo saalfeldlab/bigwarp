@@ -3,6 +3,7 @@ package bigwarp.source;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.landmarks.LandmarkTableModel;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
@@ -46,6 +47,35 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		interval = fixedsrc;
 		
 		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
+	}
+	
+	public double getMax( LandmarkTableModel lm )
+	{
+		double maxVal = 0.0;
+		
+		int ndims = 3;
+		double[] pt = new double[ 3 ];
+		
+		int i = 0;
+		for( Double[] ptPair : lm.getPoints() )
+		{
+			if( i == 0 && ptPair.length == 4 )
+				ndims = 2;
+			
+			
+			for( int d = 0; d < ndims; d++ )
+				pt[ d ] = ptPair[ d ];
+			
+			warpMagImg.ra.setPosition(  pt );
+			double val = warpMagImg.ra.get().getRealDouble();
+			
+			if( val > maxVal )
+				maxVal = val;
+			
+			i++;
+		}
+		
+		return maxVal;
 	}
 	
 	public void setWarp( CoordinateTransform warp )

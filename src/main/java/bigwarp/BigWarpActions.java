@@ -18,6 +18,7 @@ import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
 import bdv.viewer.InputActionBindings;
+import bigwarp.source.GridSource;
 
 public class BigWarpActions
 {
@@ -27,10 +28,18 @@ public class BigWarpActions
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String ESTIMATE_WARP = "estimate warp";
 	
-	public static final String TOGGLE_WARPMAG_VIS = "toggle warp magnitude";
-	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
-	public static final String TOGGLE_WARPMAG_VIS_Q = "toggle warp magnitude q";
+//	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
+//	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
+//	public static final String TOGGLE_WARPMAG_VIS_Q = "toggle warp magnitude q";
+	
+	public static final String SHOW_WARPTYPE_DIALOG = "show warp vis dialog" ;
+	public static final String SET_WARPTYPE_VIS = "set warp vis type %s" ;
+	public static final String SET_WARPTYPE_VIS_P = "p " + SET_WARPTYPE_VIS;
+	public static final String SET_WARPTYPE_VIS_Q = "q " + SET_WARPTYPE_VIS;
+	
 	public static final String WARPMAG_BASE = "set warpmag base %s";
+	public static final String WARPVISGRID = "set warp vis grid %s";
+	public static final String WARPVISDIALOG = "warp vis dialog";
 	
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
@@ -81,8 +90,6 @@ public class BigWarpActions
 		
 		inputActionBindings.addInputMap( "w", inputMap );
 		inputActionBindings.addActionMap( "bw", actionMap );
-		System.out.println( "ADDED LM ACTIONS ");
-		
 		
 		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
 		Component c = celled.getTableCellEditorComponent(landmarkTable, new Boolean(true), true, 0, 1 );
@@ -96,14 +103,13 @@ public class BigWarpActions
 		parentInputMap.put(   enterUpKS, "released" );
 	}
 	
-
 	public static InputMap createInputMap( final KeyProperties keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put( VISIBILITY_AND_GROUPING, "F6" );
-		map.put( TOGGLE_WARPMAG_VIS, "M" );
+		 map.put( SHOW_WARPTYPE_DIALOG, "G" );
 		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
@@ -124,12 +130,21 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		
 		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bw.activeSourcesDialog ) );
+		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 		map.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
-		map.put( new ToggleWarpMagAction( TOGGLE_WARPMAG_VIS, bw ));
-		map.put( new ToggleWarpMagAction( TOGGLE_WARPMAG_VIS_P, bw, bw.getViewerFrameP() ));
-		map.put( new ToggleWarpMagAction( TOGGLE_WARPMAG_VIS_Q, bw, bw.getViewerFrameQ() ));
+		
+//		map.put( new SetWarpVisTypeAction( TOGGLE_WARP_VIS, bw ));
+//		map.put( new SetWarpVisTypeAction( TOGGLE_WARPMAG_VIS_P, bw, bw.getViewerFrameP() ));
+//		map.put( new SetWarpVisTypeAction( TOGGLE_WARPMAG_VIS_Q, bw, bw.getViewerFrameQ() ));
+		
+		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
+		{
+			map.put( new SetWarpVisTypeAction( t, bw ));
+			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ));
+			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ));
+		}
+		
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
@@ -145,11 +160,15 @@ public class BigWarpActions
 			AbstractModel<?> xfm = bw.baseXfmList[ i ];
 			map.put( new SetWarpMagBaseAction( String.format( WARPMAG_BASE, xfm.getClass().getName()), bw, i ));
 		}
+		
+		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
+			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
+		
+			
 		return actionMap;
 	}
 
-	private BigWarpActions()
-	{}
+	private BigWarpActions(){}
 	
 	public static class ToggleLandmarkModeAction extends AbstractNamedAction
 	{
@@ -276,46 +295,81 @@ public class BigWarpActions
 		private static final long serialVersionUID = 7370813069619338918L;
 		
 		private BigWarp bw;
-		private AbstractModel<?> baseXfm;
+		private int i;
 		
 		public SetWarpMagBaseAction( final String name, final BigWarp bw, int i )
 		{
 			super( name );
 			this.bw = bw;
-			this.baseXfm = this.bw.baseXfmList[ i ];
+			this.i = i;
 		}
 
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.setWarpMagBaseline( this.baseXfm );
-			
+			bw.setWarpMagBaseline( i );
 		}
 	}
 	
-	public static class ToggleWarpMagAction extends AbstractNamedAction
+	public static class SetWarpVisGridTypeAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 7370813069619338918L;
+		
+		private final BigWarp bw;
+		private final GridSource.GRID_TYPE type;
+		
+		public SetWarpVisGridTypeAction( final String name, final BigWarp bw, final GridSource.GRID_TYPE type )
+		{
+			super( name );
+			this.bw = bw;
+			this.type = type;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.setWarpVisGridType( type );
+		}
+	}
+	
+	public static class SetWarpVisTypeAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
 		
 		private BigWarp bw;
 		private BigWarpViewerFrame p;
+		private BigWarp.WarpVisType type;
 		
-		public ToggleWarpMagAction( final String name, final BigWarp bw )
+		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp bw )
 		{
-			this( name, bw, null );
+			this( type, bw, null );
 		}
 		
-		public ToggleWarpMagAction( final String name, final BigWarp bw, BigWarpViewerFrame p )
+		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp bw, BigWarpViewerFrame p )
 		{
-			super( name );
+			super( getName( type, p ));
 			this.bw = bw;
+			this.p = p;
+			this.type = type;
 		}
 
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.toggleWarpMagMode( p );
-			
+			if( p == null )
+				bw.setWarpVisMode( type, p, true );
+			else
+				bw.setWarpVisMode( type, p, false );
+		}
+		
+		public static String getName( final BigWarp.WarpVisType type, BigWarpViewerFrame p )
+		{
+			if( p == null )
+				return String.format( SET_WARPTYPE_VIS, type.name() );
+			else if( p.isMoving() )
+				return String.format( SET_WARPTYPE_VIS_P, type.name() );
+			else
+				return String.format( SET_WARPTYPE_VIS_Q, type.name() );
 		}
 	}
 	
