@@ -293,13 +293,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		nextRowP = nextRow( true  );
 		nextRowQ = nextRow( false );
 		pointUpdatePending = isUpdatePending();
-		
-		if( estimatedXfm != null && estimatedXfm.getNumLandmarks() >= (i+1) )
+
+		if( estimatedXfm != null && estimatedXfm.getNumLandmarks() >= (i+1) ){
 			estimatedXfm.removePoint( i );
+		}
 		
 		fireTableRowsDeleted( i, i );
-		
-		// TODO deal with deletes correctly in the model
 		
 	}
 	
@@ -604,6 +603,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		nextRowP = nextRow( true );
 		nextRowQ = nextRow( false );
+		initTransformation();
 	}
 	
 	public void initTransformation()

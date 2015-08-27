@@ -1,7 +1,9 @@
 package bigwarp;
 
 import ij.IJ;
+import ij.ImageJ;
 import ij.ImagePlus;
+import ij.process.ColorProcessor;
 
 import java.awt.Component;
 import java.awt.Cursor;
@@ -26,7 +28,6 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JRadioButton;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
@@ -36,17 +37,20 @@ import javax.swing.table.TableCellEditor;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.view.Views;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -170,6 +174,8 @@ public class BigWarp {
 	final JFrame	 fileFrame;
 	final FileDialog fileDialog;
 	
+	private static ImageJ ij;
+	
 	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 
@@ -181,7 +187,7 @@ public class BigWarp {
 		ndims = detectNumDims();
 		ptBack = new double[ 3 ];
 		
-		sources = wrapSourcesAsTransformed( sources, ndims, 0 );
+		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndex );
 		baseXfmList = new AbstractModel<?>[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 		
@@ -323,6 +329,11 @@ public class BigWarp {
 		fileFrame = new JFrame("Select File");
 		fileDialog = new FileDialog(fileFrame);
 		fileFrame.setVisible( false );
+	}
+	
+	public void setImageJInstance( ImageJ ij )
+	{
+		this.ij = ij;
 	}
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
@@ -926,6 +937,77 @@ public class BigWarp {
 		getViewerFrameP().getViewerPanel().requestRepaint();
 	}
 	
+	protected void exportMovingImagePlus( )
+	{
+		if( ij == null )
+		{
+			System.out.println("no imagej instance");
+			return;
+		}
+		
+		final RandomAccessibleInterval<?> rai =
+				sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 );
+		
+		final RandomAccessibleInterval<?> destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
+		
+//		public static Image<UnsignedByteType> wrapByte( final ImagePlus imp ) { return ImagePlusAdapter.wrapByte( imp ); }
+//
+//		public static Image<UnsignedShortType> wrapShort( final ImagePlus imp ) { return ImagePlusAdapter.wrapShort( imp ); }
+//
+//		public static Image<RGBALegacyType> wrapRGBA( final ImagePlus imp ) { return ImagePlusAdapter.wrapRGBA( imp ); }
+//
+//		public static Image<FloatType> wrapFloat( final ImagePlus imp ) { return ImagePlusAdapter.wrapFloat( imp ); }
+//
+//		public static Image<FloatType> convertFloat( final ImagePlus imp ) { return ImagePlusAdapter.convertFloat( imp ); }
+
+		ImagePlus ip = null;
+		Object t = rai.randomAccess().get();
+		System.out.println( t );
+		if( t instanceof FloatType )
+		{
+			System.out.println("FloatType");
+		}
+		else if( t instanceof ByteType )
+		{
+			System.out.println("ByteType");
+		}
+		else if( t instanceof ARGBType )
+		{
+			System.out.println("ARGBType");
+			ip = copyToImagePlus( (RandomAccessibleInterval<ARGBType>)rai, destinterval );
+		}
+		
+		if( ip != null )
+			ip.show();
+		
+	}
+	
+	public static ImagePlus copyToImagePlus( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
+	{
+//		Views.interval( Views.extendZero( rai ), itvl ).cursor();
+//		net.imglib2.Cursor<ARGBType> cc = Views.flatIterable( rai ).cursor();
+		
+		net.imglib2.Cursor<ARGBType> cc = Views.interval( Views.extendZero( rai ), itvl ).cursor();
+		
+		ColorProcessor iproc = new ColorProcessor( (int)itvl.dimension(0), (int)itvl.dimension(1) );
+		
+		
+		System.out.println( itvl.min( 0 ) +  " " + itvl.max( 0 ));
+		System.out.println( itvl.min( 1 ) +  " " + itvl.max( 1 ));
+		
+		int[] pos = new int[ rai.numDimensions() ];
+		while( cc.hasNext() )
+		{
+			ARGBType color = cc.next();
+			cc.localize( pos );
+			
+//			System.out.println( pos[0] + " " + pos[1] );
+			iproc.set( pos[0], pos[1], color.get());
+		}
+		
+		return new ImagePlus( "warped_image", iproc );
+	}
+	
 	protected void exportMovingImage( File f ) throws IOException, InterruptedException
 	{
 		// Source< ? > movingSrc = sources.get( 1 ).getSpimSource();
@@ -1208,9 +1290,6 @@ public class BigWarp {
 	
 	public void setWarpVisMode( WarpVisType type, BigWarpViewerFrame viewerFrame, boolean both )
 	{
-		
-		JMenuItem warpVisItem = null;
-		
 		if( viewerFrame == null )
 		{
 			if( viewerFrameP.isActive() )
@@ -1290,9 +1369,6 @@ public class BigWarp {
 	
 	public void toggleWarpVisMode( BigWarpViewerFrame viewerFrame )
 	{
-		
-		JMenuItem warpVisItem = null;
-		
 		int offImgIndex = 0;
 		int onImgIndex  = 1;
 		if( viewerFrame == null )
@@ -1332,7 +1408,6 @@ public class BigWarp {
 			
 			vg.setFusedEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Removing Warp Magnitude" );
-			warpVisItem.setText("Toggle on");
 		}
 		else // warp mag is invisible, turn it on
 		{
@@ -1348,7 +1423,6 @@ public class BigWarp {
 			
 			vg.setFusedEnabled( true );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
-			warpVisItem.setText("Toggle off");
 		}
 		
 		viewerFrame.getViewerPanel().requestRepaint();
@@ -1370,7 +1444,6 @@ public class BigWarp {
 		else
 		{
 			landmarkModel.transferUpdatesToModel();
-			 // System.out.println( "are point valid? " + landmarkModel.validateTransformPoints());
 		}
 		
 		// estimate the forward transformation
@@ -1394,6 +1467,10 @@ public class BigWarp {
 		wmSrc.setWarp( landmarkModel.getTransform().deepCopy() );
 		gSrc.setWarp( landmarkModel.getTransform().deepCopy() );
 		fitBaselineWarpMagModel();
+		
+//		Interval warpedInterval = wmSrc.estimateBoundingInterval( 0, 0 );
+//		System.out.println( "warped Interval:  [ " + warpedInterval.min( 0 ) + ", " + warpedInterval.max( 0 ) +
+//				" ]  x  [ " + warpedInterval.min( 1 ) + ", " + warpedInterval.max( 1 ) +" ] ");
 		
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
@@ -1456,14 +1533,26 @@ public class BigWarp {
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
 		
+//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
+//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
+//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
+		
 		// A better 2d example
 //		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
 		
+//		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
+//		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
+//		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
+				
 		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
 		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
 		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+		
+//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
+//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
+//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
 //		final String fnLandmarks = "/Users/bogovicj/workspaces/bdv/bigwarp/src/main/resources/data/histology/histology_uniform";
 		
 		// A 2d example
@@ -1487,8 +1576,11 @@ public class BigWarp {
 		
 		try
 		{
-//			System.setProperty( "apple.laf.useScreenMenuBar", "true" );
+			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
 			new RepeatingReleasedEventsFixer().install();
+			
+			ImageJ imagej = new ImageJ();
+			System.out.println( imagej );
 			
 			BigWarp bw;
 			if( fnP.endsWith("xml") && fnQ.endsWith("xml"))
@@ -1502,6 +1594,9 @@ public class BigWarp {
 			
 			if( !fnLandmarks.isEmpty() )
 				bw.landmarkModel.load( new File( fnLandmarks ));
+			
+			bw.setImageJInstance( imagej );
+			bw.exportMovingImagePlus();
 			
 		}
 		catch ( final Exception e )
@@ -1694,33 +1789,6 @@ public class BigWarp {
 				BigWarp.this.currentLandmark.localize( ptarrayLoc );	
 				selectedPointIndex = BigWarp.this.updateWarpedPoint( ptarrayLoc, isMoving );
 				
-				
-//				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-//				BigWarp.this.currentLandmark.localize( ptarray );	
-//				
-//				// if this is the moving image, than we need to warped the clicked point 
-//				// and check if it is in the table
-//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-//				{
-//					landmarkModel.getTransform().apply( ptarray, ptBack );
-//					selectedPointIndex = selectedLandmark( ptBack, isMoving );
-//				}
-//				else // check if the clicked point itself is in the table 
-//				{
-//					selectedPointIndex = selectedLandmark( ptarray, isMoving );
-//				}
-				System.out.println( "HERE: " + isMoving + " selectedPoint: " + selectedPointIndex );
-//				
-//				
-//				// if we move the fixed point, we need to update the warped 
-//				// point for the moving image
-//				// since the point renderer uses the transformed points
-//				if( selectedPointIndex >= 0 && 
-//						!isMoving && landmarkModel.getTransform() != null )
-//				{
-//					BigWarp.this.landmarkModel.updateWarpedPoint( 
-//							selectedPointIndex, ptarray );
-//				}
 			}
 		}
 
@@ -1740,28 +1808,9 @@ public class BigWarp {
 				currentLandmark.localize( ptarrayLoc );
 				
 				String message = addPoint( ptarrayLoc, isMoving );
-//				
-//				String message = "";
-//				
-//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-//				{
-//					
-//					ptBackLoc = landmarkModel.getTransform().apply( ptarrayLoc );
-//					message = BigWarp.this.landmarkModel.add(  ptBack, isMoving );
-//					
-//					BigWarp.this.landmarkModel.updateWarpedPoint( 
-//							BigWarp.this.landmarkModel.nextRow( isMoving ) - 1, 
-//							ptarrayLoc );
-//				}
-//				else
-//					message = BigWarp.this.landmarkModel.add( ptarrayLoc, isMoving );
 				
 				if( !message.isEmpty() )
 					thisViewer.showMessage( message );
-//
-//				if( BigWarp.this.landmarkFrame.isVisible() ){
-//					BigWarp.this.landmarkFrame.repaint();
-//				}
 			}
 			
 			selectedPointIndex = -1;
@@ -1778,34 +1827,11 @@ public class BigWarp {
 	    	
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
 			{
-				
-				LandmarkTableModel lmModel = BigWarp.this.landmarkModel;
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
 				
 				updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
-//				
-//				if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed())
-//				{
-//					landmarkModel.getTransform().apply( ptarrayLoc, ptBackLoc );
-//					lmModel.updateWarpedPoint( selectedPointIndex, ptarrayLoc );
-//				}
-//				
-//				if( !isMoving || landmarkModel.getTransform() == null || !BigWarp.this.isMovingDisplayTransformed())
-//				{					
-//					lmModel.setPoint( selectedPointIndex, isMoving, ptarrayLoc );
-//					
-//					if( !isMoving && !lmModel.isWarpedPositionChanged( selectedPointIndex ))
-//						lmModel.updateWarpedPoint( selectedPointIndex, ptarrayLoc );
-//				}
-//				else
-//				{
-//					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBackLoc );
-//				}
 			}
-//			if( BigWarp.this.landmarkFrame.isVisible() ){
-//				BigWarp.this.landmarkFrame.repaint();
-//			}
 		}
 
 		@Override

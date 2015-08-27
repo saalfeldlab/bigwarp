@@ -1,5 +1,8 @@
 package bigwarp.source;
 
+import java.util.Arrays;
+
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
@@ -125,9 +128,6 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 				minmax[ 1 ] = val;
 			
 		}
-		
-		System.out.println( "WarpMag min: " + minmax[ 0 ] + "  max: " + minmax[ 1 ]);
-		
 		return minmax;
 	}
 	
@@ -135,6 +135,19 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	public boolean isPresent( int t )
 	{
 		return ( t == 0 );
+	}
+	
+	public Interval estimateBoundingInterval( final int t, final int level )
+	{
+		final Interval interval = getSource( t, level );
+		
+		System.out.println( "source Interval:  [ " + interval.min( 0 ) + ", " + interval.max( 0 ) +
+				" ]  x  [ " + interval.min( 1 ) + ", " + interval.max( 1 ) +" ] ");
+		
+		long[] delta = new long[ interval.numDimensions() ];
+		Arrays.fill( delta, 1 );
+		
+		return ((ThinPlateR2LogRSplineKernelTransform)warpMagImg.ra.warp).estimateBoundingBox( interval, delta );
 	}
 
 	@Override
@@ -148,7 +161,6 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public RealRandomAccessible<T> getInterpolatedSource( int t, int level, Interpolation method ) 
 	{
-//		return warpMagImg.copy();
 		return warpMagImg;
 	}
 
