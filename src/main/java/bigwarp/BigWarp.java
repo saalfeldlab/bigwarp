@@ -11,6 +11,8 @@ import java.awt.Cursor;
 import java.awt.FileDialog;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -90,6 +92,7 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
+import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
@@ -275,9 +278,10 @@ public class BigWarp {
 		ArrayList<ConverterSetup> csetups = new ArrayList<ConverterSetup>();
 		for ( final ConverterSetup cs : converterSetups )
 		{
-			csetups.add( cs );
-			if ( RealARGBColorConverterSetup.class.isInstance( cs ))
-				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
+			csetups.add( new BigWarpConverterSetupWrapper( this, cs) );
+			
+//			if ( RealARGBColorConverterSetup.class.isInstance( cs ))
+//				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
 		}
 		
 		setupAssignments = new SetupAssignments( csetups, 0, 512 );
@@ -2049,6 +2053,7 @@ public class BigWarp {
 					return;
 				}
 				
+				// we have an unmatched point
 				if( Double.isInfinite( pt[ 0 ]))
 					return;
 				
