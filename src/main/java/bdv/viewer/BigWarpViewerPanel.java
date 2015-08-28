@@ -41,6 +41,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	protected int ndims;
 
+	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
 	Options options;
@@ -226,7 +227,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 		
 		final double[] q = new double[ 4 ];
 		Affine3DHelpers.extractRotationAnisotropic( transform, q );
-		
+	
+		System.out.println( stateTransform );
 	}
 	
 	public synchronized void rotateView2d( boolean isClockwise )
@@ -310,6 +312,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
     public synchronized void animateTransformation( AffineTransform3D destinationXfm, int millis )
     {
+    	
     	AffineTransform3D startXfm = new AffineTransform3D();
     	getState().getViewerTransform( startXfm );
     	
@@ -326,13 +329,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerX = getWidth() / 2.0;
 		}
     	
-		if( ndims == 2 )
+		if( ndims == 2 ){
 			currentAnimator = 
 				new SimilarityTransformAnimator2D( startXfm, destinationXfm, centerX, centerY, millis );
-		else
+		}else
 		{
 			currentAnimator = 
-    			new SimilarityTransformAnimator( startXfm, destinationXfm, centerX, centerY, millis );
+    			new SimilarityTransformAnimator( startXfm, destinationXfm, centerX, centerY, millis/2 );
 		}
     	
     	currentAnimator.setTime( System.currentTimeMillis() );

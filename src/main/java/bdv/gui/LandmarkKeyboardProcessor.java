@@ -29,23 +29,6 @@ public class LandmarkKeyboardProcessor implements KeyEventPostProcessor
 				bw.getLandmarkPanel().getTableModel().restorePendingUpdate();
 			}
 		}
-		else if( ke.getKeyCode() == KeyEvent.VK_R && ke.getID() == KeyEvent.KEY_RELEASED  )
-		{ 
-			final RandomAccessibleInterval<?> interval = bw.getSources().get( 1 ).getSpimSource().getSource( 0, 0 );
-			
-			AffineTransform3D viewXfm = new AffineTransform3D();
-			viewXfm.identity();
-			viewXfm.set( -interval.min( 2 ), 2, 3 );
-			
-			if( ke.getComponent() == bw.getViewerFrameP().getViewerPanel().getDisplay() )
-			{
-				bw.getViewerFrameP().getViewerPanel().animateTransformation( viewXfm );
-			}
-			else if ( ke.getComponent() == bw.getViewerFrameQ().getViewerPanel().getDisplay() )
-			{
-				bw.getViewerFrameQ().getViewerPanel().animateTransformation( viewXfm );
-			}
-		}
 		return false;
 	}
 

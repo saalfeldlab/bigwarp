@@ -69,6 +69,8 @@ public class WarpNavigationActions
 			map.put( String.format( TOGGLE_SOURCE_VISIBILITY, i ), "shift " + numkeys[ i ] );
 		}
 
+		map.put( DISPLAY_XFMS, "shift P" );
+		
 		if( !is2d )
 		{
 			map.put( String.format( ALIGN_PLANE, AlignPlane.XY ), "shift Z" );
@@ -77,7 +79,6 @@ public class WarpNavigationActions
 		}
 		else
 		{
-			map.put( DISPLAY_XFMS, "shift A" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), "shift X" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), "shift Z" );
 		}

@@ -285,7 +285,7 @@ public class WarpVisFrame extends JDialog
 		}
 		else
 		{
-			System.out.println(" UHOH ");
+//			System.out.println(" UHOH ");
 		}
 		pack();
 	}

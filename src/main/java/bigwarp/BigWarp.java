@@ -4,6 +4,7 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.process.ColorProcessor;
+import ij.process.ImageProcessor;
 
 import java.awt.Component;
 import java.awt.Cursor;
@@ -38,9 +39,13 @@ import javax.swing.table.TableCellEditor;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import net.imglib2.Interval;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
+import net.imglib2.exception.ImgLibException;
+import net.imglib2.img.imageplus.ImagePlusImgs;
+import net.imglib2.img.imageplus.IntImagePlus;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -127,6 +132,8 @@ public class BigWarp {
 	private final BigWarpViewerFrame viewerFrameQ;
 	protected final BigWarpViewerPanel viewerP;
 	protected final BigWarpViewerPanel viewerQ;
+	protected final AffineTransform3D initialViewP;
+	protected final AffineTransform3D initialViewQ;
 	
 	protected final BigWarpLandmarkPanel landmarkPanel;
 	protected final LandmarkPointMenu    landmarkPopupMenu;
@@ -173,6 +180,8 @@ public class BigWarp {
 	// file selection
 	final JFrame	 fileFrame;
 	final FileDialog fileDialog;
+	
+	JMenu landmarkMenu;
 	
 	private static ImageJ ij;
 	
@@ -323,6 +332,11 @@ public class BigWarp {
 		viewerFrameQ.setVisible(true);
 		landmarkFrame.setVisible(true);
 		
+		initialViewP = new AffineTransform3D();
+		initialViewQ = new AffineTransform3D();
+		viewerP.getState().getViewerTransform( initialViewP );
+		viewerQ.getState().getViewerTransform( initialViewQ );
+		
 		checkBoxInputMaps();
 		
 		// file selection
@@ -333,7 +347,10 @@ public class BigWarp {
 	
 	public void setImageJInstance( ImageJ ij )
 	{
-		this.ij = ij;
+		BigWarp.ij = ij;
+		
+		if( BigWarp.ij != null )
+			setupImageJExportOption();
 	}
 	
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
@@ -365,11 +382,39 @@ public class BigWarp {
 		helpMenu.add( miHelp );
 	}
 	
+	protected void setupImageJExportOption()
+	{
+		final JMenuItem exportToImagePlus = new JMenuItem("Export as ImagePlus");
+        landmarkMenu.add( exportToImagePlus );
+        exportToImagePlus.addMouseListener( new MouseListener(){
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			@Override
+			public void mousePressed(MouseEvent e) {}
+
+			@Override
+			public void mouseReleased(MouseEvent e) 
+			{
+				//System.out.println("You touched me");
+//				IJ.showMessage("You touched me! <GASP>");
+				
+				IJ.showProgress(0.0);
+				exportMovingImagePlus();
+				IJ.showProgress(1.1);
+			}
+        });
+        
+	}
+	
 	protected void setUpLandmarkMenus()
 	{
 		JMenuBar landmarkMenuBar = new JMenuBar();
         
-		JMenu landmarkMenu    = new JMenu( "File" );
+		landmarkMenu    = new JMenu( "File" );
         final JMenuItem openItem = new JMenuItem("Import landmarks");
         landmarkMenu.add( openItem );
         
@@ -384,8 +429,8 @@ public class BigWarp {
         final JMenuItem importXfmItem = new JMenuItem("Import Transformation");
         landmarkMenu.add( importXfmItem );
         
-        final JMenuItem exportXfmItem = new JMenuItem("Export Transformation");
-        landmarkMenu.add( exportXfmItem );
+//        final JMenuItem exportXfmItem = new JMenuItem("Export Transformation");
+//        landmarkMenu.add( exportXfmItem );
         
         landmarkMenuBar.add( landmarkMenu );
         landmarkFrame.setJMenuBar( landmarkMenuBar );
@@ -767,7 +812,7 @@ public class BigWarp {
 	
 	protected int selectedLandmarkHelper( double[] pt, boolean isMoving )
 	{
-		System.out.println("bw selectedLandmarkHelper");
+		//System.out.println("bw selectedLandmarkHelper");
 		// TODO selectedLandmark
 		int N = landmarkModel.getRowCount();
 		
@@ -859,6 +904,10 @@ public class BigWarp {
 		
 		// change transform of panelToChange
 		panelToChange.animateTransformation( viewXfm );
+		
+		AffineTransform3D resXfm = new AffineTransform3D();
+		panelToChange.getState().getViewerTransform( resXfm );
+		
 	}
 	
 	public void matchOtherViewerPanelToActive()
@@ -903,6 +952,25 @@ public class BigWarp {
 		matchWindowTransforms( panelToChange, panelToMatch );
 	}
 	
+	public void resetView()
+	{
+		final RandomAccessibleInterval<?> interval = getSources().get( 1 ).getSpimSource().getSource( 0, 0 );
+		
+		AffineTransform3D viewXfm = new AffineTransform3D();
+		viewXfm.identity();
+		viewXfm.set( -interval.min( 2 ), 2, 3 );
+		
+		if( viewerFrameP.isActive() )
+		{
+			if( viewerP.getOverlay().getIsTransformed() )
+				viewerP.animateTransformation( initialViewQ );
+			else
+				viewerP.animateTransformation( initialViewP );
+		}
+		else if ( viewerFrameQ.isActive() )
+			viewerQ.animateTransformation( initialViewQ );
+	}
+	
 	public void toggleNameVisibility()
 	{
 		viewerP.getSettings().toggleNamesVisible();
@@ -939,6 +1007,7 @@ public class BigWarp {
 	
 	protected void exportMovingImagePlus( )
 	{
+		//TODO exportMovingImagePlus
 		if( ij == null )
 		{
 			System.out.println("no imagej instance");
@@ -949,17 +1018,6 @@ public class BigWarp {
 				sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 );
 		
 		final RandomAccessibleInterval<?> destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
-		
-//		public static Image<UnsignedByteType> wrapByte( final ImagePlus imp ) { return ImagePlusAdapter.wrapByte( imp ); }
-//
-//		public static Image<UnsignedShortType> wrapShort( final ImagePlus imp ) { return ImagePlusAdapter.wrapShort( imp ); }
-//
-//		public static Image<RGBALegacyType> wrapRGBA( final ImagePlus imp ) { return ImagePlusAdapter.wrapRGBA( imp ); }
-//
-//		public static Image<FloatType> wrapFloat( final ImagePlus imp ) { return ImagePlusAdapter.wrapFloat( imp ); }
-//
-//		public static Image<FloatType> convertFloat( final ImagePlus imp ) { return ImagePlusAdapter.convertFloat( imp ); }
-
 		ImagePlus ip = null;
 		Object t = rai.randomAccess().get();
 		System.out.println( t );
@@ -974,7 +1032,14 @@ public class BigWarp {
 		else if( t instanceof ARGBType )
 		{
 			System.out.println("ARGBType");
-			ip = copyToImagePlus( (RandomAccessibleInterval<ARGBType>)rai, destinterval );
+			if( destinterval.numDimensions() == 2 )
+			{
+				ip = new ImagePlus( "warped_image", copyToImagePlus( (RandomAccessibleInterval<ARGBType>)rai, destinterval ));
+			}
+			else if( destinterval.numDimensions() == 3 )
+			{
+				ip = copyToImageStack((RandomAccessibleInterval<ARGBType>)rai, destinterval );
+			}
 		}
 		
 		if( ip != null )
@@ -982,8 +1047,46 @@ public class BigWarp {
 		
 	}
 	
-	public static ImagePlus copyToImagePlus( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
+	public static ImagePlus copyToImageStack( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
 	{
+		System.out.println("copy to stack");
+		long[] dimensions = new long[ itvl.numDimensions() ];
+		itvl.dimensions( dimensions );
+		
+		IntImagePlus<ARGBType> ip = ImagePlusImgs.argbs( dimensions );
+		
+		net.imglib2.Cursor<ARGBType> c = ip.cursor();
+		
+		int k = 0;
+		long N = dimensions[0] * dimensions[1] * dimensions[2];
+		
+		RandomAccess<ARGBType> ra = rai.randomAccess();
+		while( c.hasNext() )
+		{
+			
+			c.fwd();
+			ra.setPosition( c );
+			c.get().set( ra.get() );
+			
+			if( k % 1000 == 0 ){
+//				System.out.println(k);
+				IJ.showProgress( k/N );
+			}
+			k++;
+		}
+		
+		try {
+			return ip.getImagePlus();
+		} catch (ImgLibException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
+	public static ImageProcessor copyToImagePlus( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
+	{
+		System.out.println("copy to ip");
 //		Views.interval( Views.extendZero( rai ), itvl ).cursor();
 //		net.imglib2.Cursor<ARGBType> cc = Views.flatIterable( rai ).cursor();
 		
@@ -992,20 +1095,27 @@ public class BigWarp {
 		ColorProcessor iproc = new ColorProcessor( (int)itvl.dimension(0), (int)itvl.dimension(1) );
 		
 		
-		System.out.println( itvl.min( 0 ) +  " " + itvl.max( 0 ));
-		System.out.println( itvl.min( 1 ) +  " " + itvl.max( 1 ));
+//		System.out.println( itvl.min( 0 ) +  " " + itvl.max( 0 ));
+//		System.out.println( itvl.min( 1 ) +  " " + itvl.max( 1 ));
+		
+		int N = iproc.getWidth() * iproc.getHeight();
 		
 		int[] pos = new int[ rai.numDimensions() ];
+		int k = 0;
 		while( cc.hasNext() )
 		{
 			ARGBType color = cc.next();
 			cc.localize( pos );
 			
-//			System.out.println( pos[0] + " " + pos[1] );
+			if( k % 1000 == 0 ){
+				IJ.showProgress( k/N );
+			}
+			
 			iproc.set( pos[0], pos[1], color.get());
+			k++;
 		}
 		
-		return new ImagePlus( "warped_image", iproc );
+		return iproc;
 	}
 	
 	protected void exportMovingImage( File f ) throws IOException, InterruptedException
@@ -1145,7 +1255,7 @@ public class BigWarp {
 	private static int addGridSource( ArrayList< SourceAndConverter< ? > > sources, ArrayList<ConverterSetup> converterSetups, String name, BigWarpData data )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
-		// or should we just stick with Doubles?
+		// or should we just stick with Floats?
 		
 		GridSource< FloatType > magSource = new GridSource< FloatType >( name, data, new FloatType(), null );
 		
@@ -1542,13 +1652,13 @@ public class BigWarp {
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
 		
-//		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
-//		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
-//		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
+		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
+		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
+		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
 				
-		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
-		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
+//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
+//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
 		
 //		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
 //		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
@@ -1596,7 +1706,7 @@ public class BigWarp {
 				bw.landmarkModel.load( new File( fnLandmarks ));
 			
 			bw.setImageJInstance( imagej );
-			bw.exportMovingImagePlus();
+			//bw.exportMovingImagePlus();
 			
 		}
 		catch ( final Exception e )
@@ -1722,8 +1832,8 @@ public class BigWarp {
 //		 * Returns the index of the landmark under the mouse position,
 //		 * or -1 if no landmark is at the current position
 //		 */
-		protected int selectedLandmarkLocal( double[] pt, boolean isMoving ){
-			// TODO selectedLandmark
+		protected int selectedLandmarkLocal( double[] pt, boolean isMoving )
+		{
 			int N = BigWarp.this.landmarkModel.getRowCount();
 			
 			double dist = 0;
@@ -1938,6 +2048,10 @@ public class BigWarp {
 					// should do nothing
 					return;
 				}
+				
+				if( Double.isInfinite( pt[ 0 ]))
+					return;
+				
 				
 				final AffineTransform3D transform = viewer.getDisplay().getTransformEventHandler().getTransform();
 				AffineTransform3D xfmCopy = transform.copy();

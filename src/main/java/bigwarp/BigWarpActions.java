@@ -41,6 +41,7 @@ public class BigWarpActions
 	public static final String WARPVISGRID = "set warp vis grid %s";
 	public static final String WARPVISDIALOG = "warp vis dialog";
 	
+	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping";
@@ -119,6 +120,7 @@ public class BigWarpActions
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 		map.put( ESTIMATE_WARP, "C" );
 		
+		map.put(RESET_VIEWER, "R");
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
 		
@@ -153,6 +155,7 @@ public class BigWarpActions
 		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
 		map.put( new EstimateWarpAction( ESTIMATE_WARP, bw ));
 
+		map.put( new ResetActiveViewerAction( bw ));
 		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ) );
 		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ) );
 		
@@ -262,6 +265,24 @@ public class BigWarpActions
 		public void actionPerformed( ActionEvent e )
 		{
 			bw.togglePointVisibility();	
+		}
+	}
+	
+	public static class ResetActiveViewerAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -130575800163574517L;
+		
+		private BigWarp bw;
+		
+		public ResetActiveViewerAction( final BigWarp bw )
+		{
+			super( String.format( RESET_VIEWER ) );
+			this.bw = bw;
+		}
+		
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.resetView();
 		}
 	}
 	

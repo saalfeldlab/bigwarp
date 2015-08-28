@@ -283,11 +283,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void deleteRow( int i )
 	{
-		if( i >= names.size() ) return;
+		if( i >= names.size() ){
+			System.out.println(" i to big ");
+			return;
+		}
 		
 		names.remove( i );
 		pts.remove( i );
 		activeList.remove( i );
+		
+		if( wereUpdated.contains( i ))
+			wereUpdated.remove( wereUpdated.indexOf( i ) );
+		
+		changedPositionSinceWarpEstimation.set( i , false );
 		
 		numRows--;
 		nextRowP = nextRow( true  );
@@ -299,7 +307,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		
 		fireTableRowsDeleted( i, i );
-		
 	}
 	
 	public boolean isUpdatePending()
@@ -438,54 +445,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 			pts.set( nextRow, exPts );
 			activeList.set( nextRow, true );
 			
-			
-//			double[] tgtpt = null;
-//			double[] srcpt = null;
-//			double[] pointerPt = null;
-			
-//			int copyOffset = 0;
 			if( isMoving )
 			{
 				changedPositionSinceWarpEstimation.set( nextRow, false );
 				for( int d = 0; d < ndims; d++ )
 					warpedPoints.get( nextRowP )[ d ] = pt[ d ];
 				
-//				copyOffset = ndims;
-				
-//				srcpt = pt;
-//				tgtpt = new double[ ndims ];
-//				pointerPt  = tgtpt; 
 			}
-//			else
-//			{
-//				tgtpt = pt;
-//				srcpt = new double[ ndims ];
-//				pointerPt  = srcpt;
-//			}
-			
-//			if( estimatedXfm != null )
-//			{
-//				if( nextRow == estimatedXfm.getNumLandmarks() ) // its a new point for estimatedXfm 
-//				{
-//					for( int i = 0; i < ndims; i++ )
-//						pointerPt[ i ] = pts.get( nextRow )[ copyOffset + i ];
-//					
-////					estimatedXfm.addMatch( tgtpt, srcpt );
-////					estimatedXfm.disableLandmarkPair( nextRow );
-//					
-//				}
-//				else
-//				{
-//					for( int i = 0; i < ndims; i++ )
-//						pointerPt[ i ] = pts.get( nextRow )[ copyOffset + i ];
-//					
-////					if( isMoving )
-////						estimatedXfm.updateSourceLandmark( nextRow, tgtpt );
-////					else
-////						estimatedXfm.updateTargetLandmark( nextRow, srcpt );
-//				}
-//				
-//			}
 		}
 		
 		if( !wereUpdated.contains( nextRow ))
@@ -741,7 +707,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	@Override
 	public Object getValueAt( int rowIndex, int columnIndex )
 	{
-		if ( columnIndex == 0 )
+		if( rowIndex >= names.size() )
+			return null;
+		else if ( columnIndex == 0 )
 			return names.get( rowIndex );
 		else if ( columnIndex == 1 )
 			return activeList.get( rowIndex );
