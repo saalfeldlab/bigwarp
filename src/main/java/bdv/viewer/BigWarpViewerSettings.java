@@ -41,9 +41,11 @@ public class BigWarpViewerSettings  {
 	/**
 	 * The default color for spots.
 	 */
-	public static final Color DEFAULT_SPOT_COLOR = new Color( 0.7f, 0, 0.7f, 0.5f );
-	public static final Color DEFAULT_INACTIVE_SPOT_COLOR = new Color( 0.3f, 0, 1.0f, 0.5f );
-	public static final Color DEFAULT_UNMATCHED_SPOT_COLOR = new Color( 0.3f, 0, 1.0f, 0.5f );
+//	public static final Color DEFAULT_SPOT_COLOR = new Color( 0.7f, 0, 0.7f, 0.5f );
+	public static final Color DEFAULT_SPOT_COLOR = new Color( 1.0f, 0.2f, 1.0f, 0.75f );
+	
+	public static final Color DEFAULT_INACTIVE_SPOT_COLOR = new Color( 0.3f, 0, 1.0f, 0.75f );
+	public static final Color DEFAULT_UNMATCHED_SPOT_COLOR = new Color( 0.3f, 0, 1.0f, 0.75f );
 	
 	public static final Stroke NORMAL_STROKE = new BasicStroke( 1.0f );
 	public static final Stroke HIGHLIGHT_STROKE = new BasicStroke( 2.0f );
@@ -51,7 +53,7 @@ public class BigWarpViewerSettings  {
 	/**
 	 * The default color for highlighting.
 	 */
-	public static final Color DEFAULT_HIGHLIGHT_COLOR = new Color( 1f, 0f, 1f );
+	public static final Color DEFAULT_HIGHLIGHT_COLOR = new Color( 1f, 0.5f, 1f );
 
 	public static final double DEFAULT_SPOT_SIZE = 4;
 	

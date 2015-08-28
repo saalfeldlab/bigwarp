@@ -11,8 +11,6 @@ import java.awt.Cursor;
 import java.awt.FileDialog;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -148,7 +146,7 @@ public class BigWarp {
 	protected final BigWarpDragOverlay dragOverlayQ;
 	
 	protected double rad = 7;
-	protected double LANDMARK_DOT_SIZE = 7; // diameter of dots
+	protected double LANDMARK_DOT_SIZE = 14; // diameter of dots
 	
 	protected RealPoint currentLandmark;	
 	
@@ -279,9 +277,6 @@ public class BigWarp {
 		for ( final ConverterSetup cs : converterSetups )
 		{
 			csetups.add( new BigWarpConverterSetupWrapper( this, cs) );
-			
-//			if ( RealARGBColorConverterSetup.class.isInstance( cs ))
-//				( ( RealARGBColorConverterSetup ) cs ).setViewer( viewerQ );
 		}
 		
 		setupAssignments = new SetupAssignments( csetups, 0, 512 );
