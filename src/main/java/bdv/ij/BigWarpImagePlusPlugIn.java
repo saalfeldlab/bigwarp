@@ -101,6 +101,8 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         {
         	new RepeatingReleasedEventsFixer().install();
 			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
+			ImageJ ij = IJ.getInstance();
+			bw.setImageJInstance( ij );
 		} 
         catch (SpimDataException e) 
         {
