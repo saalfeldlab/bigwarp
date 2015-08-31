@@ -59,8 +59,22 @@ public class BigWarpViewerSettings  {
 	
 	protected Map< String, Object > displaySettings;
 	
+
+	protected Color currentSpotColor;
+	protected Color currentInactiveSpotColor;
+	public double currentSpotSize;
+	
+	
 	public BigWarpViewerSettings(){
 		createDisplaySettings();
+		
+		currentSpotColor = DEFAULT_SPOT_COLOR;
+		currentSpotSize = DEFAULT_SPOT_SIZE;
+		currentInactiveSpotColor = new Color( 
+				currentSpotColor.getRed() / 2, 
+				currentSpotColor.getGreen() / 2,
+				currentSpotColor.getBlue() / 2,
+				currentSpotColor.getAlpha() );
 	}
 	
 	protected Map< String, Object > createDisplaySettings(  )
@@ -85,6 +99,36 @@ public class BigWarpViewerSettings  {
 				!((Boolean)displaySettings.get( KEY_SPOTS_VISIBLE )).booleanValue());
 		
 		//System.out.println(((Boolean)displaySettings.get( KEY_DISPLAY_SPOT_NAMES )));
+	}
+	
+	public void setSpotColor( Color c )
+	{
+		this.currentSpotColor = c;
+		currentInactiveSpotColor = new Color( 
+				currentSpotColor.getRed() / 2, 
+				currentSpotColor.getGreen() / 2,
+				currentSpotColor.getBlue() / 2,
+				currentSpotColor.getAlpha() );
+	}
+	
+	public Color getSpotColor()
+	{
+		return currentSpotColor;
+	}
+	
+	public Color getInactiveSpotColor()
+	{
+		return currentInactiveSpotColor;
+	}
+	
+	public void setSpotSize( double size )
+	{
+		this.currentSpotSize = size;
+	}
+	
+	public double getSpotSize()
+	{
+		return currentSpotSize;
 	}
 	
 	public Boolean areNamesVisible(){

@@ -1,9 +1,15 @@
 package bigwarp;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Enumeration;
 
 import javax.swing.AbstractButton;
@@ -12,6 +18,9 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JColorChooser;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -21,6 +30,7 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 
 public class WarpVisFrame extends JDialog 
@@ -28,6 +38,7 @@ public class WarpVisFrame extends JDialog
 	private static final long serialVersionUID = 7561228647761694686L;
 
 	private final BigWarp bw;
+	private final BigWarpViewerSettings settings;
 	
 	protected ButtonGroup visTypeGroup;
 	protected JRadioButton setWarpVisOffButton;
@@ -35,6 +46,11 @@ public class WarpVisFrame extends JDialog
 	protected JRadioButton setWarpMagButton;
 	
 	protected JLabel noOptionsLabel;
+	
+	// landmark point options
+	protected final JButton landmarkColorButton;
+	private final JColorChooser colorChooser;
+	protected final JSlider landmarkSizeSlider;
 	
 	// warp magnitude
 	protected ButtonGroup warpMagButtons;
@@ -54,7 +70,7 @@ public class WarpVisFrame extends JDialog
 	protected JLabel gridWidthLabel;
 	
 	public static final int minGridSpacing = 5;
-	public static final int maxGridSpacing = 1000;
+	public static final int maxGridSpacing = 400;
 	public static final int defaultGridSpacing = 100;
 	
 	public static final int minGridWidth = 1;
@@ -63,14 +79,37 @@ public class WarpVisFrame extends JDialog
 	
 	public WarpVisFrame( final Frame owner, final BigWarp bw )
 	{
-		//super( "Warp Visualization" );
-		super( owner, "warp visualization options", false );
+		super( owner, "big warp options", false );
 		this.bw = bw;
+		this.settings = bw.viewerSettings;
 		
 		final Container content = getContentPane();
 		
 		setSize( 500, 400 );
 		
+		JPanel landmarkPointOptionsPanel = new JPanel();
+		landmarkPointOptionsPanel.setLayout( new BoxLayout( landmarkPointOptionsPanel, BoxLayout.X_AXIS ));
+		
+		
+		landmarkColorButton = new JButton( new ColorIcon( settings.getSpotColor() ) );
+		colorChooser = new JColorChooser();
+		
+		landmarkSizeSlider = new JSlider();
+		landmarkSizeSlider.setValue( (int)settings.getSpotSize() );
+		landmarkSizeSlider.setMinimum( 1 );
+		landmarkSizeSlider.setMaximum( 20 );
+		
+		landmarkPointOptionsPanel.add( landmarkColorButton );
+		landmarkPointOptionsPanel.add( landmarkSizeSlider );
+		landmarkPointOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"landmark size & color" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+		
+		// 
 		JPanel visTypePanel = new JPanel();
 		visTypePanel.setLayout(  new BoxLayout( visTypePanel, BoxLayout.Y_AXIS) );
 		visTypePanel.setBorder( BorderFactory.createCompoundBorder(
@@ -153,6 +192,7 @@ public class WarpVisFrame extends JDialog
 		
 		typeOptionPanel.add( noOptionsLabel );
 		
+		content.add( landmarkPointOptionsPanel, BorderLayout.NORTH );
 		content.add( visTypePanel, BorderLayout.WEST );
 		content.add( typeOptionPanel, BorderLayout.EAST );
 		
@@ -166,6 +206,44 @@ public class WarpVisFrame extends JDialog
 	{
 		final ActionMap actionMap = bw.getViewerFrameP().getKeybindings().getConcatenatedActionMap();
 
+		landmarkColorButton.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( final ActionEvent e )
+			{
+				colorChooser.setColor( settings.getSpotColor());
+				final JDialog d = JColorChooser.createDialog( landmarkColorButton, "Choose a color", true, colorChooser, new ActionListener()
+				{
+					@Override
+					public void actionPerformed( final ActionEvent arg0 )
+					{
+						final Color c = colorChooser.getColor();
+						if (c != null)
+						{
+							landmarkColorButton.setIcon( new ColorIcon( c ) );
+							settings.setSpotColor( c );
+							bw.viewerP.requestRepaint();
+							bw.viewerQ.requestRepaint();
+						}
+					}
+				}, null );
+				d.setVisible( true );
+			}
+		} );
+		
+		landmarkSizeSlider.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				if( e.getSource() != landmarkSizeSlider ) return;
+				
+				settings.setSpotSize( landmarkSizeSlider.getValue() );
+				bw.viewerP.requestRepaint();
+				bw.viewerQ.requestRepaint();
+			}
+		});
+		
 		setWarpVisOffButton.setAction( 
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.NONE )));
 		setWarpGridButton.setAction( 
@@ -290,4 +368,36 @@ public class WarpVisFrame extends JDialog
 		pack();
 	}
 	
+	private static class ColorIcon implements Icon
+	{
+		private final int size = 16;
+
+		private final Color color;
+
+		public ColorIcon( final Color color )
+		{
+			this.color = color;
+		}
+
+		@Override
+		public void paintIcon( final Component c, final Graphics g, final int x, final int y )
+		{
+			final Graphics2D g2d = ( Graphics2D ) g;
+			g2d.setRenderingHint( RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON );
+			g2d.setColor( color );
+			g2d.fillOval( x, y, size, size );
+		}
+
+		@Override
+		public int getIconWidth()
+		{
+			return size;
+		}
+
+		@Override
+		public int getIconHeight()
+		{
+			return size;
+		}
+	}
 }

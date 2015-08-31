@@ -95,6 +95,7 @@ import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
+import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
@@ -140,6 +141,7 @@ public class BigWarp {
 	protected final LandmarkPointMenu    landmarkPopupMenu;
 	protected final BigWarpLandmarkFrame landmarkFrame;
 	
+	protected final BigWarpViewerSettings viewerSettings;
 	protected final BigWarpOverlay overlayP;
 	protected final BigWarpOverlay overlayQ;
 	protected final BigWarpDragOverlay dragOverlayP;
@@ -222,14 +224,16 @@ public class BigWarp {
 		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
 		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
 		
+		viewerSettings = new BigWarpViewerSettings();
+		
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
+		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true );
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, 1,
+		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false );
 		viewerQ = getViewerFrameQ().getViewerPanel();
 		
@@ -972,17 +976,15 @@ public class BigWarp {
 	
 	public void toggleNameVisibility()
 	{
-		viewerP.getSettings().toggleNamesVisible();
+		viewerSettings.toggleNamesVisible();
 		viewerP.requestRepaint();
-		viewerQ.getSettings().toggleNamesVisible();
 		viewerQ.requestRepaint();
 	}
 	
 	public void togglePointVisibility()
 	{
-		viewerP.getSettings().togglePointsVisible();
+		viewerSettings.togglePointsVisible();
 		viewerP.requestRepaint();
-		viewerQ.getSettings().togglePointsVisible();
 		viewerQ.requestRepaint();
 	}
 	
@@ -1649,13 +1651,13 @@ public class BigWarp {
 //		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
 //		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
 		
-		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
-		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
-		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
+//		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
+//		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
+//		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
 				
-//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
-//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
+		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
+		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
 		
 //		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
 //		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
@@ -1686,8 +1688,8 @@ public class BigWarp {
 			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
 			new RepeatingReleasedEventsFixer().install();
 			
-			ImageJ imagej = new ImageJ();
-			System.out.println( imagej );
+//			ImageJ imagej = new ImageJ();
+//			System.out.println( imagej );
 			
 			BigWarp bw;
 			if( fnP.endsWith("xml") && fnQ.endsWith("xml"))
@@ -1702,7 +1704,7 @@ public class BigWarp {
 			if( !fnLandmarks.isEmpty() )
 				bw.landmarkModel.load( new File( fnLandmarks ));
 			
-			bw.setImageJInstance( imagej );
+//			bw.setImageJInstance( imagej );
 			//bw.exportMovingImagePlus();
 			
 		}
@@ -1777,26 +1779,6 @@ public class BigWarp {
 			this.seq = seq;
 			this.converterSetups = converterSetups;
 		}
-	}
-	
-	public static BigWarpViewerFrame frameFromXml( String xmlFilePath ) throws SpimDataException{
-		final SpimDataMinimal spimData = new XmlIoSpimDataMinimal().load( xmlFilePath );
-		if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
-		{
-			System.err.println( "WARNING:\nOpening <SpimData> dataset that is not suited for interactive browsing.\nConsider resaving as HDF5 for better performance." );
-		}
-		final AbstractSequenceDescription< ?, ?, ? > seq = spimData.getSequenceDescription();
-
-		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
-		BigDataViewer.initSetups( spimData, converterSetups, sources );
-
-		final List< TimePoint > timepoints = seq.getTimePoints().getTimePointsOrdered();
-
-		BigWarpViewerFrame viewerFrame = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, timepoints.size(),
-				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), "Fidip", true );
-
-		return viewerFrame;
 	}
 	
 	protected class MouseLandmarkListener implements MouseListener, MouseMotionListener

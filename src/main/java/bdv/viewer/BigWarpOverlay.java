@@ -55,8 +55,7 @@ public class BigWarpOverlay {
 			final double radiusRatio = ( Double ) viewer.getSettings().get( 
 					BigWarpViewerSettings.KEY_SPOT_RADIUS_RATIO );
 			
-			final double radius = ( Double ) viewer.getSettings().get( 
-					BigWarpViewerSettings.KEY_SPOT_SIZE);
+			final double radius = viewer.getSettings().getSpotSize();
 
 			/*
 			 * Compute scale
@@ -94,9 +93,9 @@ public class BigWarpOverlay {
 				Double[] spot = landmarkModel.getPoints().get( index );
 				
 				if( landmarkModel.isActive(index) ){
-					color  = (Color)viewer.getSettings().get( BigWarpViewerSettings.KEY_COLOR );
+					color  = viewer.getSettings().getSpotColor();
 				}else{
-					color  = (Color)viewer.getSettings().get( BigWarpViewerSettings.KEY_INACTIVE_COLOR );
+					color  = viewer.getSettings().getInactiveSpotColor();
 				}              
 
 				g.setColor( color );

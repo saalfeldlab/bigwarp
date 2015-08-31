@@ -13,6 +13,7 @@ import javax.swing.SwingUtilities;
 import net.imglib2.ui.util.GuiUtil;
 import bdv.img.cache.Cache;
 import bdv.viewer.BigWarpViewerPanel;
+import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
@@ -30,18 +31,18 @@ public class BigWarpViewerFrame extends JFrame
 	public BigWarpViewerFrame(
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
-			final int numTimePoints,
+			final BigWarpViewerSettings viewerSettings,
 			final Cache cache,
 			final String title,
 			final boolean isMoving )
 	{
-		this( width, height, sources, numTimePoints, cache, ViewerPanel.options(), title, isMoving );
+		this( width, height, sources, viewerSettings, cache, ViewerPanel.options(), title, isMoving );
 	}
 	
 	public BigWarpViewerFrame(
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
-			final int numTimePoints,
+			final BigWarpViewerSettings viewerSettings,
 			final Cache cache,
 			final Options optional,
 			final String title,
@@ -49,7 +50,7 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		
-		viewer = new BigWarpViewerPanel( sources, numTimePoints, cache, optional.width( width / 2 ).height( height ), isMoving );
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving );
 
 		if( !isMoving )
 			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );

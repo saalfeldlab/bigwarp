@@ -46,16 +46,16 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	Options options;
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving )
 	{
-		this( sources, numTimePoints, cache, options(), isMoving );
+		this( sources, viewerSettings, cache, options(), isMoving );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final int numTimePoints, final Cache cache, final Options optional, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final Options optional, boolean isMoving )
 	{
-		super( sources, numTimePoints, cache, optional );
+		super( sources, 1, cache, optional );
+		this.viewerSettings = viewerSettings;
 		options = optional;
-		viewerSettings = new BigWarpViewerSettings();
 		this.isMoving = isMoving;
 		destXfm = new AffineTransform3D();
 	}
