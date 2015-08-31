@@ -93,10 +93,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         moving_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
         target_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
         
-        //IJ.showMessage( "moving_img " + moving_imp );
-        //IJ.showMessage( "target_img " + target_imp );
-        
-        
         try 
         {
         	new RepeatingReleasedEventsFixer().install();

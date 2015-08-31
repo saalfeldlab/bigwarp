@@ -1062,13 +1062,11 @@ public class BigWarp {
 		RandomAccess<ARGBType> ra = rai.randomAccess();
 		while( c.hasNext() )
 		{
-			
 			c.fwd();
 			ra.setPosition( c );
 			c.get().set( ra.get() );
 			
-			if( k % 1000 == 0 ){
-//				System.out.println(k);
+			if( k % 10000 == 0 ){
 				IJ.showProgress( k/N );
 			}
 			k++;
