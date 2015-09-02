@@ -18,7 +18,7 @@ import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.RotationAnimator2D;
-import bdv.viewer.animate.SimilarityTransformAnimator;
+import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.animate.SimilarityTransformAnimator2D;
 import bdv.viewer.state.SourceState;
 
@@ -335,7 +335,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		}else
 		{
 			currentAnimator = 
-    			new SimilarityTransformAnimator( startXfm, destinationXfm, centerX, centerY, millis/2 );
+    			new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
 		}
     	
     	currentAnimator.setTime( System.currentTimeMillis() );

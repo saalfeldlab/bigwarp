@@ -48,6 +48,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	private final SetCacheHints sourceSetCacheHints;
 	
 	private final TpsTransformWrapper tpsXfm;
+	
+	private AffineTransform3D viewXfm;
 
 	private boolean isTransformed;
 	
@@ -63,6 +65,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 
 		sourceSetCacheHints = SetCacheHints.class.isInstance( source ) ?
 				( SetCacheHints ) source : SetCacheHints.empty;
+	}
+	
+	public void setViewTransform( AffineTransform3D viewXfm )
+	{
+		this.viewXfm = viewXfm;
 	}
 
 	@Override

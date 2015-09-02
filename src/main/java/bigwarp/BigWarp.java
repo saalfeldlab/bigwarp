@@ -17,8 +17,8 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.ActionMap;
@@ -38,10 +38,13 @@ import javax.swing.table.TableCellEditor;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.RealRandomAccess;
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.exception.ImgLibException;
 import net.imglib2.img.imageplus.ImagePlusImgs;
@@ -51,6 +54,8 @@ import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
+import net.imglib2.ui.InteractiveDisplayCanvasComponent;
+import net.imglib2.ui.OverlayRenderer;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
@@ -65,10 +70,8 @@ import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.RigidModel2D;
 import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
-import mpicbg.models.SimilarityModel3D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
-import mpicbg.spim.data.sequence.TimePoint;
 import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
@@ -96,6 +99,7 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
@@ -103,6 +107,7 @@ import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.Options;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
+import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
@@ -130,6 +135,7 @@ public class BigWarp {
 	
 	protected final VisibilityAndGroupingDialog activeSourcesDialog;
 	
+	final AffineTransform3D fixedViewXfm;
 	private final BigWarpViewerFrame viewerFrameP;
 	private final BigWarpViewerFrame viewerFrameQ;
 	protected final BigWarpViewerPanel viewerP;
@@ -203,6 +209,8 @@ public class BigWarp {
 		baseXfmList = new AbstractModel<?>[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 		
+		fixedViewXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+		
 		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
 		setGridType( GridSource.GRID_TYPE.LINE );
@@ -212,17 +220,17 @@ public class BigWarp {
 		// rotations and scalings of the 2d plane ( z = 0 )
 		Options optionsP = ViewerPanel.options();
 		Options optionsQ = ViewerPanel.options();
-		if( ndims == 2 )
-		{
-			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-			
-			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-			
-		}
-		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
-		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
+		
+//		if( ndims == 2 )
+//		{
+//			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
+//			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
+//			
+//			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
+//			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
+//		}
+//		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
+//		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
 		
 		viewerSettings = new BigWarpViewerSettings();
 		
@@ -236,6 +244,66 @@ public class BigWarp {
 		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false );
 		viewerQ = getViewerFrameQ().getViewerPanel();
+		
+		if( ndims == 2 )
+		{
+			Class<ViewerPanel> c_vp = ViewerPanel.class;
+			Class<? extends InteractiveDisplayCanvasComponent> c_idcc = viewerP.getDisplay().getClass();
+			try 
+			{
+				Field overlayRendererField = c_vp.getDeclaredField( "multiBoxOverlayRenderer" );
+				overlayRendererField.setAccessible( true );
+
+				MultiBoxOverlayRenderer overlayRenderP = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+				MultiBoxOverlayRenderer overlayRenderQ = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+				Class orp = overlayRenderP.getClass();
+				Field boxField = orp.getDeclaredField("box");
+				boxField.setAccessible( true );
+				boxField.set( overlayRenderP, new MultiBoxOverlay2d() );
+				boxField.set( overlayRenderQ, new MultiBoxOverlay2d() );
+				boxField.setAccessible( false );
+				
+				overlayRendererField.set( viewerP, overlayRenderP );
+				overlayRendererField.set( viewerQ, overlayRenderQ );
+				overlayRendererField.setAccessible( false );
+
+				Field handlerField = c_idcc.getDeclaredField( "handler" );
+				handlerField.setAccessible( true );
+
+				viewerP.getDisplay().removeHandler( handlerField.get( viewerP.getDisplay() ));
+				viewerQ.getDisplay().removeHandler( handlerField.get( viewerQ.getDisplay() ));
+
+				TransformEventHandler<AffineTransform3D> pHandler = TransformHandler3DWrapping2D.factory().create( viewerP.getDisplay());
+				pHandler.setCanvasSize( viewerP.getDisplay().getWidth(), viewerP.getDisplay().getHeight(), false );
+
+				TransformEventHandler<AffineTransform3D> qHandler = TransformHandler3DWrapping2D.factory().create( viewerQ.getDisplay());
+				qHandler.setCanvasSize( viewerQ.getDisplay().getWidth(), viewerQ.getDisplay().getHeight(), false );
+
+				handlerField.set( viewerP.getDisplay(), pHandler );
+				handlerField.set( viewerQ.getDisplay(), qHandler );
+
+				viewerP.getDisplay().addHandler( pHandler );
+				viewerQ.getDisplay().addHandler( qHandler );
+				handlerField.setAccessible( false );
+
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
+		try
+		{
+			Class<ViewerPanel> c_vp = ViewerPanel.class;
+			Field sourceInfoOverlayRendererField = c_vp.getDeclaredField( "sourceInfoOverlayRenderer" );
+			sourceInfoOverlayRendererField.setAccessible( true );
+			sourceInfoOverlayRendererField.set( viewerP, new BigWarpSourceOverlayRenderer() );
+			sourceInfoOverlayRendererField.set( viewerQ, new BigWarpSourceOverlayRenderer() );
+			sourceInfoOverlayRendererField.setAccessible( false );
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 		
 		viewerP.setNumDim( ndims );
 		viewerQ.setNumDim( ndims );
@@ -896,7 +964,7 @@ public class BigWarp {
 	 * @param panelToChange
 	 * @param panelToMatch
 	 */
-	protected void matchWindowTransforms( BigWarpViewerPanel panelToChange, BigWarpViewerPanel panelToMatch )
+	protected void matchWindowTransforms( BigWarpViewerPanel panelToChange, BigWarpViewerPanel panelToMatch, AffineTransform3D toPreconcat )
 	{
 		panelToChange.showMessage( "Aligning" );
 		panelToMatch.showMessage( "Matching alignment" );
@@ -918,6 +986,8 @@ public class BigWarp {
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 		
+		AffineTransform3D toPreconcat = null;
+		
 		if( viewerFrameP.isActive() )
 		{
 			panelToChange = viewerQ;
@@ -927,11 +997,12 @@ public class BigWarp {
 		{
 			panelToChange = viewerP;
 			panelToMatch  = viewerQ;
+			toPreconcat = fixedViewXfm;
 		}
 		else
 			return;
 		
-		matchWindowTransforms( panelToChange, panelToMatch );
+		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
 	}
 	
 	public void matchActiveViewerPanelToOther()
@@ -939,10 +1010,13 @@ public class BigWarp {
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 		
+		AffineTransform3D toPreconcat = null;
+		
 		if( viewerFrameP.isActive() )
 		{
 			panelToChange = viewerP;
 			panelToMatch  = viewerQ;
+			toPreconcat = fixedViewXfm;
 		}
 		else if( viewerFrameQ.isActive() )
 		{
@@ -952,7 +1026,7 @@ public class BigWarp {
 		else
 			return;
 		
-		matchWindowTransforms( panelToChange, panelToMatch );
+		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
 	}
 	
 	public void resetView()
@@ -1015,13 +1089,19 @@ public class BigWarp {
 			return;
 		}
 		
-		final RandomAccessibleInterval<?> rai =
-				sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 );
+		Interpolation interp = viewerP.getState().getInterpolation();
+		RealRandomAccessible< ? > rai = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 		
-		final RandomAccessibleInterval<?> destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
+		final RandomAccessibleInterval<?> destintervalRaw = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
+		AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+		
+		FinalInterval destinterval = new FinalInterval( 
+				(long)(Math.ceil( destintervalRaw.dimension( 0 ) * fixedImgXfm.get( 0, 0 ))),
+				(long)(Math.ceil( destintervalRaw.dimension( 1 ) * fixedImgXfm.get( 1, 1 ))),
+				(long)(Math.ceil( destintervalRaw.dimension( 2 ) * fixedImgXfm.get( 2, 2 ))));
+		
 		ImagePlus ip = null;
-		Object t = rai.randomAccess().get();
-		System.out.println( t );
+		Object t = rai.realRandomAccess().get();
 		if( t instanceof FloatType )
 		{
 			System.out.println("FloatType");
@@ -1039,7 +1119,7 @@ public class BigWarp {
 			}
 			else if( destinterval.numDimensions() == 3 )
 			{
-				ip = copyToImageStack((RandomAccessibleInterval<ARGBType>)rai, destinterval );
+				ip = copyToImageStack((RealRandomAccessible<ARGBType>)rai, destinterval );
 			}
 		}
 		
@@ -1048,7 +1128,7 @@ public class BigWarp {
 		
 	}
 	
-	public static ImagePlus copyToImageStack( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
+	public static ImagePlus copyToImageStack( RealRandomAccessible<ARGBType> rai, Interval itvl )
 	{
 		System.out.println("copy to stack");
 		long[] dimensions = new long[ itvl.numDimensions() ];
@@ -1061,7 +1141,7 @@ public class BigWarp {
 		int k = 0;
 		long N = dimensions[0] * dimensions[1] * dimensions[2];
 		
-		RandomAccess<ARGBType> ra = rai.randomAccess();
+		RealRandomAccess<ARGBType> ra = rai.realRandomAccess();
 		while( c.hasNext() )
 		{
 			c.fwd();
@@ -1618,84 +1698,65 @@ public class BigWarp {
 	public static void main( final String[] args )
 	{
 		//TODO main
+		String fnP = "";
+		String fnQ = "";
+		String fnLandmarks = "";
 		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/openconnectome-bock11-neariso.xml";
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/openconnectome-cardona1-neariso.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/light-brain-template.xml";
+		int i = 0;
+		if( args.length >= 2 )
+		{
+			fnP = args[ i++ ];
+			fnQ = args[ i++ ];
+		}
+		else
+		{
+			System.err.println("Must provide at least 2 inputs for moving and target image files");
+			System.exit( 1 );
+		}
 		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/tiffTest.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/tiffTest.xml";
-		
-//		final String fnP = "/Users/bogovicj/workspaces/bdv/bigdataviewer-core/src/main/resources/tiffTest.xml";
-//		final String fnQ = "/Users/bogovicj/workspaces/bdv/bigdataviewer-core/src/main/resources/fakeoutLM.xml";
-		
-//		final String fnP = "/Users/bogovicj/workspaces/bdv/bdvLandmarkUi/resources/fakeout.xml";
-//		final String fnQ = "/Users/bogovicj/workspaces/bdv/bdvLandmarkUi/resources/fakeoutMR.xml";
-
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fakeout.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fakeoutMR.xml";
-////		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/light-brain-template.xml";
-////		
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/cell2mr/pts2.lnmk";
-		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
-		
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/flyc.xml";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/fruTemplate.xml";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps"; 
-		
-		// A better 2d example
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/KChlP1_invert.png";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigwarp/src/main/resources/data/histology/landmarks";
-		
-//		final String fnP = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc.xml";
-//		final String fnQ = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/fruTemplate.xml";
-//		final String fnLandmarks = "/Users/bogovicj/Documents/projects/bigwarp/data/fly/flyc_tps";
+		ArrayList< Double > resList = new ArrayList< Double >();
+		if( args.length >= 4 )
+		{
+			while( true )
+			{
 				
-		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
-		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
+				Double d;
+				try
+				{
+					d = Double.parseDouble( args[ i ]);
+					System.out.println("d: " + d );
+				}
+				catch(Exception e )
+				{
+					break;
+				}
+				resList.add( d );
+				i++;
+			}
+		}
 		
-//		final String fnP = "/Users/bogovicj/tmp/histology/KChlP1_invert.png";
-//		final String fnQ = "/Users/bogovicj/tmp/histology/nissl_1_invert.png";
-//		final String fnLandmarks = "/Users/bogovicj/tmp/histology/landmarks";
-//		final String fnLandmarks = "/Users/bogovicj/workspaces/bdv/bigwarp/src/main/resources/data/histology/histology_uniform";
+		if( args.length > i )
+			fnLandmarks = args[ i ];
 		
-		// A 2d example
-////		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/dots.xml";
-////		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bdvLandmarkUi/resources/gel.xml";
-//		final String fnP = "/groups/saalfeld/home/bogovicj/tests/Dot_Blot0000.png";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/tests/gel0000.png";
-//		final String fnP = "/Users/bogovicj/tmp/gel0000.png"; // this
-//		final String fnQ = "/Users/bogovicj/tmp/Dot_Blot0000.png";
-//		final String fnLandmarks = "/Users/bogovicj/tmp/gelDotPts";
+		double[] resolutions = null;
+		if( resList.size() > 2 )
+		{
+			resolutions = new double[ resList.size() ];
+			for( int j = 0; j < resolutions.length; j++ )
+				resolutions[ j ] = resList.get( j );
+		}
 		
-////		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes/dotsAndGenes";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/tests/test_bdvtps/dotsAndGenes2/dotsAndGenes2";
-
-		// grid example
-//		final String fnP = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/test/grid.png";
-//		final String fnQ = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/test/grid_blur.png";
-//		final String fnLandmarks = "/groups/saalfeld/home/bogovicj/dev/bdv/bigdataviewer-core/src/main/resources/test/gridTest100";
-		
-//		final String fnLandmarks = "";
 		
 		try
 		{
 			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
 			new RepeatingReleasedEventsFixer().install();
 			
-//			ImageJ imagej = new ImageJ();
-//			System.out.println( imagej );
-			
 			BigWarp bw;
 			if( fnP.endsWith("xml") && fnQ.endsWith("xml"))
 				bw = new BigWarp( loadSourcesFromXmls( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
 			else if( fnP.endsWith("png") && fnQ.endsWith("png") )
-				bw = new BigWarp( loadSourcesFromImages( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				bw = new BigWarp( loadSourcesFromImages( fnP, fnQ, resolutions ), new File( fnP ).getName(), new ProgressWriterConsole() );
 			else{
 				System.err.println("Error reading files - should both be xmls or both image files");
 				return;
@@ -1704,8 +1765,8 @@ public class BigWarp {
 			if( !fnLandmarks.isEmpty() )
 				bw.landmarkModel.load( new File( fnLandmarks ));
 			
-//			bw.setImageJInstance( imagej );
-			//bw.exportMovingImagePlus();
+			ImageJ ij = new ImageJ();
+			bw.setImageJInstance( ij );
 			
 		}
 		catch ( final Exception e )
@@ -1741,12 +1802,12 @@ public class BigWarp {
 //		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 	}
 	
-	public static BigWarpData loadSourcesFromImages( final String filenameP, final String filenameQ )
+	public static BigWarpData loadSourcesFromImages( final String filenameP, final String filenameQ, double[] resolutions )
 	{
 		ImagePlus moving_imp = IJ.openImage( filenameP );
 		ImagePlus target_imp = IJ.openImage( filenameQ );
 		
-		return BigWarpImagePlusPlugIn.buildData( moving_imp, target_imp );
+		return BigWarpImagePlusPlugIn.buildData( moving_imp, target_imp, resolutions );
 	}
 	
 	public static BigWarpData loadSourcesFromXmls( final String xmlFilenameP, final String xmlFilenameQ )

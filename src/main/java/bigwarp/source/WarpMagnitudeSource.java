@@ -137,6 +137,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		return ( t == 0 );
 	}
 	
+	/*
 	public Interval estimateBoundingInterval( final int t, final int level )
 	{
 		final Interval interval = getSource( t, level );
@@ -149,7 +150,8 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		
 		return ((ThinPlateR2LogRSplineKernelTransform)warpMagImg.ra.warp).estimateBoundingBox( interval, delta );
 	}
-
+	 */
+	
 	@Override
 	public RandomAccessibleInterval<T> getSource( int t, int level ) 
 	{

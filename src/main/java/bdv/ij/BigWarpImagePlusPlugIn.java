@@ -96,7 +96,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try 
         {
         	new RepeatingReleasedEventsFixer().install();
-			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
+			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp, null ), "Big Warp",  new ProgressWriterIJ() );
 			ImageJ ij = IJ.getInstance();
 			bw.setImageJInstance( ij );
 		} 
@@ -108,10 +108,29 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         
 	}
 	
-	public static BigWarp.BigWarpData buildData( ImagePlus moving_imp, ImagePlus target_imp )
+	public static BigWarp.BigWarpData buildData( ImagePlus moving_imp, ImagePlus target_imp, double[] resolutions )
 	{
-		BigWarp.BigWarpData moving_data = getSource( moving_imp, null );
-		BigWarp.BigWarpData moving_and_target_data = getSource( target_imp, moving_data );
+		if( resolutions != null )
+		{
+			int N = resolutions.length / 2;
+			double[] res1 = new double[ N ];
+			double[] res2 = new double[ N ];
+
+			for( int i = 0; i < resolutions.length; i++ )
+			{
+				res1[ i ] = resolutions[ i ];
+				res2[ i ] = resolutions[ i + N ];
+			}
+			BigWarp.BigWarpData moving_data = getSource( moving_imp, null, res1 );
+			BigWarp.BigWarpData moving_and_target_data = getSource( target_imp, moving_data, res2 );
+			return moving_and_target_data;
+			
+		}else{
+			BigWarp.BigWarpData moving_data = getSource( moving_imp, null, null );
+			BigWarp.BigWarpData moving_and_target_data = getSource( target_imp, moving_data, null );
+			return moving_and_target_data;
+		}
+		
 		
 //		ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
 //		sources.add( moving_data.sources.get(0) );
@@ -119,16 +138,35 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 //		
 //		BigWarp.BigWarpData data = new BigWarp.BigWarpData( sources, moving_data.seq, moving_data.converterSetups );
 		
-		return moving_and_target_data;
+		
 	}
 	
 	public static BigWarp.BigWarpData getSource( ImagePlus imp, BigWarp.BigWarpData dataIn )
 	{
+		return getSource( imp, dataIn, null );
+	}
+	
+	public static BigWarp.BigWarpData getSource( ImagePlus imp, BigWarp.BigWarpData dataIn, double[] resolutions )
+	{
 		
 		// get calibration and image size
-		final double pw = imp.getCalibration().pixelWidth;
-		final double ph = imp.getCalibration().pixelHeight;
-		final double pd = imp.getCalibration().pixelDepth;
+		final double pw;
+		final double ph;
+		final double pd;
+		
+		if( resolutions == null )
+		{
+			pw = imp.getCalibration().pixelWidth;
+			ph = imp.getCalibration().pixelHeight;
+			pd = imp.getCalibration().pixelDepth;
+		}
+		else
+		{
+			pw = resolutions[ 0 ];
+			ph = resolutions[ 1 ];
+			pd = resolutions[ 2 ];
+		}
+		
 		String punit = imp.getCalibration().getUnit();
 		if ( punit == null || punit.isEmpty() )
 			punit = "px";

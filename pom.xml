@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-  <artifactId>bigwarp</artifactId>
+  <artifactId>bigwarp_fiji</artifactId>
   <version>0.0.2-SNAPSHOT</version>
-  <name>bigwarp</name>
+  <name>bigwarp_fiji</name>
   <description>A tool for manual pointwise deformable registration using A tool for A A tool for manual pointwise deformable registration using bigdataviewer. </description>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -20,8 +20,8 @@
   </build>
   <parent>
   	<groupId>sc.fiji</groupId>
-  	<artifactId>pom-bigdataviewer</artifactId>
-  	<version>2.1.4</version>
+  	<artifactId>pom-fiji</artifactId>
+  	<version>7.2.0</version>
   </parent>
   <repositories>
         <repository>
@@ -32,28 +32,25 @@
   
   <dependencies>
   	<dependency>
+  		<groupId>
+  			com.googlecode.efficient-java-matrix-library
+  		</groupId>
+  		<artifactId>ejml</artifactId>
+  		<version>0.24</version>
+  	</dependency>
+  	<dependency>
   		<groupId>sc.fiji</groupId>
   		<artifactId>bigdataviewer-core</artifactId>
-  		<version>1.2.4</version>
+  		<version>1.2.2</version>
   	</dependency>
   	<dependency>
   		<groupId>net.imglib2</groupId>
-  		<artifactId>imglib2</artifactId>
+  		<artifactId>imglib2-ui</artifactId>
   	</dependency>
   	<dependency>
-  		<groupId>saalfeldlab</groupId>
-  		<artifactId>janelia-util</artifactId>
-  		<version>0.0.1-SNAPSHOT</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>au.com.bytecode</groupId>
-  		<artifactId>opencsv</artifactId>
-  		<version>2.4</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>sc.fiji</groupId>
-  		<artifactId>bigdataviewer_fiji</artifactId>
-  		<version>1.0.15</version>
+  		<groupId>net.imglib2</groupId>
+  		<artifactId>imglib2-ij</artifactId>
+  		<version>2.0.0-beta-29</version>
   	</dependency>
   	<dependency>
   		<groupId>jitk</groupId>
@@ -61,14 +58,23 @@
   		<version>1.1.3</version>
   	</dependency>
   	<dependency>
-  		<groupId>mpicbg</groupId>
-  		<artifactId>mpicbg</artifactId>
-  		<version>1.0.3</version>
+  		<groupId>net.imglib2</groupId>
+  		<artifactId>imglib2</artifactId>
   	</dependency>
   	<dependency>
-  		<groupId>net.imglib2</groupId>
-  		<artifactId>imglib2-ij</artifactId>
-  		<version>2.0.1</version>
+  		<groupId>au.com.bytecode</groupId>
+  		<artifactId>opencsv</artifactId>
+  		<version>2.4</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>mpicbg</groupId>
+  		<artifactId>mpicbg</artifactId>
+  		<version>1.0.2</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>sc.fiji</groupId>
+  		<artifactId>bigdataviewer_fiji</artifactId>
+  		<version>1.0.14</version>
   	</dependency>
   </dependencies>
 </project>

@@ -11,6 +11,7 @@ import java.util.List;
 import net.imglib2.Interval;
 import net.imglib2.realtransform.AffineTransform3D;
 import bdv.viewer.overlay.MultiBoxOverlay;
+import bdv.viewer.overlay.RenderBoxHelper;
 
 /**
  * Paint an overlay showing multiple transformed boxes (interval + transform).
@@ -23,6 +24,37 @@ import bdv.viewer.overlay.MultiBoxOverlay;
  */
 public class MultiBoxOverlay2d extends MultiBoxOverlay
 {
+	private final RenderBoxHelper renderBoxHelper = new RenderBoxHelper();
+	
+	private final Color activeBackColor = new Color( 0x00994499 );// Color.MAGENTA;
+
+	private final Color activeFrontColor = Color.GREEN;
+
+	private final Color inactiveBackColor = Color.DARK_GRAY;
+
+	private final Color inactiveFrontColor = Color.LIGHT_GRAY;
+
+	private final Color canvasColor = new Color( 0xb0bbbbbb, true );
+	
+	private int highlightIndex = -1;
+
+	private long highlighStartTime = -1;
+
+	private final int highlightDuration = 300;
+
+	private volatile boolean highlightInProgress;
+
+	public boolean isHighlightInProgress()
+	{
+		return highlightInProgress;
+	}
+	
+	public void highlight( final int sourceIndex )
+	{
+		highlightIndex = sourceIndex;
+		highlighStartTime = -1;
+	}
+	
 	/**
 	 * This paints the box overlay with perspective and scale set such that it
 	 * fits approximately into the specified screen area.
