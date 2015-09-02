@@ -1819,10 +1819,10 @@ public class BigWarp {
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		
 		ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
-		BigDataViewer.initSetups( spimData, converterSetups, sources );
+		BigWarpInit.initSetups( spimData, converterSetups, sources );
 
 		/* Load the second source */
-		BigDataViewer.initSetups( loadSpimData( xmlFilenameQ ), converterSetups, sources );
+		BigWarpInit.initSetups( loadSpimData( xmlFilenameQ ), converterSetups, sources );
 		
 		return new BigWarpData( sources, seq, converterSetups );
 	}
