@@ -29,10 +29,6 @@ public class BigWarpDragOverlay
 	
 	private double arad = 4.0;
 	
-//	private Color startColor = new Color( Integer.parseInt( "EDA50D", 16 ) ); // an orange
-//	private Color endColor   = new Color( Integer.parseInt( "09A067", 16 ) ); // a green 
-//	private Color lineColor  = new Color( Integer.parseInt( "8447CE", 16 ) ); // a purple 
-	
 	private Color baseColor;
 	
 	public BigWarpDragOverlay( final BigWarp bw, final BigWarpViewerPanel viewer )
@@ -44,13 +40,9 @@ public class BigWarpDragOverlay
 		movingPointScreen = new RealPoint( 3 );
 		targetPointScreen = new RealPoint( 3 );
 		
+		arad = viewer.getSettings().getSpotSize();
+		baseColor = viewer.getSettings().getSpotColor();
 
-		arad = ( Double ) viewer.getSettings().get( 
-				 BigWarpViewerSettings.KEY_SPOT_SIZE);
-		
-		baseColor = ( Color ) viewer.getSettings().get( 
-				 BigWarpViewerSettings.KEY_COLOR );
-		
 		mouseListener = new WarpDragMouseListener( bw, viewer );
 	}
 	
@@ -58,9 +50,13 @@ public class BigWarpDragOverlay
 	{
 		completedOK = false;
 	}
+
 	
 	public void paint( final Graphics2D g ) 
 	{
+		arad = viewer.getSettings().getSpotSize();
+		baseColor = viewer.getSettings().getSpotColor();
+		
 		// System.out.println("BigWarpDragOverlay - PAINT" );
 		if( inProgress )
 		{
@@ -92,7 +88,6 @@ public class BigWarpDragOverlay
 	
 	public void updateLandmarkModel( )
 	{
-		System.out.println( "BigWarpDragOverlay: updateLandmarkModel" );
 		
 		if( !completedOK )
 			return;
@@ -105,34 +100,6 @@ public class BigWarpDragOverlay
 		
 		bw.addPoint( movingPtArray, true,  viewer );
 		bw.addPoint( targetPtArray, false, viewer );
-		
-//		// if points were placed in a transformed viewer, the clicked
-//		// points need to be transformed before being added
-//		if( viewer.getOverlay().isTransformed )
-//		{
-//			System.out.println( "Adding TRANSFORMED points");
-//			LandmarkTableModel lm = bw.getLandmarkPanel().getTableModel();
-//			
-//			double[] movingPtXfm = new double[ 3 ];
-//			double[] targetPtXfm = new double[ 3 ];
-//			
-//			lm.getTransform().apply( movingPtArray, movingPtXfm );
-//			lm.getTransform().apply( targetPtArray, targetPtXfm );
-//			
-//			bw.addPoint( movingPtXfm, true,  viewer );
-//			bw.addPoint( targetPtXfm, false, viewer );
-//			
-////			lm.add( movingPtXfm, true );
-////			lm.add( targetPtXfm, false );
-//		}
-//		else
-//		{
-//			System.out.println( "Adding points");
-////			lm.add( movingPtArray, true );
-////			lm.add( targetPtArray, false );
-//			bw.addPoint( movingPtArray, true,  viewer );
-//			bw.addPoint( targetPtArray, false, viewer );
-//		}
 		
 		reset();
 	}
