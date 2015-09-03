@@ -1078,6 +1078,12 @@ public class BigWarp {
 		// Toggle whether moving image is displayed as transformed or not
 		setIsMovingDisplayTransformed( newState );
 		getViewerFrameP().getViewerPanel().requestRepaint();
+		
+		if( viewerQ.getVisibilityAndGrouping().isFusedEnabled())
+		{
+			System.out.println("updating fixed frame");
+			getViewerFrameQ().getViewerPanel().requestRepaint();
+		}
 	}
 	
 	protected void exportMovingImagePlus( )

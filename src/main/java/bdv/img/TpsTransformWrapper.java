@@ -68,14 +68,12 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	{
 		if( tps == null )
 		{
-//			System.out.println("Warp Identity");
 			for ( int d = 0; d < target.numDimensions(); ++d )
 				source.setPosition( target.getDoublePosition( d ), d );
 				
 			return;
 		}
 		
-//		System.out.println("Warp TPS");
 		double[] pt = new double[ tps.getNumDims() ];
 		for ( int d = 0; d < tps.getNumDims(); ++d )
 			pt[ d ] = target.getDoublePosition( d );

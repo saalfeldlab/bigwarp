@@ -31,7 +31,7 @@ public class HelpDialog extends JDialog
 	 */
 	public HelpDialog( final Frame owner )
 	{
-		this( owner, HelpDialog.class.getResource( "/viewer/Help.html" ) );
+		this( owner, HelpDialog.class.getResource( "/viewer/BigWarpHelp.html" ) );
 	}
 
 	public HelpDialog( final Frame owner, final URL helpFile )
