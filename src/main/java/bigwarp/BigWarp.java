@@ -40,7 +40,6 @@ import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccess;
@@ -55,7 +54,6 @@ import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.InteractiveDisplayCanvasComponent;
-import net.imglib2.ui.OverlayRenderer;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
@@ -72,7 +70,6 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
-import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -192,14 +189,17 @@ public class BigWarp {
 	
 	JMenu landmarkMenu;
 	
+	final ProgressWriter progressWriter;
+	
 	private static ImageJ ij;
 	
 	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-
+		
 		sources = data.sources;
 		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
 		ArrayList<ConverterSetup> converterSetups = data.converterSetups;
+		this.progressWriter = progressWriter;
 		
 		ndims = 3;
 		ndims = detectNumDims();
@@ -598,18 +598,24 @@ public class BigWarp {
 				//int returnval = fc.showOpenDialog( landmarkFrame );
 				fc.showSaveDialog( landmarkFrame );
 				
-				File file = fc.getSelectedFile();
+				final ViewerState state = viewerP.getState().copy();
+				final File file = fc.getSelectedFile();
 				if( file == null )
 					return;
 				
-				try 
-				{
-					exportMovingImage( file );
-				}
-				catch( Exception e1 )
-				{
-					e1.printStackTrace();
-				}
+				//TODO exportThread
+				new Thread() {
+					public void run() {
+						try 
+						{
+							exportMovingImage( file, state, progressWriter );
+						}
+						catch( Exception e1 )
+						{
+							e1.printStackTrace();
+						}
+					}
+				}.start();
 			}
         });
 	
@@ -1203,7 +1209,7 @@ public class BigWarp {
 		return iproc;
 	}
 	
-	protected void exportMovingImage( File f ) throws IOException, InterruptedException
+	protected void exportMovingImage( final File f, final ViewerState renderState, ProgressWriter progressWriter ) throws IOException, InterruptedException
 	{
 		// Source< ? > movingSrc = sources.get( 1 ).getSpimSource();
 		final RandomAccessibleInterval<?> interval = sources.get( 1 ).getSpimSource().getSource( 0, 0 );
@@ -1233,37 +1239,33 @@ public class BigWarp {
 			}
 		}
 		
-		final ViewerState renderState = viewerP.getState();
+//		final ViewerState renderState = viewerP.getState().copy();
 		
 		int minz = (int)interval.min( 2 );
 		int maxz = (int)interval.max( 2 );
 		
-		if( ndims == 2 && maxz == 0 )
-			maxz = 1;
-		
+//		if( ndims == 2 && maxz == 0 )
+//			maxz = 0;
 		
 		final AffineTransform3D viewXfm = new AffineTransform3D();
 		viewXfm.identity();
 		
 		final MyTarget target = new MyTarget();
-		 System.out.println( "target width : " + target.getWidth() );
-		 System.out.println( "target height: " + target.getHeight() );
 		
 		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), new double[] { 1 }, 0, false, 1, null, false, new Cache.Dummy() );
+		progressWriter.setProgress( 0 );
 		
-		 System.out.println( "zrange: " + minz + " " + maxz );
-		 
 		// step through z, rendering each slice as an image and writing it to 
-		for( int z = minz; z < maxz; z++ )
-		{			
+		for( int z = minz; z <= maxz; z++ )
+		{	
 			viewXfm.set( -z, 2, 3 );
 			renderState.setViewerTransform( viewXfm );
 			renderer.requestRepaint();
 			renderer.paint( renderState );
 
 			File thiszFile = new File( String.format( "%s_z-%04d.png", f.getAbsolutePath(), z ) );
+			progressWriter.setProgress( ( double ) ( z - minz + 1) / ( maxz - minz + 1) );
 			
-			System.out.println("exporting slice: " + z + " of " + (maxz - minz) );
 			ImageIO.write( target.bi, "png", thiszFile );
 		}
 	}
@@ -1770,9 +1772,6 @@ public class BigWarp {
 			
 			if( !fnLandmarks.isEmpty() )
 				bw.landmarkModel.load( new File( fnLandmarks ));
-			
-			ImageJ ij = new ImageJ();
-			bw.setImageJInstance( ij );
 			
 		}
 		catch ( final Exception e )
