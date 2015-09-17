@@ -187,6 +187,8 @@ public class BigWarp {
 	final JFrame	 fileFrame;
 	final FileDialog fileDialog;
 	
+	protected File lastDirectory;
+	
 	JMenu landmarkMenu;
 	
 	final ProgressWriter progressWriter;
@@ -413,7 +415,19 @@ public class BigWarp {
 		// file selection
 		fileFrame = new JFrame("Select File");
 		fileDialog = new FileDialog(fileFrame);
+		lastDirectory = null;
+		
 		fileFrame.setVisible( false );
+	}
+	
+	public File getLastDirectory()
+	{
+		return lastDirectory;
+	}
+	
+	public void setLastDirectory( File dir )
+	{
+		this.lastDirectory = dir;
 	}
 	
 	public void setImageJInstance( ImageJ ij )
@@ -519,9 +533,14 @@ public class BigWarp {
 			@Override
 			public void mouseReleased(MouseEvent e) 
 			{
-				final JFileChooser fc = new JFileChooser();
+				System.out.println( "getLastDirectory is: " + getLastDirectory());
+				final JFileChooser fc = new JFileChooser( getLastDirectory() );
+				
 				fc.showOpenDialog( landmarkFrame );
 				File file = fc.getSelectedFile();
+				
+				setLastDirectory( file.getParentFile() );
+				System.out.println( "now is: " + getLastDirectory());
 				
 				//fileFrame.setVisible( true );
 //				fileDialog.setVisible( true );
@@ -559,11 +578,14 @@ public class BigWarp {
 			@Override
 			public void mouseReleased(MouseEvent e) 
 			{
-				final JFileChooser fc = new JFileChooser();
+				System.out.println( "getLastDirectory is: " + getLastDirectory());
+				final JFileChooser fc = new JFileChooser( getLastDirectory() );
 				// int returnval = fc.showOpenDialog( landmarkFrame );
 				fc.showSaveDialog( landmarkFrame );
-				
 				File file = fc.getSelectedFile();
+				
+				setLastDirectory( file.getParentFile() );
+				System.out.println( "now is: " + getLastDirectory());
 				
 				if( file == null )
 					return;
@@ -594,12 +616,18 @@ public class BigWarp {
 			@Override
 			public void mouseReleased(MouseEvent e) 
 			{
-				final JFileChooser fc = new JFileChooser();
+				System.out.println( "getLastDirectory is: " + getLastDirectory());
+				final JFileChooser fc = new JFileChooser( getLastDirectory() );
 				//int returnval = fc.showOpenDialog( landmarkFrame );
 				fc.showSaveDialog( landmarkFrame );
 				
 				final ViewerState state = viewerP.getState().copy();
 				final File file = fc.getSelectedFile();
+				
+				setLastDirectory( file.getParentFile() );
+				System.out.println( "now is: " + getLastDirectory());
+				
+				
 				if( file == null )
 					return;
 				
