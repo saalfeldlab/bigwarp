@@ -1984,6 +1984,18 @@ public class BigWarp {
 	    		return;
 	    	}
 	    	
+	    	if( e.isControlDown() )
+	    	{
+	    		System.out.println( "release control down " );
+	    		if( BigWarp.this.inLandmarkMode && selectedPointIndex < 0 )
+	    		{
+	    			System.out.println( "here" );
+	    			thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
+	    			addFixedPoint( BigWarp.this.currentLandmark, isMoving );
+	    		}
+	    		return;
+	    	}
+	    	
 			// deselect any point that may be selected
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex == -1 )
 			{
@@ -2020,6 +2032,26 @@ public class BigWarp {
 		@Override
 		public void mouseMoved(MouseEvent e) {}
 		
+		/**
+		 * Adds a point in the moving and fixed images at the same point.  
+		 */
+		public void addFixedPoint( RealPoint pt, boolean isMovingImage )
+		{
+			System.out.println( "Add fixed point" );
+			if( isMovingImage && viewerP.getTransformEnabled() )
+			{
+				// Here we clicked in the space of the moving image
+				currentLandmark.localize( ptarrayLoc );
+				addPoint( ptarrayLoc,  true, viewerP );
+				addPoint( ptarrayLoc, false, viewerQ );
+			}
+			else
+			{
+				currentLandmark.localize( ptarrayLoc );
+				addPoint( ptarrayLoc,  true, viewerP );
+				addPoint( ptarrayLoc, false, viewerQ );
+			}
+		}
 	}
 	
 	public class LandmarkTableListener implements TableModelListener 
