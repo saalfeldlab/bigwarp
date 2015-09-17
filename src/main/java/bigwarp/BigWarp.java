@@ -484,12 +484,16 @@ public class BigWarp {
 			@Override
 			public void mouseReleased(MouseEvent e) 
 			{
-				//System.out.println("You touched me");
-//				IJ.showMessage("You touched me! <GASP>");
-				
-				IJ.showProgress(0.0);
-				exportMovingImagePlus();
-				IJ.showProgress(1.1);
+				new Thread() {
+					public void run() 
+					{
+						try 
+						{
+							exportMovingImagePlus();
+						}
+						catch( Exception e ){ e.printStackTrace(); }
+					}
+				}.start();
 			}
         });
         
