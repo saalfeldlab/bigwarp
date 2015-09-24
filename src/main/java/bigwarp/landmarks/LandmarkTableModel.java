@@ -727,4 +727,34 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return (col <= 1);
 	}
 
+	/**
+	 * Returns a new LandmarkTableModel but makes the moving points fixed and vice versa.
+	 *
+	 * @return
+	 */
+	public LandmarkTableModel invert()
+	{
+		LandmarkTableModel inv = new LandmarkTableModel( ndims );
+
+		int N = this.getRowCount();
+
+		double[] tmp = new double[ ndims ];
+		for ( int i = 0; i < N; i++ )
+		{
+			Double[] thispair = pts.get( i );
+
+			for ( int d = 0; d < ndims; d++ )
+				tmp[ d ] = thispair[ d ];
+
+			inv.add( tmp, false );
+
+			for ( int d = 0; d < ndims; d++ )
+				tmp[ d ] = thispair[ ndims + d ];
+
+			inv.add( tmp, true );
+		}
+
+		return inv;
+	}
+
 }
