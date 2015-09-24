@@ -420,6 +420,21 @@ public class BigWarp {
 		fileFrame.setVisible( false );
 	}
 	
+//	public void closeAll( Object o )
+	public void closeAll()
+	{
+		viewerFrameP.setVisible( false );
+		viewerFrameQ.setVisible( false );
+		landmarkFrame.setVisible( false );
+		
+		viewerFrameP.getViewerPanel().stop();
+		viewerFrameQ.getViewerPanel().stop();
+		
+		viewerFrameP.dispose();
+		viewerFrameQ.dispose();
+		landmarkFrame.dispose();
+	}
+	
 	public File getLastDirectory()
 	{
 		return lastDirectory;

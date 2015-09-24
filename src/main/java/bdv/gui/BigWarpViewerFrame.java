@@ -18,6 +18,7 @@ import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.Options;
+import bigwarp.BigWarp;
 
 public class BigWarpViewerFrame extends JFrame
 {
@@ -26,9 +27,12 @@ public class BigWarpViewerFrame extends JFrame
 	
 	private final InputActionBindings keybindings;
 	
+	private final BigWarp bw;
+
 	private static final long serialVersionUID = -7630931733043185034L;
 
 	public BigWarpViewerFrame(
+			BigWarp bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
@@ -36,10 +40,11 @@ public class BigWarpViewerFrame extends JFrame
 			final String title,
 			final boolean isMoving )
 	{
-		this( width, height, sources, viewerSettings, cache, ViewerPanel.options(), title, isMoving );
+		this( bw, width, height, sources, viewerSettings, cache, ViewerPanel.options(), title, isMoving );
 	}
 	
 	public BigWarpViewerFrame(
+			BigWarp bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
@@ -49,7 +54,7 @@ public class BigWarpViewerFrame extends JFrame
 			final boolean isMoving )
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
-		
+		this.bw = bw;
 		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving );
 
 		if( !isMoving )
@@ -62,13 +67,14 @@ public class BigWarpViewerFrame extends JFrame
 		add( viewer, BorderLayout.CENTER );
 		
 		pack();
-		setDefaultCloseOperation( JFrame.DISPOSE_ON_CLOSE );
+
+		setDefaultCloseOperation( JFrame.DO_NOTHING_ON_CLOSE );
 		addWindowListener( new WindowAdapter()
 		{
 			@Override
 			public void windowClosing( final WindowEvent e )
 			{
-				viewer.stop();
+				BigWarpViewerFrame.this.bw.closeAll();
 			}
 		} );
 
