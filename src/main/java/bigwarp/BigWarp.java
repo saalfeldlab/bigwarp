@@ -237,13 +237,13 @@ public class BigWarp {
 		viewerSettings = new BigWarpViewerSettings();
 		
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true );
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
 				( ( ViewerImgLoader< ?, ? > ) seq.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false );
 		viewerQ = getViewerFrameQ().getViewerPanel();
 		
@@ -342,7 +342,7 @@ public class BigWarp {
 		landmarkPanel.setOpaque( true );
 		addDefaultTableMouseListener();
 		
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel );
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 		
 		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners( );
