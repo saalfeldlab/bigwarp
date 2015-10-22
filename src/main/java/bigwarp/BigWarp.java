@@ -1,11 +1,5 @@
 package bigwarp;
 
-import ij.IJ;
-import ij.ImageJ;
-import ij.ImagePlus;
-import ij.process.ColorProcessor;
-import ij.process.ImageProcessor;
-
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.FileDialog;
@@ -38,38 +32,6 @@ import javax.swing.table.TableCellEditor;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
-import net.imglib2.FinalInterval;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
-import net.imglib2.RealRandomAccess;
-import net.imglib2.RealRandomAccessible;
-import net.imglib2.display.RealARGBColorConverter;
-import net.imglib2.exception.ImgLibException;
-import net.imglib2.img.imageplus.ImagePlusImgs;
-import net.imglib2.img.imageplus.IntImagePlus;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.type.volatiles.VolatileFloatType;
-import net.imglib2.ui.InteractiveDisplayCanvasComponent;
-import net.imglib2.ui.PainterThread;
-import net.imglib2.ui.RenderTarget;
-import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformListener;
-import net.imglib2.view.Views;
-import mpicbg.models.AbstractModel;
-import mpicbg.models.AffineModel2D;
-import mpicbg.models.AffineModel3D;
-import mpicbg.models.CoordinateTransform;
-import mpicbg.models.IllDefinedDataPointsException;
-import mpicbg.models.NotEnoughDataPointsException;
-import mpicbg.models.RigidModel2D;
-import mpicbg.models.RigidModel3D;
-import mpicbg.models.SimilarityModel2D;
-import mpicbg.spim.data.SpimDataException;
-import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -113,6 +75,43 @@ import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import bigwarp.source.WarpMagnitudeSource;
+import ij.IJ;
+import ij.ImageJ;
+import ij.ImagePlus;
+import ij.process.ColorProcessor;
+import ij.process.ImageProcessor;
+import mpicbg.models.AbstractModel;
+import mpicbg.models.AffineModel2D;
+import mpicbg.models.AffineModel3D;
+import mpicbg.models.CoordinateTransform;
+import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.NotEnoughDataPointsException;
+import mpicbg.models.RigidModel2D;
+import mpicbg.models.RigidModel3D;
+import mpicbg.models.SimilarityModel2D;
+import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
+import net.imglib2.FinalInterval;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealPoint;
+import net.imglib2.RealRandomAccess;
+import net.imglib2.RealRandomAccessible;
+import net.imglib2.display.RealARGBColorConverter;
+import net.imglib2.exception.ImgLibException;
+import net.imglib2.img.imageplus.ImagePlusImgs;
+import net.imglib2.img.imageplus.IntImagePlus;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.type.volatiles.VolatileFloatType;
+import net.imglib2.ui.InteractiveDisplayCanvasComponent;
+import net.imglib2.ui.PainterThread;
+import net.imglib2.ui.RenderTarget;
+import net.imglib2.ui.TransformEventHandler;
+import net.imglib2.ui.TransformListener;
+import net.imglib2.view.Views;
 
 public class BigWarp {
 	
@@ -500,6 +499,7 @@ public class BigWarp {
 			public void mouseReleased(MouseEvent e) 
 			{
 				new Thread() {
+					@Override
 					public void run() 
 					{
 						try 
@@ -652,6 +652,7 @@ public class BigWarp {
 				
 				//TODO exportThread
 				new Thread() {
+					@Override
 					public void run() {
 						try 
 						{
@@ -1903,7 +1904,7 @@ public class BigWarp {
 		double[] ptBackLoc = new double[ 3 ];
 		
 		private BigWarpViewerPanel thisViewer;
-		private boolean isMoving;
+		private final boolean isMoving;
 		
 		protected MouseLandmarkListener( BigWarpViewerPanel thisViewer )
 		{
@@ -2095,7 +2096,8 @@ public class BigWarp {
 	    	this.viewer = viewer;
 	    }
 	 
-	    public void mouseClicked( MouseEvent e)
+	    @Override
+		public void mouseClicked( MouseEvent e)
 	    {
 	    	
 	    	if( BigWarp.this.inLandmarkMode )
@@ -2241,8 +2243,14 @@ public class BigWarp {
 			return null;
 		}
 		
+		@Override
 		public String toString(){
 			return "Dummy Transform Handler";
 		}
+	}
+
+	public SetupAssignments getSetupAssignments()
+	{
+		return setupAssignments;
 	}
 }
