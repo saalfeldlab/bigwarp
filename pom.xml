@@ -40,7 +40,7 @@
   	<dependency>
   		<groupId>jitk</groupId>
   		<artifactId>jitk-tps</artifactId>
-  		<version>1.2.0</version>
+  		<version>1.2.1-SNAPSHOT</version>
   	</dependency>
   	<dependency>
   		<groupId>net.imglib2</groupId>
