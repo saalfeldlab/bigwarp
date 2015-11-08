@@ -60,14 +60,13 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		double[] pt = new double[ 3 ];
 		
 		int i = 0;
-		for( Double[] ptPair : lm.getPoints() )
+		for( Double[] movingPt : lm.getPoints( true ) )
 		{
-			if( i == 0 && ptPair.length == 4 )
+			if( i == 0 && movingPt.length == 2 )
 				ndims = 2;
 			
-			
 			for( int d = 0; d < ndims; d++ )
-				pt[ d ] = ptPair[ d ];
+				pt[ d ] = movingPt[ d ];
 			
 			warpMagImg.ra.setPosition(  pt );
 			double val = warpMagImg.ra.get().getRealDouble();
@@ -193,7 +192,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.seq.getViewSetups().get( 0 ).getVoxelSize();
+		return sourceData.seqQ.getViewSetups().get( 0 ).getVoxelSize();
 	}
 
 	@Override

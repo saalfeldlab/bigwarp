@@ -24,13 +24,6 @@ public class BigWarpConverterSetupWrapper implements ConverterSetup {
 		return cs.getSetupId();
 	}
 
-	@Override
-	public void setDisplayRange(double min, double max) 
-	{
-		cs.setDisplayRange(min, max);
-		bw.getViewerFrameP().getViewerPanel().requestRepaint();
-		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
-	}
 
 	@Override
 	public void setColor(ARGBType color) {
@@ -39,24 +32,37 @@ public class BigWarpConverterSetupWrapper implements ConverterSetup {
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
-	@Override
-	public boolean supportsColor() {
-		return cs.supportsColor();
-	}
-
-	@Override
-	public double getDisplayRangeMin() {
-		return cs.getDisplayRangeMin();
-	}
-
-	@Override
-	public double getDisplayRangeMax() {
-		return cs.getDisplayRangeMax();
-	}
 
 	@Override
 	public ARGBType getColor() {
 		return cs.getColor();
+	}
+
+	@Override
+	public void setDisplayRange( double min, double max )
+	{
+		cs.setDisplayRange(min, max);
+		bw.getViewerFrameP().getViewerPanel().requestRepaint();
+		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+		
+	}
+
+	@Override
+	public boolean supportsColor()
+	{
+		return cs.supportsColor();
+	}
+
+	@Override
+	public double getDisplayRangeMin()
+	{
+		return cs.getDisplayRangeMin();
+	}
+
+	@Override
+	public double getDisplayRangeMax()
+	{
+		return cs.getDisplayRangeMax();
 	}
 
 }

@@ -69,7 +69,7 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 	}
 
 	@Override
-	protected AffineTransform3D get( final double t )
+	public AffineTransform3D get( final double t )
 	{
 
 		final double scaleCurrent = scaleStart + t * scaleDiff;

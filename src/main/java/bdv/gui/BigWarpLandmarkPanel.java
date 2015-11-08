@@ -13,20 +13,16 @@ public class BigWarpLandmarkPanel extends JPanel {
 	
 	private static final long serialVersionUID = 8470689265638231579L;
 
-	protected final LandmarkTableModel tableModel;
-	protected final JTable table;
+	protected LandmarkTableModel tableModel;
+	protected JTable table;
 	
 	
     public BigWarpLandmarkPanel( LandmarkTableModel tableModel ) {
         
     	super(new GridLayout(1,0));
-        this.tableModel = tableModel;
+    	setTableModel( tableModel );
         
-        table = new JTable( getTableModel() );
-        
-        table.setPreferredScrollableViewportSize(new Dimension(400, 800));
-        table.setFillsViewportHeight(true);
-        table.setShowVerticalLines( false );
+        genJTable();
         
         //Create the scroll pane and add the table to it.
         JScrollPane scrollPane = new JScrollPane(table);
@@ -37,6 +33,21 @@ public class BigWarpLandmarkPanel extends JPanel {
 
     public LandmarkTableModel getTableModel() {
 		return tableModel;
+	}
+    
+    public void genJTable()
+    {
+    	 table = new JTable( getTableModel() );
+         
+         table.setPreferredScrollableViewportSize(new Dimension(400, 800));
+         table.setFillsViewportHeight(true);
+         table.setShowVerticalLines( false );
+    }
+    
+    public void setTableModel( LandmarkTableModel tableModel )
+    {
+		this.tableModel = tableModel;
+		genJTable();
 	}
     
     public JTable getJTable(){

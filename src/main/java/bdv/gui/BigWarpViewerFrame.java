@@ -16,8 +16,8 @@ import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.ViewerPanel.Options;
 import bigwarp.BigWarp;
 
 public class BigWarpViewerFrame extends JFrame
@@ -40,7 +40,7 @@ public class BigWarpViewerFrame extends JFrame
 			final String title,
 			final boolean isMoving )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, ViewerPanel.options(), title, isMoving );
+		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving );
 	}
 	
 	public BigWarpViewerFrame(
@@ -49,7 +49,7 @@ public class BigWarpViewerFrame extends JFrame
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
 			final Cache cache,
-			final Options optional,
+			final ViewerOptions optional,
 			final String title,
 			final boolean isMoving )
 	{

@@ -7,7 +7,6 @@ import java.util.HashMap;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.BigDataViewer;
-import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.imagestack.ImageStackImageLoader;
 import bdv.img.virtualstack.VirtualStackImageLoader;
 import bdv.spimdata.SequenceDescriptionMinimal;
@@ -96,7 +95,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try 
         {
         	new RepeatingReleasedEventsFixer().install();
-			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp, null ), "Big Warp",  new ProgressWriterIJ() );
+			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp, null ), "Big Warp",  null );
 			ImageJ ij = IJ.getInstance();
 			bw.setImageJInstance( ij );
 		} 
@@ -177,7 +176,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		final FinalDimensions size = new FinalDimensions( new int[] { w, h, d } );
 
 		// create ImgLoader wrapping the image
-		final BasicImgLoader< ? > imgLoader;
+		final BasicImgLoader imgLoader;
 		if ( imp.getStack().isVirtual() )
 		{
 			switch ( imp.getType() )
@@ -233,7 +232,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		final ArrayList< TimePoint > timepoints = new ArrayList< TimePoint >( numTimepoints );
 		for ( int t = 0; t < numTimepoints; ++t )
 			timepoints.add( new TimePoint( t ) );
-		final SequenceDescriptionMinimal seq = new SequenceDescriptionMinimal( new TimePoints( timepoints ), setups, imgLoader, null );
+		
 
 		// create ViewRegistrations from the images calibration
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
@@ -244,8 +243,9 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 				registrations.add( new ViewRegistration( t, s, sourceTransform ) );
 
 		final File basePath = new File(".");
-		final SpimDataMinimal spimData = new SpimDataMinimal( basePath, seq, new ViewRegistrations( registrations ) );
 		
+		final SequenceDescriptionMinimal seq = new SequenceDescriptionMinimal( new TimePoints( timepoints ), setups, imgLoader, null );
+		final SpimDataMinimal spimData = new SpimDataMinimal( basePath, seq, new ViewRegistrations( registrations ) );
 		if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
 		{
 			System.err.println( "WARNING:\nOpening <SpimData> dataset that is not suited for interactive browsing.\nConsider resaving as HDF5 for better performance." );
@@ -253,20 +253,24 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		
 		ArrayList< SourceAndConverter< ? > > sources;
 		final ArrayList< ConverterSetup > converterSetups;
+		BigWarp.BigWarpData data;
 		if( dataIn == null )
 		{
 			converterSetups = new ArrayList< ConverterSetup >();
 			sources = new ArrayList< SourceAndConverter< ? > >();
+			
+			BigDataViewer.initSetups( spimData, converterSetups, sources );
+			data = new BigWarp.BigWarpData( sources, seq, null, converterSetups );
 		}
 		else
 		{
 			converterSetups = dataIn.converterSetups;
 			sources = dataIn.sources;
+			
+			BigDataViewer.initSetups( spimData, converterSetups, sources );
+			data = new BigWarp.BigWarpData( sources, dataIn.seqP, seq, converterSetups );
 		}
 		
-		BigDataViewer.initSetups( spimData, converterSetups, sources );
-		
-		BigWarp.BigWarpData data = new BigWarp.BigWarpData( sources, seq, converterSetups );
 		return data;
 	}
 
@@ -281,7 +285,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			final ConverterSetup setup = setupAssignments.getConverterSetups().get( c );
 			if ( transferColor )
 				setup.setColor( new ARGBType( lut.getRGB( 255 ) ) );
-			setup.setDisplayRange( lut.min, lut.max );
+			setup.setDisplayRange( (int)lut.min, (int)lut.max );
 		}
 		if ( mode == IJ.COMPOSITE )
 		{
@@ -298,6 +302,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 	protected void transferSettingsRGB( final ImagePlus imp, final SetupAssignments setupAssignments )
 	{
 		final ConverterSetup setup = setupAssignments.getConverterSetups().get( 0 );
-		setup.setDisplayRange( imp.getDisplayRangeMin(), imp.getDisplayRangeMax() );
+		setup.setDisplayRange( (int)imp.getDisplayRangeMin(), (int)imp.getDisplayRangeMax() );
 	}
 }

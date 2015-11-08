@@ -9,6 +9,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
+import javax.swing.undo.UndoManager;
 
 import mpicbg.models.AbstractModel;
 import bdv.gui.BigWarpViewerFrame;
@@ -18,6 +19,7 @@ import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
 import bdv.viewer.InputActionBindings;
+import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 
 public class BigWarpActions
@@ -49,8 +51,12 @@ public class BigWarpActions
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
+
+	public static final String UNDO = "undo";
+	public static final String REDO = "redo";
 	
-	
+	public static final String DEBUG = "debug";
+	public static final String GARBAGE_COLLECTION = "garbage collection";
 
 	/**
 	 * Create BigDataViewer actions and install them in the specified
@@ -124,6 +130,12 @@ public class BigWarpActions
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
 		
+		map.put( UNDO, "control Z" );
+		map.put( REDO, "control Y" );
+		
+		map.put( GARBAGE_COLLECTION, "F9" );
+		map.put( DEBUG, "F8" );
+		
 		return inputMap;
 	}
 
@@ -167,12 +179,116 @@ public class BigWarpActions
 		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
 			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
 		
+		map.put( new UndoRedoAction( UNDO, bw ) );
+		map.put( new UndoRedoAction( REDO, bw ) );
+		
+		map.put( new GarbageCollectionAction( GARBAGE_COLLECTION ) );
+		map.put( new DebugAction( DEBUG, bw ) );
 			
 		return actionMap;
 	}
 
 	private BigWarpActions(){}
+
+	public static class UndoRedoAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -5413579107763110117L;
+
+		private BigWarp bw;
+		private boolean isRedo;
+
+		public UndoRedoAction( final String name, BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+			
+			isRedo = false;
+
+			if ( name.equals( REDO ) )
+				isRedo = true;
+
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+//			UndoManager manager = bw.getLandmarkPanel().getTableModel().getUndoManager();
+			
+//			if( isRedo )
+//				System.out.println( "can redo: " + manager.canRedo() );
+//			else
+//				System.out.println( "can undo: " + manager.canUndo() );
+			
+//			if( isRedo && manager.canRedo() ){
+			try { 
+				if( isRedo ) {
+					bw.getLandmarkPanel().getTableModel().getUndoManager().redo();
+					bw.getViewerFrameP().getViewerPanel().showMessage( "Redo" );
+					bw.getViewerFrameQ().getViewerPanel().showMessage( "Redo" );
+				}else{ 
+					//			} else if( manager.canUndo() ) {
+					bw.getLandmarkPanel().getTableModel().getUndoManager().undo();
+					bw.getViewerFrameP().getViewerPanel().showMessage( "Undo" );
+					bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo" );
+				}
+			}catch( Exception ex ){
+				System.err.println( " Undo / redo error " );
+				//ex.printStackTrace();
+			}
+			//System.out.println( "  can redo: " + manager.canRedo() );
+			//System.out.println( "  can undo: " + manager.canUndo() );
+			
+			this.bw.getLandmarkPanel().repaint();
+
+		}
+	}
+
+	public static class GarbageCollectionAction extends AbstractNamedAction 
+	{
+		private static final long serialVersionUID = -4487441057212703143L;
+
+		public GarbageCollectionAction( final String name )
+		{
+			super( name );
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			System.out.println( "GARBAGE COLLECTION" );
+			System.gc();
+		}
+	}
 	
+	public static class DebugAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 7408679512565343805L;
+
+		private BigWarp bw;
+
+		public DebugAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			System.out.println( "Debug" );
+
+			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
+			// ltm.printState();
+			// ltm.validateTransformPoints();
+
+			// System.out.println( ltm.getChangedSinceWarp() );
+			// System.out.println( ltm.getWarpedPoints() );
+			ltm.printWarpedPoints();
+
+			System.out.println( " " );
+		}
+	}
+
 	public static class ToggleLandmarkModeAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7370813069619338918L;

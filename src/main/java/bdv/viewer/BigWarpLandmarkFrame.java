@@ -18,7 +18,7 @@ public class BigWarpLandmarkFrame extends JFrame {
 
 	private final BigWarp bw;
 
-	private final BigWarpLandmarkPanel lmPanel;
+	private BigWarpLandmarkPanel lmPanel;
 
 	private final InputActionBindings keybindings;
 
@@ -26,12 +26,10 @@ public class BigWarpLandmarkFrame extends JFrame {
 	{
 		super( name, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL )  );
 		this.bw = bw;
-		this.lmPanel = panel;
+		setLandmarkPanel( panel );
 
 		keybindings = new InputActionBindings();
 
-		setContentPane( lmPanel );
-		pack();
 
 		// do nothing because the closeAll method in bigWarp is responsible for calling dispose and cleaning up
 		setDefaultCloseOperation( WindowConstants.DO_NOTHING_ON_CLOSE );
@@ -45,6 +43,14 @@ public class BigWarpLandmarkFrame extends JFrame {
 		
 		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
+	}
+	
+	public void setLandmarkPanel( BigWarpLandmarkPanel panel )
+	{
+		this.lmPanel = panel;
+		setContentPane( lmPanel );
+		pack();
+
 	}
 
 	public InputActionBindings getKeybindings()

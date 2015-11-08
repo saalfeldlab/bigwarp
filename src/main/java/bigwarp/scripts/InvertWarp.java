@@ -2,6 +2,7 @@ package bigwarp.scripts;
 
 import java.io.File;
 import java.io.IOException;
+
 import bigwarp.landmarks.LandmarkTableModel;
 
 /**
@@ -16,9 +17,11 @@ public class InvertWarp
 	public static void main( String[] args ) throws IOException
 	{
 		int ndims = 3;
-		String pts_fn = "/groups/saalfeld/saalfeldlab/tem-light-reg/HRtemplate-2-tomo/landmarks_list";
+		// String pts_fn = "/groups/saalfeld/saalfeldlab/tem-light-reg/HRtemplate-2-tomo/landmarks_list";
+//		String output_fn = "/groups/saalfeld/saalfeldlab/tem-light-reg/HRtemplate-2-tomo/landmarks_template-2-tomo";
 		
-		String output_fn = "/groups/saalfeld/saalfeldlab/tem-light-reg/HRtemplate-2-tomo/landmarks_template-2-tomo";
+		String pts_fn = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps";
+		String output_fn = "/groups/saalfeld/home/bogovicj/projects/wong_reg/flyc_tps/flyc_tps_inv";
 
 		LandmarkTableModel ltm = new LandmarkTableModel( ndims );
 		

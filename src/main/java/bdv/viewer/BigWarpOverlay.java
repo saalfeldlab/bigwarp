@@ -82,7 +82,7 @@ public class BigWarpOverlay {
 				textBoxColor = Color.BLACK;
 			}
 			
-			if( landmarkModel.getPoints().size() > 0 && landmarkModel.getPoints().get( 0 ).length == 4 ){
+			if( landmarkModel.getPoints( true ).size() > 0 && landmarkModel.getPoints( true ).get( 0 ).length == 2 ){
 				is3d = false;
 				offset = 2;
 			}
@@ -90,7 +90,7 @@ public class BigWarpOverlay {
 			for( int index = 0; index < landmarkModel.getRowCount(); index++ )
 			{
 				
-				Double[] spot = landmarkModel.getPoints().get( index );
+				Double[] spot; // = landmarkModel.getPoints().get( index );
 				
 				if( landmarkModel.isActive(index) ){
 					color  = viewer.getSettings().getSpotColor();
@@ -102,14 +102,18 @@ public class BigWarpOverlay {
 				g.setStroke( stroke );
 
 				double x=0.0, y=0.0, z=0.0;
-				if( viewer.getIsMoving() && spot[0] != null && spot[ 0 ] < Double.MAX_VALUE  )
+				if( viewer.getIsMoving() )
 				{
 					if( !isTransformed )
 					{
-						x = spot[0];
-						y = spot[1];
+						spot = landmarkModel.getPoints( true ).get( index );
+						x = spot[ 0 ];
+						y = spot[ 1 ];
 						
-						if( is3d ) z = spot[2];
+						if( Double.isInfinite( x ))
+							continue;
+
+						if( is3d ) z = spot[ 2 ];
 					}
 					else if( isTransformed && landmarkModel.isWarpedPositionChanged( index ) )
 					{
@@ -126,30 +130,39 @@ public class BigWarpOverlay {
 						if( is3d )
 							z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
 					}
-					else if( isTransformed && spot[ offset ] < Double.MAX_VALUE )
+					else if( isTransformed )
 					{
 						// if we've provided a moving landmark here ( spot < double max value )
 						// and we're displaying a transformed version, then
 						// the landmark should be at the target location.
 						
-						x = spot[ offset ];
-						y = spot[ offset + 1];
+						spot = landmarkModel.getPoints( false ).get( index );
+						x = spot[ 0 ];
+						y = spot[ 1 ];
 						
+						if( Double.isInfinite( x ))
+							continue;
+
 						if( is3d ) 
-							z = spot[ offset + 2 ];
+							z = spot[ 2 ];
 					}
 					else
 					{
 						continue;
 					}
 				}
-				else if( !viewer.getIsMoving() && spot[offset] != null && spot[offset] < Double.MAX_VALUE )
+				else if( !viewer.getIsMoving() )
 				{
-					x = spot[ offset ];
-					y = spot[ offset + 1];
-					
+
+					spot = landmarkModel.getPoints( false ).get( index );
+					x = spot[ 0 ];
+					y = spot[ 1 ];
+
+					if( Double.isInfinite( x ))
+						continue;
+
 					if( is3d ) 
-						z = spot[ offset + 2 ];
+						z = spot[ 2 ];
 				}
 				else
 				{

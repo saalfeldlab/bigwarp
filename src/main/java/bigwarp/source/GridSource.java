@@ -131,7 +131,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.seq.getViewSetups().get( 0 ).getVoxelSize();
+		return sourceData.seqQ.getViewSetups().get( 0 ).getVoxelSize();
 	}
 
 	@Override
