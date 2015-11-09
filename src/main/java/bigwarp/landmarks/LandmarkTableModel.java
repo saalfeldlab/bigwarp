@@ -630,12 +630,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 */
 	private void addHelper( boolean isFirst, int index, double[] pt, boolean isMoving )
 	{
-		System.out.println("\naddHelper");
-		System.out.println("isFirst: " + isFirst );
-		System.out.println("isMoving: " + isMoving );
-		System.out.println("pt: " + XfmUtils.printArray(pt));
-		System.out.println("index: " + index + "\n");
-		
 		if( isFirst )
 		{
 			//System.out.println("addHelper first");
@@ -729,7 +723,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 */
 	public int add( double[] pt, boolean isMoving )
 	{
-		System.out.println("add new");
 		int nrStart = this.getRowCount();
 		int nextRow = addHelper( pt, isMoving );
 		
@@ -739,7 +732,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	private void addUndoable( double[] pt, boolean isMoving, int row, boolean isNew )
 	{
-		System.out.println("addUndoable isNew: " + isNew );
 		if( isNew )
 			undoRedoManager.addEdit( new AddPointEdit( row, pt, isMoving ) );
 		else
@@ -1122,33 +1114,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 		private static final long serialVersionUID = -2912174487193763272L;
 
 		private final int index;
-		private final double[] oldpt;
 		private final double[] newpt;
 		private final boolean isMoving;
-		private final boolean isNewRow;
 		
 		private final double[] warpedPos;
 
 		public AddPointEdit( final int index, final double[] pt, final boolean isMoving )
 		{
-			System.out.println("made add pt edit with warped pos");
-			System.out.println("index: " + index );
+//			System.out.println("made add pt edit with warped pos");
+//			System.out.println("index: " + index );
 			
 			this.index = index;
-			this.newpt = pt;
+			this.newpt = Arrays.copyOf( pt, pt.length );
 			this.isMoving = isMoving;
-			this.isNewRow = (index == LandmarkTableModel.this.numRows - 1);
-
-			System.out.println("is new: " + isNewRow );
-			
-			if ( !isNewRow )
-			{
-				if ( isMoving )
-					oldpt = toPrimitive( LandmarkTableModel.this.movingPts.get( index ) );
-				else
-					oldpt = toPrimitive( LandmarkTableModel.this.targetPts.get( index ) );
-			} else
-				oldpt = null;
 			
 			if( LandmarkTableModel.this.isWarpedPositionChanged( index ))
 			{
@@ -1164,29 +1142,26 @@ public class LandmarkTableModel extends AbstractTableModel {
 		@Override
 		public void undo()
 		{
-			System.out.println("undo add");
-			if ( isNewRow )
-				LandmarkTableModel.this.deleteRowHelper( index );
-			else
-				LandmarkTableModel.this.setPointHelper( index, isMoving, oldpt );
-			
+			LandmarkTableModel.this.deleteRowHelper( index );
 		}
 
 		@Override
 		public void redo()
 		{
-			System.out.println("redo add");
 			int nr = LandmarkTableModel.this.numRows;
-			if ( isNewRow )
-				LandmarkTableModel.this.addHelper(  true, nr, newpt, isMoving );
-			else
-				LandmarkTableModel.this.addHelper( false, nr-1, newpt, isMoving );
-			
+			LandmarkTableModel.this.addHelper(  true, nr, newpt, isMoving );
 			if( warpedPos != null )
 			{
 				System.out.println("warped");
 				LandmarkTableModel.this.updateWarpedPoint(  LandmarkTableModel.this.numRows, warpedPos );
 			}
+		}
+		
+		public String toString()
+		{
+			String s = "AddPointEdit\n";
+			s += "newpt: " + XfmUtils.printArray( this.newpt ) + "\n";
+			return s;
 		}
 	}
 	
@@ -1211,12 +1186,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 			this.index = index;
 			this.isMoving = isMoving;
 			
-			this.oldpt = oldpt;
-			this.newpt = newpt;
-			
-			System.out.println("ModifyPointEdit2");
-			System.out.println("oldpt: " + XfmUtils.printArray( oldpt ));
-			System.out.println("newpt: " + XfmUtils.printArray( newpt ));
+			this.oldpt = Arrays.copyOf( oldpt, oldpt.length );
+			this.newpt = Arrays.copyOf( newpt, newpt.length );
 			
 			if( oldwarped != null && warped == null )
 			{
@@ -1236,7 +1207,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 				double[] pt, 
 				final boolean isMoving )
 		{
-			System.out.println("ModifyPointEdit");
 			this.index = index;
 			this.isMoving = isMoving;
 			
@@ -1284,6 +1254,14 @@ public class LandmarkTableModel extends AbstractTableModel {
 			//System.out.println( "  ModifyPointEdit:  " + index + " " + isMoving + " " + XfmUtils.printArray(  newpt ));
 			LandmarkTableModel.this.addHelper( false, index, newpt, isMoving );
 			LandmarkTableModel.this.updateNextRows();
+		}
+		
+		public String toString()
+		{
+			String s = "ModifyPointEdit\n";
+			s += "oldpt: " + XfmUtils.printArray( this.oldpt ) + "\n";
+			s += "newpt: " + XfmUtils.printArray( this.newpt ) + "\n";
+			return s;
 		}
 	}
 
