@@ -1,5 +1,6 @@
 package bdv.viewer;
 
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -20,9 +21,13 @@ public class LandmarkPointMenu extends JPopupMenu
 	protected BigWarpLandmarkPanel landmarkPanel;
 	protected BigWarp bw;
 	
-	protected LandmarkMenuHandler handler;
+	protected DeleteOneSelectedHandler oneHandler;
+	protected DeleteAllSelectedHandler allHandler;
 	protected MouseListener popupListener;
-	protected JMenuItem deleteItem;
+	protected JMenuItem deleteSingleItem;
+	protected JMenuItem deleteAllItem;
+
+	private Point clickPt;
 	
 	public LandmarkPointMenu( BigWarp bw )
 	{
@@ -34,13 +39,18 @@ public class LandmarkPointMenu extends JPopupMenu
 	{
 		this.landmarkPanel = landmarkPanel;
 		
-		handler = new LandmarkMenuHandler();
+		oneHandler = new DeleteOneSelectedHandler();
+		allHandler = new DeleteAllSelectedHandler();
 		popupListener = new PopupListener();
-		
-		deleteItem = new JMenuItem("Delete");
-		deleteItem.addActionListener( handler );
-		
-		this.add( deleteItem );
+
+		deleteSingleItem = new JMenuItem("Delete");
+		deleteSingleItem.addActionListener( oneHandler );
+
+		deleteAllItem = new JMenuItem("Delete all selected");
+		deleteAllItem.addActionListener( allHandler );
+
+		this.add( deleteSingleItem );
+		this.add( deleteAllItem );
 	}
 	
 	public void setupListeners( )
@@ -59,25 +69,42 @@ public class LandmarkPointMenu extends JPopupMenu
 		{
 	        if (e.isPopupTrigger())
 	        {
+	        	clickPt = e.getPoint();
 	        	LandmarkPointMenu.this.show(
 	        			e.getComponent(),
 	        			e.getX(), e.getY());
 	        }
 	    }
 	}
+
+	private class DeleteOneSelectedHandler implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			int j = landmarkPanel.getJTable().rowAtPoint( clickPt );
+			landmarkPanel.getTableModel().deleteRow( j );
+
+			if( bw != null )
+				bw.restimateTransformation();
+		}
+	}
 	
-	private class LandmarkMenuHandler implements ActionListener 
+	private class DeleteAllSelectedHandler implements ActionListener
 	{
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
 			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
-			for( int i = 0; i < selectedRows.length; i++ )
+			System.out.println("selectedRows length: " + selectedRows.length );
+
+			// do in reverse order so that the index
+			for( int i = selectedRows.length - 1; i >= 0; i-- )
 			{
 				int j = selectedRows[ i ];
 				landmarkPanel.getTableModel().deleteRow( j );
 			}
-			
+
 			if( bw != null )
 				bw.restimateTransformation();
 		}
