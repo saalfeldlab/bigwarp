@@ -705,14 +705,14 @@ public class LandmarkTableModel extends AbstractTableModel {
 		firePointUpdated( nextRowP, isMoving );
 		
 	}
-	
+
 	// TODO the current implmentation avoids overlap in common use cases.
-	// Consider whether 
+	// Consider whether checking all names for overlaps is worth it.
 	private String nextName( int index )
 	{
 		final String s;
 		if( index == 0 )
-			s = "Pt-";
+			s = "Pt-0";
 		else
 		{
 			// Increment the index in the name of the previous row
