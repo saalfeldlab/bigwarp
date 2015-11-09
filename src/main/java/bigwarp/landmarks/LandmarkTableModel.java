@@ -651,7 +651,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			movingPts.add( index, movingPt );
 			targetPts.add( index, targetPt );
 			
-			names.add( index, "Pt-" + index );
+			names.add( index, nextName( index ));
 			activeList.add( index, false );
 			warpedPoints.add( index, new Double[ ndims ] );
 			changedPositionSinceWarpEstimation.add( index, false );
@@ -704,6 +704,22 @@ public class LandmarkTableModel extends AbstractTableModel {
 		updateNextRows();
 		firePointUpdated( nextRowP, isMoving );
 		
+	}
+	
+	// TODO the current implmentation avoids overlap in common use cases.
+	// Consider whether 
+	private String nextName( int index )
+	{
+		final String s;
+		if( index == 0 )
+			s = "Pt-";
+		else
+		{
+			// Increment the index in the name of the previous row
+			int i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			s = String.format( "Pt-%d", i );
+		}
+		return s;
 	}
 	
 	private void markAsChanged( int index )
