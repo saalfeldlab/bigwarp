@@ -96,7 +96,6 @@ public class LandmarkPointMenu extends JPopupMenu
 		public void actionPerformed(ActionEvent e) 
 		{
 			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
-			System.out.println("selectedRows length: " + selectedRows.length );
 
 			// do in reverse order so that the index
 			for( int i = selectedRows.length - 1; i >= 0; i-- )

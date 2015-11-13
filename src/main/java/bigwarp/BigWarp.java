@@ -177,7 +177,7 @@ public class BigWarp {
 	protected double rad = 7;
 	protected double LANDMARK_DOT_SIZE = 14; // diameter of dots
 	
-	protected RealPoint currentLandmark;	
+	protected RealPoint currentLandmark;
 	
 	protected LandmarkTableModel landmarkModel;
 	protected JTable			 landmarkTable;
@@ -211,6 +211,7 @@ public class BigWarp {
 	final FileDialog fileDialog;
 	
 	protected File lastDirectory;
+	protected boolean updateWarpOnPtChange = true;
 	
 	JMenu landmarkMenu;
 	
@@ -460,6 +461,16 @@ public class BigWarp {
 		viewerFrameP.dispose();
 		viewerFrameQ.dispose();
 		landmarkFrame.dispose();
+	}
+	
+	public void setUpdateWarpOnChange( boolean updateWarpOnPtChange )
+	{
+		this.updateWarpOnPtChange = updateWarpOnPtChange;
+	}
+	
+	public boolean isUpdateWarpOnChange()
+	{
+		return updateWarpOnPtChange;
 	}
 	
 	public void invertPointCorrespondences()
@@ -909,7 +920,11 @@ public class BigWarp {
 		if( !isMoving && viewer.getIsMoving() && !isViewerTransformed )
 			return "Adding a fixed point in moving image space not supported";
 		else
-			return addPoint( ptarray, isMoving );
+		{
+			addPoint( ptarray, isMoving );
+			return "";
+		}
+			
 	}
 	
 	/**
@@ -917,41 +932,17 @@ public class BigWarp {
 	 * @param ptarray
 	 * @param isMoving
 	 */
-	public String addPoint( double[] ptarray, boolean isMoving )
+	public boolean addPoint( double[] ptarray, boolean isMoving )
 	{
-//		System.out.println("isMoving: " + isMoving );
-//		System.out.println("landmarkModel.getTransform(): " + landmarkModel.getTransform() );
-//		System.out.println("BigWarp.this.isMovingDisplayTransformed() : " + BigWarp.this.isMovingDisplayTransformed()  );
-		
-		String message = "";
-		// We need to transform the point if:
-		// Adding a moving point in a viewer in target-image-space
-		// could be a transformed viewer panel or
-		// the fixed image viewer panel
-		//
-		// Adding a fixed point in the space of the moving image requires
-		// the inverse transform and is currently not allowed
-		//
-		// In all other cases, the raw point can be added directly
-		if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-		{
-			//System.out.println("Add point moving, warped space");
-			landmarkModel.getTransform().apply( ptarray, ptBack );
-			
-			BigWarp.this.landmarkModel.add( ptBack, isMoving );
-			
-			int i = (BigWarp.this.landmarkModel.getRowCount() - 1);
-			//System.out.println(" new index: " + i );
-			
-			landmarkModel.updateWarpedPoint( i, ptarray );
-		}
-		else
-			BigWarp.this.landmarkModel.add( ptarray, isMoving );
+		System.out.println("BigWarp addPoint");
+
+		boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
+		boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true );
 		
 		if( BigWarp.this.landmarkFrame.isVisible() ){
 			BigWarp.this.landmarkFrame.repaint();
 		}
-		return message;
+		return didAdd;
 	}
 	
 	/**
@@ -2042,6 +2033,12 @@ public class BigWarp {
 				
 				selectedPointIndex = BigWarp.this.updateWarpedPoint( ptarrayLoc, isMoving );
 				
+				if( selectedPointIndex >=0 )
+				{
+					boolean isWarped = isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed();
+					BigWarp.this.landmarkModel.setPreDraggedPoint( selectedPointIndex, isMoving, isWarped );
+				}
+				
 				//System.out.println( "clicked: " + XfmUtils.printArray(ptarrayLoc) );
 				//System.out.println( "selected Point: " + selectedPointIndex );
 			}
@@ -2066,6 +2063,8 @@ public class BigWarp {
 	    		return;
 	    	}
 	    	
+	    	boolean wasNewRowAdded = false;
+	    	
 			// deselect any point that may be selected
 			if ( BigWarp.this.inLandmarkMode )
 			{
@@ -2074,35 +2073,43 @@ public class BigWarp {
 
 				if ( selectedPointIndex == -1 )
 				{
-					String message = addPoint( ptarrayLoc, isMoving );
-					
-//					if( isMoving && landmarkModel.getTransform() != null && viewerP.getTransformEnabled())
-//					{
-//						System.out.println( "updateWarpedPoint" );
-//						landmarkModel.updateWarpedPoint( selectedPointIndex, ptarrayLoc );
-//					}
+					wasNewRowAdded = addPoint( ptarrayLoc, isMoving );
 
-					if ( !message.isEmpty() )
-						thisViewer.showMessage( message );
+//					if ( !message.isEmpty() )
+//						thisViewer.showMessage( message );
 				} 
 				else
 				{
-					
-					if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
-					{
-						//System.out.println("Add point moving, warped space");
-						landmarkModel.getTransform().apply( ptarrayLoc, ptBack );
-						BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
-					}
-					else
-					{
-						BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptarrayLoc );
-					}
+	
+					boolean isWarped = 	isMoving && 
+										(landmarkModel.getTransform() != null) && 
+										(BigWarp.this.isMovingDisplayTransformed());
+
+					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, isWarped, true );
+
+//					if( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() )
+//					{
+//						
+//						System.out.println("Add point moving, warped space");
+//						landmarkModel.getTransform().apply( ptarrayLoc, ptBack );
+//						BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptBack );
+//					}
+//					else
+//					{
+//						BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptarrayLoc );
+//					}
 //					BigWarp.this.landmarkModel.setPoint( selectedPointIndex, isMoving, ptarrayLoc );
+				}
+				
+				System.out.println( "wasNewRowAdded: " + wasNewRowAdded );
+				if( updateWarpOnPtChange && !wasNewRowAdded )
+				{
+					// here, if a new row is added, then only one of the point pair was added.
+					// if we changed and existing row, then we have both points in the pair and should recompute
+					BigWarp.this.restimateTransformation();
 				}
 			}
 			selectedPointIndex = -1;
-			//System.out.println( "\n\n" ); 
 		}
 
 		@Override
@@ -2116,7 +2123,8 @@ public class BigWarp {
 	    	
 			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
 			{
-				BigWarp.this.landmarkModel.setPreDraggedPoint( selectedPointIndex, isMoving );
+//				boolean isWarped = isMoving && viewerP.getTransformEnabled();
+//				BigWarp.this.landmarkModel.setPreDraggedPoint( selectedPointIndex, isMoving, isWarped );
 				
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
@@ -2161,15 +2169,13 @@ public class BigWarp {
 	
 	public class MouseLandmarkTableListener implements MouseListener
 	{
-		
 		boolean wasDoubleClick = false;
 	    Timer timer;
-	    
+
 	    public MouseLandmarkTableListener() {}
-	 
+
 	    public void mouseClicked( MouseEvent e)
 	    {
-	    	
 	    	if( BigWarp.this.inLandmarkMode )
 	    	{
 	    		JTable target = (JTable)e.getSource();
@@ -2179,7 +2185,7 @@ public class BigWarp {
 	    		
 	    		boolean isMoving = ( column > 1 && column < ( 2 + ndims ) );
 	    		
-	    		BigWarp.this.landmarkModel.setPointToUpdate( row, isMoving );
+	    		BigWarp.this.landmarkModel.clearPt( row, isMoving );
 	    		
 	    	}
 	    	else if( e.getClickCount() == 2 )

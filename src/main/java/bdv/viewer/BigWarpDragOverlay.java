@@ -141,6 +141,9 @@ public class BigWarpDragOverlay
 			{
 				completedOK = true;
 				updateLandmarkModel();
+
+				if( bw.isUpdateWarpOnChange() )
+						bw.restimateTransformation();
 			}
 			else
 			{

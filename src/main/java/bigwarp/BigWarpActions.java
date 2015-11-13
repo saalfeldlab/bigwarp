@@ -238,6 +238,7 @@ public class BigWarpActions
 			//System.out.println( "  can redo: " + manager.canRedo() );
 			//System.out.println( "  can undo: " + manager.canUndo() );
 			
+			this.bw.restimateTransformation();
 			this.bw.getLandmarkPanel().repaint();
 
 		}
