@@ -49,13 +49,29 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
+import net.imglib2.converter.ComplexPowerGLogFloatConverter;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.exception.ImgLibException;
+import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.img.imageplus.ImagePlusImg;
+import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.img.imageplus.IntImagePlus;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealViews;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.ComplexType;
+import net.imglib2.type.numeric.IntegerType;
+import net.imglib2.type.numeric.NumericType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.type.numeric.integer.ShortType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.InteractiveDisplayCanvasComponent;
@@ -63,6 +79,7 @@ import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
@@ -113,7 +130,6 @@ import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
-import bdv.viewer.render.AccumulateProjectorFactory;
 import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -130,6 +146,8 @@ public class BigWarp {
 	protected int fixedSourceIndex = 1;
 	
 	protected ArrayList< SourceAndConverter< ? > > sources;
+	protected Object movingSourceType;
+	protected Object targetSourceType;
 	
 	protected final SetupAssignments setupAssignments;
 	protected final BrightnessDialog brightnessDialog;
@@ -208,6 +226,9 @@ public class BigWarp {
 		ArrayList<ConverterSetup> converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 		
+		movingSourceType = data.seqP.getImgLoader().getSetupImgLoader( 0 ).getImageType();
+		targetSourceType = data.seqQ.getImgLoader().getSetupImgLoader( 0 ).getImageType();
+
 		ndims = 3;
 		ndims = detectNumDims();
 		ptBack = new double[ 3 ];
@@ -497,7 +518,35 @@ public class BigWarp {
 	
 	protected void setupImageJExportOption()
 	{
-		final JMenuItem exportToImagePlus = new JMenuItem("Export as ImagePlus");
+		final JMenuItem exportToVImagePlus = new JMenuItem("Export as Virtual ImagePlus");
+        landmarkMenu.add( exportToVImagePlus );
+        exportToVImagePlus.addMouseListener( new MouseListener(){
+			@Override
+			public void mouseClicked(MouseEvent e) {}
+			@Override
+			public void mouseEntered(MouseEvent e) {}
+			@Override
+			public void mouseExited(MouseEvent e) {}
+			@Override
+			public void mousePressed(MouseEvent e) {}
+
+			@Override
+			public void mouseReleased(MouseEvent e) 
+			{
+				new Thread() {
+					public void run() 
+					{
+						try 
+						{
+							exportMovingImagePlus( true );
+						}
+						catch( Exception e ){ e.printStackTrace(); }
+					}
+				}.start();
+			}
+        });
+        
+        final JMenuItem exportToImagePlus = new JMenuItem("Export as ImagePlus");
         landmarkMenu.add( exportToImagePlus );
         exportToImagePlus.addMouseListener( new MouseListener(){
 			@Override
@@ -517,7 +566,7 @@ public class BigWarp {
 					{
 						try 
 						{
-							exportMovingImagePlus();
+							exportMovingImagePlus( false );
 						}
 						catch( Exception e ){ e.printStackTrace(); }
 					}
@@ -542,9 +591,9 @@ public class BigWarp {
         final JMenuItem exportImageItem = new JMenuItem("Export Moving Image");
         landmarkMenu.add( exportImageItem );
         
-        landmarkMenu.addSeparator();
-        final JMenuItem importXfmItem = new JMenuItem("Import Transformation");
-        landmarkMenu.add( importXfmItem );
+//        landmarkMenu.addSeparator();
+//        final JMenuItem importXfmItem = new JMenuItem("Import Transformation");
+//        landmarkMenu.add( importXfmItem );
         
 //        final JMenuItem exportXfmItem = new JMenuItem("Export Transformation");
 //        landmarkMenu.add( exportXfmItem );
@@ -1140,12 +1189,12 @@ public class BigWarp {
 		
 		if( viewerQ.getVisibilityAndGrouping().isFusedEnabled())
 		{
-			System.out.println("updating fixed frame");
 			getViewerFrameQ().getViewerPanel().requestRepaint();
 		}
 	}
 	
-	protected void exportMovingImagePlus( )
+	@SuppressWarnings("unchecked")
+	protected void exportMovingImagePlus( boolean isVirtual )
 	{
 		//TODO exportMovingImagePlus
 		if( ij == null )
@@ -1154,37 +1203,44 @@ public class BigWarp {
 			return;
 		}
 		
-		Interpolation interp = viewerP.getState().getInterpolation();
-		RealRandomAccessible< ? > rai = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-		
-		final RandomAccessibleInterval<?> destintervalRaw = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
+		final RandomAccessibleInterval<?> destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
 		AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
 		
-		FinalInterval destinterval = new FinalInterval( 
-				(long)(Math.ceil( destintervalRaw.dimension( 0 ) * fixedImgXfm.get( 0, 0 ))),
-				(long)(Math.ceil( destintervalRaw.dimension( 1 ) * fixedImgXfm.get( 1, 1 ))),
-				(long)(Math.ceil( destintervalRaw.dimension( 2 ) * fixedImgXfm.get( 2, 2 ))));
+		Interpolation interp = viewerP.getState().getInterpolation();
+		RealRandomAccessible< ? > raiRaw = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
+		AffineTransform3D xfmInv = fixedImgXfm.inverse();
+		
+		AffineRandomAccessible< ?, AffineGet > rai = RealViews.affine( raiRaw, xfmInv );
 		
 		ImagePlus ip = null;
 		Object t = rai.realRandomAccess().get();
-		if( t instanceof FloatType )
+		
+		if( isVirtual )
 		{
-			System.out.println("FloatType");
+			// return a wrapper
+			IntervalView rasterItvl = Views.interval( Views.raster( rai ), destinterval );
+			ip = ImageJFunctions.wrap( rasterItvl, "warped_moving_image" );
 		}
-		else if( t instanceof ByteType )
+		else
 		{
-			System.out.println("ByteType");
-		}
-		else if( t instanceof ARGBType )
-		{
-			System.out.println("ARGBType");
-			if( destinterval.numDimensions() == 2 )
+			// This is annoying ... is there a better way?
+			if ( ByteType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< ByteType > )rai, destinterval );
+			else if ( UnsignedByteType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< UnsignedByteType > )rai, destinterval );
+			else if ( IntType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< IntType > )rai, destinterval );
+			else if ( FloatType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< FloatType > )rai, destinterval );
+			else if ( DoubleType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< DoubleType > )rai, destinterval );
+			else if ( ARGBType.class.isInstance( movingSourceType ) )
+				ip = copyToImageStack( (RealRandomAccessible< ARGBType > )rai, destinterval );
+			else
 			{
-				ip = new ImagePlus( "warped_image", copyToImagePlus( (RandomAccessibleInterval<ARGBType>)rai, destinterval ));
-			}
-			else if( destinterval.numDimensions() == 3 )
-			{
-				ip = copyToImageStack((RealRandomAccessible<ARGBType>)rai, destinterval );
+				System.err.println("Can't convert type " + movingSourceType.getClass() + 
+				 	" to ImagePlus" );
+				return;
 			}
 		}
 		
@@ -1193,20 +1249,21 @@ public class BigWarp {
 		
 	}
 	
-	public static ImagePlus copyToImageStack( RealRandomAccessible<ARGBType> rai, Interval itvl )
+	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( RealRandomAccessible<T> rai, Interval itvl )
 	{
 		System.out.println("copy to stack");
 		long[] dimensions = new long[ itvl.numDimensions() ];
 		itvl.dimensions( dimensions );
 		
-		IntImagePlus<ARGBType> ip = ImagePlusImgs.argbs( dimensions );
+		T t = rai.realRandomAccess().get();
+		ImagePlusImgFactory<T> factory = new ImagePlusImgFactory<T>();
+		ImagePlusImg< T, ? > target = factory.create( itvl, t );
 		
-		net.imglib2.Cursor<ARGBType> c = ip.cursor();
-		
-		int k = 0;
+		double k = 0;
 		long N = dimensions[0] * dimensions[1] * dimensions[2];
 		
-		RealRandomAccess<ARGBType> ra = rai.realRandomAccess();
+		net.imglib2.Cursor< T > c = target.cursor();
+		RealRandomAccess< T > ra = rai.realRandomAccess();
 		while( c.hasNext() )
 		{
 			c.fwd();
@@ -1214,52 +1271,20 @@ public class BigWarp {
 			c.get().set( ra.get() );
 			
 			if( k % 10000 == 0 ){
-				IJ.showProgress( k/N );
+				//System.out.println(" progress: " +  (k/N));
+				IJ.showProgress( k / N );
 			}
 			k++;
 		}
 		
+		IJ.showProgress( 1.1 );
 		try {
-			return ip.getImagePlus();
+			return target.getImagePlus();
 		} catch (ImgLibException e) {
 			e.printStackTrace();
 		}
 		
 		return null;
-	}
-	
-	public static ImageProcessor copyToImagePlus( RandomAccessibleInterval<ARGBType> rai, Interval itvl )
-	{
-		System.out.println("copy to ip");
-//		Views.interval( Views.extendZero( rai ), itvl ).cursor();
-//		net.imglib2.Cursor<ARGBType> cc = Views.flatIterable( rai ).cursor();
-		
-		net.imglib2.Cursor<ARGBType> cc = Views.interval( Views.extendZero( rai ), itvl ).cursor();
-		
-		ColorProcessor iproc = new ColorProcessor( (int)itvl.dimension(0), (int)itvl.dimension(1) );
-		
-		
-//		System.out.println( itvl.min( 0 ) +  " " + itvl.max( 0 ));
-//		System.out.println( itvl.min( 1 ) +  " " + itvl.max( 1 ));
-		
-		int N = iproc.getWidth() * iproc.getHeight();
-		
-		int[] pos = new int[ rai.numDimensions() ];
-		int k = 0;
-		while( cc.hasNext() )
-		{
-			ARGBType color = cc.next();
-			cc.localize( pos );
-			
-			if( k % 1000 == 0 ){
-				IJ.showProgress( k/N );
-			}
-			
-			iproc.set( pos[0], pos[1], color.get());
-			k++;
-		}
-		
-		return iproc;
 	}
 	
 	protected void exportMovingImage( final File f, final ViewerState renderState, ProgressWriter progressWriter ) throws IOException, InterruptedException
