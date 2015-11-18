@@ -1089,10 +1089,9 @@ public class BigWarp {
 		}
 	}
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "deprecation" })
 	protected void exportMovingImagePlus( boolean isVirtual )
 	{
-		//TODO exportMovingImagePlus
 		if( ij == null )
 		{
 			System.out.println("no imagej instance");
@@ -1100,20 +1099,29 @@ public class BigWarp {
 		}
 		
 		final RandomAccessibleInterval<?> destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
-		AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
-		
+
 		Interpolation interp = viewerP.getState().getInterpolation();
 		RealRandomAccessible< ? > raiRaw = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-		AffineTransform3D xfmInv = fixedImgXfm.inverse();
-		
-		AffineRandomAccessible< ?, AffineGet > rai = RealViews.affine( raiRaw, xfmInv );
+
+		// go from moving to physical space
+		AffineTransform3D movingImgXfm = sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+
+		// go from physical space to fixed image space
+		AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+		AffineTransform3D fixedXfmInv  = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
+
+		// apply the transformations
+		AffineRandomAccessible< ?, AffineGet > rai =
+				RealViews.affine(
+						RealViews.affine( raiRaw, movingImgXfm ),
+				fixedXfmInv );
 		
 		ImagePlus ip = null;
-		Object t = rai.realRandomAccess().get();
 		
 		if( isVirtual )
 		{
 			// return a wrapper
+			@SuppressWarnings("rawtypes")
 			IntervalView rasterItvl = Views.interval( Views.raster( rai ), destinterval );
 			ip = ImageJFunctions.wrap( rasterItvl, "warped_moving_image" );
 		}
