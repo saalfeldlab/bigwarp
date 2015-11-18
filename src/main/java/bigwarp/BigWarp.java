@@ -110,8 +110,8 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
+import bdv.viewer.ViewerPanel.Options;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
@@ -218,8 +218,8 @@ public class BigWarp {
 		ArrayList<ConverterSetup> converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 		
-		movingSourceType = data.seqP.getImgLoader().getSetupImgLoader( 0 ).getImageType();
-		targetSourceType = data.seqQ.getImgLoader().getSetupImgLoader( 0 ).getImageType();
+		movingSourceType = sources.get( movingSourceIndex ).getSpimSource().getType();
+		targetSourceType = sources.get( fixedSourceIndex ).getSpimSource().getType();
 
 		ndims = 3;
 		ndims = detectNumDims();
@@ -230,7 +230,7 @@ public class BigWarp {
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 		
 		fixedViewXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
-		
+
 		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
 		setGridType( GridSource.GRID_TYPE.LINE );
@@ -238,8 +238,9 @@ public class BigWarp {
 
 		// If the images are 2d, use a transform handler that limits transformations to 
 		// rotations and scalings of the 2d plane ( z = 0 )
-		ViewerOptions optionsP = ViewerOptions.options();
-		ViewerOptions optionsQ = ViewerOptions.options();
+
+		Options optionsP = ViewerPanel.options();
+		Options optionsQ = ViewerPanel.options();
 		
 //		if( ndims == 2 )
 //		{
@@ -259,6 +260,7 @@ public class BigWarp {
 				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true );
 
 		viewerP = getViewerFrameP().getViewerPanel();
+		
 
 		
 		// Viewer frame for the fixed image
@@ -872,7 +874,6 @@ public class BigWarp {
 			addPoint( ptarray, isMoving );
 			return "";
 		}
-			
 	}
 	
 	/**
@@ -1275,9 +1276,10 @@ public class BigWarp {
 		final MyTarget target = new MyTarget();
 		int numRenderThreads = 1;		
 		
+		
 		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), 
 				new double[] { 1 }, 0, false, numRenderThreads, null, false, 
-				viewerP.getOptionValues().getAccumulateProjectorFactory(), new Cache.Dummy() );
+				new Cache.Dummy() );
 		
 		progressWriter.setProgress( 0 );
 		
@@ -1651,6 +1653,9 @@ public class BigWarp {
 	
 	public void restimateTransformation()
 	{
+		// TODO - call this asynchronously during mouse drags
+		// (take logic from net.imglib2.ui.PainterThread )
+		// change the 'paintable.paint' line to re-solve 
 		
 		if( landmarkModel.getRowCount() < 4 )
 		{
@@ -1902,6 +1907,10 @@ public class BigWarp {
 		}
 	}
 	
+	// TODO,
+	// consider this
+	// https://github.com/kwhat/jnativehook
+	// for arbitrary modifiers
 	protected class MouseLandmarkListener implements MouseListener, MouseMotionListener
 	{
 
