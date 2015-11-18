@@ -29,6 +29,7 @@ public class BigWarpActions
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String ESTIMATE_WARP = "estimate warp";
+	public static final String TOGGLE_ALWAYS_ESTIMATE_WARP = "toggle always estimate warp";
 	
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
 //	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
@@ -115,12 +116,13 @@ public class BigWarpActions
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
+		map.put( SHOW_WARPTYPE_DIALOG, "G" );
 		map.put( VISIBILITY_AND_GROUPING, "F6" );
-		 map.put( SHOW_WARPTYPE_DIALOG, "G" );
 		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
+		map.put( TOGGLE_ALWAYS_ESTIMATE_WARP, "F3" );
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
@@ -162,6 +164,7 @@ public class BigWarpActions
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
+		map.put( new ToggleAlwaysEstimateTransformAction( TOGGLE_ALWAYS_ESTIMATE_WARP, bw ));
 		map.put( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ));
 		map.put( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ));
 		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
@@ -221,12 +224,16 @@ public class BigWarpActions
 			
 //			if( isRedo && manager.canRedo() ){
 			try { 
+				
 				if( isRedo ) {
+					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessRedo();
 					bw.getLandmarkPanel().getTableModel().getUndoManager().redo();
 					bw.getViewerFrameP().getViewerPanel().showMessage( "Redo" );
 					bw.getViewerFrameQ().getViewerPanel().showMessage( "Redo" );
 				}else{ 
+					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessUndo();
 					//			} else if( manager.canUndo() ) {
+//					bw.getLandmarkPanel().getTableModel().getUndoManager().
 					bw.getLandmarkPanel().getTableModel().getUndoManager().undo();
 					bw.getViewerFrameP().getViewerPanel().showMessage( "Undo" );
 					bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo" );
@@ -237,10 +244,40 @@ public class BigWarpActions
 			}
 			//System.out.println( "  can redo: " + manager.canRedo() );
 			//System.out.println( "  can undo: " + manager.canUndo() );
-			
+
 			this.bw.restimateTransformation();
+
+			// if there's something to do after resestimation, then do it now 
+			if( isRedo ) 
+			{
+//				bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
+			}
+			else
+			{
+				bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
+			}
+			// repaint
 			this.bw.getLandmarkPanel().repaint();
 
+		}
+	}
+
+	public static class ToggleAlwaysEstimateTransformAction extends AbstractNamedAction 
+	{
+		private static final long serialVersionUID = 2909830484701853577L;
+
+		private BigWarp bw;
+
+		public ToggleAlwaysEstimateTransformAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.toggleUpdateWarpOnChange();
 		}
 	}
 

@@ -455,7 +455,29 @@ public class BigWarp {
 	{
 		this.updateWarpOnPtChange = updateWarpOnPtChange;
 	}
-	
+
+	public void toggleUpdateWarpOnChange(  )
+	{
+		this.updateWarpOnPtChange = !this.updateWarpOnPtChange;
+
+		if( updateWarpOnPtChange )
+		{
+			viewerP.showMessage("Always estimate transform on change");
+			viewerQ.showMessage("Always estimate transform on change");
+
+			//toggleAlwaysWarpMenuP.setText( "Toggle always warp off" );
+			//toggleAlwaysWarpMenuQ.setText( "Toggle always warp off" );
+		}
+		else
+		{
+			viewerP.showMessage("Estimate transform on request only");
+			viewerQ.showMessage("Estimate transform on request only");
+
+			//toggleAlwaysWarpMenuP.setText( "Warp on every point change" );
+			//toggleAlwaysWarpMenuQ.setText( "Toggle always warp on" );
+		}
+	}
+
 	public boolean isUpdateWarpOnChange()
 	{
 		return updateWarpOnPtChange;
@@ -488,17 +510,32 @@ public class BigWarp {
 	protected void setUpViewerMenu( BigWarpViewerFrame vframe )
 	{
 		//TODO setupviewermenu
-		
+
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
-		
+
 		JMenuBar viewerMenuBar = new JMenuBar();
 		JMenu settingsMenu    = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
+
+		final JMenuItem toggleAlwaysWarpMenu;
+		if( vframe.isMoving() )
+		{
+			toggleAlwaysWarpMenuP = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_ALWAYS_ESTIMATE_WARP ) );
+			toggleAlwaysWarpMenu = toggleAlwaysWarpMenuP;
+		}
+		else
+		{
+			toggleAlwaysWarpMenuQ = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_ALWAYS_ESTIMATE_WARP ) );
+			toggleAlwaysWarpMenu = toggleAlwaysWarpMenuQ;
+		}
 		
+		toggleAlwaysWarpMenu.setText( "Toggle warp after change" );
+		settingsMenu.add( toggleAlwaysWarpMenu );
+
 		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
 		miBrightness.setText( "Brightness & Color" );
 		settingsMenu.add( miBrightness );
-		
+
 		/* Warp Visualization */
 		final JMenuItem warpVisMenu = new JMenuItem( actionMap.get( BigWarpActions.SHOW_WARPTYPE_DIALOG ) );
 		warpVisMenu.setText( "Warp Visualization" );
