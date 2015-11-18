@@ -152,6 +152,9 @@ public class BigWarp {
 	protected final AffineTransform3D initialViewP;
 	protected final AffineTransform3D initialViewQ;
 	
+	private JMenuItem toggleAlwaysWarpMenuP;
+	private JMenuItem toggleAlwaysWarpMenuQ;
+
 	protected BigWarpLandmarkPanel landmarkPanel;
 	protected final LandmarkPointMenu    landmarkPopupMenu;
 	protected final BigWarpLandmarkFrame landmarkFrame;

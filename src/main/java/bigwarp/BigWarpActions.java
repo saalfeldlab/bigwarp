@@ -2,6 +2,7 @@ package bigwarp;
 
 import java.awt.Component;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -9,7 +10,6 @@ import javax.swing.JCheckBox;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
-import javax.swing.undo.UndoManager;
 
 import mpicbg.models.AbstractModel;
 import bdv.gui.BigWarpViewerFrame;
@@ -60,23 +60,25 @@ public class BigWarpActions
 	public static final String GARBAGE_COLLECTION = "garbage collection";
 
 	/**
-	 * Create BigDataViewer actions and install them in the specified
+	 * Create BigWarp actions and install them in the specified
 	 * {@link InputActionBindings}.
 	 *
 	 * @param inputActionBindings
 	 *            {@link InputMap} and {@link ActionMap} are installed here.
-	 * @param bdv
-	 *            Actions are targeted at this {@link BigDataViewer}.
+	 * @param bw
+	 *            Actions are targeted at this {@link BigWarp}.
 	 * @param keyProperties
 	 *            user-defined key-bindings.
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarp bdv,
+			final BigWarp bw,
 			final KeyProperties keyProperties )
 	{
-		inputActionBindings.addActionMap( "bw", createActionMap( bdv ) );
+		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
+		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
+		inputActionBindings.addInputMap( "bwv", createInputMapViewer( keyProperties ) );
 	}
 	
 	public static void installLandmarkPanelActionBindings(
@@ -85,19 +87,8 @@ public class BigWarpActions
 			final JTable landmarkTable,
 			final KeyProperties keyProperties )
 	{
-		final InputMap inputMap = new InputMap();
-		final KeyStrokeAdder map = keyProperties.adder( inputMap );
-
-		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
-		map.put( SHOW_HELP, "F1", "H" );
-		
-		final ActionMap actionMap = new ActionMap();
-		final NamedActionAdder actionAdder = new NamedActionAdder( actionMap );
-		actionAdder.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
-		actionAdder.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
-		
-		inputActionBindings.addInputMap( "w", inputMap );
-		inputActionBindings.addActionMap( "bw", actionMap );
+		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
+		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 		
 		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
 		Component c = celled.getTableCellEditorComponent(landmarkTable, new Boolean(true), true, 0, 1 );
@@ -106,18 +97,56 @@ public class BigWarpActions
 		parentInputMap.clear();
 		KeyStroke enterDownKS = KeyStroke.getKeyStroke("pressed ENTER" );
 		KeyStroke enterUpKS = KeyStroke.getKeyStroke("released ENTER" );
-		
+
 		parentInputMap.put( enterDownKS, "pressed" );
 		parentInputMap.put(   enterUpKS, "released" );
 	}
-	
+
+	public static InputMap createInputMapViewer( final KeyProperties keyProperties )
+	{
+		final InputMap inputMap = new InputMap();
+		final KeyStrokeAdder map = keyProperties.adder( inputMap );
+
+		map.put(RESET_VIEWER, "R");
+		map.put( VISIBILITY_AND_GROUPING, "F6" );
+		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
+		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
+
+		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
+
+		return inputMap;
+	}
+
+	public static ActionMap createActionMapViewer( final BigWarp bw )
+	{
+		final ActionMap actionMap = new ActionMap();
+		final NamedActionAdder map = new NamedActionAdder( actionMap );
+
+		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bw.activeSourcesDialog ) );
+
+		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
+		{
+			map.put( new SetWarpVisTypeAction( t, bw ));
+			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ));
+			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ));
+		}
+
+		map.put( new ResetActiveViewerAction( bw ));
+		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ) );
+		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ) );
+
+		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
+			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
+
+		return actionMap;
+	}
+
 	public static InputMap createInputMap( final KeyProperties keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put( SHOW_WARPTYPE_DIALOG, "G" );
-		map.put( VISIBILITY_AND_GROUPING, "F6" );
 		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
@@ -125,13 +154,8 @@ public class BigWarpActions
 		map.put( TOGGLE_ALWAYS_ESTIMATE_WARP, "F3" );
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
-		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 		map.put( ESTIMATE_WARP, "C" );
-		
-		map.put(RESET_VIEWER, "R");
-		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
-		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
-		
+
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
 		
@@ -146,21 +170,9 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bw.activeSourcesDialog ) );
-		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 		map.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
-		
-//		map.put( new SetWarpVisTypeAction( TOGGLE_WARP_VIS, bw ));
-//		map.put( new SetWarpVisTypeAction( TOGGLE_WARPMAG_VIS_P, bw, bw.getViewerFrameP() ));
-//		map.put( new SetWarpVisTypeAction( TOGGLE_WARPMAG_VIS_Q, bw, bw.getViewerFrameQ() ));
-		
-		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
-		{
-			map.put( new SetWarpVisTypeAction( t, bw ));
-			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ));
-			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ));
-		}
-		
+		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
+
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
@@ -170,17 +182,10 @@ public class BigWarpActions
 		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
 		map.put( new EstimateWarpAction( ESTIMATE_WARP, bw ));
 
-		map.put( new ResetActiveViewerAction( bw ));
-		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ) );
-		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ) );
-		
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			AbstractModel<?> xfm = bw.baseXfmList[ i ];
 			map.put( new SetWarpMagBaseAction( String.format( WARPMAG_BASE, xfm.getClass().getName()), bw, i ));
 		}
-		
-		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
-			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
 		
 		map.put( new UndoRedoAction( UNDO, bw ) );
 		map.put( new UndoRedoAction( REDO, bw ) );
@@ -215,13 +220,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-//			UndoManager manager = bw.getLandmarkPanel().getTableModel().getUndoManager();
-			
-//			if( isRedo )
-//				System.out.println( "can redo: " + manager.canRedo() );
-//			else
-//				System.out.println( "can undo: " + manager.canUndo() );
-			
+
 //			if( isRedo && manager.canRedo() ){
 			try { 
 				
@@ -242,23 +241,16 @@ public class BigWarpActions
 				System.err.println( " Undo / redo error " );
 				//ex.printStackTrace();
 			}
-			//System.out.println( "  can redo: " + manager.canRedo() );
-			//System.out.println( "  can undo: " + manager.canUndo() );
 
 			this.bw.restimateTransformation();
 
 			// if there's something to do after resestimation, then do it now 
-			if( isRedo ) 
-			{
-//				bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
-			}
-			else
+			if( !isRedo )
 			{
 				bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
 			}
 			// repaint
 			this.bw.getLandmarkPanel().repaint();
-
 		}
 	}
 
@@ -388,9 +380,9 @@ public class BigWarpActions
 	public static class TogglePointNameVisibleAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 2639535533224809586L;
-		
+
 		private BigWarp bw;
-		
+
 		public TogglePointNameVisibleAction( final String name, final BigWarp bw )
 		{
 			super( name );
@@ -403,7 +395,7 @@ public class BigWarpActions
 			bw.toggleNameVisibility();	
 		}
 	}
-	
+
 	public static class TogglePointsVisibleAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 8747830204501341125L;
