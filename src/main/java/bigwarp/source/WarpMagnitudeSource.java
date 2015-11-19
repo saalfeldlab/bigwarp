@@ -1,8 +1,5 @@
 package bigwarp.source;
 
-import java.util.Arrays;
-
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
