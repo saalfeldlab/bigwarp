@@ -525,6 +525,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void updateWarpedPoint( int i, double[] pt )
 	{
+		if( pt == null )
+			return;
+
 		for ( int d = 0; d < ndims; d++ )
 			warpedPoints.get( i )[ d ] = pt[ d ];
 
@@ -697,7 +700,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 			updateWarpedPoint( index, warpedPt );
 		}
-		else if( !isMoving )
+		else if( !isMoving && changedPositionSinceWarpEstimation.get( index ))
 		{
 			origWarpedPt = toPrimitive( getWarpedPoints().get( index ));
 		}
