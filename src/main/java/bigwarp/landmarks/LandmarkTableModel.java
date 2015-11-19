@@ -263,6 +263,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 			}
 		}
 		pointUpdatePendingMoving = false;
+		
+//		System.out.println("nextRowP: " + nextRowP );
+//		System.out.println("nextRowQ: " + nextRowQ );
 	}
 
 	public void resetPreDraggedPoint()
@@ -376,7 +379,18 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		return numRows;
 	}
-	
+
+	public int getActiveRowCount()
+	{
+		//TODO consider keeping track of this actively instead of recomputing
+		int N = 0;
+		for( Boolean b : activeList )
+			if( b ) 
+				N++;
+
+		return N;
+	}
+
 	@Override 
 	public String getColumnName( int col ){
 		return columnNames[col];
@@ -652,6 +666,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 			else
 				index = nextRowQ;
 		}
+		
+//		System.out.println("index: " + index );
 
 		boolean isAdd = forceAdd || ( index == getRowCount() );
 		

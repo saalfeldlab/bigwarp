@@ -110,8 +110,8 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.ViewerPanel.Options;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
@@ -239,8 +239,8 @@ public class BigWarp {
 		// If the images are 2d, use a transform handler that limits transformations to 
 		// rotations and scalings of the 2d plane ( z = 0 )
 
-		Options optionsP = ViewerPanel.options();
-		Options optionsQ = ViewerPanel.options();
+		ViewerOptions optionsP = ViewerOptions.options();
+		ViewerOptions optionsQ = ViewerOptions.options();
 		
 //		if( ndims == 2 )
 //		{
@@ -1279,7 +1279,7 @@ public class BigWarp {
 		
 		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), 
 				new double[] { 1 }, 0, false, numRenderThreads, null, false, 
-				new Cache.Dummy() );
+				viewerP.getOptionValues().getAccumulateProjectorFactory(), new Cache.Dummy() );
 		
 		progressWriter.setProgress( 0 );
 		
@@ -1657,9 +1657,9 @@ public class BigWarp {
 		// (take logic from net.imglib2.ui.PainterThread )
 		// change the 'paintable.paint' line to re-solve 
 		
-		if( landmarkModel.getRowCount() < 4 )
+		if( landmarkModel.getActiveRowCount() < 4 )
 		{
-			JOptionPane.showMessageDialog( landmarkFrame, "Require at least 4 points to estimate a transformation" );
+			//JOptionPane.showMessageDialog( landmarkFrame, "Require at least 4 points to estimate a transformation" );
 			return;
 		}
 		
