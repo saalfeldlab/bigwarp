@@ -15,14 +15,15 @@ import java.util.List;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.AbstractTableModel;
-import javax.swing.undo.AbstractUndoableEdit;
-import javax.swing.undo.UndoManager;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.SerializationUtils;
 
+import bigwarp.landmarks.actions.AddPointEdit;
+import bigwarp.landmarks.actions.DeleteRowEdit;
+import bigwarp.landmarks.actions.LandmarkUndoManager;
+import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import jitk.spline.XfmUtils;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -57,6 +58,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	// pre-dragged point
 	protected double[] preDraggedPoint;
+	protected double[] preDraggedPointWarped;
 	
 	// determines if the last point that was added has a pair
 	protected boolean isLastPointPaired = true; // initialize to true, when there are no points
@@ -79,7 +81,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected ArrayList<Double[]> warpedPoints;
 	
 	// keep track of edits for undo's and redo's
-	protected UndoManager undoRedoManager;
+	protected LandmarkUndoManager undoRedoManager;
 	
 	final static String[] columnNames3d = new String[]
 			{
@@ -130,10 +132,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		setTableListener();
 		
-		undoRedoManager = new UndoManager();
+		undoRedoManager = new LandmarkUndoManager();
 	}
 	
-
+	public double[] getPendingPoint()
+	{
+		return PENDING_PT;
+	}
 	
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
 	{
@@ -190,7 +195,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			{
 				if ( targetPts.get( i )[ d ].doubleValue() != estimatedXfm.getSourceLandmarks()[ d ][ i ] )
 				{
-					//System.out.println("Wrong for pt: " + i );
+					System.out.println("Wrong for pt: " + i );
 					return false;
 				}
 			}
@@ -270,6 +275,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setPreDraggedPoint( int i, boolean isMoving )
 	{
+		setPreDraggedPoint( i, isMoving, false );
+	}
+	
+	public void setPreDraggedPoint( int i, boolean isMoving, boolean isWarped )
+	{
 		if( isPreDraggedPoint() )
 		{
 			return;
@@ -286,8 +296,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 			this.preDraggedPoint[ d ] = pt[ d ];
 		}
 		
-//		System.out.println( "set pre dragged point to: " + 
-//				preDraggedPoint[0] + " " + preDraggedPoint[1] + " " + preDraggedPoint[2] );
+		// if the image is warped, then remember where the point
+		// lived in the warped space
+		
+		//TODO explicitly checking if this point has changed 
+		// 	   might be a good idea, but right now the changedSinceWarp flag
+		//     is set after this method call
+		
+		//if( isWarped && getChangedSinceWarp().get( i ) )
+		
+		if( isWarped )
+		{
+			preDraggedPointWarped = toPrimitive( getWarpedPoints().get( i ));
+		}
 	}
 	
 	public void setPreDraggedPoint( double[] pt )
@@ -297,49 +318,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			this.preDraggedPoint[ d ] = pt[ d ];
 		}
 	}
-	
-	public void setPointToUpdate( int i, boolean isMoving )
-	{
-		undoRedoManager.addEdit( new ModifyPointEdit( i, PENDING_PT, isMoving ) );
-		addHelper( false, i, PENDING_PT, isMoving );
-		updateNextRows();
-	}
-	
-	/*
-	public void setPointToUpdateOld( int i, boolean isMoving )
-	{
-		undoRedoManager.addEdit( new ModifyPointEdit( i, PENDING_PT, isMoving ) );
-		
-		ArrayList< Double[] > pts;
-		
-		if ( isMoving )
-		{
-			nextRowP = i;
-			pointUpdatePendingMoving = true;
-			pts = movingPts;
-		} else
-		{
-			nextRowQ = i;
-			pointUpdatePendingMoving = false;
-			pts = targetPts;
-		}
 
-		for ( int d = 0; d < ndims; d++ )
-		{
-			pointToOverride[ d ] = pts.get( i )[ d ];
-			pts.get( i )[ d ] 			= Double.POSITIVE_INFINITY;
-			warpedPoints.get( i )[ d ] 	= Double.POSITIVE_INFINITY;
-		}
-
-		changedPositionSinceWarpEstimation.set( i, false );
-		activeList.set( i, false );
-
-		pointUpdatePending = true;
-		fireTableRowsUpdated( i, i );
-
-	}
-	*/
-	
 	public boolean isPointUpdatePending()
 	{
 		return pointUpdatePending;
@@ -381,15 +360,28 @@ public class LandmarkTableModel extends AbstractTableModel {
 	}
 	
 	@Override
-	public int getColumnCount() {
+	public int getColumnCount()
+	{
 		return numCols;
 	}
 
 	@Override
-	public int getRowCount() { 
+	public int getRowCount()
+	{
 		return numRows;
 	}
-	
+
+	public int getActiveRowCount()
+	{
+		//TODO consider keeping track of this actively instead of recomputing
+		int N = 0;
+		for( Boolean b : activeList )
+			if( b ) 
+				N++;
+
+		return N;
+	}
+
 	@Override 
 	public String getColumnName( int col ){
 		return columnNames[col];
@@ -439,14 +431,14 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void deleteRow( int i )
 	{
-		undoRedoManager.addEdit( new DeleteRowEdit( i ) );
+		undoRedoManager.addEdit( new DeleteRowEdit( this, i ) );
 		deleteRowHelper( i );
 	}
 
-	private void deleteRowHelper( int i )
+	public void deleteRowHelper( int i )
 	{
-		if( i >= names.size() ){
-			//System.out.println(" i to big ");
+		if( i >= names.size() )
+		{
 			return;
 		}
 		
@@ -533,8 +525,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void updateWarpedPoint( int i, double[] pt )
 	{
-		//System.out.println( "updateWarpedPoint " + i + " pt: " + pt[0] + " " + pt[1] + " " + pt[2] );
-//		warpedPoints.size()
+		if( pt == null )
+			return;
+
 		for ( int d = 0; d < ndims; d++ )
 			warpedPoints.get( i )[ d ] = pt[ d ];
 
@@ -569,12 +562,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		return changedPositionSinceWarpEstimation;
 	}
-	
+
 	public void resetWarpedPoints()
 	{
-		Collections.fill( changedPositionSinceWarpEstimation, false );
+		int N = changedPositionSinceWarpEstimation.size();
+		for( int i = 0; i < N; i++ )
+		{
+			if( activeList.get( i ))
+			{
+				changedPositionSinceWarpEstimation.set( i, false );
+			}
+		}
 	}
-	
+
 	public void resetNeedsInverse(){
 		Collections.fill( needsInverse, false );
 	}
@@ -590,128 +590,213 @@ public class LandmarkTableModel extends AbstractTableModel {
 			fireTableCellUpdated( row, 2 + d );
 	}
 
-	private int addHelper( double[] pt, boolean isMoving )
+	private void addEmptyRow( int index )
 	{
-
-		int nextRow = -1;
-		if ( isMoving )
-		{
-			nextRow = nextRowP;
-		} else
-		{
-			nextRow = nextRowQ;
-		}
-
-		if ( nextRow == movingPts.size() )
-		{
-			addHelper( true, nextRow, pt, isMoving );
-			return nextRow;
-		} else
-		{
-			addHelper( false, nextRow, pt, isMoving );
-			return nextRow;
-		}
-
+		Double[] movingPt = new Double[ ndims ];
+		Double[] targetPt = new Double[ ndims ];
+		
+		Arrays.fill( targetPt, new Double( Double.POSITIVE_INFINITY ) );
+		Arrays.fill( movingPt, new Double( Double.POSITIVE_INFINITY ) );
+		
+		movingPts.add( index, movingPt );
+		targetPts.add( index, targetPt );
+		
+		names.add( index, nextName( index ));
+		activeList.add( index, false );
+		warpedPoints.add( index, new Double[ ndims ] );
+		changedPositionSinceWarpEstimation.add( index, false );
+		
+		fireTableRowsInserted( index, index );
+		
+		numRows++;
 	}
-
-//	private boolean addHelper( int index, double[] pt, boolean isMoving )
-//	{
-//		addHelper( true, index, pt, isMoving );
-//		return true;
-//	}
-
+	
+	public void clearPt( int row, boolean isMoving )
+	{
+		pointEdit( row, PENDING_PT, false, isMoving, null, true );
+	}
+	
+	public boolean add( double[] pt, boolean isMoving )
+	{
+		return pointEdit( -1, pt, true, isMoving, false, true );
+	}
+	
+	public void setPoint( int row, boolean isMoving, double[] pt )
+	{
+		setPoint( row, isMoving, pt, true );
+	}
+	
+	public void setPoint( int row, boolean isMoving, double[] pt, boolean isUndoable )
+	{
+		pointEdit( row, pt, false, isMoving, false, isUndoable );
+	}
+	
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, boolean isWarped, boolean isUndoable )
+	{
+		//TODO point edit
+		if( isWarped )
+			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable );
+		else
+			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
+	}
+	
 	/**
-	 * Adds a point, but does not add an edit to the undo stack.
-	 * Returns true if this is the first point in the pair to be added.
 	 * 
+	 * @param index
 	 * @param pt
 	 * @param isMoving
-	 * @return
+	 * @param isWarped
+	 * @param isUndoable
+	 * @return true if a new row was added
 	 */
-	private void addHelper( boolean isFirst, int index, double[] pt, boolean isMoving )
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
-		System.out.println("\naddHelper");
-		System.out.println("isFirst: " + isFirst );
-		System.out.println("isMoving: " + isMoving );
-		System.out.println("pt: " + XfmUtils.printArray(pt));
-		System.out.println("index: " + index + "\n");
-		
-		if( isFirst )
+		if( index == -1 )
 		{
-			//System.out.println("addHelper first");
-			
-			Double[] movingPt = new Double[ ndims ];
-			Double[] targetPt = new Double[ ndims ];
-			
 			if( isMoving )
-			{
-				for( int i = 0; i < ndims; i++ ){ movingPt[ i ] = pt[ i ]; }
-				Arrays.fill( targetPt, new Double( Double.POSITIVE_INFINITY ) );
-			}
+				index = nextRowP;
 			else
-			{
-				for( int i = 0; i < ndims; i++ ){ targetPt[ i ] = pt[ i ]; }
-				Arrays.fill( movingPt, new Double( Double.POSITIVE_INFINITY ) );
-			}
-			
-			movingPts.add( index, movingPt );
-			targetPts.add( index, targetPt );
-			
-			names.add( index, "Pt-" + index );
-			activeList.add( index, false );
-			warpedPoints.add( index, new Double[ ndims ] );
-			changedPositionSinceWarpEstimation.add( index, false );
-			
-			fireTableRowsInserted( index, index );
-			
-			numRows++;
+				index = nextRowQ;
 		}
+
+		boolean isAdd = forceAdd || ( index == getRowCount() );
+		
+		if( isAdd )
+			addEmptyRow( index );
+		
+		double[] oldpt = PENDING_PT;
+		if( !isAdd )
+		{
+			if( isMoving )
+				oldpt = toPrimitive( movingPts.get( index ) );
+			else
+				oldpt = toPrimitive( targetPts.get( index ) );
+		}
+		
+		ArrayList< Double[] > pts;
+		
+		/********************
+		 * Update the point *
+		 ********************/
+		if( isMoving )
+			pts = movingPts;
 		else
-		{
-			//System.out.println("addHelper not first");
-			
-			ArrayList< Double[] > pts;
-			
-			if( isMoving )
-				pts = movingPts;
-			else
-				pts = targetPts;
-			
-			// add a new one
-			Double[] exPts = new Double[ ndims ];
-			for( int i = 0; i < ndims; i++ ){
-				exPts[ i ] = pt[ i ];
-			}
-			pts.set( index, exPts );
-			
-			// modify current
-//			Double[] curPt = pts.get( index );
-//			for( int i = 0; i < ndims; i++ ){
-//				curPt[ i ] = pt[ i ];
-//			}
-			
-			activeList.set( index, true );
-			
-			if( isMoving )
-			{
-				updateWarpedPoint( index, pt );
-			}
-			
-			fireTableRowsUpdated( index, index );
+			pts = targetPts;
+		
+		Double[] exPts = new Double[ ndims ];
+		for( int i = 0; i < ndims; i++ ){
+			exPts[ i ] = pt[ i ];
 		}
+		pts.set( index, exPts );
 		
-		markAsChanged( index );
-		
+		/************************************************
+		 * Determine if we have to update warped points *
+		 ************************************************/
+		double[] origWarpedPt = null;
+		if( isMoving && warpedPt != null )
+		{
+			if( !isAdd )
+				origWarpedPt = toPrimitive( getWarpedPoints().get( index ));
+
+			updateWarpedPoint( index, warpedPt );
+		}
+		else if( !isMoving && changedPositionSinceWarpEstimation.get( index ))
+		{
+			origWarpedPt = toPrimitive( getWarpedPoints().get( index ));
+		}
+
+		if( isUndoable )
+		{
+			if( isAdd )
+			{
+				undoRedoManager.addEdit( new AddPointEdit( this, index, pt, warpedPt, isMoving ) );
+			}
+			else if( LandmarkTableModel.this.isPreDraggedPoint() )
+			{
+				oldpt = copy( preDraggedPoint );
+				
+				double[] oldWarped = null;
+				if( preDraggedPointWarped != null)
+					oldWarped = copy( preDraggedPointWarped );
+
+				undoRedoManager.addEdit( new ModifyPointEdit( 
+						this, index,
+						oldpt, pt,
+						oldWarped, warpedPt, isMoving ));
+				
+				LandmarkTableModel.this.resetPreDraggedPoint();
+			}
+			else
+			{
+				undoRedoManager.addEdit( new ModifyPointEdit( 
+						this, index,
+						oldpt, pt,
+						origWarpedPt, warpedPt, isMoving ));
+			}
+		}
+
+		/***********************
+		 * Update next indices *
+		 ***********************/
 		if( isMoving )
 			nextRowP = nextRow( isMoving );
 		else
 			nextRowQ = nextRow( isMoving );
 		
-		updateNextRows();
-		firePointUpdated( nextRowP, isMoving );
 		
+		activateRow( index );
+		
+		updateNextRows();
+		firePointUpdated( index, isMoving );
+		
+		return isAdd;
+	}
+
+	public void activateRow( int index )
+	{
+		boolean activate = true;
+		
+		for( int d = 0; d < ndims; d++ )
+		{
+			if( Double.isInfinite( movingPts.get( index )[ d ] ))
+			{
+				activate = false;
+				break;
+			}
+			if( Double.isInfinite( targetPts.get( index )[ d ] ))
+			{
+				activate = false;
+				break;
+			}	
+		}
+		activeList.set( index, activate );
+	}
+
+
+	// TODO the current implmentation avoids overlap in common use cases.
+	// Consider whether checking all names for overlaps is worth it.
+	private String nextName( int index )
+	{
+		final String s;
+		if( index == 0 )
+			s = "Pt-0";
+		else
+		{
+			// Increment the index in the name of the previous row
+			int i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			s = String.format( "Pt-%d", i );
+		}
+		return s;
 	}
 	
+	/**
+	 * Sets a flag that indicates the point at the input index has changed
+	 * since the last time a transform was estimated.
+	 * 
+	 * Not currently in use, but may be in the future 
+	 * @param index
+	 */
+	@SuppressWarnings("unused")
 	private void markAsChanged( int index )
 	{
 		for( int i = 0; i < this.numRows; i++ )
@@ -720,44 +805,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 				indicesOfChangedPoints.add( i ); 
 		}
 	}
-	
-	/**
-	 * Adds a point, adding an edit to the undo stack.
-	 * @param pt
-	 * @param isMoving
-	 * @return
-	 */
-	public int add( double[] pt, boolean isMoving )
-	{
-		System.out.println("add new");
-		int nrStart = this.getRowCount();
-		int nextRow = addHelper( pt, isMoving );
-		
-		addUndoable( pt, isMoving, nextRow, (nextRow == nrStart) );
-		return nextRow;
-	}
-	
-	private void addUndoable( double[] pt, boolean isMoving, int row, boolean isNew )
-	{
-		System.out.println("addUndoable isNew: " + isNew );
-		if( isNew )
-			undoRedoManager.addEdit( new AddPointEdit( row, pt, isMoving ) );
-		else
-			undoRedoManager.addEdit( new ModifyPointEdit( row, 
-					this.PENDING_PT, pt,
-					null, null, isMoving ));
-	}
-	
-//	private void addUndoable( double[] pt, boolean isMoving )
-//	{
-//		int nextRow = -1;
-//		
-//		if( isMoving )	nextRow = nextRowP;
-//		else			nextRow = nextRowQ;
-//		
-//		addUndoable( pt, isMoving, nextRow );
-//	}
-	
+
+
 	public void resetUpdated()
 	{
 		indicesOfChangedPoints.clear();
@@ -781,10 +830,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 		if (estimatedXfm == null)
 			return;
-
-		//System.out.println("changed pts: " + indicesOfChangedPoints);
-		//System.out.println("moving size" + movingPts.size());
-		//System.out.println("target size" + targetPts.size());
 
 		double[] source = new double[ ndims ];
 		double[] target = new double[ ndims ];
@@ -816,12 +861,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 		resetUpdated();
 	}
 	
+	public void load( File f ) throws IOException
+	{
+		load( f, false );
+	}
+	
 	/**
 	 * Loads this table from a file
 	 * @param f
 	 * @throws IOException 
 	 */
-	public void load( File f ) throws IOException
+	public void load( File f, boolean invert ) throws IOException
 	{
 		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
 		List<String[]> rows = reader.readAll();
@@ -864,8 +914,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 			for( int d = 0; d < ndims; d++ )
 				targetPt[ d ] = Double.parseDouble( row[ k++ ]);
 			
-			movingPts.add( movingPt );
-			targetPts.add( targetPt );
+			if( invert )
+			{
+				movingPts.add( targetPt );
+				targetPts.add( movingPt );
+			}
+			else
+			{
+				movingPts.add( movingPt );
+				targetPts.add( targetPt );
+			}
+			
 			
 			warpedPoints.add( new Double[ ndims ] );
 			changedPositionSinceWarpEstimation.add( false );
@@ -926,7 +985,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 				}
 			}
 		}
-		
+
 		// need to find the "inverse TPS" so exchange moving and tgt
 		estimatedXfm.setLandmarks( tgtPts, mvgPts );
 
@@ -972,59 +1031,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		csvWriter.close();
 		
 	}
-	public void setPoint( int row, boolean isMoving, double[] pt )
-	{
-		setPoint( row, isMoving, pt, true );
-	}
-	
-	public void setPoint( int row, boolean isMoving, double[] pt, boolean isUndoable )
-	{
-		if( isUndoable )
-			undoRedoManager.addEdit( new ModifyPointEdit( row, pt, isMoving ) );
-		
-		setPointHelper( row, isMoving, pt );
-	}
-
-	public void setPointHelper( int row, boolean isMoving, double[] pt )
-	{
-		ArrayList< Double[] > pts;
-
-		int offset = 0;
-		if ( isMoving )
-			pts = movingPts;
-		else
-		{
-			pts = targetPts;
-			offset = ndims;
-		}
-
-		for ( int i = 0; i < ndims; i++ )
-		{
-			pts.get( row )[ i ] = pt[ i ];
-			fireTableCellUpdated( row, ndims + offset + i );
-		}
-
-		if ( (estimatedXfm != null) )
-		{
-			if ( !indicesOfChangedPoints.contains( row ) )
-				indicesOfChangedPoints.add( row );
-
-//			 if( !isMoving && !isWarpedPositionChanged( row ))
-//				 updateWarpedPoint( row, pt );
-//			 else if( isMoving )
-//			 	updateWarpedPoint( row, pt );
-
-			// // moving and target are "switched" since we need an
-			// "inverse tps"
-			// if( isMoving )
-			// estimatedXfm.updateTargetLandmark( row, pt );
-			// else
-			// estimatedXfm.updateSourceLandmark( row, pt );
-
-		}
-		
-		updateNextRows(); 
-	}
 	
 	public static String print( Double[] d )
 	{
@@ -1035,25 +1041,35 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return out;
 	}
 	
-	public void setValueAt(Object value, int row, int col) {
-        if (DEBUG) {
+	public void setValueAt(Object value, int row, int col)
+	{
+        if (DEBUG)
+        {
             System.out.println("Setting value at " + row + "," + col
                                + " to " + value
                                + " (an instance of "
                                + value.getClass() + ")");
         }
 
-        if( col == NAMECOLUMN ){
+        if( col == NAMECOLUMN )
+        {
         	names.set(row, (String)value );
-        }else if( col == ACTIVECOLUMN ){
+        }
+        else if( col == ACTIVECOLUMN )
+        {
         	activeList.set(row, (Boolean)value );
-        }else if( col < 2 + ndims ){
+        }
+        else if( col < 2 + ndims )
+        {
         	Double[] thesePts = movingPts.get(row);
         	thesePts[ col - 2 ] = ((Double)value).doubleValue();
-        }else{
+        }
+        else
+        {
         	Double[] thesePts = targetPts.get(row);
         	thesePts[ col - ndims - 2 ] = ((Double)value).doubleValue();
         }
+
         fireTableCellUpdated(row, col);
     }
 	
@@ -1112,208 +1128,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return inv;
 	}
 
-	public UndoManager getUndoManager()
+	public LandmarkUndoManager getUndoManager()
 	{
 		return undoRedoManager;
-	}
-	
-	public class AddPointEdit extends AbstractUndoableEdit
-	{
-		private static final long serialVersionUID = -2912174487193763272L;
-
-		private final int index;
-		private final double[] oldpt;
-		private final double[] newpt;
-		private final boolean isMoving;
-		private final boolean isNewRow;
-		
-		private final double[] warpedPos;
-
-		public AddPointEdit( final int index, final double[] pt, final boolean isMoving )
-		{
-			System.out.println("made add pt edit with warped pos");
-			System.out.println("index: " + index );
-			
-			this.index = index;
-			this.newpt = pt;
-			this.isMoving = isMoving;
-			this.isNewRow = (index == LandmarkTableModel.this.numRows - 1);
-
-			System.out.println("is new: " + isNewRow );
-			
-			if ( !isNewRow )
-			{
-				if ( isMoving )
-					oldpt = toPrimitive( LandmarkTableModel.this.movingPts.get( index ) );
-				else
-					oldpt = toPrimitive( LandmarkTableModel.this.targetPts.get( index ) );
-			} else
-				oldpt = null;
-			
-			if( LandmarkTableModel.this.isWarpedPositionChanged( index ))
-			{
-				System.out.println("made add pt edit with warped pos");
-				warpedPos = LandmarkTableModel.toPrimitive( LandmarkTableModel.this.getWarpedPoints().get( index ));
-			}
-			else
-			{
-				warpedPos = null;
-			}
-		}
-
-		@Override
-		public void undo()
-		{
-			System.out.println("undo add");
-			if ( isNewRow )
-				LandmarkTableModel.this.deleteRowHelper( index );
-			else
-				LandmarkTableModel.this.setPointHelper( index, isMoving, oldpt );
-			
-		}
-
-		@Override
-		public void redo()
-		{
-			System.out.println("redo add");
-			int nr = LandmarkTableModel.this.numRows;
-			if ( isNewRow )
-				LandmarkTableModel.this.addHelper(  true, nr, newpt, isMoving );
-			else
-				LandmarkTableModel.this.addHelper( false, nr-1, newpt, isMoving );
-			
-			if( warpedPos != null )
-			{
-				System.out.println("warped");
-				LandmarkTableModel.this.updateWarpedPoint(  LandmarkTableModel.this.numRows, warpedPos );
-			}
-		}
-	}
-	
-	public class ModifyPointEdit extends AbstractUndoableEdit
-	{
-		private static final long serialVersionUID = 1805061472166752857L;
-
-		private final int index;
-		private final double[] oldpt;
-		private final double[] newpt;
-		private final boolean isMoving;
-		
-		private final boolean  isWarped;
-		private final double[] newWarpedPos;
-		private final double[] oldWarpedPos;
-
-		public ModifyPointEdit( final int index, 
-				final double[] oldpt, double[] newpt, 
-				final double[] oldwarped, final double[] warped, 
-				final boolean isMoving )
-		{
-			this.index = index;
-			this.isMoving = isMoving;
-			
-			this.oldpt = oldpt;
-			this.newpt = newpt;
-			
-			System.out.println("ModifyPointEdit2");
-			System.out.println("oldpt: " + XfmUtils.printArray( oldpt ));
-			System.out.println("newpt: " + XfmUtils.printArray( newpt ));
-			
-			if( oldwarped != null && warped == null )
-			{
-				isWarped = false;
-				oldWarpedPos = null;
-				newWarpedPos = null;
-			}
-			else
-			{
-				isWarped = true;
-				oldWarpedPos = oldwarped;
-				newWarpedPos = warped;
-			}
-		}
-		
-		public ModifyPointEdit( final int index, 
-				double[] pt, 
-				final boolean isMoving )
-		{
-			System.out.println("ModifyPointEdit");
-			this.index = index;
-			this.isMoving = isMoving;
-			
-			if( LandmarkTableModel.this.isWarpedPositionChanged( index ) )
-			{
-				isWarped = true;
-				oldWarpedPos = LandmarkTableModel.toPrimitive( LandmarkTableModel.this.getWarpedPoints().get( index ));
-				
-				newWarpedPos = pt;
-				this.newpt = LandmarkTableModel.this.getTransform().apply( pt );
-				
-			}
-			else
-			{
-				isWarped = false;
-				newWarpedPos = null;
-				oldWarpedPos = null;
-				
-				this.newpt = pt;
-			}
-			
-			if( LandmarkTableModel.this.isPreDraggedPoint() )
-			{
-				oldpt = copy( LandmarkTableModel.this.preDraggedPoint );
-				LandmarkTableModel.this.resetPreDraggedPoint();
-			}
-			else{
-				if ( isMoving )
-					oldpt = toPrimitive( LandmarkTableModel.this.movingPts.get( index ) );
-				else
-					oldpt = toPrimitive( LandmarkTableModel.this.targetPts.get( index ) );
-			}
-		}
-
-		@Override
-		public void undo()
-		{
-			LandmarkTableModel.this.addHelper( false, index, oldpt, isMoving );
-			LandmarkTableModel.this.updateNextRows();
-		}
-
-		@Override
-		public void redo()
-		{
-			//System.out.println( "  ModifyPointEdit:  " + index + " " + isMoving + " " + XfmUtils.printArray(  newpt ));
-			LandmarkTableModel.this.addHelper( false, index, newpt, isMoving );
-			LandmarkTableModel.this.updateNextRows();
-		}
-	}
-
-	public class DeleteRowEdit extends AbstractUndoableEdit
-	{
-		private static final long serialVersionUID = -3624020789748090982L;
-
-		private final int index;
-		private final double[] movingPt;
-		private final double[] targetPt;
-
-		public DeleteRowEdit( final int index )
-		{
-			this.index = index;
-			movingPt = toPrimitive( LandmarkTableModel.this.movingPts.get( index ) );
-			targetPt = toPrimitive( LandmarkTableModel.this.targetPts.get( index ) );
-		}
-
-		@Override
-		public void undo()
-		{
-			LandmarkTableModel.this.addHelper( true, index, movingPt, true );
-			LandmarkTableModel.this.addHelper( false, index, targetPt, false );
-		}
-
-		@Override
-		public void redo()
-		{
-			LandmarkTableModel.this.deleteRowHelper( index );
-		}
 	}
 
 	public static double[] copy( double[] in )
