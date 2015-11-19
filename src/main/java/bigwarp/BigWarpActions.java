@@ -238,20 +238,39 @@ public class BigWarpActions
 					bw.getViewerFrameP().getViewerPanel().showMessage( "Undo" );
 					bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo" );
 				}
-			}catch( Exception ex ){
-				System.err.println( " Undo / redo error " );
+
+				/*
+				 * Keep the stuff below in the try-catch block to avoid unnecessary calls
+				 * if there is nothing to undo/redo
+				 */
+				if( this.bw.updateWarpOnPtChange )
+					this.bw.restimateTransformation();
+
+				// if there's something to do after re-estimation, then do it now
+				// (usually this is setting the warped point position, if it exists,
+				// so the point can be rendered correctly in warped mode
+				if( !isRedo )
+				{
+					bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
+				}
+				// repaint
+				this.bw.getLandmarkPanel().repaint();
+			}
+			catch( Exception ex )
+			{
+				if( isRedo )
+				{
+					bw.getViewerFrameP().getViewerPanel().showMessage("Can't redo");
+					bw.getViewerFrameQ().getViewerPanel().showMessage("Can't redo");
+				}
+				else
+				{
+					bw.getViewerFrameP().getViewerPanel().showMessage("Can't undo");
+					bw.getViewerFrameQ().getViewerPanel().showMessage("Can't undo");
+				}
+				//System.err.println( " Undo / redo error, or nothing to do " );
 				//ex.printStackTrace();
 			}
-
-			this.bw.restimateTransformation();
-
-			// if there's something to do after resestimation, then do it now 
-			if( !isRedo )
-			{
-				bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
-			}
-			// repaint
-			this.bw.getLandmarkPanel().repaint();
 		}
 	}
 
