@@ -9,6 +9,9 @@
   	<artifactId>pom-fiji</artifactId>
   	<version>15.5.0</version>
   </parent>
+  <properties>
+    <enforcer.skip>true</enforcer.skip>
+  </properties>
   <repositories>
         <repository>
             <id>imagej.public</id>
