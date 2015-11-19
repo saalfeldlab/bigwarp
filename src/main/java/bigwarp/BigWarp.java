@@ -27,15 +27,12 @@ import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
-
-import jitk.spline.XfmUtils;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
@@ -202,7 +199,8 @@ public class BigWarp {
 	final FileDialog fileDialog;
 	
 	protected File lastDirectory;
-	protected boolean updateWarpOnPtChange = true;
+	protected boolean updateWarpOnPtChange = false;
+	protected boolean firstWarpEstimation = true;
 	
 	JMenu landmarkMenu;
 	
@@ -1657,6 +1655,8 @@ public class BigWarp {
 		if( landmarkModel.getActiveRowCount() < 4 )
 		{
 			//JOptionPane.showMessageDialog( landmarkFrame, "Require at least 4 points to estimate a transformation" );
+			getViewerFrameP().getViewerPanel().showMessage("Require at least 4 points to estimate a transformation" );
+			getViewerFrameQ().getViewerPanel().showMessage("Require at least 4 points to estimate a transformation" );
 			return;
 		}
 		
@@ -1664,17 +1664,13 @@ public class BigWarp {
 		getViewerFrameQ().getViewerPanel().showMessage("Estimating transformation...");
 		
 		// TODO restimateTransformation
-		boolean isFirst = false;
+		// This distinction is unnecessary right now, because 
+		// transferUpdatesToModel just calls initTransformation.. but this may change
 		if( landmarkModel.getTransform() == null )
-		{
 			landmarkModel.initTransformation();
-			isFirst = true;
-		}
 		else
-		{
 			landmarkModel.transferUpdatesToModel();
-		}
-		
+
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
 		landmarkModel.resetWarpedPoints();
@@ -1687,8 +1683,14 @@ public class BigWarp {
 		
 		// display the warped version automatically if this is the first
 		// time the transform was computed
-		if( isFirst )
+		// and make  
+		if( firstWarpEstimation )
+		{
 			setIsMovingDisplayTransformed( true );
+			setUpdateWarpOnChange( true );
+			firstWarpEstimation = false;
+		}
+			
 		
 		WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
 		GridSource<?> gSrc = ((GridSource<?>) sources.get( gridSourceIndex ).getSpimSource());
