@@ -195,7 +195,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			{
 				if ( targetPts.get( i )[ d ].doubleValue() != estimatedXfm.getSourceLandmarks()[ d ][ i ] )
 				{
-					//System.out.println("Wrong for pt: " + i );
+					System.out.println("Wrong for pt: " + i );
 					return false;
 				}
 			}
@@ -260,9 +260,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			}
 		}
 		pointUpdatePendingMoving = false;
-		
-//		System.out.println("nextRowP: " + nextRowP );
-//		System.out.println("nextRowQ: " + nextRowQ );
 	}
 
 	public void resetPreDraggedPoint()
@@ -283,8 +280,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setPreDraggedPoint( int i, boolean isMoving, boolean isWarped )
 	{
-		System.out.println("set predragged pt");
-		System.out.println("isWarped: " + isWarped );
 		if( isPreDraggedPoint() )
 		{
 			return;
@@ -312,7 +307,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		if( isWarped )
 		{
-			System.out.println("set predragged warped pt");
 			preDraggedPointWarped = toPrimitive( getWarpedPoints().get( i ));
 		}
 	}
@@ -443,8 +437,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void deleteRowHelper( int i )
 	{
-		if( i >= names.size() ){
-			//System.out.println(" i to big ");
+		if( i >= names.size() )
+		{
 			return;
 		}
 		
@@ -568,8 +562,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void resetWarpedPoints()
 	{
-		// Collections.fill( changedPositionSinceWarpEstimation, false );
-
 		int N = changedPositionSinceWarpEstimation.size();
 		for( int i = 0; i < N; i++ )
 		{
@@ -663,8 +655,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			else
 				index = nextRowQ;
 		}
-		
-//		System.out.println("index: " + index );
 
 		boolean isAdd = forceAdd || ( index == getRowCount() );
 		
@@ -720,7 +710,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			}
 			else if( LandmarkTableModel.this.isPreDraggedPoint() )
 			{
-				//System.out.println("Make undo with dragged point");
 				oldpt = copy( preDraggedPoint );
 				
 				double[] oldWarped = null;
@@ -797,6 +786,14 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return s;
 	}
 	
+	/**
+	 * Sets a flag that indicates the point at the input index has changed
+	 * since the last time a transform was estimated.
+	 * 
+	 * Not currently in use, but may be in the future 
+	 * @param index
+	 */
+	@SuppressWarnings("unused")
 	private void markAsChanged( int index )
 	{
 		for( int i = 0; i < this.numRows; i++ )
@@ -1131,11 +1128,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public LandmarkUndoManager getUndoManager()
 	{
 		return undoRedoManager;
-	}
-	
-	public void postUndoAction()
-	{
-//		undoRedoManager.undoableEditHappened( e );
 	}
 
 	public static double[] copy( double[] in )

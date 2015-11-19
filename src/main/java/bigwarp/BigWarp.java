@@ -823,7 +823,6 @@ public class BigWarp {
 		}
 		else
 		{
-			//System.out.println("HERE");
 			landmarkModel.getTransform().apply( ptarray, ptBack);
 			landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
 		}
@@ -883,7 +882,6 @@ public class BigWarp {
 	 */
 	public boolean addPoint( double[] ptarray, boolean isMoving )
 	{
-		System.out.println("BigWarp addPoint");
 
 		boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 		boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true );
@@ -1196,7 +1194,6 @@ public class BigWarp {
 	
 	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( RealRandomAccessible<T> rai, Interval itvl )
 	{
-		System.out.println("copy to stack");
 		long[] dimensions = new long[ itvl.numDimensions() ];
 		itvl.dimensions( dimensions );
 		
@@ -1215,8 +1212,8 @@ public class BigWarp {
 			ra.setPosition( c );
 			c.get().set( ra.get() );
 			
-			if( k % 10000 == 0 ){
-				//System.out.println(" progress: " +  (k/N));
+			if( k % 10000 == 0 )
+			{
 				IJ.showProgress( k / N );
 			}
 			k++;
@@ -1725,7 +1722,6 @@ public class BigWarp {
 	
 	protected int detectNumDims()
 	{
-		// System.out.println( "ndim 0: " + sources.get( 0 ).getSpimSource().getSource( 0, 0 ).dimension( 2 ));
 		
 		boolean is1Src2d = sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
 		boolean is2Src2d = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
@@ -2000,9 +1996,6 @@ public class BigWarp {
 					boolean isWarped = isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed();
 					BigWarp.this.landmarkModel.setPreDraggedPoint( selectedPointIndex, isMoving, isWarped );
 				}
-				
-				//System.out.println( "clicked: " + XfmUtils.printArray(ptarrayLoc) );
-				//System.out.println( "selected Point: " + selectedPointIndex );
 			}
 		}
 
@@ -2049,8 +2042,7 @@ public class BigWarp {
 
 					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, isWarped, true );
 				}
-				
-				System.out.println( "wasNewRowAdded: " + wasNewRowAdded );
+
 				if( updateWarpOnPtChange && !wasNewRowAdded )
 				{
 					// here, if a new row is added, then only one of the point pair was added.

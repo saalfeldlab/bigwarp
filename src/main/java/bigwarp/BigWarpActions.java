@@ -219,6 +219,8 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+			// TODO I would love for this check to work instead of using a try-catch
+			// bug it doesn't seem to be consistent
 
 //			if( isRedo && manager.canRedo() ){
 			try { 
@@ -305,6 +307,8 @@ public class BigWarpActions
 		public void actionPerformed( ActionEvent e )
 		{
 			System.out.println( "Debug" );
+
+			System.out.println( "viewerP is Transformed: " + bw.isMovingDisplayTransformed() );
 
 			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
 			// ltm.printState();
