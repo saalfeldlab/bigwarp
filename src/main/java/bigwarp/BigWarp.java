@@ -7,8 +7,10 @@ import ij.ImagePlus;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.FileDialog;
+import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
@@ -17,6 +19,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.RejectedExecutionException;
 
 import javax.imageio.ImageIO;
 import javax.swing.ActionMap;
@@ -176,6 +182,7 @@ public class BigWarp {
 	protected MouseLandmarkListener landmarkClickListenerQ;
 	
 	protected MouseLandmarkTableListener landmarkTableListener;
+	protected final Set<KeyEventPostProcessor> keyEventPostProcessorSet = new HashSet<KeyEventPostProcessor>();
 
 	protected int ndims;
 	
@@ -438,10 +445,34 @@ public class BigWarp {
 		lastDirectory = null;
 		
 		fileFrame.setVisible( false );
+		
+		
+		// add landmark mode listener
+		addKeyEventPostProcessor( new LandmarkModeListener() );
+		
+		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform() );
+		if( sources.get(0).asVolatile() != null )
+		{
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform() );
+		}
 	}
-	
+
+	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
+	{
+		keyEventPostProcessorSet.add( ke );
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor( ke );
+	}
+	public void removeKeyEventPostProcessor( final KeyEventPostProcessor ke )
+	{
+		keyEventPostProcessorSet.remove( ke );
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventPostProcessor( ke );
+	}
+
 	public void closeAll()
 	{
+		for( KeyEventPostProcessor ke : keyEventPostProcessorSet )
+			removeKeyEventPostProcessor( ke );
+		
 		viewerFrameP.setVisible( false );
 		viewerFrameQ.setVisible( false );
 		landmarkFrame.setVisible( false );
@@ -1902,6 +1933,48 @@ public class BigWarp {
 			this.seqP = seqP;
 			this.seqQ = seqQ;
 			this.converterSetups = converterSetups;
+		}
+	}
+	
+	protected class LandmarkModeListener implements KeyEventPostProcessor
+	{
+		@Override
+		public boolean postProcessKeyEvent(KeyEvent ke )
+		{
+			if( ke.isConsumed())
+				return false;
+
+			if( ke.getKeyCode() == KeyEvent.VK_SPACE )
+			{
+				if( ke.getID() == KeyEvent.KEY_PRESSED )
+				{
+					if( !BigWarp.this.inLandmarkMode  )
+					{
+						BigWarp.this.getViewerFrameP().getViewerPanel().showMessage( "Landmark mode on ( Moving image )" );
+						BigWarp.this.getViewerFrameQ().getViewerPanel().showMessage( "Landmark mode on ( Fixed image )" );
+
+						BigWarp.this.inLandmarkMode = true;
+
+						disableTransformHandlers();
+
+					}
+					return false;
+				}
+				else if( ke.getID() == KeyEvent.KEY_RELEASED  )
+				{
+					if( BigWarp.this.inLandmarkMode  )
+					{
+						BigWarp.this.getViewerFrameP().getViewerPanel().showMessage( "Landmark mode off ( Moving image )" );
+						BigWarp.this.getViewerFrameQ().getViewerPanel().showMessage( "Landmark mode off ( Fixed image )" );
+
+						BigWarp.this.inLandmarkMode = false;
+
+						enableTransformHandlers();
+					}
+					return false;
+				}
+			}
+			return false;
 		}
 	}
 	
