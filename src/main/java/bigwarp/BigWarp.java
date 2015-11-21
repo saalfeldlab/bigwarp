@@ -470,7 +470,8 @@ public class BigWarp {
 
 	public void closeAll()
 	{
-		for( KeyEventPostProcessor ke : keyEventPostProcessorSet )
+		final ArrayList< KeyEventPostProcessor > ks = new ArrayList< KeyEventPostProcessor >( keyEventPostProcessorSet );
+		for ( final KeyEventPostProcessor ke : ks )
 			removeKeyEventPostProcessor( ke );
 		
 		viewerFrameP.setVisible( false );
