@@ -14,6 +14,15 @@
 
 	<name>bigwarp_fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
+	<url>http://imagej.net/BigWarp</url>
+	<inceptionYear>2015</inceptionYear>
+	<licenses>
+		<license>
+			<name>GNU General Public License v2+</name>
+			<url>http://www.gnu.org/licenses/gpl.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
 
 	<developers>
 		<developer>
