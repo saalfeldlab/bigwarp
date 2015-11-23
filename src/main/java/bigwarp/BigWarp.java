@@ -40,8 +40,6 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 
-import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
-
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -72,6 +70,7 @@ import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
+
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -83,6 +82,8 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
+import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
+
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -183,6 +184,7 @@ public class BigWarp {
 	
 	protected MouseLandmarkTableListener landmarkTableListener;
 	protected final Set<KeyEventPostProcessor> keyEventPostProcessorSet = new HashSet<KeyEventPostProcessor>();
+	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
 
 	protected int ndims;
 	
@@ -217,6 +219,8 @@ public class BigWarp {
 	
 	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
+		repeatedKeyEventsFixer = new RepeatingReleasedEventsFixer();
+		repeatedKeyEventsFixer.install();
 		
 		sources = data.sources;
 //		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
@@ -473,6 +477,7 @@ public class BigWarp {
 		for( KeyEventPostProcessor ke : keyEventPostProcessorSet )
 			removeKeyEventPostProcessor( ke );
 		
+		repeatedKeyEventsFixer.remove();
 		viewerFrameP.setVisible( false );
 		viewerFrameQ.setVisible( false );
 		landmarkFrame.setVisible( false );
