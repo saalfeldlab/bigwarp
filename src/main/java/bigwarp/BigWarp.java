@@ -40,6 +40,18 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import mpicbg.models.AbstractModel;
+import mpicbg.models.AffineModel2D;
+import mpicbg.models.AffineModel3D;
+import mpicbg.models.CoordinateTransform;
+import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.NotEnoughDataPointsException;
+import mpicbg.models.RigidModel2D;
+import mpicbg.models.RigidModel3D;
+import mpicbg.models.SimilarityModel2D;
+import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -71,17 +83,6 @@ import net.imglib2.ui.TransformListener;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-import mpicbg.models.AbstractModel;
-import mpicbg.models.AffineModel2D;
-import mpicbg.models.AffineModel3D;
-import mpicbg.models.CoordinateTransform;
-import mpicbg.models.IllDefinedDataPointsException;
-import mpicbg.models.NotEnoughDataPointsException;
-import mpicbg.models.RigidModel2D;
-import mpicbg.models.RigidModel3D;
-import mpicbg.models.SimilarityModel2D;
-import mpicbg.spim.data.SpimDataException;
-import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ViewerImgLoader;
@@ -453,12 +454,6 @@ public class BigWarp {
 		
 		// add landmark mode listener
 		addKeyEventPostProcessor( new LandmarkModeListener() );
-		
-		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform() );
-		if( sources.get(0).asVolatile() != null )
-		{
-			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform() );
-		}
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
@@ -515,6 +510,16 @@ public class BigWarp {
 			//toggleAlwaysWarpMenuP.setText( "Warp on every point change" );
 			//toggleAlwaysWarpMenuQ.setText( "Toggle always warp on" );
 		}
+	}
+
+	public boolean isInLandmarkMode()
+	{
+		return inLandmarkMode;
+	}
+
+	public void toggleInLandmarkMode()
+	{
+		setInLandmarkMode( !inLandmarkMode );
 	}
 
 	public boolean isUpdateWarpOnChange()
@@ -808,10 +813,6 @@ public class BigWarp {
 	{
 		return landmarkPanel;
 	}
-	
-	public boolean isInLandmarkMode(){
-		return inLandmarkMode;
-	}
 
 	public void setInLandmarkMode( boolean inLmMode )
 	{
@@ -1003,11 +1004,6 @@ public class BigWarp {
 	public static double computeScaleAssumeRigid( AffineTransform3D xfm )
 	{
 		return xfm.get( 0, 0 ) + xfm.get( 0, 1 ) + xfm.get( 0, 2 );
-	}
-	
-	public void toggleInLandmarkMode()
-	{
-		setInLandmarkMode( !inLandmarkMode );
 	}
 	
 	protected void disableTransformHandlers()
@@ -1671,15 +1667,37 @@ public class BigWarp {
 			// estimate the max warp 
 			WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
 			double maxval = wmSrc.getMax( landmarkModel );
-			
+
 			// set the slider
 			((RealARGBColorConverter< FloatType >)(sources.get( warpMagSourceIndex ).getConverter())).setMax(  maxval );
-			
+
 			vg.setFusedEnabled( true );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
 		}
 		
 		viewerFrame.getViewerPanel().requestRepaint();
+	}
+
+	private void setTransformationMovingSourceOnly( ThinPlateR2LogRSplineKernelTransform transform )
+	{
+		// the updateTransform method creates a copy of the transform
+		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( transform );
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( transform );
+	}
+
+	private void setTransformationAll( ThinPlateR2LogRSplineKernelTransform transform  )
+	{
+		//TODO
+		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( transform );
+		if( sources.get(0).asVolatile() != null )
+			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( transform );
+
+		WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
+		GridSource<?> gSrc = ((GridSource<?>) sources.get( gridSourceIndex ).getSpimSource());
+
+		wmSrc.setWarp( transform.deepCopy() );
+		gSrc.setWarp( transform.deepCopy() );
 	}
 	
 	public void restimateTransformation()
@@ -1703,7 +1721,9 @@ public class BigWarp {
 		// This distinction is unnecessary right now, because 
 		// transferUpdatesToModel just calls initTransformation.. but this may change
 		if( landmarkModel.getTransform() == null )
+		{
 			landmarkModel.initTransformation();
+		}
 		else
 			landmarkModel.transferUpdatesToModel();
 
@@ -1711,11 +1731,6 @@ public class BigWarp {
 		landmarkModel.getTransform().solve();
 		landmarkModel.resetWarpedPoints();
 		landmarkModel.resetUpdated();
-		
-		( (WarpedSource<?>)(sources.get( 0 ).getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
-		
-		if( sources.get(0).asVolatile() != null )
-			( (WarpedSource<?>)(sources.get( 0 ).asVolatile().getSpimSource())).updateTransform( landmarkModel.getTransform().deepCopy() );
 		
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -1726,19 +1741,11 @@ public class BigWarp {
 			setUpdateWarpOnChange( true );
 			firstWarpEstimation = false;
 		}
-			
-		
-		WarpMagnitudeSource<?> wmSrc = ((WarpMagnitudeSource<?>) sources.get( warpMagSourceIndex ).getSpimSource());
-		GridSource<?> gSrc = ((GridSource<?>) sources.get( gridSourceIndex ).getSpimSource());
-		
-		wmSrc.setWarp( landmarkModel.getTransform().deepCopy() );
-		gSrc.setWarp( landmarkModel.getTransform().deepCopy() );
+
+		// update sources with the new transformation
+		setTransformationAll( landmarkModel.getTransform() );
 		fitBaselineWarpMagModel();
-		
-//		Interval warpedInterval = wmSrc.estimateBoundingInterval( 0, 0 );
-//		System.out.println( "warped Interval:  [ " + warpedInterval.min( 0 ) + ", " + warpedInterval.max( 0 ) +
-//				" ]  x  [ " + warpedInterval.min( 1 ) + ", " + warpedInterval.max( 1 ) +" ] ");
-		
+
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
@@ -1998,11 +2005,21 @@ public class BigWarp {
 		private BigWarpViewerPanel thisViewer;
 		private boolean isMoving;
 		
+		private SolveThread solverThread;
+
 		protected MouseLandmarkListener( BigWarpViewerPanel thisViewer )
 		{
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 			isMoving = ( thisViewer == BigWarp.this.viewerP );
+
+			if( !isMoving )
+			{
+				solverThread = new SolveThread(
+								BigWarp.this.getLandmarkPanel().getTableModel().getTransform(),
+								BigWarp.this );
+				solverThread.start();
+			}
 		}
 		
 		protected void setViewer( BigWarpViewerPanel thisViewer )
@@ -2062,7 +2079,7 @@ public class BigWarp {
 	    		return;
 	    	}
 	    	
-			if( BigWarp.this.inLandmarkMode )
+			if( BigWarp.this.isInLandmarkMode() )
 			{
 				// TODO landmark pressed
 				
@@ -2090,7 +2107,7 @@ public class BigWarp {
 	    	
 	    	if( e.isControlDown() )
 	    	{
-	    		if( BigWarp.this.inLandmarkMode && selectedPointIndex < 0 )
+	    		if( BigWarp.this.isInLandmarkMode() && selectedPointIndex < 0 )
 	    		{
 	    			thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 	    			addFixedPoint( BigWarp.this.currentLandmark, isMoving );
@@ -2101,7 +2118,7 @@ public class BigWarp {
 	    	boolean wasNewRowAdded = false;
 	    	
 			// deselect any point that may be selected
-			if ( BigWarp.this.inLandmarkMode )
+	    	if ( BigWarp.this.isInLandmarkMode() )
 			{
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
@@ -2141,13 +2158,18 @@ public class BigWarp {
 	    	{
 	    		return;
 	    	}
-	    	
-			if( BigWarp.this.inLandmarkMode && selectedPointIndex >= 0 )
+
+			if( BigWarp.this.isInLandmarkMode() && selectedPointIndex >= 0 )
 			{
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
 				
 				updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
+
+				if( !isMoving )
+				{
+					solverThread.requestResolve( selectedPointIndex, ptarrayLoc ); 
+				}
 			}
 		}
 
@@ -2194,7 +2216,7 @@ public class BigWarp {
 
 	    public void mouseClicked( MouseEvent e)
 	    {
-	    	if( BigWarp.this.inLandmarkMode )
+	    	if ( BigWarp.this.isInLandmarkMode() )
 	    	{
 	    		JTable target = (JTable)e.getSource();
 	    		
@@ -2320,6 +2342,85 @@ public class BigWarp {
 		
 		public String toString(){
 			return "Dummy Transform Handler";
+		}
+	}
+
+	protected static class SolveThread extends Thread
+	{
+		private boolean pleaseResolve;
+
+		private ThinPlateR2LogRSplineKernelTransform xfm;
+
+		private BigWarp bw;
+
+		private int index;
+		private double[] pt;
+
+		public SolveThread( ThinPlateR2LogRSplineKernelTransform xfm, BigWarp bw )
+		{
+			this.xfm = xfm;
+			this.bw = bw;
+			pleaseResolve = false;
+		}
+
+		@Override
+		public void run()
+		{
+			while ( !isInterrupted() )
+			{
+				final boolean b;
+				synchronized ( this )
+				{
+					b = pleaseResolve;
+					pleaseResolve = false;
+				}
+				if ( b )
+					try
+					{
+						// only necessary to do work *during* drag if we're working
+						// in warped space
+						if( bw.isMovingDisplayTransformed() )
+						{
+							// make a deep copy of the transformation and solve it
+							xfm.updateSourceLandmark( index, pt );
+							xfm.solve();
+
+							// update the transform and warped point
+							// and repaint
+							bw.setTransformationMovingSourceOnly( xfm );
+							bw.getLandmarkPanel().getTableModel().updateWarpedPoint( index, pt );
+							bw.getViewerFrameP().getViewerPanel().requestRepaint();
+						}
+					}
+					catch ( final RejectedExecutionException e )
+					{
+						// this happens when the rendering threadpool
+						// is killed before the painter thread.
+					}
+				synchronized ( this )
+				{
+					try
+					{
+						if ( !pleaseResolve )
+							wait();
+					}
+					catch ( final InterruptedException e )
+					{
+						break;
+					}
+				}
+			}
+		}
+
+		public void requestResolve( int index, double[] newpt)
+		{
+			synchronized ( this )
+			{
+				pleaseResolve = true;
+				this.index = index;
+				this.pt = Arrays.copyOf( newpt, newpt.length );
+				notify();
+			}
 		}
 	}
 }

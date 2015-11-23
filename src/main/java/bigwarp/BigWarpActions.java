@@ -23,7 +23,7 @@ import bigwarp.source.GridSource;
 
 public class BigWarpActions
 {
-	public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
+	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
@@ -146,7 +146,7 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put( SHOW_WARPTYPE_DIALOG, "G" );
-		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
+		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
@@ -169,7 +169,6 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
 		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
@@ -338,25 +337,6 @@ public class BigWarpActions
 			ltm.printWarpedPoints();
 
 			System.out.println( " " );
-		}
-	}
-
-	public static class ToggleLandmarkModeAction extends AbstractNamedAction
-	{
-		private static final long serialVersionUID = 7370813069619338918L;
-		
-		private BigWarp bw;
-		
-		public ToggleLandmarkModeAction( final String name, final BigWarp bw )
-		{
-			super( name );
-			this.bw = bw;
-		}
-
-		@Override
-		public void actionPerformed( ActionEvent e )
-		{
-			bw.toggleInLandmarkMode( );	
 		}
 	}
 	
