@@ -1,5 +1,6 @@
 package bigwarp;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.FileDialog;
@@ -537,6 +538,13 @@ public class BigWarp {
 
 		if( BigWarp.ij != null )
 			setupImageJExportOption();
+	}
+
+	public void setSpotColor( Color c )
+	{
+		viewerSettings.setSpotColor( c );
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
 	}
 
 	protected void setUpViewerMenu( final BigWarpViewerFrame vframe )
