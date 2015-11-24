@@ -200,5 +200,60 @@ public class RepeatingReleasedEventsFixer implements AWTEventListener {
 		return true;
 	}
 
+	public static final long[] awtEventMaskList = new long[]{
+		AWTEvent.ACTION_EVENT_MASK,
+		AWTEvent.ADJUSTMENT_EVENT_MASK,
+		AWTEvent.COMPONENT_EVENT_MASK,
+		AWTEvent.CONTAINER_EVENT_MASK,
+		AWTEvent.FOCUS_EVENT_MASK,
+		AWTEvent.HIERARCHY_BOUNDS_EVENT_MASK,
+		AWTEvent.HIERARCHY_EVENT_MASK,
+		AWTEvent.INPUT_METHOD_EVENT_MASK,
+		AWTEvent.INVOCATION_EVENT_MASK,
+		AWTEvent.ITEM_EVENT_MASK,
+		AWTEvent.KEY_EVENT_MASK,
+		AWTEvent.MOUSE_EVENT_MASK,
+		AWTEvent.MOUSE_MOTION_EVENT_MASK,
+		AWTEvent.MOUSE_WHEEL_EVENT_MASK,
+		AWTEvent.PAINT_EVENT_MASK,
+		AWTEvent.TEXT_EVENT_MASK,
+		AWTEvent.WINDOW_EVENT_MASK,
+		AWTEvent.WINDOW_FOCUS_EVENT_MASK,
+		AWTEvent.WINDOW_STATE_EVENT_MASK
+	};
 
+	public static RepeatingReleasedEventsFixer installAnyTime()
+	{
+		int numActionMasks = awtEventMaskList.length;
+
+		// remove all AWTEventListeners, and remember them along with
+		// their corresponding event mask
+		HashMap<Long,AWTEventListener[]> listenersByMask = new HashMap<Long,AWTEventListener[]>();
+		for( int m = 0; m < numActionMasks; m++ )
+		{
+			long eventMask = awtEventMaskList[ m ];
+			AWTEventListener[] listenerList = Toolkit.getDefaultToolkit().getAWTEventListeners( eventMask );
+			listenersByMask.put( eventMask, listenerList );
+
+			// remove AWTEventListeners
+			for( AWTEventListener l : listenerList ){
+				Toolkit.getDefaultToolkit().removeAWTEventListener( l );
+			}
+		}
+
+		// add the RepeatingReleasedEventsFixer
+		RepeatingReleasedEventsFixer repeatedKeyEventsFixer = new RepeatingReleasedEventsFixer();
+		repeatedKeyEventsFixer.install();
+
+		// add the AWTEventListeners back
+		for( int m = 0; m < numActionMasks; m++ )
+		{
+			long eventMask = awtEventMaskList[ m ];
+			AWTEventListener[] listenerList = listenersByMask.get( eventMask );
+
+			for( AWTEventListener l : listenerList )
+				Toolkit.getDefaultToolkit().addAWTEventListener( l, eventMask );
+		}
+		return repeatedKeyEventsFixer;
+	}
 }

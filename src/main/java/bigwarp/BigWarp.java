@@ -129,6 +129,8 @@ import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import bigwarp.source.WarpMagnitudeSource;
 
+import java.awt.Toolkit;
+
 public class BigWarp {
 	
 	protected static final int DEFAULT_WIDTH  = 600;
@@ -220,9 +222,13 @@ public class BigWarp {
 	
 	public BigWarp( BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		repeatedKeyEventsFixer = new RepeatingReleasedEventsFixer();
-		repeatedKeyEventsFixer.install();
-		
+		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
+
+		/* The code below if awt listeners are added before this is called */
+//		System.out.println("install fixer vanilla");
+//		repeatedKeyEventsFixer = new RepeatingReleasedEventsFixer();
+//		repeatedKeyEventsFixer.install();
+
 		sources = data.sources;
 //		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
 		ArrayList<ConverterSetup> converterSetups = data.converterSetups;
