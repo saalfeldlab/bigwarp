@@ -22,7 +22,9 @@ import net.imglib2.type.numeric.ARGBType;
 /**
  * ImageJ plugin to show the current image in BigDataViewer.
  *
- * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
+ * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt:
+ * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
+ * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
 public class BigWarpImagePlusPlugIn implements PlugIn
 {

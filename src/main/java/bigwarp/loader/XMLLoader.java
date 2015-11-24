@@ -23,8 +23,8 @@ import mpicbg.spim.data.SpimDataException;
 
 /**
  *
- *
- * @author Stephan Saalfeld <saalfelds@janelia.hhmi.org>
+ * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
+ * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
 public class XMLLoader implements Loader
 {

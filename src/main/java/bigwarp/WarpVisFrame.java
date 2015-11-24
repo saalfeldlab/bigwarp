@@ -221,9 +221,7 @@ public class WarpVisFrame extends JDialog
 						if (c != null)
 						{
 							landmarkColorButton.setIcon( new ColorIcon( c ) );
-							settings.setSpotColor( c );
-							bw.viewerP.requestRepaint();
-							bw.viewerQ.requestRepaint();
+							bw.setSpotColor( c );
 						}
 					}
 				}, null );
