@@ -2030,13 +2030,8 @@ public class BigWarp {
 			thisViewer.getDisplay().addHandler( this );
 			isMoving = ( thisViewer == BigWarp.this.viewerP );
 
-			if( !isMoving )
-			{
-				solverThread = new SolveThread(
-								BigWarp.this.getLandmarkPanel().getTableModel().getTransform(),
-								BigWarp.this );
-				solverThread.start();
-			}
+			solverThread = new SolveThread( BigWarp.this );
+			solverThread.start();
 		}
 
 		protected void setViewer( final BigWarpViewerPanel thisViewer )
@@ -2183,10 +2178,14 @@ public class BigWarp {
 
 				updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
 
-				if( !isMoving )
-				{
-					solverThread.requestResolve( selectedPointIndex, ptarrayLoc ); 
-				}
+                if( BigWarp.this.isMovingDisplayTransformed() )
+                {
+                    solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
+                }
+                else
+                {
+                    updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
+                }
 			}
 		}
 
@@ -2364,20 +2363,18 @@ public class BigWarp {
 		}
 	}
 
-	protected static class SolveThread extends Thread
+	public static class SolveThread extends Thread
 	{
 		private boolean pleaseResolve;
 
-		private ThinPlateR2LogRSplineKernelTransform xfm;
-
 		private BigWarp bw;
 
+		private boolean isMoving;
 		private int index;
 		private double[] pt;
 
-		public SolveThread( ThinPlateR2LogRSplineKernelTransform xfm, BigWarp bw )
+		public SolveThread( BigWarp bw )
 		{
-			this.xfm = xfm;
 			this.bw = bw;
 			pleaseResolve = false;
 		}
@@ -2396,21 +2393,33 @@ public class BigWarp {
 				if ( b )
 					try
 					{
-						// only necessary to do work *during* drag if we're working
-						// in warped space
-						if( bw.isMovingDisplayTransformed() )
-						{
-							// make a deep copy of the transformation and solve it
-							xfm.updateSourceLandmark( index, pt );
-							xfm.solve();
+						ThinPlateR2LogRSplineKernelTransform xfm = bw.getLandmarkPanel().getTableModel().getTransform();
 
-							// update the transform and warped point
-							// and repaint
-							bw.setTransformationMovingSourceOnly( xfm );
-							bw.getLandmarkPanel().getTableModel().updateWarpedPoint( index, pt );
-							bw.getViewerFrameP().getViewerPanel().requestRepaint();
+						// make a deep copy of the transformation and solve it
+						if ( isMoving )
+							xfm.updateTargetLandmark( index, xfm.apply( pt ) );
+						else
+							xfm.updateSourceLandmark( index, pt );
+
+						xfm.solve();
+
+						// update the transform and warped point
+						bw.setTransformationMovingSourceOnly( xfm );
+
+						// update fixed point - but don't allow undo/redo
+						// and update warped point
+						// both for rendering purposes
+						if ( !isMoving )
+						{
+							bw.getLandmarkPanel().getTableModel()
+									.updateWarpedPoint( index, pt );
+							bw.getLandmarkPanel().getTableModel()
+									.setPoint( index, isMoving, pt, false );
 						}
+
+						bw.getViewerFrameP().getViewerPanel().requestRepaint();
 					}
+
 					catch ( final RejectedExecutionException e )
 					{
 						// this happens when the rendering threadpool
@@ -2431,11 +2440,12 @@ public class BigWarp {
 			}
 		}
 
-		public void requestResolve( int index, double[] newpt)
+		public void requestResolve( boolean isMoving, int index, double[] newpt)
 		{
 			synchronized ( this )
 			{
 				pleaseResolve = true;
+				this.isMoving = isMoving;
 				this.index = index;
 				this.pt = Arrays.copyOf( newpt, newpt.length );
 				notify();

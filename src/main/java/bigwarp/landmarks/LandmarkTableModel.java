@@ -136,6 +136,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
 	}
+
+	public int getNumdims()
+	{
+		return ndims;
+	}
 	
 	public double[] getPendingPoint()
 	{
