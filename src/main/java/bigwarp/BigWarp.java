@@ -34,20 +34,14 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 
-import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
-
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
-import bdv.ij.BigWarpImagePlusPlugIn;
 import bdv.img.WarpedSource;
 import bdv.img.cache.Cache;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.WrapBasicImgLoader;
-import bdv.spimdata.XmlIoSpimDataMinimal;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.brightness.BrightnessDialog;
@@ -1430,24 +1424,6 @@ public class BigWarp {
 		}
 	}
 
-	public static SpimDataMinimal loadSpimData( final String xmlPath ){
-		SpimDataMinimal spimData = null;
-		try {
-			spimData = new XmlIoSpimDataMinimal().load( xmlPath );
-
-			if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
-			{
-				System.err.println( "WARNING:\nOpening <SpimData> dataset that is not suited for interactive browsing.\nConsider resaving as HDF5 for better performance." );
-			}
-
-		} catch (final SpimDataException e)
-		{
-			e.printStackTrace();
-		}
-
-		return spimData;
-	}
-
 	public void setupKeyListener( )
 	{
 		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor(
@@ -1788,28 +1764,6 @@ public class BigWarp {
 			System.exit( 1 );
 		}
 
-		final ArrayList< Double > resList = new ArrayList< Double >();
-
-//		if( args.length >= 4 )
-//		{
-//			while( true )
-//			{
-//
-//				Double d;
-//				try
-//				{
-//					d = Double.parseDouble( args[ i ]);
-//					System.out.println("d: " + d );
-//				}
-//				catch(Exception e )
-//				{
-//					break;
-//				}
-//				resList.add( d );
-//				i++;
-//			}
-//		}
-
 		if( args.length > i )
 			fnLandmarks = args[ i++ ];
 
@@ -1828,26 +1782,27 @@ public class BigWarp {
 			}
 		}
 
-		double[] resolutions = null;
-		if( resList.size() > 2 )
-		{
-			resolutions = new double[ resList.size() ];
-			for( int j = 0; j < resolutions.length; j++ )
-				resolutions[ j ] = resList.get( j );
-		}
-
-
 		try
 		{
 			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
-			new RepeatingReleasedEventsFixer().install();
 
 			BigWarp bw;
 			if( fnP.endsWith("xml") && fnQ.endsWith("xml"))
-				bw = new BigWarp( loadSourcesFromXmls( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
 			else if( fnP.endsWith("png") && fnQ.endsWith("png") )
-				bw = new BigWarp( loadSourcesFromImages( fnP, fnQ, resolutions ), new File( fnP ).getName(), new ProgressWriterConsole() );
-			else{
+			{
+				final ImagePlus impP = IJ.openImage( fnP );
+				final ImagePlus impQ = IJ.openImage( fnQ );
+				if ( !( impP == null || impQ == null ) )
+					bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( impP, impQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				else
+				{
+					System.err.println("Error reading images");
+					return;
+				}
+			}
+			else
+			{
 				System.err.println("Error reading files - should both be xmls or both image files");
 				return;
 			}
@@ -1890,33 +1845,6 @@ public class BigWarp {
 		 */
 //		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 //		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
-	}
-
-	public static BigWarpData loadSourcesFromImages( final String filenameP, final String filenameQ, final double[] resolutions )
-	{
-		final ImagePlus moving_imp = IJ.openImage( filenameP );
-		final ImagePlus target_imp = IJ.openImage( filenameQ );
-
-		return BigWarpImagePlusPlugIn.buildData( moving_imp, target_imp, resolutions );
-	}
-
-	public static BigWarpData loadSourcesFromXmls( final String xmlFilenameP, final String xmlFilenameQ )
-	{
-		/* Load the first source */
-		final SpimDataMinimal spimDataP = loadSpimData( xmlFilenameP );
-		final SpimDataMinimal spimDataQ = loadSpimData( xmlFilenameQ );
-		final AbstractSequenceDescription< ?, ?, ? > seqP = spimDataP.getSequenceDescription();
-		final AbstractSequenceDescription< ?, ?, ? > seqQ = spimDataQ.getSequenceDescription();
-
-		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-
-		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
-		BigWarpInit.initSetups( spimDataP, converterSetups, sources );
-
-		/* Load the second source */
-		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
-
-		return new BigWarpData( sources, seqP, seqQ, converterSetups );
 	}
 
 	public static class BigWarpData
