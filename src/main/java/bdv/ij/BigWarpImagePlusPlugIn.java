@@ -4,8 +4,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
-
 import bdv.BigDataViewer;
 import bdv.img.imagestack.ImageStackImageLoader;
 import bdv.img.virtualstack.VirtualStackImageLoader;
@@ -27,7 +25,6 @@ import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import ij.process.LUT;
 import mpicbg.spim.data.SpimDataException;
-import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.generic.sequence.BasicImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.registration.ViewRegistration;
@@ -43,6 +40,7 @@ import net.imglib2.type.numeric.ARGBType;
 /**
  * ImageJ plugin to show the current image in BigDataViewer.
  *
+ * @author John Bogovic <bogovicj@janelia.hhmi.org>
  * @author Tobias Pietzsch <tobias.pietzsch@gmail.com>
  */
 public class BigWarpImagePlusPlugIn implements PlugIn
@@ -94,7 +92,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         
         try 
         {
-        	new RepeatingReleasedEventsFixer().install();
 			BigWarp bw = new BigWarp( buildData( moving_imp, target_imp, null ), "Big Warp",  null );
 			ImageJ ij = IJ.getInstance();
 			bw.setImageJInstance( ij );
@@ -104,7 +101,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			e.printStackTrace();
 			return;
 		}
-        
 	}
 	
 	public static BigWarp.BigWarpData buildData( ImagePlus moving_imp, ImagePlus target_imp, double[] resolutions )
@@ -129,15 +125,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			BigWarp.BigWarpData moving_and_target_data = getSource( target_imp, moving_data, null );
 			return moving_and_target_data;
 		}
-		
-		
-//		ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
-//		sources.add( moving_data.sources.get(0) );
-//		sources.add( target_data.sources.get(0) );
-//		
-//		BigWarp.BigWarpData data = new BigWarp.BigWarpData( sources, moving_data.seq, moving_data.converterSetups );
-		
-		
 	}
 	
 	public static BigWarp.BigWarpData getSource( ImagePlus imp, BigWarp.BigWarpData dataIn )

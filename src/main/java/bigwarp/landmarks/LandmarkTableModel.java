@@ -133,6 +133,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		setTableListener();
 		
 		undoRedoManager = new LandmarkUndoManager();
+
+		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
 	}
 	
 	public double[] getPendingPoint()
@@ -969,7 +971,10 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		//TODO: better to pass a factory here so the transformation can be any
 		// CoordinateTransform ( not just a TPS )
-		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
+		if( estimatedXfm == null )
+		{
+			estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
+		}
 		
 		double[][] mvgPts = new double[ ndims ][ this.numRows ];
 		double[][] tgtPts = new double[ ndims ][ this.numRows ];

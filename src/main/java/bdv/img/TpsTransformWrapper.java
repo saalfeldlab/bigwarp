@@ -33,7 +33,7 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	{
 		assert( tps.getNumDims() == 2 || tps.getNumDims() == 3 );
 		
-		this.tps = tps;
+		this.tps = tps.deepCopy();
 	}
 
 	@Override
