@@ -2202,7 +2202,12 @@ public class BigWarp
 				{
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
-
+				else
+				{
+					// make a non-undoable point edit so that the point can be displayed correctly
+					// the undoable action is added on mouseRelease
+					BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
+				}
 			}
 		}
 
