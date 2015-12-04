@@ -223,14 +223,15 @@ public class BigWarpActions
 
 //			if( isRedo && manager.canRedo() ){
 			try { 
-				
-				if( isRedo ) {
-					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessRedo();
+
+				if( isRedo )
+				{
 					bw.getLandmarkPanel().getTableModel().getUndoManager().redo();
 					bw.getViewerFrameP().getViewerPanel().showMessage( "Redo" );
 					bw.getViewerFrameQ().getViewerPanel().showMessage( "Redo" );
-				}else{ 
-					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessUndo();
+				}
+				else
+				{
 					//			} else if( manager.canUndo() ) {
 //					bw.getLandmarkPanel().getTableModel().getUndoManager().
 					bw.getLandmarkPanel().getTableModel().getUndoManager().undo();
@@ -245,13 +246,6 @@ public class BigWarpActions
 				if( this.bw.updateWarpOnPtChange )
 					this.bw.restimateTransformation();
 
-				// if there's something to do after re-estimation, then do it now
-				// (usually this is setting the warped point position, if it exists,
-				// so the point can be rendered correctly in warped mode
-				if( !isRedo )
-				{
-					bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
-				}
 				// repaint
 				this.bw.getLandmarkPanel().repaint();
 			}
@@ -343,9 +337,9 @@ public class BigWarpActions
 	public static class EstimateWarpAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -210012348709096037L;
-		
+
 		private BigWarp bw;
-		
+
 		public EstimateWarpAction( final String name, final BigWarp bw )
 		{
 			super( name );
@@ -355,8 +349,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( bw.isInLandmarkMode())
-				bw.restimateTransformation();
+			bw.restimateTransformation();
 		}
 	}
 	

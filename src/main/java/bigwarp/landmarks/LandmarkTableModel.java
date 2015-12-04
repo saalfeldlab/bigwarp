@@ -24,6 +24,7 @@ import bigwarp.landmarks.actions.DeleteRowEdit;
 import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import jitk.spline.TransformInverseGradientDescent;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -699,46 +700,32 @@ public class LandmarkTableModel extends AbstractTableModel {
 		/************************************************
 		 * Determine if we have to update warped points *
 		 ************************************************/
-		double[] origWarpedPt = null;
 		if( isMoving && warpedPt != null )
-		{
-			if( !isAdd )
-				origWarpedPt = toPrimitive( getWarpedPoints().get( index ));
-
 			updateWarpedPoint( index, warpedPt );
-		}
-		else if( !isMoving && changedPositionSinceWarpEstimation.get( index ))
-		{
-			origWarpedPt = toPrimitive( getWarpedPoints().get( index ));
-		}
 
-		if( isUndoable )
+		if ( isUndoable )
 		{
-			if( isAdd )
+			if ( isAdd )
 			{
-				undoRedoManager.addEdit( new AddPointEdit( this, index, pt, warpedPt, isMoving ) );
+				undoRedoManager.addEdit( new AddPointEdit( this, index, pt, isMoving ) );
 			}
-			else if( LandmarkTableModel.this.isPreDraggedPoint() )
+			else if ( LandmarkTableModel.this.isPreDraggedPoint() )
 			{
 				oldpt = copy( preDraggedPoint );
-				
-				double[] oldWarped = null;
-				if( preDraggedPointWarped != null)
-					oldWarped = copy( preDraggedPointWarped );
 
-				undoRedoManager.addEdit( new ModifyPointEdit( 
+				undoRedoManager.addEdit( new ModifyPointEdit(
 						this, index,
 						oldpt, pt,
-						oldWarped, warpedPt, isMoving ));
-				
+						isMoving ) );
+
 				LandmarkTableModel.this.resetPreDraggedPoint();
 			}
 			else
 			{
-				undoRedoManager.addEdit( new ModifyPointEdit( 
+				undoRedoManager.addEdit( new ModifyPointEdit(
 						this, index,
 						oldpt, pt,
-						origWarpedPt, warpedPt, isMoving ));
+						isMoving ) );
 			}
 		}
 
@@ -749,14 +736,63 @@ public class LandmarkTableModel extends AbstractTableModel {
 			nextRowP = nextRow( isMoving );
 		else
 			nextRowQ = nextRow( isMoving );
-		
-		
+
 		activateRow( index );
-		
+		updateWarpedPoints();
+
 		updateNextRows();
 		firePointUpdated( index, isMoving );
-		
+
 		return isAdd;
+	}
+
+	/**
+	 * Looks through the table for points where there is a point in moving space but not fixed space.
+	 * For any such landmarks that are found, compute the inverse transform and add the result to the fixed points line.
+	 * 
+	 */
+	public void updateWarpedPoints()
+	{
+		for ( int i = 0; i < numRows; i++ )
+		{
+			if ( !isFixedPoint( i ) && isMovingPoint( i ) )
+			{
+				double[] tgt = toPrimitive( movingPts.get( i ) );
+				double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
+
+				double[] resini = estimatedXfm.apply( warpedPt );
+				double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+
+				estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
+				double[] resfin = estimatedXfm.apply( warpedPt );
+				double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+
+				// TODO should check for failure or non-convergence here
+				updateWarpedPoint( i, warpedPt );
+			}
+			else
+			{
+				changedPositionSinceWarpEstimation.set( i, false );
+			}
+		}
+	}
+
+	public boolean isMovingPoint( int index )
+	{
+		return !Double.isInfinite( movingPts.get( index )[ 0 ] );
+	}
+
+	public boolean isFixedPoint( int index )
+	{
+		return !Double.isInfinite( targetPts.get( index )[ 0 ] );
+	}
+
+	public boolean isFixedPoint( int index, boolean isMoving )
+	{
+		if ( isMoving )
+			return isMovingPoint( index );
+		else
+			return isFixedPoint( index );
 	}
 
 	public void activateRow( int index )
@@ -765,12 +801,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		for( int d = 0; d < ndims; d++ )
 		{
-			if( Double.isInfinite( movingPts.get( index )[ d ] ))
+			if( !isMovingPoint( index ) )
 			{
 				activate = false;
 				break;
 			}
-			if( Double.isInfinite( targetPts.get( index )[ d ] ))
+			if( !isFixedPoint( index ) )
 			{
 				activate = false;
 				break;

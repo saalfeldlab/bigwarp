@@ -82,6 +82,8 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import jitk.spline.TransformInverseGradientDescent;
+import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -947,7 +949,6 @@ public class BigWarp
 		final boolean isMovingViewerXfm = viewer.getOverlay().getIsTransformed();
 
 		// TODO avoid duplicate effort and comment this section
-
 		if ( landmarkModel.getTransform() == null || !isMovingViewerXfm )
 		{
 			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false );
@@ -991,7 +992,6 @@ public class BigWarp
 
 		return selectedPointIndex;
 	}
-
 	/**
 	 * Updates the global variable ptBack
 	 *
@@ -1398,8 +1398,6 @@ public class BigWarp
 				return ( int ) ( interval.max( 1 ) - interval.min( 1 ) + 1 );
 			}
 		}
-
-//		final ViewerState renderState = viewerP.getState().copy();
 
 		final int minz = ( int ) interval.min( 2 );
 		final int maxz = ( int ) interval.max( 2 );
@@ -1827,8 +1825,6 @@ public class BigWarp
 
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
-		landmarkModel.resetWarpedPoints();
-		landmarkModel.resetUpdated();
 
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -1838,6 +1834,12 @@ public class BigWarp
 			setUpdateWarpOnChange( true );
 			firstWarpEstimation = false;
 		}
+
+		// reset active warped points
+		landmarkModel.resetWarpedPoints();
+
+		// re-compute warped points for non-active points
+		landmarkModel.updateWarpedPoints();
 
 		// update sources with the new transformation
 		setTransformationAll( landmarkModel.getTransform() );
@@ -2128,12 +2130,10 @@ public class BigWarp
 
 			if ( BigWarp.this.isInLandmarkMode() )
 			{
-				// TODO landmark pressed
-
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-				BigWarp.this.currentLandmark.localize( ptarrayLoc );
 
-				selectedPointIndex = BigWarp.this.updateWarpedPoint( ptarrayLoc, isMoving );
+				BigWarp.this.currentLandmark.localize( ptarrayLoc );
+				selectedPointIndex = BigWarp.this.selectedLandmark(  ptarrayLoc, isMoving );
 
 				if ( selectedPointIndex >= 0 )
 				{
@@ -2168,17 +2168,10 @@ public class BigWarp
 				currentLandmark.localize( ptarrayLoc );
 
 				if ( selectedPointIndex == -1 )
-				{
 					wasNewRowAdded = addPoint( ptarrayLoc, isMoving );
-
-//					if ( !message.isEmpty() )
-//						thisViewer.showMessage( message );
-				}
 				else
 				{
-
 					final boolean isWarped = isMoving && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
-
 					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, isWarped, true );
 				}
 
@@ -2205,16 +2198,11 @@ public class BigWarp
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
 
-				updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
-
 				if ( BigWarp.this.isMovingDisplayTransformed() )
 				{
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
-				else
-				{
-					updatePointLocation( ptarrayLoc, isMoving, selectedPointIndex );
-				}
+
 			}
 		}
 
@@ -2440,10 +2428,7 @@ public class BigWarp
 						// and update warped point
 						// both for rendering purposes
 						if ( !isMoving )
-						{
-							bw.getLandmarkPanel().getTableModel().updateWarpedPoint( index, pt );
 							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false );
-						}
 
 						bw.getViewerFrameP().getViewerPanel().requestRepaint();
 					}

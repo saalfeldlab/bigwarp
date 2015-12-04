@@ -13,59 +13,29 @@ public class ModifyPointEdit extends AbstractPointEdit
 	private final double[] oldpt;
 	private final double[] newpt;
 	private final boolean isMoving;
-	
-	//private final boolean  isWarped;
-	private final double[] newWarpedPos;
-	private final double[] oldWarpedPos;
 
-	public ModifyPointEdit( final LandmarkTableModel ltm, final int index, 
-			final double[] oldpt, double[] newpt, 
-			final double[] oldwarped, final double[] warped, 
+	public ModifyPointEdit( final LandmarkTableModel ltm, final int index,
+			final double[] oldpt, double[] newpt,
 			final boolean isMoving )
 	{
-		super(ltm);
+		super( ltm );
 		this.index = index;
 		this.isMoving = isMoving;
-		
+
 		this.oldpt = Arrays.copyOf( oldpt, oldpt.length );
 		this.newpt = Arrays.copyOf( newpt, newpt.length );
-
-		//isWarped = true;
-		oldWarpedPos = oldwarped;
-		newWarpedPos = warped;
 	}
 	
 	@Override
 	public void undo()
 	{
-		ltm.pointEdit( index, oldpt, false, isMoving, oldWarpedPos, false );
+		ltm.pointEdit( index, oldpt, false, isMoving, null, false );
 	}
 
 	@Override
 	public void redo()
 	{
-		ltm.pointEdit( index, newpt, false, isMoving, newWarpedPos, false );
-	}
-	
-	@Override
-	public void postProcessUndo()
-	{
-		// if this edits the fixed image, AND it was changed to be "empty"
-		if( (!isMoving && Arrays.equals( ltm.getPendingPoint(), oldpt ) && !ltm.isActive( index )) ||
-			 isMoving && oldWarpedPos != null )
-		{
-			ltm.updateWarpedPoint( index, oldWarpedPos );
-		}
-		else if( isMoving && newWarpedPos != null  )
-		{
-			ltm.updateWarpedPoint( index, newWarpedPos );
-		}
-	}
-	
-	@Override
-	public void postProcessRedo()
-	{
-		// do nothing
+		ltm.pointEdit( index, newpt, false, isMoving, null, false );
 	}
 
 	public String toString()

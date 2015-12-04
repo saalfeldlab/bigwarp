@@ -108,7 +108,7 @@
 		<dependency>
 			<groupId>jitk</groupId>
 			<artifactId>jitk-tps</artifactId>
-			<version>1.2.1</version><!--$NO-MVN-MAN-VER$-->
+			<version>1.2.2-SNAPSHOT</version><!--$NO-MVN-MAN-VER$-->
 		</dependency>
 		<dependency>
 			<groupId>net.imglib2</groupId>

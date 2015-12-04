@@ -19,9 +19,5 @@ public abstract class AbstractPointEdit extends AbstractUndoableEdit
 
 	public abstract void redo();
 
-	public abstract void postProcessUndo();
-
-	public abstract void postProcessRedo();
-
 	public abstract String toString();
 }

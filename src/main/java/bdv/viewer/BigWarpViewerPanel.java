@@ -10,6 +10,7 @@ import java.util.List;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
+import bdv.img.WarpedSource;
 import bdv.img.cache.Cache;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
@@ -27,6 +28,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	private static final long serialVersionUID = 7706602964307210070L;
 
+	protected List< SourceAndConverter< ? > > sources;
+
 	protected BigWarpViewerSettings viewerSettings;
 	
 	protected BigWarpOverlay overlay;
@@ -41,6 +44,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	protected int ndims;
 
+	protected int movingSourceIndex = 0; //TODO HAVE A SETTER FOR THIS
+
 	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
@@ -54,10 +59,16 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving )
 	{
 		super( sources, 1, cache, optional );
+		this.sources = sources;
 		this.viewerSettings = viewerSettings;
 		options = optional;
 		this.isMoving = isMoving;
 		destXfm = new AffineTransform3D();
+	}
+
+	public boolean isInFixedImageSpace()
+	{
+		return !isMoving || ((WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).isTransformed();
 	}
 	
 	public void addOverlay( BigWarpOverlay overlay ){
@@ -85,7 +96,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		this.ndims = ndim;
 	}
-	
 
 	@Override
 	public void paint()
@@ -236,14 +246,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
-		
-//		final double[] qSource = new double[ 4 ];
-//		Affine3DHelpers.extractRotationAnisotropic( sourceTransform, qSource );
-//		
+
 		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
-//		Affine3DHelpers.extractApproximateRotationAffine( sourceTransform, qSource, 2 );
-		
-		
+
 		// avoid computing angle explicitly ( and thus avoid expensive inverse tan op )
 		// and instead do a verbose, but faster if statements
 		double m00 = transform.get( 0, 0 );
