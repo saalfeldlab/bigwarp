@@ -149,14 +149,19 @@ public class BigWarpDragOverlay
 		@Override
 		public void mouseReleased( MouseEvent e )
 		{
-			if( bw.isInLandmarkMode() && e.isShiftDown() )
+			if ( bw.isInLandmarkMode() && e.isShiftDown() )
 			{
 				completedOK = true;
 
 				reset();
 
-				if( bw.isUpdateWarpOnChange() )
-						bw.restimateTransformation();
+				// make an undo-able action for adding the fixed point
+				thisViewer.getGlobalMouseCoordinates( BigWarpDragOverlay.this.targetPoint );
+				targetPoint.localize( targetPtArray );
+				bw.getLandmarkPanel().getTableModel().pointEdit( index, targetPtArray, false, false, false, true );
+
+				if ( bw.isUpdateWarpOnChange() )
+					bw.restimateTransformation();
 			}
 			else
 			{
