@@ -17,6 +17,7 @@ import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -28,7 +29,7 @@ public class BigWarpActions
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String ESTIMATE_WARP = "estimate warp";
-	public static final String TOGGLE_ALWAYS_ESTIMATE_WARP = "toggle always estimate warp";
+	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
 //	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
@@ -150,7 +151,6 @@ public class BigWarpActions
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
-		map.put( TOGGLE_ALWAYS_ESTIMATE_WARP, "F3" );
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( ESTIMATE_WARP, "C" );
@@ -174,7 +174,6 @@ public class BigWarpActions
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
-		map.put( new ToggleAlwaysEstimateTransformAction( TOGGLE_ALWAYS_ESTIMATE_WARP, bw ));
 		map.put( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ));
 		map.put( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ));
 		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
@@ -271,18 +270,18 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 2909830484701853577L;
 
-		private BigWarp bw;
+		private BigWarpViewerFrame bwvp;
 
-		public ToggleAlwaysEstimateTransformAction( final String name, final BigWarp bw )
+		public ToggleAlwaysEstimateTransformAction( final String name, final BigWarpViewerFrame bwvp )
 		{
 			super( name );
-			this.bw = bw;
+			this.bwvp = bwvp;
 		}
 
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.toggleUpdateWarpOnChange();
+			bwvp.getViewerPanel().toggleUpdateOnDrag();
 		}
 	}
 

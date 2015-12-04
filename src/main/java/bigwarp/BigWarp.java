@@ -608,16 +608,16 @@ public class BigWarp
 		final JMenuItem toggleAlwaysWarpMenu;
 		if ( vframe.isMoving() )
 		{
-			toggleAlwaysWarpMenuP = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_ALWAYS_ESTIMATE_WARP ) );
+			toggleAlwaysWarpMenuP = new JMenuItem( new BigWarpActions.ToggleAlwaysEstimateTransformAction( "", vframe )  );
 			toggleAlwaysWarpMenu = toggleAlwaysWarpMenuP;
 		}
 		else
 		{
-			toggleAlwaysWarpMenuQ = new JMenuItem( actionMap.get( BigWarpActions.TOGGLE_ALWAYS_ESTIMATE_WARP ) );
+			toggleAlwaysWarpMenuQ = new JMenuItem( new BigWarpActions.ToggleAlwaysEstimateTransformAction( "", vframe ) );
 			toggleAlwaysWarpMenu = toggleAlwaysWarpMenuQ;
 		}
 
-		toggleAlwaysWarpMenu.setText( "Toggle warp after change" );
+		toggleAlwaysWarpMenu.setText( "Toggle warp on drag" );
 		settingsMenu.add( toggleAlwaysWarpMenu );
 
 		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
@@ -2183,15 +2183,29 @@ public class BigWarp
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
 
-				if ( BigWarp.this.isMovingDisplayTransformed() )
+				if ( BigWarp.this.isMovingDisplayTransformed() && thisViewer.doUpdateOnDrag() )
 				{
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
 				else
 				{
-					// make a non-undoable point edit so that the point can be displayed correctly
+					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
+					if( isMoving )
+					{
+						// The moving image:
+						// Update the warped point during the drag even if there is a corresponding fixed image point
+						// Do this so the point sticks on the mouse
+						BigWarp.this.landmarkModel.pointEdit(
+								selectedPointIndex,
+								BigWarp.this.landmarkModel.getTransform().apply( ptarrayLoc ),
+								false, isMoving, ptarrayLoc, false, false );
+					}
+					else
+					{
+						// The fixed image
+						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
+					}
 				}
 			}
 		}

@@ -37,7 +37,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpDragOverlay dragOverlay;
 	
 	protected boolean isMoving;
-	
+
+	protected boolean updateOnDrag;
+
 	protected boolean transformEnabled = true;
 	
 	protected AffineTransform3D destXfm;
@@ -63,6 +65,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.viewerSettings = viewerSettings;
 		options = optional;
 		this.isMoving = isMoving;
+		this.updateOnDrag = !isMoving; // update on drag only for the fixed image by default
 		destXfm = new AffineTransform3D();
 	}
 
@@ -70,7 +73,23 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		return !isMoving || ((WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).isTransformed();
 	}
-	
+
+	public boolean doUpdateOnDrag()
+	{
+		return updateOnDrag;
+	}
+
+	public void setUpdateOnDrag( boolean updateOnDrag )
+	{
+		System.out.println("set updateOnDrag: " + updateOnDrag );
+		this.updateOnDrag = updateOnDrag;
+	}
+
+	public void toggleUpdateOnDrag()
+	{
+		setUpdateOnDrag( !updateOnDrag );
+	}
+
 	public void addOverlay( BigWarpOverlay overlay ){
 		this.overlay = overlay;
 	}

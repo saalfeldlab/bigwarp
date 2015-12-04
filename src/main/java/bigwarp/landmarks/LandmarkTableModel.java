@@ -583,7 +583,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
-	
+
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	{
+		return pointEdit( index, pt, forceAdd, isMoving, warpedPt, isUndoable, true );
+	}
+
 	/**
 	 * 
 	 * @param index
@@ -593,7 +598,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * @param isUndoable
 	 * @return true if a new row was added
 	 */
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
 	{
 		if( index == -1 )
 		{
@@ -663,7 +668,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 			nextRowQ = nextRow( isMoving );
 
 		activateRow( index );
-		updateWarpedPoints();
+
+		if( forceUpdateWarpedPts )
+			updateWarpedPoints(); // TODO this may be overkill
 
 		updateNextRows();
 		firePointUpdated( index, isMoving );
