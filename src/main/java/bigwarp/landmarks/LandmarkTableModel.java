@@ -57,10 +57,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected ArrayList<Double[]>	movingPts;
 	protected ArrayList<Double[]>	targetPts;
 	
-	// pre-dragged point
-	protected double[] preDraggedPoint;
-	protected double[] preDraggedPointWarped;
-	
 	// determines if the last point that was added has a pair
 	protected boolean isLastPointPaired = true; // initialize to true, when there are no points
 	protected boolean lastPointMoving = false; // "P"
@@ -112,10 +108,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		movingPts = new ArrayList<Double[]>();
 		targetPts = new ArrayList<Double[]>();
-		
-		preDraggedPoint = new double[ ndims ];
-		resetPreDraggedPoint();
-		
+
 		pointToOverride = new Double[ ndims ];
 		Arrays.fill( pointToOverride, Double.POSITIVE_INFINITY );
 		
@@ -268,63 +261,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			}
 		}
 		pointUpdatePendingMoving = false;
-	}
-
-	public void resetPreDraggedPoint()
-	{
-		for ( int d = 0; d < ndims; d++ )
-			this.preDraggedPoint[ d ] = Double.NaN;
-	}
-	
-	public boolean isPreDraggedPoint()
-	{
-		return !Double.isNaN( preDraggedPoint[ 0 ] );
-	}
-	
-	public void setPreDraggedPoint( int i, boolean isMoving )
-	{
-		setPreDraggedPoint( i, isMoving, false );
-	}
-	
-	public void setPreDraggedPoint( int i, boolean isMoving, boolean isWarped )
-	{
-		if( isPreDraggedPoint() )
-		{
-			return;
-		}
-		
-		Double[] pt;
-		if( isMoving )
-			pt = movingPts.get( i );
-		else
-			pt = targetPts.get( i );
-		
-		for ( int d = 0; d < ndims; d++ )
-		{
-			this.preDraggedPoint[ d ] = pt[ d ];
-		}
-		
-		// if the image is warped, then remember where the point
-		// lived in the warped space
-		
-		//TODO explicitly checking if this point has changed 
-		// 	   might be a good idea, but right now the changedSinceWarp flag
-		//     is set after this method call
-		
-		//if( isWarped && getChangedSinceWarp().get( i ) )
-		
-		if( isWarped )
-		{
-			preDraggedPointWarped = toPrimitive( getWarpedPoints().get( i ));
-		}
-	}
-	
-	public void setPreDraggedPoint( double[] pt )
-	{
-		for ( int d = 0; d < ndims; d++ )
-		{
-			this.preDraggedPoint[ d ] = pt[ d ];
-		}
 	}
 
 	public boolean isPointUpdatePending()
@@ -708,17 +644,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			if ( isAdd )
 			{
 				undoRedoManager.addEdit( new AddPointEdit( this, index, pt, isMoving ) );
-			}
-			else if ( LandmarkTableModel.this.isPreDraggedPoint() )
-			{
-				oldpt = copy( preDraggedPoint );
-
-				undoRedoManager.addEdit( new ModifyPointEdit(
-						this, index,
-						oldpt, pt,
-						isMoving ) );
-
-				LandmarkTableModel.this.resetPreDraggedPoint();
 			}
 			else
 			{
