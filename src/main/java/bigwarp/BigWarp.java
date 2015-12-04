@@ -2133,7 +2133,7 @@ public class BigWarp
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 
 				BigWarp.this.currentLandmark.localize( ptarrayLoc );
-				selectedPointIndex = BigWarp.this.selectedLandmark(  ptarrayLoc, isMoving );
+				selectedPointIndex = BigWarp.this.selectedLandmark( ptarrayLoc, isMoving );
 
 				if ( selectedPointIndex >= 0 )
 				{
@@ -2278,30 +2278,36 @@ public class BigWarp
 				final BigWarpViewerPanel viewer;
 				if ( column >= ( 2 + ndims ) )
 				{
+					// clicked on a fixed point
 					viewer = BigWarp.this.viewerQ;
 					offset = ndims;
 				}
 				else if ( column >= 2 && column < ( 2 + ndims ) )
 				{
+					// clicked on a moving point
 					viewer = BigWarp.this.viewerP;
 
 					if ( BigWarp.this.viewerP.getOverlay().getIsTransformed() )
-						offset = ndims;
+						if ( BigWarp.this.landmarkModel.isWarpedPositionChanged( row ) )
+							pt = LandmarkTableModel.toPrimitive( BigWarp.this.landmarkModel.getWarpedPoints().get( row ) );
+						else
+							offset = ndims;
 				}
 				else
 				{
-					// we're in a column that doesnt correspond to a point and
+					// we're in a column that doesn't correspond to a point and
 					// should do nothing
 					return;
 				}
 
-				if ( ndims == 3 )
+				// the pt variable might be set above by grabbing the warped point.
+				// if so, stick with it, else grab the appropriate value from the table
+				if ( pt == null )
 				{
-					pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), ( Double ) target.getValueAt( row, offset + 4 ) };
-				}
-				else
-				{
-					pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), 0.0 };
+					if ( ndims == 3 )
+						pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), ( Double ) target.getValueAt( row, offset + 4 ) };
+					else
+						pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), 0.0 };
 				}
 
 				// we have an unmatched point
