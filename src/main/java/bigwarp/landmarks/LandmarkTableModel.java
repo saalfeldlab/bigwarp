@@ -70,7 +70,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected Double[] pointToOverride;	// hold a backup of a point for fallback
 	
 	// keeps track of whether points have been updated
-	protected ArrayList<Boolean> changedPositionSinceWarpEstimation;
+	protected ArrayList<Boolean> doesPointHaveAndNeedWarp;
 	protected ArrayList<Integer> indicesOfChangedPoints;
 	protected boolean			 elementDeleted = false;
 	protected ArrayList<Boolean> needsInverse;
@@ -127,7 +127,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		
 		warpedPoints = new ArrayList<Double[]>();
-		changedPositionSinceWarpEstimation = new ArrayList<Boolean>();
+		doesPointHaveAndNeedWarp = new ArrayList<Boolean>();
 		indicesOfChangedPoints  = new ArrayList<Integer>();
 		needsInverse = new ArrayList<Boolean>();
 		
@@ -459,7 +459,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		if( indicesOfChangedPoints.contains( i ))
 			indicesOfChangedPoints.remove( indicesOfChangedPoints.indexOf( i ) );
 		
-		changedPositionSinceWarpEstimation.remove( i );
+		doesPointHaveAndNeedWarp.remove( i );
 		warpedPoints.remove( i );
 		
 		numRows--;
@@ -528,7 +528,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public Boolean isWarpedPositionChanged( int i )
 	{
-		return changedPositionSinceWarpEstimation.get( i );
+		return doesPointHaveAndNeedWarp.get( i );
 	}
 
 	public void updateWarpedPoint( int i, double[] pt )
@@ -539,16 +539,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		for ( int d = 0; d < ndims; d++ )
 			warpedPoints.get( i )[ d ] = pt[ d ];
 
-		changedPositionSinceWarpEstimation.set( i, true );
+		doesPointHaveAndNeedWarp.set( i, true );
 	}
 	
 	public void printWarpedPoints()
 	{
 		String s = "";
-		int N = changedPositionSinceWarpEstimation.size();
+		int N = doesPointHaveAndNeedWarp.size();
 		for( int i = 0; i < N; i++ )
 		{
-			if( changedPositionSinceWarpEstimation.get( i ))
+			if( doesPointHaveAndNeedWarp.get( i ))
 			{
 //				String s = "" + i + " : ";
 				s += String.format("%04d : ", i);
@@ -568,17 +568,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public ArrayList<Boolean> getChangedSinceWarp()
 	{
-		return changedPositionSinceWarpEstimation;
+		return doesPointHaveAndNeedWarp;
 	}
 
 	public void resetWarpedPoints()
 	{
-		int N = changedPositionSinceWarpEstimation.size();
+		int N = doesPointHaveAndNeedWarp.size();
 		for( int i = 0; i < N; i++ )
 		{
 			if( activeList.get( i ))
 			{
-				changedPositionSinceWarpEstimation.set( i, false );
+				doesPointHaveAndNeedWarp.set( i, false );
 			}
 		}
 	}
@@ -612,7 +612,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		names.add( index, nextName( index ));
 		activeList.add( index, false );
 		warpedPoints.add( index, new Double[ ndims ] );
-		changedPositionSinceWarpEstimation.add( index, false );
+		doesPointHaveAndNeedWarp.add( index, false );
 		
 		fireTableRowsInserted( index, index );
 		
@@ -772,7 +772,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			}
 			else
 			{
-				changedPositionSinceWarpEstimation.set( i, false );
+				doesPointHaveAndNeedWarp.set( i, false );
 			}
 		}
 	}
@@ -925,7 +925,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		movingPts.clear();
 		targetPts.clear();
 		
-		changedPositionSinceWarpEstimation.clear();
+		doesPointHaveAndNeedWarp.clear();
 		warpedPoints.clear();
 		
 		int ndims = 3;
@@ -970,7 +970,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			
 			
 			warpedPoints.add( new Double[ ndims ] );
-			changedPositionSinceWarpEstimation.add( false );
+			doesPointHaveAndNeedWarp.add( false );
 			
 			fireTableRowsInserted( numRows, numRows );
 			numRows++;
