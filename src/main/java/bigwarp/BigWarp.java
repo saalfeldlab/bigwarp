@@ -82,8 +82,6 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import jitk.spline.TransformInverseGradientDescent;
-import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -1281,14 +1279,7 @@ public class BigWarp
 
 		// go from physical space to fixed image space
 		final AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
-		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to
-																		// the
-																		// pixel
-																		// space
-																		// of
-																		// the
-																		// fixed
-																		// image
+		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
 
 		// apply the transformations
 		final AffineRandomAccessible< ?, AffineGet > rai = RealViews.affine( RealViews.affine( raiRaw, movingImgXfm ), fixedXfmInv );
