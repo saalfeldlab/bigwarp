@@ -20,7 +20,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import bdv.img.imagestack.ImageStackImageLoader;
 import bdv.img.virtualstack.VirtualStackImageLoader;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -54,6 +53,16 @@ public class ImagePlusLoader implements Loader
 	@SuppressWarnings( "unchecked" )
 	@Override
 	public SpimDataMinimal load()
+	{
+		return load( 0 );
+	}
+
+	public SpimDataMinimal load( int startid )
+	{
+		return load( range( startid, imp.getNChannels() ) );
+	}
+
+	public SpimDataMinimal load( int[] ids )
 	{
 		// get calibration and image size
 		final double pw;
@@ -99,17 +108,17 @@ public class ImagePlusLoader implements Loader
 			switch ( imp.getType() )
 			{
 			case ImagePlus.GRAY8:
-				imgLoader = ImageStackImageLoader.createUnsignedByteInstance( imp );
+				imgLoader = BigWarpImageStackImageLoader.createUnsignedByteInstance( imp, ids );
 				break;
 			case ImagePlus.GRAY16:
-				imgLoader = ImageStackImageLoader.createUnsignedShortInstance( imp );
+				imgLoader = BigWarpImageStackImageLoader.createUnsignedShortInstance( imp, ids );
 				break;
 			case ImagePlus.GRAY32:
-				imgLoader = ImageStackImageLoader.createFloatInstance( imp );
+				imgLoader = BigWarpImageStackImageLoader.createFloatInstance( imp, ids );
 				break;
 			case ImagePlus.COLOR_RGB:
 			default:
-				imgLoader = ImageStackImageLoader.createARGBInstance( imp );
+				imgLoader = BigWarpImageStackImageLoader.createARGBInstance( imp, ids );
 				break;
 			}
 		}
@@ -121,9 +130,9 @@ public class ImagePlusLoader implements Loader
 		final HashMap< Integer, BasicViewSetup > setups = new HashMap< Integer, BasicViewSetup >( numSetups );
 		for ( int s = 0; s < numSetups; ++s )
 		{
-			final BasicViewSetup setup = new BasicViewSetup( s, String.format( "channel %d", s + 1 ), size, voxelSize );
-			setup.setAttribute( new Channel( s + 1 ) );
-			setups.put( s, setup );
+			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "channel %d", s + 1 ), size, voxelSize );
+			setup.setAttribute( new Channel( ids[ s ] + 1 ) );
+			setups.put( ids[ s ], setup );
 		}
 
 		// create timepoints
@@ -137,7 +146,7 @@ public class ImagePlusLoader implements Loader
 		final ArrayList< ViewRegistration > registrations = new ArrayList< ViewRegistration >();
 		for ( int t = 0; t < numTimepoints; ++t )
 			for ( int s = 0; s < numSetups; ++s )
-				registrations.add( new ViewRegistration( t, s, sourceTransform ) );
+				registrations.add( new ViewRegistration( t, ids[ s ], sourceTransform ) );
 
 		final File basePath = new File( "." );
 
@@ -149,5 +158,14 @@ public class ImagePlusLoader implements Loader
 		}
 
 		return spimData;
+	}
+
+	public static int[] range( int start, int length )
+	{
+		int[] out = new int[ length ];
+		for ( int i = 0; i < length; i++ )
+			out[ i ] = start + i;
+
+		return out;
 	}
 }

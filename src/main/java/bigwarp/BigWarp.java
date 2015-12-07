@@ -51,7 +51,6 @@ import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
@@ -285,17 +284,6 @@ public class BigWarp
 		final ViewerOptions optionsP = ViewerOptions.options();
 		final ViewerOptions optionsQ = ViewerOptions.options();
 
-//		if( ndims == 2 )
-//		{
-//			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-//			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-//
-//			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-//			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-//		}
-//		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
-//		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
-
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
@@ -413,22 +401,15 @@ public class BigWarp
 
 		final ArrayList< ConverterSetup > csetups = new ArrayList< ConverterSetup >();
 		for ( final ConverterSetup cs : converterSetups )
-		{
 			csetups.add( new BigWarpConverterSetupWrapper( this, cs ) );
-			System.out.println("display range: " + cs.getDisplayRangeMin() + "  " + cs.getDisplayRangeMax() );
-		}
 
 		setupAssignments = new SetupAssignments( csetups, 0, 65535 );
-		if ( setupAssignments.getMinMaxGroups().size() > 0 )
-		{
-			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
-			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
-				setupAssignments.moveSetupToGroup( setup, group );
-		}
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
 
+		BigWarpInit.modify( data, setupAssignments );
+		
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
 																// constructed
