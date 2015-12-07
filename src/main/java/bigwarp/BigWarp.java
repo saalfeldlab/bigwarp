@@ -413,18 +413,9 @@ public class BigWarp
 
 		final ArrayList< ConverterSetup > csetups = new ArrayList< ConverterSetup >();
 		for ( final ConverterSetup cs : converterSetups )
-		{
 			csetups.add( new BigWarpConverterSetupWrapper( this, cs ) );
-			System.out.println("display range: " + cs.getDisplayRangeMin() + "  " + cs.getDisplayRangeMax() );
-		}
 
 		setupAssignments = new SetupAssignments( csetups, 0, 65535 );
-		if ( setupAssignments.getMinMaxGroups().size() > 0 )
-		{
-			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
-			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
-				setupAssignments.moveSetupToGroup( setup, group );
-		}
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
