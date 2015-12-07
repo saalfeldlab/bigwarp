@@ -17,18 +17,19 @@ import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 
 public class BigWarpActions
 {
-	public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
+	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String ESTIMATE_WARP = "estimate warp";
-	public static final String TOGGLE_ALWAYS_ESTIMATE_WARP = "toggle always estimate warp";
+	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
 //	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
@@ -146,11 +147,10 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put( SHOW_WARPTYPE_DIALOG, "G" );
-		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
+		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
-		map.put( TOGGLE_ALWAYS_ESTIMATE_WARP, "F3" );
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( ESTIMATE_WARP, "C" );
@@ -169,13 +169,11 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ));
 		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 
 		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
 		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
 
-		map.put( new ToggleAlwaysEstimateTransformAction( TOGGLE_ALWAYS_ESTIMATE_WARP, bw ));
 		map.put( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ));
 		map.put( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ));
 		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
@@ -224,14 +222,15 @@ public class BigWarpActions
 
 //			if( isRedo && manager.canRedo() ){
 			try { 
-				
-				if( isRedo ) {
-					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessRedo();
+
+				if( isRedo )
+				{
 					bw.getLandmarkPanel().getTableModel().getUndoManager().redo();
 					bw.getViewerFrameP().getViewerPanel().showMessage( "Redo" );
 					bw.getViewerFrameQ().getViewerPanel().showMessage( "Redo" );
-				}else{ 
-					bw.getLandmarkPanel().getTableModel().getUndoManager().preProcessUndo();
+				}
+				else
+				{
 					//			} else if( manager.canUndo() ) {
 //					bw.getLandmarkPanel().getTableModel().getUndoManager().
 					bw.getLandmarkPanel().getTableModel().getUndoManager().undo();
@@ -246,13 +245,6 @@ public class BigWarpActions
 				if( this.bw.updateWarpOnPtChange )
 					this.bw.restimateTransformation();
 
-				// if there's something to do after re-estimation, then do it now
-				// (usually this is setting the warped point position, if it exists,
-				// so the point can be rendered correctly in warped mode
-				if( !isRedo )
-				{
-					bw.getLandmarkPanel().getTableModel().getUndoManager().postProcess();
-				}
 				// repaint
 				this.bw.getLandmarkPanel().repaint();
 			}
@@ -278,18 +270,18 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 2909830484701853577L;
 
-		private BigWarp bw;
+		private BigWarpViewerFrame bwvp;
 
-		public ToggleAlwaysEstimateTransformAction( final String name, final BigWarp bw )
+		public ToggleAlwaysEstimateTransformAction( final String name, final BigWarpViewerFrame bwvp )
 		{
 			super( name );
-			this.bw = bw;
+			this.bwvp = bwvp;
 		}
 
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.toggleUpdateWarpOnChange();
+			bwvp.getViewerPanel().toggleUpdateOnDrag();
 		}
 	}
 
@@ -340,32 +332,13 @@ public class BigWarpActions
 			System.out.println( " " );
 		}
 	}
-
-	public static class ToggleLandmarkModeAction extends AbstractNamedAction
-	{
-		private static final long serialVersionUID = 7370813069619338918L;
-		
-		private BigWarp bw;
-		
-		public ToggleLandmarkModeAction( final String name, final BigWarp bw )
-		{
-			super( name );
-			this.bw = bw;
-		}
-
-		@Override
-		public void actionPerformed( ActionEvent e )
-		{
-			bw.toggleInLandmarkMode( );	
-		}
-	}
 	
 	public static class EstimateWarpAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -210012348709096037L;
-		
+
 		private BigWarp bw;
-		
+
 		public EstimateWarpAction( final String name, final BigWarp bw )
 		{
 			super( name );
@@ -375,8 +348,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( bw.isInLandmarkMode())
-				bw.restimateTransformation();
+			bw.restimateTransformation();
 		}
 	}
 	

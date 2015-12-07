@@ -24,6 +24,8 @@ public class BigWarpOverlay {
 	protected CoordinateTransform estimatedXfm;
 	
 	protected boolean isTransformed = false;
+	protected final boolean isMoving;
+	protected final boolean is3d;
 	
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
@@ -32,10 +34,22 @@ public class BigWarpOverlay {
 	{
 		this.viewer = viewer;
 		this.landmarkModel = landmarkModel;
+
+		if( landmarkModel.getPoints( true ).size() > 0 && landmarkModel.getPoints( true ).get( 0 ).length == 2 )
+			is3d = false;
+		else
+			is3d = true;
+
+		isMoving = viewer.getIsMoving();
 	}
 
 	public void paint( final Graphics2D g ) 
 	{
+//		if( viewer.isMoving )
+//		{
+//			System.out.println("painting moving image overlay");
+//		}
+
 		/*
 		 * Collect current view.
 		 */
@@ -57,20 +71,9 @@ public class BigWarpOverlay {
 			
 			final double radius = viewer.getSettings().getSpotSize();
 
-			/*
-			 * Compute scale
-			 */
-			// final double vx = transform.get( 0, 0 );
-			// final double vy = transform.get( 1, 0 );
-			// final double vz = transform.get( 2, 0 );
-			// final double transformScale = Math.sqrt( vx * vx + vy * vy + vz * vz );
-
 			Color color;
 			Stroke stroke;
 			stroke = BigWarpViewerSettings.NORMAL_STROKE;
-			
-			boolean is3d = true;
-			int offset = 3;
 			
 			FontMetrics fm = null;
 			int fonthgt = 0;
@@ -82,92 +85,40 @@ public class BigWarpOverlay {
 				textBoxColor = Color.BLACK;
 			}
 			
-			if( landmarkModel.getPoints( true ).size() > 0 && landmarkModel.getPoints( true ).get( 0 ).length == 2 ){
-				is3d = false;
-				offset = 2;
-			}
-			
 			for( int index = 0; index < landmarkModel.getRowCount(); index++ )
 			{
-				
 				Double[] spot; // = landmarkModel.getPoints().get( index );
-				
-				if( landmarkModel.isActive(index) ){
-					color  = viewer.getSettings().getSpotColor();
-				}else{
-					color  = viewer.getSettings().getInactiveSpotColor();
-				}              
+
+				if ( landmarkModel.isActive( index ) )
+					color = viewer.getSettings().getSpotColor();
+				else
+					color = viewer.getSettings().getInactiveSpotColor();
 
 				g.setColor( color );
 				g.setStroke( stroke );
 
-				double x=0.0, y=0.0, z=0.0;
-				if( viewer.getIsMoving() )
-				{
-					if( !isTransformed )
-					{
-						spot = landmarkModel.getPoints( true ).get( index );
-						x = spot[ 0 ];
-						y = spot[ 1 ];
-						
-						if( Double.isInfinite( x ))
-							continue;
+				double x = 0.0, y = 0.0, z = 0.0;
+				spot = landmarkModel.getPoints( isMoving ).get( index );
 
-						if( is3d ) z = spot[ 2 ];
-					}
-					else if( isTransformed && landmarkModel.isWarpedPositionChanged( index ) )
-					{
-						// in this block, the viewer is displaying a transformed version
-						// of the moving image, but the location of the point has changed
-						// ( as a result, we can't use the target point ) 
-						// so use the stored warped point
-						
-						x = landmarkModel.getWarpedPoints().get( index )[ 0 ];
-						y = landmarkModel.getWarpedPoints().get( index )[ 1 ];
-						
-						//System.out.println( "rendering warped point" + index  + "   " + x + " " + y );
-						
-						if( is3d )
-							z = landmarkModel.getWarpedPoints().get( index )[ 2 ];
-					}
-					else if( isTransformed )
-					{
-						// if we've provided a moving landmark here ( spot < double max value )
-						// and we're displaying a transformed version, then
-						// the landmark should be at the target location.
-						
-						spot = landmarkModel.getPoints( false ).get( index );
-						x = spot[ 0 ];
-						y = spot[ 1 ];
-						
-						if( Double.isInfinite( x ))
-							continue;
-
-						if( is3d ) 
-							z = spot[ 2 ];
-					}
-					else
-					{
-						continue;
-					}
-				}
-				else if( !viewer.getIsMoving() )
-				{
-
-					spot = landmarkModel.getPoints( false ).get( index );
-					x = spot[ 0 ];
-					y = spot[ 1 ];
-
-					if( Double.isInfinite( x ))
-						continue;
-
-					if( is3d ) 
-						z = spot[ 2 ];
-				}
-				else
-				{
+				// if this point is not set, don't render it.
+				if ( Double.isInfinite( spot[ 0 ] ) )
 					continue;
+
+				// if the viewer is moving but transformed, render the points
+				// at the location of the fixed point
+				if ( isMoving && viewer.isInFixedImageSpace() )
+				{
+					if ( landmarkModel.isWarpedPositionChanged( index ) )
+						spot = landmarkModel.getWarpedPoints().get( index );
+					else
+						spot = landmarkModel.getPoints( false ).get( index );
 				}
+				// have to do this song and dance because globalCoords should be a length-3 array
+				// all the time with z=0 if we're in a 2d
+				x = spot[ 0 ];
+				y = spot[ 1 ];
+				if ( is3d )
+					z = spot[ 2 ];
 
 				final double[] globalCoords = new double[] { x, y, z };
 				final double[] viewerCoords = new double[ 3 ];

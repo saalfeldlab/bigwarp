@@ -31,18 +31,6 @@ public class DeleteRowEdit extends AbstractPointEdit
 	{
 		ltm.deleteRowHelper( index );
 	}
-	
-	@Override
-	public void postProcessUndo()
-	{
-		// do nothing
-	}
-
-	@Override
-	public void postProcessRedo()
-	{
-		// do nothing
-	}
 
 	@Override
 	public String toString()

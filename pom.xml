@@ -1,65 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-  <artifactId>bigwarp_fiji</artifactId>
-  <name>bigwarp_fiji</name>
-  <description>A tool for manual pointwise deformable registration using A tool for A A tool for manual pointwise deformable registration using bigdataviewer. </description>
-  <parent>
-  	<groupId>sc.fiji</groupId>
-  	<artifactId>pom-bigdataviewer</artifactId>
-  	<version>2.2.0</version>
-  </parent>
-  <properties>
-    <enforcer.skip>true</enforcer.skip>
-  </properties>
-  <repositories>
-        <repository>
-            <id>imagej.public</id>
-            <url>http://maven.imagej.net/content/groups/public</url>
-        </repository>
-    </repositories>
-  
-  <dependencies>
-  	<dependency>
-  		<groupId>
-  			com.googlecode.efficient-java-matrix-library
-  		</groupId>
-  		<artifactId>ejml</artifactId>
-  		<version>0.24</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>sc.fiji</groupId>
-  		<artifactId>bigdataviewer-core</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>net.imglib2</groupId>
-  		<artifactId>imglib2-ui</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>net.imglib2</groupId>
-  		<artifactId>imglib2-ij</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>jitk</groupId>
-  		<artifactId>jitk-tps</artifactId>
-  		<version>1.2.1</version><!--$NO-MVN-MAN-VER$-->
-  	</dependency>
-  	<dependency>
-  		<groupId>net.imglib2</groupId>
-  		<artifactId>imglib2</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>au.com.bytecode</groupId>
-  		<artifactId>opencsv</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>mpicbg</groupId>
-  		<artifactId>mpicbg</artifactId>
-  	</dependency>
-  	<dependency>
-  		<groupId>sc.fiji</groupId>
-  		<artifactId>bigdataviewer_fiji</artifactId>
-  	</dependency>
-  </dependencies>
-  <version>1.1.1-SNAPSHOT</version>
+
+	<parent>
+		<groupId>sc.fiji</groupId>
+		<artifactId>pom-bigdataviewer</artifactId>
+		<version>2.2.2</version>
+	</parent>
+
+	<artifactId>bigwarp_fiji</artifactId>
+	<version>1.1.1-SNAPSHOT</version>
+
+	<name>bigwarp_fiji</name>
+	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
+	<url>http://imagej.net/BigWarp</url>
+	<inceptionYear>2015</inceptionYear>
+	<licenses>
+		<license>
+			<name>GNU General Public License v2+</name>
+			<url>http://www.gnu.org/licenses/gpl.html</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>bogovicj</id>
+			<name>John Bogovic</name>
+			<email>bogovicj@janelia.hhmi.org</email>
+			<url>http://www.janelia.org/lab/saalfeld-lab</url>
+			<organization>HHMI Janelia Research Campus</organization>
+			<organizationUrl>http://www.janelia.org/</organizationUrl>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+		</developer>
+		<developer>
+			<id>axtimwalde</id>
+			<name>Stephan Saalfeld</name>
+			<email>saalfelds@janelia.hhmi.org</email>
+			<url>http://www.janelia.org/lab/saalfeld-lab</url>
+			<organization>HHMI Janelia Research Campus</organization>
+			<organizationUrl>http://www.janelia.org/</organizationUrl>
+			<roles>
+				<role>founder</role>
+				<role>lead</role>
+				<role>developer</role>
+				<role>debugger</role>
+				<role>reviewer</role>
+				<role>support</role>
+				<role>maintainer</role>
+			</roles>
+			<timezone>-5</timezone>
+		</developer>
+	</developers>
+	<contributors>
+		<contributor>
+			<name>Curtis Rueden</name>
+			<url>http://loci.wisc.edu/people/curtis-rueden</url>
+			<organization>UW-Madison LOCI</organization>
+			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<properties><id>ctrueden</id></properties>
+		</contributor>
+		<contributor>
+			<name>Mark Hiner</name>
+			<url>http://loci.wisc.edu/people/mark-hiner</url>
+			<organization>UW-Madison LOCI</organization>
+			<organizationUrl>http://loci.wisc.edu/</organizationUrl>
+			<properties><id>hinerm</id></properties>
+		</contributor>
+	</contributors>
+
+	<repositories>
+		<repository>
+			<id>imagej.public</id>
+			<url>http://maven.imagej.net/content/groups/public</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<dependency>
+			<groupId>
+				com.googlecode.efficient-java-matrix-library
+			</groupId>
+			<artifactId>ejml</artifactId>
+			<version>0.24</version>
+		</dependency>
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-ui</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-ij</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jitk</groupId>
+			<artifactId>jitk-tps</artifactId>
+			<version>1.2.2-SNAPSHOT</version><!--$NO-MVN-MAN-VER$-->
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>au.com.bytecode</groupId>
+			<artifactId>opencsv</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mpicbg</groupId>
+			<artifactId>mpicbg</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer_fiji</artifactId>
+		</dependency>
+	</dependencies>
 </project>

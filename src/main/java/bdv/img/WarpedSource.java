@@ -80,6 +80,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	
 	public void updateTransform( ThinPlateR2LogRSplineKernelTransform tps )
 	{
+		//a deep copy of the transform is used internally
 		tpsXfm.setTps( tps );
 	}
 	
