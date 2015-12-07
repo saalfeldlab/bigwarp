@@ -35,10 +35,10 @@ public class BigWarpOverlay {
 		this.viewer = viewer;
 		this.landmarkModel = landmarkModel;
 
-		if( landmarkModel.getPoints( true ).size() > 0 && landmarkModel.getPoints( true ).get( 0 ).length == 2 )
-			is3d = false;
-		else
+		if( landmarkModel.getNumdims() == 3 )
 			is3d = true;
+		else
+			is3d = false;
 
 		isMoving = viewer.getIsMoving();
 	}
