@@ -415,9 +415,10 @@ public class BigWarp
 		for ( final ConverterSetup cs : converterSetups )
 		{
 			csetups.add( new BigWarpConverterSetupWrapper( this, cs ) );
+			System.out.println("display range: " + cs.getDisplayRangeMin() + "  " + cs.getDisplayRangeMax() );
 		}
 
-		setupAssignments = new SetupAssignments( csetups, 0, 512 );
+		setupAssignments = new SetupAssignments( csetups, 0, 65535 );
 		if ( setupAssignments.getMinMaxGroups().size() > 0 )
 		{
 			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
@@ -425,8 +426,8 @@ public class BigWarp
 				setupAssignments.moveSetupToGroup( setup, group );
 		}
 
-		brightnessDialog = new BrightnessDialog( getViewerFrameQ(), setupAssignments );
-		helpDialog = new HelpDialog( getViewerFrameP() );
+		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
+		helpDialog = new HelpDialog( landmarkFrame );
 
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
