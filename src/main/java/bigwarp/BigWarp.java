@@ -1243,6 +1243,17 @@ public class BigWarp
 	 */
 	public void toggleMovingImageDisplay()
 	{
+		boolean success = true;
+
+		// If this is the first time calling the toggle, there may not be enough
+		// points to estimate a reasonable transformation.  
+		// Check for this, and return early if an re-estimation did not occur
+		if( firstWarpEstimation )
+			success = restimateTransformation();
+
+		if( !success )
+			return;
+		
 		final boolean newState = !getOverlayP().getIsTransformed();
 
 		if ( newState )
@@ -1787,7 +1798,7 @@ public class BigWarp
 		gSrc.setWarp( transform.deepCopy() );
 	}
 
-	public void restimateTransformation()
+	public boolean restimateTransformation()
 	{
 		// TODO - call this asynchronously during mouse drags
 		// (take logic from net.imglib2.ui.PainterThread )
@@ -1799,7 +1810,7 @@ public class BigWarp
 			// points to estimate a transformation" );
 			getViewerFrameP().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
 			getViewerFrameQ().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
-			return;
+			return false;
 		}
 
 		getViewerFrameP().getViewerPanel().showMessage( "Estimating transformation..." );
@@ -1809,10 +1820,12 @@ public class BigWarp
 		// This distinction is unnecessary right now, because
 		// transferUpdatesToModel just calls initTransformation.. but this may
 		// change
-		if ( landmarkModel.getTransform() == null )
-			landmarkModel.initTransformation();
-		else
-			landmarkModel.transferUpdatesToModel();
+//		if ( landmarkModel.getTransform() == null )
+//			landmarkModel.initTransformation();
+//		else
+//			landmarkModel.transferUpdatesToModel();
+
+		landmarkModel.initTransformation();
 
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
@@ -1821,7 +1834,6 @@ public class BigWarp
 		// time the transform was computed
 		if ( firstWarpEstimation )
 		{
-			setIsMovingDisplayTransformed( true );
 			setUpdateWarpOnChange( true );
 			firstWarpEstimation = false;
 		}
@@ -1838,6 +1850,8 @@ public class BigWarp
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
+
+		return true;
 	}
 
 	public void setIsMovingDisplayTransformed( final boolean isTransformed )

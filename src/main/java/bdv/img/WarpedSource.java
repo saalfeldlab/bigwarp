@@ -57,6 +57,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	{
 		this.source = source;
 		this.name = name;
+		this.isTransformed = false;
 		
 		this.tpsXfm = new TpsTransformWrapper( 3 );
 
