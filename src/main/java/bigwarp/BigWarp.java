@@ -2228,7 +2228,8 @@ public class BigWarp
 				addPoint( ptarrayLoc, true, viewerP );
 				addPoint( ptarrayLoc, false, viewerQ );
 			}
-			BigWarp.this.restimateTransformation();
+			if ( updateWarpOnPtChange )
+				BigWarp.this.restimateTransformation();
 		}
 	}
 
