@@ -1,0 +1,68 @@
+import java.awt.Color;
+import java.awt.Point;
+import java.io.File;
+
+import net.imglib2.type.numeric.ARGBType;
+import bdv.export.ProgressWriterConsole;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpInit;
+import ij.IJ;
+import ij.ImageJ;
+import ij.ImagePlus;
+
+int WIDTH = 600;
+int HEIGHT = 600;
+
+fnLandmarks = ""; // can optionally point to a file with landmark points 
+fnMoving = "http://imagej.nih.gov/ij/images/m51.zip"; // m51 galaxy
+fnTarget = "http://imagej.nih.gov/ij/images/boats.gif"; // boats
+
+try
+{
+    impMoving = IJ.openImage( fnMoving );
+    impTarget = IJ.openImage( fnTarget );
+
+    bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( impMoving, impTarget ), new File( fnMoving ).getName(), new ProgressWriterConsole() );
+    bw.setImageJInstance( IJ.getInstance() );
+
+	/* load the landmark points if there are any */
+	if ( !fnLandmarks.isEmpty() )
+		bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
+
+	/* Change color of landmark points to yellow */
+	bw.setSpotColor( new Color( 255, 255, 0, 255 ) );
+			
+	/* Adjust contrast */
+	bw.getSetupAssignments().getConverterSetups().get( 0 ).setDisplayRange( 250, 750 );
+	bw.getSetupAssignments().getConverterSetups().get( 1 ).setDisplayRange(   0, 255 );
+
+	/* Change moving image color to magenta */
+	bw.getSetupAssignments().getConverterSetups().get( 0 ).setColor( new ARGBType( ARGBType.rgba( 255, 0, 255, 255 )) );
+
+	/* Change target image color to green */
+	bw.getSetupAssignments().getConverterSetups().get( 1 ).setColor( new ARGBType( ARGBType.rgba( 0, 255, 0, 255 )) );
+
+	/* Set window sizes */
+	bw.getViewerFrameP().setSize( WIDTH, HEIGHT );
+	bw.getViewerFrameQ().setSize( WIDTH, HEIGHT );
+
+	/* Set window positions */
+	bw.getViewerFrameP().setLocation( 0, 0 );
+	Point location = bw.getViewerFrameP().getLocation();
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getViewerFrameQ().setLocation( location );
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getLandmarkPanel().setLocation( location );
+			
+	/* Repaint */
+	bw.getViewerFrameP().getViewerPanel().requestRepaint();
+	bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+
+}
+catch ( Exception e )
+{
+	e.printStackTrace();
+}
+
