@@ -890,6 +890,11 @@ public class BigWarp
 		return sources;
 	}
 
+	public BigWarpLandmarkFrame getLandmarkFrame()
+	{
+		return landmarkFrame;
+	}
+
 	public BigWarpLandmarkPanel getLandmarkPanel()
 	{
 		return landmarkPanel;

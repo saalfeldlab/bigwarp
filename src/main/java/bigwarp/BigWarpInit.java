@@ -213,19 +213,6 @@ public class BigWarpInit
 		BigDataViewer.initSetups(spimData, converterSetups, sources);
 	}
 
-	public static void modify(
-			BigWarpData data,
-			SetupAssignments setups )
-	{
-		ArrayList< ConverterSetup > csetups = data.converterSetups;
-		
-		for( int i = 0; i < 2; i++ )
-		{
-			MinMaxGroup mmg = setups.getMinMaxGroups().get( i );
-			mmg.getFullRangeMin();
-		}
-	}
-
 	/**
 	 * Create {@link BigWarpData} from two {@link AbstractSpimData}.
 	 *
@@ -253,7 +240,6 @@ public class BigWarpInit
 			final ImagePlusLoader loaderP,
 			final ImagePlusLoader loaderQ )
 	{
-		System.out.println( "creating from ImagePlusLoaders" );
 		/* Load the first source */
 		final AbstractSpimData< ? > spimDataP = loaderP.load( 0 );
 		
