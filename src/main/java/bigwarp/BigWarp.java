@@ -407,8 +407,6 @@ public class BigWarp
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
-
-		BigWarpInit.modify( data, setupAssignments );
 		
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
