@@ -63,6 +63,7 @@ import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
@@ -81,6 +82,7 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -93,6 +95,8 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import net.imglib2.Interval;
+import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccess;
@@ -131,15 +135,17 @@ public class BigWarp
 	protected static final int DEFAULT_HEIGHT = 400;
 
 	// descriptive names for indexing sources
-	protected int movingSourceIndex = 0;
+	protected int[] movingSourceIndexList;
 
-	protected int fixedSourceIndex = 1;
+	protected int[] targetSourceIndexList;
 
 	protected ArrayList< SourceAndConverter< ? > > sources;
+	
+	protected BigWarpExporter exporter;
 
-	protected Object movingSourceType;
-
-	protected Object targetSourceType;
+//	protected Object movingSourceType;
+//
+//	protected Object targetSourceType;
 
 	protected final SetupAssignments setupAssignments;
 
@@ -260,18 +266,21 @@ public class BigWarp
 		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 
-		movingSourceType = sources.get( movingSourceIndex ).getSpimSource().getType();
-		targetSourceType = sources.get( fixedSourceIndex ).getSpimSource().getType();
+		this.movingSourceIndexList = data.movingSourceIndices;
+		this.targetSourceIndexList = data.targetSourceIndices;
+
+		Arrays.sort( movingSourceIndexList );
+		Arrays.sort( targetSourceIndexList );
 
 		ndims = 3;
 		ndims = detectNumDims();
 		ptBack = new double[ 3 ];
 
-		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndex );
+		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndexList );
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
-		fixedViewXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+		fixedViewXfm = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0 );
 
 		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
@@ -287,12 +296,14 @@ public class BigWarp
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, ( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true );
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
+				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true, movingSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, ( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false );
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
+				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -307,8 +318,8 @@ public class BigWarp
 
 				final MultiBoxOverlayRenderer overlayRenderP = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
 				final MultiBoxOverlayRenderer overlayRenderQ = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
-				final Class orp = overlayRenderP.getClass();
-				final Field boxField = orp.getDeclaredField( "box" );
+
+				final Field boxField = overlayRenderP.getClass().getDeclaredField( "box" );
 				boxField.setAccessible( true );
 				boxField.set( overlayRenderP, new MultiBoxOverlay2d() );
 				boxField.set( overlayRenderQ, new MultiBoxOverlay2d() );
@@ -463,6 +474,32 @@ public class BigWarp
 		fileFrame = new JFrame( "Select File" );
 		fileDialog = new FileDialog( fileFrame );
 		lastDirectory = null;
+
+		if ( BigWarpExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
+		{
+			Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
+			if ( ByteType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< ByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( ByteType ) baseType );
+			else if ( UnsignedByteType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType );
+			else if ( IntType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType );
+			else if ( FloatType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType );
+			else if ( DoubleType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
+			else
+			{
+				System.err.println( "Can't export type " + baseType.getClass() );
+				exporter = null;
+			}
+		}
+		else
+		{
+			exporter = new BigWarpExporter< FloatType >(
+					sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(),
+					new FloatType(), true );
+		}
 
 		fileFrame.setVisible( false );
 
@@ -651,7 +688,16 @@ public class BigWarp
 					{
 						try
 						{
-							exportMovingImagePlus( true );
+							if( ij == null )
+								return;
+
+//							ImagePlus ip = exportMovingImagePlus( true );
+
+							BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
+							ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( true );
+
+							if ( ip != null )
+								ip.show();
 						}
 						catch ( final Exception e )
 						{
@@ -692,7 +738,14 @@ public class BigWarp
 					{
 						try
 						{
-							exportMovingImagePlus( false );
+							if( ij == null )
+								return;
+
+							BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
+							ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( false );
+
+							if ( ip != null )
+								ip.show();
 						}
 						catch ( final Exception e )
 						{
@@ -1256,106 +1309,6 @@ public class BigWarp
 		}
 	}
 
-	@SuppressWarnings( { "unchecked", "deprecation" } )
-	protected void exportMovingImagePlus( final boolean isVirtual )
-	{
-		if ( ij == null )
-		{
-			System.out.println( "no imagej instance" );
-			return;
-		}
-
-		final RandomAccessibleInterval< ? > destinterval = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 );
-
-		final Interpolation interp = viewerP.getState().getInterpolation();
-		final RealRandomAccessible< ? > raiRaw = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-
-		// go from moving to physical space
-		final AffineTransform3D movingImgXfm = sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
-
-		// go from physical space to fixed image space
-		final AffineTransform3D fixedImgXfm = sources.get( fixedSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
-		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
-
-		// apply the transformations
-		final AffineRandomAccessible< ?, AffineGet > rai = RealViews.affine( RealViews.affine( raiRaw, movingImgXfm ), fixedXfmInv );
-
-		ImagePlus ip = null;
-
-		if ( isVirtual )
-		{
-			// return a wrapper
-			@SuppressWarnings( "rawtypes" )
-			final IntervalView rasterItvl = Views.interval( Views.raster( rai ), destinterval );
-			ip = ImageJFunctions.wrap( rasterItvl, "warped_moving_image" );
-		}
-		else
-		{
-			// This is annoying ... is there a better way?
-			if ( ByteType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< ByteType > ) rai, destinterval );
-			else if ( UnsignedByteType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< UnsignedByteType > ) rai, destinterval );
-			else if ( IntType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< IntType > ) rai, destinterval );
-			else if ( FloatType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< FloatType > ) rai, destinterval );
-			else if ( DoubleType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< DoubleType > ) rai, destinterval );
-			else if ( ARGBType.class.isInstance( movingSourceType ) )
-				ip = copyToImageStack( ( RealRandomAccessible< ARGBType > ) rai, destinterval );
-			else
-			{
-				System.err.println( "Can't convert type " + movingSourceType.getClass() + " to ImagePlus" );
-				return;
-			}
-		}
-
-		if ( ip != null )
-			ip.show();
-
-	}
-
-	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RealRandomAccessible< T > rai, final Interval itvl )
-	{
-		final long[] dimensions = new long[ itvl.numDimensions() ];
-		itvl.dimensions( dimensions );
-
-		final T t = rai.realRandomAccess().get();
-		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
-		final ImagePlusImg< T, ? > target = factory.create( itvl, t );
-
-		double k = 0;
-		final long N = dimensions[ 0 ] * dimensions[ 1 ] * dimensions[ 2 ];
-
-		final net.imglib2.Cursor< T > c = target.cursor();
-		final RealRandomAccess< T > ra = rai.realRandomAccess();
-		while ( c.hasNext() )
-		{
-			c.fwd();
-			ra.setPosition( c );
-			c.get().set( ra.get() );
-
-			if ( k % 10000 == 0 )
-			{
-				IJ.showProgress( k / N );
-			}
-			k++;
-		}
-
-		IJ.showProgress( 1.1 );
-		try
-		{
-			return target.getImagePlus();
-		}
-		catch ( final ImgLibException e )
-		{
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
 	protected void exportMovingImage( final File f, final ViewerState renderState, final ProgressWriter progressWriter ) throws IOException, InterruptedException
 	{
 		// Source< ? > movingSrc = sources.get( 1 ).getSpimSource();
@@ -1428,15 +1381,18 @@ public class BigWarp
 		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setMethod( method );
 	}
 
-	private static ArrayList< SourceAndConverter< ? > > wrapSourcesAsTransformed( final ArrayList< SourceAndConverter< ? > > sources, final int ndims, final int warpUsIndices )
+	private static ArrayList< SourceAndConverter< ? > > wrapSourcesAsTransformed( final ArrayList< SourceAndConverter< ? > > sources, final int ndims, final int[] warpUsIndices )
 	{
 		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
 
 		int i = 0;
 		for ( final SourceAndConverter< ? > sac : sources )
 		{
-			if ( i == warpUsIndices )
+			int idx = Arrays.binarySearch( warpUsIndices, i );
+			System.out.println( "index into warpUsIndices: " + idx );
+			if ( idx >= 0 )
 			{
+				System.out.println( "wrapped source index: " + i );
 				wrappedSource.add( wrapSourceAsTransformed( sac, "xfm_" + i, ndims ) );
 			}
 			else
@@ -1763,18 +1719,20 @@ public class BigWarp
 
 	private void setTransformationMovingSourceOnly( final ThinPlateR2LogRSplineKernelTransform transform )
 	{
-		// the updateTransform method creates a copy of the transform
-		( ( WarpedSource< ? > ) ( sources.get( 0 ).getSpimSource() ) ).updateTransform( transform );
-		if ( sources.get( 0 ).asVolatile() != null )
-			( ( WarpedSource< ? > ) ( sources.get( 0 ).asVolatile().getSpimSource() ) ).updateTransform( transform );
+		for ( int i = 0; i < movingSourceIndexList.length; i++ )
+		{
+			int idx = movingSourceIndexList [ i ];
+
+			// the updateTransform method creates a copy of the transform
+			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
+			if ( sources.get( 0 ).asVolatile() != null )
+				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( transform );
+		}
 	}
 
 	private void setTransformationAll( final ThinPlateR2LogRSplineKernelTransform transform )
 	{
-		// TODO
-		( ( WarpedSource< ? > ) ( sources.get( 0 ).getSpimSource() ) ).updateTransform( transform );
-		if ( sources.get( 0 ).asVolatile() != null )
-			( ( WarpedSource< ? > ) ( sources.get( 0 ).asVolatile().getSpimSource() ) ).updateTransform( transform );
+		setTransformationMovingSourceOnly( transform );
 
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
@@ -1841,30 +1799,63 @@ public class BigWarp
 
 	public void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
-		( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).getSpimSource() ) ).setIsTransformed( isTransformed );
+		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
+		{
+			int movingSourceIndex = movingSourceIndexList[ i ];
 
-		if ( sources.get( movingSourceIndex ).asVolatile() != null )
-			( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).asVolatile().getSpimSource() ) ).setIsTransformed( isTransformed );
+			( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).getSpimSource() ) ).setIsTransformed( isTransformed );
+
+			if ( sources.get( movingSourceIndex ).asVolatile() != null )
+				( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).asVolatile().getSpimSource() ) ).setIsTransformed( isTransformed );
+		}
 
 		overlayP.setIsTransformed( isTransformed );
 	}
 
 	public boolean isMovingDisplayTransformed()
 	{
-		return ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).getSpimSource() ) ).isTransformed();
+		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
+		return ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
 	}
 
+	/**
+	 * The display will be in 3d if any of the input sources are 3d.
+	 * @return
+	 */
 	protected int detectNumDims()
 	{
+		System.out.println( "number of sources: " + sources.size() );
 
-		final boolean is1Src2d = sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
-		final boolean is2Src2d = sources.get( fixedSourceIndex ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) == 1;
+		boolean isAnySource3d = false;
+		for( SourceAndConverter< ? > sac : sources )
+		{
+			System.out.println( "have source with name: " + sac.getSpimSource().getName());
+			long[] dims = new long[ sac.getSpimSource().getSource( 0, 0 ).numDimensions() ];
+			sac.getSpimSource().getSource( 0, 0 ).dimensions( dims );
+			System.out.println( "  of size : " + printArray( dims ));
 
-		int ndims = 3;
-		if ( is1Src2d && is2Src2d )
-			ndims = 2;
+			if ( sac.getSpimSource().getSource( 0, 0 ).dimension( 2 ) > 1 )
+			{
+				isAnySource3d = true;
+				break;
+			}
+		}
+
+		int ndims = 2;
+		if ( isAnySource3d )
+			ndims = 3;
+
+		System.out.println( "ndims: " + ndims );
 
 		return ndims;
+	}
+
+	public static String printArray( long[] in )
+	{
+		String s = "";
+		for ( int i = 0; i < in.length; i++ )
+			s += in[ i ] + " ";
+		return s;
 	}
 
 	public static void main( final String[] args )
@@ -1980,12 +1971,23 @@ public class BigWarp
 
 		public final ArrayList< ConverterSetup > converterSetups;
 
-		public BigWarpData( final ArrayList< SourceAndConverter< ? > > sources, final AbstractSequenceDescription< ?, ?, ? > seqP, final AbstractSequenceDescription< ?, ?, ? > seqQ, final ArrayList< ConverterSetup > converterSetups )
+		public final int[] movingSourceIndices;
+
+		public final int[] targetSourceIndices;
+
+		public BigWarpData(
+				final ArrayList< SourceAndConverter< ? > > sources,
+				final AbstractSequenceDescription< ?, ?, ? > seqP,
+				final AbstractSequenceDescription< ?, ?, ? > seqQ,
+				final ArrayList< ConverterSetup > converterSetups,
+				int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
 			this.seqP = seqP;
 			this.seqQ = seqQ;
 			this.converterSetups = converterSetups;
+			this.movingSourceIndices = movingSourceIndices;
+			this.targetSourceIndices = targetSourceIndices;
 		}
 	}
 

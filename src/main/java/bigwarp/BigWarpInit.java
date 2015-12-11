@@ -184,8 +184,6 @@ public class BigWarpInit
 			final List< ConverterSetup > converterSetups,
 			final List< SourceAndConverter< ? > > sources )
 	{
-		System.out.println("setupsARGBType NV");
-
 		final AbstractSequenceDescription< ?, ?, ? > seq = spimData.getSequenceDescription();
 		for ( final BasicViewSetup setup : seq.getViewSetupsOrdered() )
 		{
@@ -230,10 +228,16 @@ public class BigWarpInit
 		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
 		BigWarpInit.initSetups( spimDataP, converterSetups, sources );
 
+		int numMovingSources = seqP.getViewSetups().size();
+		int numTargetSources = seqQ.getViewSetups().size();
+
+		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
 
-		return new BigWarpData( sources, seqP, seqQ, converterSetups );
+		return new BigWarpData( sources, seqP, seqQ, converterSetups, movingSourceIndices, targetSourceIndices );
 	}
 
 	public static BigWarpData createBigWarpData(
@@ -242,13 +246,14 @@ public class BigWarpInit
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? > spimDataP = loaderP.load( 0 );
-		
-		/* Load the second source,
-		 * giving different 
-		 */
-		final AbstractSpimData< ? > spimDataQ = loaderQ.load( 1 );
+		int numMovingChannels = spimDataP.getSequenceDescription().getViewSetups().keySet().size();
 
-		return createBigWarpData( spimDataP, spimDataQ );		
+		/*
+		 * Load the second source, giving each channel a different setupId
+		 */
+		final AbstractSpimData< ? > spimDataQ = loaderQ.load( numMovingChannels );
+
+		return createBigWarpData( spimDataP, spimDataQ );
 	}
 	
 	/**

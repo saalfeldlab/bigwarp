@@ -38,9 +38,10 @@ public class BigWarpViewerFrame extends JFrame
 			final BigWarpViewerSettings viewerSettings,
 			final Cache cache,
 			final String title,
-			final boolean isMoving )
+			final boolean isMoving,
+			final int[] movingIndexList )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving );
+		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving, movingIndexList );
 	}
 	
 	public BigWarpViewerFrame(
@@ -51,11 +52,12 @@ public class BigWarpViewerFrame extends JFrame
 			final Cache cache,
 			final ViewerOptions optional,
 			final String title,
-			final boolean isMoving )
+			final boolean isMoving,
+			final int[] movingIndexList )
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving );
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving, movingIndexList  );
 
 		if( !isMoving )
 			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );

@@ -46,19 +46,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	protected int ndims;
 
-	protected int movingSourceIndex = 0; //TODO HAVE A SETTER FOR THIS
+	final protected int[] movingSourceIndexList;
 
 	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
 	ViewerOptions options;
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving, int[] movingSourceIndexList )
 	{
-		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving );
+		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving, int[] movingSourceIndexList )
 	{
 		super( sources, 1, cache, optional );
 		this.sources = sources;
@@ -66,12 +66,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 		options = optional;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed image by default
+		this.movingSourceIndexList = movingSourceIndexList;
 		destXfm = new AffineTransform3D();
 	}
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ((WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).isTransformed();
+		return !isMoving || ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()

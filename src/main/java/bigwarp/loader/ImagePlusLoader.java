@@ -18,6 +18,7 @@ package bigwarp.loader;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 
 import bdv.img.virtualstack.VirtualStackImageLoader;
@@ -45,9 +46,22 @@ public class ImagePlusLoader implements Loader
 {
 	final private ImagePlus imp;
 
+	private boolean is3d;
+	private boolean isMultiChannel;
+
 	public ImagePlusLoader( final ImagePlus imp )
 	{
 		this.imp = imp;
+	}
+
+	public boolean is3d()
+	{
+		return is3d;
+	}
+
+	public boolean isMultiChannel()
+	{
+		return isMultiChannel;
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -80,7 +94,12 @@ public class ImagePlusLoader implements Loader
 		final int w = imp.getWidth();
 		final int h = imp.getHeight();
 		final int d = imp.getNSlices();
+		final int numTimepoints = imp.getNFrames();
+		final int numSetups = imp.getNChannels();
 		final FinalDimensions size = new FinalDimensions( new int[] { w, h, d } );
+
+		is3d = ( d > 1 );
+		isMultiChannel = ( numSetups > 1 );
 
 		// create ImgLoader wrapping the image
 		final BasicImgLoader imgLoader;
@@ -123,14 +142,11 @@ public class ImagePlusLoader implements Loader
 			}
 		}
 
-		final int numTimepoints = imp.getNFrames();
-		final int numSetups = imp.getNChannels();
-
 		// create setups from channels
 		final HashMap< Integer, BasicViewSetup > setups = new HashMap< Integer, BasicViewSetup >( numSetups );
 		for ( int s = 0; s < numSetups; ++s )
 		{
-			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "channel %d", s + 1 ), size, voxelSize );
+			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "channel %d", ids[ s ] + 1 ), size, voxelSize );
 			setup.setAttribute( new Channel( ids[ s ] + 1 ) );
 			setups.put( ids[ s ], setup );
 		}
@@ -166,6 +182,13 @@ public class ImagePlusLoader implements Loader
 		for ( int i = 0; i < length; i++ )
 			out[ i ] = start + i;
 
+		return out;
+	}
+
+	public static int[] value( int value, int length )
+	{
+		int[] out = new int[ length ];
+		Arrays.fill( out, value );
 		return out;
 	}
 }
