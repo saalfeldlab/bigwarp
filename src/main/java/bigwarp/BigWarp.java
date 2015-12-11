@@ -116,6 +116,7 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
@@ -484,6 +485,8 @@ public class BigWarp
 				exporter = new BigWarpExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType );
 			else if ( IntType.class.isInstance( baseType ) )
 				exporter = new BigWarpExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType );
+			else if ( UnsignedShortType.class.isInstance( baseType ) )
+				exporter = new BigWarpExporter< UnsignedShortType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedShortType ) baseType );
 			else if ( FloatType.class.isInstance( baseType ) )
 				exporter = new BigWarpExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType );
 			else if ( DoubleType.class.isInstance( baseType ) )
@@ -690,8 +693,6 @@ public class BigWarp
 						{
 							if( ij == null )
 								return;
-
-//							ImagePlus ip = exportMovingImagePlus( true );
 
 							BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
 							ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( true );

@@ -14,7 +14,6 @@ import net.imglib2.RealRandomAccessible;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.converter.RealFloatConverter;
-import net.imglib2.converter.RealUnsignedShortConverter;
 import net.imglib2.exception.ImgLibException;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImg;
@@ -32,12 +31,11 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
-public class BigWarpExporter< T extends RealType< T > >
+public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 {
 	final private ArrayList< SourceAndConverter< ? >> sources;
 
@@ -167,7 +165,7 @@ public class BigWarpExporter< T extends RealType< T > >
 		}
 		else
 		{
-			System.out.println( "NOT YET IMPLEMENTED" );
+			ip = copyToImageStack( raiStack, raiStack );
 		}
 
 		return ip;
