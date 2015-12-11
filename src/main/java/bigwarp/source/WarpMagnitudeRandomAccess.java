@@ -25,14 +25,19 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, CoordinateTransform warp, AbstractModel<?> base )
 	{
 		super( dimensions.length );
-		this.warp = warp;
-		this.base = base;
+		if( warp != null)
+			this.warp = ((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy();
+		if( base != null )
+			this.base = base.copy();
 		this.value = value;
 	}
 
 	@Override
 	public T get() 
 	{
+		if( warp == null || base == null )
+			return value;
+					
 		double[] mypt = new double[ this.numDimensions() ];
 		this.localize( mypt );
 		
@@ -64,7 +69,7 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	public RealRandomAccess<T> copy() 
 	{
 		return new WarpMagnitudeRandomAccess< T >( new double[ position.length ], value.copy(), 
-				((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy(), base.copy() );
+				warp, base.copy() );
 	}
 
 	public RealRandomAccess<T> copyRandomAccess() 
