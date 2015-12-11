@@ -118,16 +118,16 @@ public abstract class BigWarpImageStackImageLoader< T extends NumericType< T > &
 		final int numSetups = imp.getNChannels();
 		setupImgLoaders = new HashMap< Integer, SetupImgLoader >();
 		for ( int i = 0; i < numSetups; ++i )
-			setupImgLoaders.put( setupIds[ i ], new SetupImgLoader( setupIds[ i ] ) );
+			setupImgLoaders.put( setupIds[ i ], new SetupImgLoader( i ) );
 	}
 
 	public class SetupImgLoader implements BasicSetupImgLoader< T >
 	{
-		private final int setupId;
+		private final int channel;
 
-		public SetupImgLoader( final int setupId )
+		public SetupImgLoader( final int channel )
 		{
-			this.setupId = setupId;
+			this.channel = channel;
 		}
 
 		@Override
@@ -137,10 +137,9 @@ public abstract class BigWarpImageStackImageLoader< T extends NumericType< T > &
 			{
 				private PlanarImg< T, A > init()
 				{
-					final int channel = setupId + 1;
 					final int frame = timepointId + 1;
 					for ( int slice = 1; slice <= dim[ 2 ]; ++slice )
-						mirror.set( slice - 1, wrapPixels( imp.getStack().getPixels( imp.getStackIndex( channel, slice, frame ) ) ) );
+						mirror.set( slice - 1, wrapPixels( imp.getStack().getPixels( imp.getStackIndex( channel + 1, slice, frame ) ) ) );
 					linkType( this );
 					return this;
 				}
