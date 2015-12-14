@@ -624,7 +624,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		{
 			if ( lastPoint != PENDING_PT )
 			{
-				System.out.println("taking lastPoint");
 				oldpt = copy( lastPoint );
 			}
 			else
@@ -698,6 +697,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 		firePointUpdated( index, isMoving );
 
 		return isAdd;
+	}
+
+	public void setLastPoint( int i, boolean isMoving )
+	{
+		if( isMoving )
+			lastPoint = toPrimitive( movingPts.get( i ) );
+		else
+			lastPoint = toPrimitive( targetPts.get( i ) );
+	}
+
+	public void resetLastPoint()
+	{
+		lastPoint = PENDING_PT;
 	}
 
 	/**

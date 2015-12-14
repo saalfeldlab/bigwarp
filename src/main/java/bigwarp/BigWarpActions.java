@@ -221,9 +221,15 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+			if( bw.isInLandmarkMode() )
+			{
+				bw.getViewerFrameP().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
+				bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
+				return;
+			}
+
 			// TODO I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
-
 //			if( isRedo && manager.canRedo() ){
 			try { 
 
