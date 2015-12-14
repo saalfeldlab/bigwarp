@@ -17,7 +17,6 @@ import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
-import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -25,6 +24,10 @@ import bigwarp.source.GridSource;
 public class BigWarpActions
 {
 	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
+
+	public static final String LANDMARK_MODE_ON  = "landmark mode on";
+	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
+
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
@@ -152,6 +155,19 @@ public class BigWarpActions
 
 		map.put( SHOW_WARPTYPE_DIALOG, "U" );
 		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
+
+		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
+
+		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
+		// the few lines below are super ugly, but are necessary for robustness
+		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
+
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
@@ -172,6 +188,9 @@ public class BigWarpActions
 	{
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
+
+		map.put( new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ) );
+		map.put( new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ) );
 
 		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 
@@ -273,6 +292,28 @@ public class BigWarpActions
 				//System.err.println( " Undo / redo error, or nothing to do " );
 				//ex.printStackTrace();
 			}
+		}
+	}
+
+	public static class LandmarkModeAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4079013525930019558L;
+
+		private BigWarp bw;
+
+		private final boolean isOn;
+
+		public LandmarkModeAction( final String name, final BigWarp bw, final boolean on )
+		{
+			super( name );
+			this.bw = bw;
+			this.isOn = on;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.setInLandmarkMode( isOn );
 		}
 	}
 

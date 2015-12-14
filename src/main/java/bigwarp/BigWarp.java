@@ -489,7 +489,7 @@ public class BigWarp
 		fileFrame.setVisible( false );
 
 		// add landmark mode listener
-		addKeyEventPostProcessor( new LandmarkModeListener() );
+		//addKeyEventPostProcessor( new LandmarkModeListener() );
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
@@ -934,8 +934,11 @@ public class BigWarp
 		return landmarkPanel;
 	}
 
-	public void setInLandmarkMode( final boolean inLmMode )
+	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
+		if( inLandmarkMode == inLmMode )
+			return;
+
 		if ( inLmMode )
 		{
 			disableTransformHandlers();
@@ -1984,29 +1987,12 @@ public class BigWarp
 			{
 				if ( ke.getID() == KeyEvent.KEY_PRESSED )
 				{
-					if ( !BigWarp.this.inLandmarkMode )
-					{
-						BigWarp.this.getViewerFrameP().getViewerPanel().showMessage( "Landmark mode on ( Moving image )" );
-						BigWarp.this.getViewerFrameQ().getViewerPanel().showMessage( "Landmark mode on ( Fixed image )" );
-
-						BigWarp.this.inLandmarkMode = true;
-
-						disableTransformHandlers();
-
-					}
+					BigWarp.this.setInLandmarkMode( true );
 					return false;
 				}
 				else if ( ke.getID() == KeyEvent.KEY_RELEASED )
 				{
-					if ( BigWarp.this.inLandmarkMode )
-					{
-						BigWarp.this.getViewerFrameP().getViewerPanel().showMessage( "Landmark mode off ( Moving image )" );
-						BigWarp.this.getViewerFrameQ().getViewerPanel().showMessage( "Landmark mode off ( Fixed image )" );
-
-						BigWarp.this.inLandmarkMode = false;
-
-						enableTransformHandlers();
-					}
+					BigWarp.this.setInLandmarkMode( false );
 					return false;
 				}
 			}
