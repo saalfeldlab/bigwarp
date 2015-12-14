@@ -2124,6 +2124,9 @@ public class BigWarp
 
 				BigWarp.this.currentLandmark.localize( ptarrayLoc );
 				selectedPointIndex = BigWarp.this.selectedLandmark( ptarrayLoc, isMoving );
+
+				if ( selectedPointIndex >= 0 )
+					BigWarp.this.landmarkModel.setLastPoint( selectedPointIndex, isMoving );
 			}
 		}
 
@@ -2168,6 +2171,9 @@ public class BigWarp
 					BigWarp.this.restimateTransformation();
 				}
 			}
+
+			BigWarp.this.landmarkModel.resetLastPoint();
+
 			selectedPointIndex = -1;
 		}
 

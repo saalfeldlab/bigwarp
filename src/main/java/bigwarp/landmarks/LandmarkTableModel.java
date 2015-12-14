@@ -76,6 +76,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	// keeps track of warped points so we don't always have to do it on the fly
 	protected ArrayList<Double[]> warpedPoints;
+
+	// keep track of the value of the last point that was edited but not-undoable
+	// this lets us both render points correctly, and create desirable undo behavior
+	// for point drags.
+	protected double[] lastPoint; 
 	
 	// keep track of edits for undo's and redo's
 	protected LandmarkUndoManager undoRedoManager;
@@ -102,6 +107,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		this.ndims = ndims;
 		PENDING_PT = new double[ ndims ];
 		Arrays.fill( PENDING_PT, Double.POSITIVE_INFINITY );
+		lastPoint = PENDING_PT;
 		
 		names = new ArrayList<String>();
 		activeList = new ArrayList<Boolean>();
@@ -613,13 +619,20 @@ public class LandmarkTableModel extends AbstractTableModel {
 		if( isAdd )
 			addEmptyRow( index );
 		
-		double[] oldpt = PENDING_PT;
+		double[] oldpt = copy( PENDING_PT );
 		if( !isAdd )
 		{
-			if( isMoving )
-				oldpt = toPrimitive( movingPts.get( index ) );
+			if ( lastPoint != PENDING_PT )
+			{
+				oldpt = copy( lastPoint );
+			}
 			else
-				oldpt = toPrimitive( targetPts.get( index ) );
+			{
+				if ( isMoving )
+					oldpt = toPrimitive( movingPts.get( index ) );
+				else
+					oldpt = toPrimitive( targetPts.get( index ) );
+			}
 		}
 		
 		ArrayList< Double[] > pts;
@@ -676,6 +689,19 @@ public class LandmarkTableModel extends AbstractTableModel {
 		firePointUpdated( index, isMoving );
 
 		return isAdd;
+	}
+
+	public void setLastPoint( int i, boolean isMoving )
+	{
+		if( isMoving )
+			lastPoint = toPrimitive( movingPts.get( i ) );
+		else
+			lastPoint = toPrimitive( targetPts.get( i ) );
+	}
+
+	public void resetLastPoint()
+	{
+		lastPoint = PENDING_PT;
 	}
 
 	/**
