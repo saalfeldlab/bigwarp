@@ -8,10 +8,13 @@ import bdv.SpimSource;
 import bdv.VolatileSpimSource;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
+import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
+import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.loader.BigWarpImageStackImageLoader;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
@@ -233,6 +236,21 @@ public class BigWarpInit
 		return new BigWarpData( sources, seqP, seqQ, converterSetups );
 	}
 
+	public static BigWarpData createBigWarpData(
+			final ImagePlusLoader loaderP,
+			final ImagePlusLoader loaderQ )
+	{
+		/* Load the first source */
+		final AbstractSpimData< ? > spimDataP = loaderP.load( 0 );
+		
+		/* Load the second source,
+		 * giving different 
+		 */
+		final AbstractSpimData< ? > spimDataQ = loaderQ.load( 1 );
+
+		return createBigWarpData( spimDataP, spimDataQ );		
+	}
+	
 	/**
 	 * Create {@link BigWarpData} from two {@link Loader Loaders} that generate {@link AbstractSpimData}.
 	 *

@@ -35,10 +35,10 @@ public class BigWarpOverlay {
 		this.viewer = viewer;
 		this.landmarkModel = landmarkModel;
 
-		if( landmarkModel.getPoints( true ).size() > 0 && landmarkModel.getPoints( true ).get( 0 ).length == 2 )
-			is3d = false;
-		else
+		if( landmarkModel.getNumdims() == 3 )
 			is3d = true;
+		else
+			is3d = false;
 
 		isMoving = viewer.getIsMoving();
 	}
@@ -106,13 +106,14 @@ public class BigWarpOverlay {
 
 				// if the viewer is moving but transformed, render the points
 				// at the location of the fixed point
-				if ( isMoving && viewer.isInFixedImageSpace() )
+				if ( isMoving )
 				{
 					if ( landmarkModel.isWarpedPositionChanged( index ) )
 						spot = landmarkModel.getWarpedPoints().get( index );
-					else
+					else if( viewer.isInFixedImageSpace() )
 						spot = landmarkModel.getPoints( false ).get( index );
 				}
+
 				// have to do this song and dance because globalCoords should be a length-3 array
 				// all the time with z=0 if we're in a 2d
 				x = spot[ 0 ];

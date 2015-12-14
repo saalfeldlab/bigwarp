@@ -51,7 +51,6 @@ import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.KeyProperties;
@@ -285,17 +284,6 @@ public class BigWarp
 		final ViewerOptions optionsP = ViewerOptions.options();
 		final ViewerOptions optionsQ = ViewerOptions.options();
 
-//		if( ndims == 2 )
-//		{
-//			optionsP.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-//			optionsQ.transformEventHandlerFactory( TransformHandler3DWrapping2D.factory() );
-//
-//			optionsP.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-//			optionsQ.boxOverlayRenderer( new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT, new MultiBoxOverlay2d()) );
-//		}
-//		optionsP.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
-//		optionsQ.sourceInfoOverlayRenderer( new BigWarpSourceOverlayRenderer() );
-
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
@@ -413,21 +401,13 @@ public class BigWarp
 
 		final ArrayList< ConverterSetup > csetups = new ArrayList< ConverterSetup >();
 		for ( final ConverterSetup cs : converterSetups )
-		{
 			csetups.add( new BigWarpConverterSetupWrapper( this, cs ) );
-		}
 
-		setupAssignments = new SetupAssignments( csetups, 0, 512 );
-		if ( setupAssignments.getMinMaxGroups().size() > 0 )
-		{
-			final MinMaxGroup group = setupAssignments.getMinMaxGroups().get( 0 );
-			for ( final ConverterSetup setup : setupAssignments.getConverterSetups() )
-				setupAssignments.moveSetupToGroup( setup, group );
-		}
+		setupAssignments = new SetupAssignments( csetups, 0, 65535 );
 
-		brightnessDialog = new BrightnessDialog( getViewerFrameQ(), setupAssignments );
-		helpDialog = new HelpDialog( getViewerFrameP() );
-
+		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
+		helpDialog = new HelpDialog( landmarkFrame );
+		
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
 																// constructed
@@ -908,6 +888,11 @@ public class BigWarp
 		return sources;
 	}
 
+	public BigWarpLandmarkFrame getLandmarkFrame()
+	{
+		return landmarkFrame;
+	}
+
 	public BigWarpLandmarkPanel getLandmarkPanel()
 	{
 		return landmarkPanel;
@@ -1243,6 +1228,17 @@ public class BigWarp
 	 */
 	public void toggleMovingImageDisplay()
 	{
+		boolean success = true;
+
+		// If this is the first time calling the toggle, there may not be enough
+		// points to estimate a reasonable transformation.  
+		// Check for this, and return early if an re-estimation did not occur
+		if( firstWarpEstimation )
+			success = restimateTransformation();
+
+		if( !success )
+			return;
+		
 		final boolean newState = !getOverlayP().getIsTransformed();
 
 		if ( newState )
@@ -1787,7 +1783,7 @@ public class BigWarp
 		gSrc.setWarp( transform.deepCopy() );
 	}
 
-	public void restimateTransformation()
+	public boolean restimateTransformation()
 	{
 		// TODO - call this asynchronously during mouse drags
 		// (take logic from net.imglib2.ui.PainterThread )
@@ -1799,7 +1795,7 @@ public class BigWarp
 			// points to estimate a transformation" );
 			getViewerFrameP().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
 			getViewerFrameQ().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
-			return;
+			return false;
 		}
 
 		getViewerFrameP().getViewerPanel().showMessage( "Estimating transformation..." );
@@ -1809,10 +1805,12 @@ public class BigWarp
 		// This distinction is unnecessary right now, because
 		// transferUpdatesToModel just calls initTransformation.. but this may
 		// change
-		if ( landmarkModel.getTransform() == null )
-			landmarkModel.initTransformation();
-		else
-			landmarkModel.transferUpdatesToModel();
+//		if ( landmarkModel.getTransform() == null )
+//			landmarkModel.initTransformation();
+//		else
+//			landmarkModel.transferUpdatesToModel();
+
+		landmarkModel.initTransformation();
 
 		// estimate the forward transformation
 		landmarkModel.getTransform().solve();
@@ -1821,7 +1819,6 @@ public class BigWarp
 		// time the transform was computed
 		if ( firstWarpEstimation )
 		{
-			setIsMovingDisplayTransformed( true );
 			setUpdateWarpOnChange( true );
 			firstWarpEstimation = false;
 		}
@@ -1838,6 +1835,8 @@ public class BigWarp
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
+
+		return true;
 	}
 
 	public void setIsMovingDisplayTransformed( final boolean isTransformed )
@@ -2232,7 +2231,8 @@ public class BigWarp
 				addPoint( ptarrayLoc, true, viewerP );
 				addPoint( ptarrayLoc, false, viewerQ );
 			}
-			BigWarp.this.restimateTransformation();
+			if ( updateWarpOnPtChange )
+				BigWarp.this.restimateTransformation();
 		}
 	}
 

@@ -687,7 +687,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		for ( int i = 0; i < numRows; i++ )
 		{
-			if ( !isFixedPoint( i ) && isMovingPoint( i ) )
+			if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumActiveLandmarks() > 3 )
 			{
 				double[] tgt = toPrimitive( movingPts.get( i ) );
 				double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
