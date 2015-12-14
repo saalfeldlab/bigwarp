@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.imglib2.RealPoint;
@@ -25,8 +26,11 @@ import bdv.viewer.state.SourceState;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
-
 	private static final long serialVersionUID = 7706602964307210070L;
+
+	public static final int MOVING_GROUP_INDEX = 0;
+
+	public static final int TARGET_GROUP_INDEX = 1;
 
 	protected List< SourceAndConverter< ? > > sources;
 
@@ -48,26 +52,71 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	final protected int[] movingSourceIndexList;
 
+	final protected int[] targetSourceIndexList;
+
 	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
 	ViewerOptions options;
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving, int[] movingSourceIndexList )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving,
+			int[] movingSourceIndexList, int[] targetSourceIndexList )
 	{
-		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList );
+		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving, int[] movingSourceIndexList )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving, 
+			int[] movingSourceIndexList, int[] targetSourceIndexList  )
 	{
 		super( sources, 1, cache, optional );
 		this.sources = sources;
 		this.viewerSettings = viewerSettings;
 		options = optional;
 		this.isMoving = isMoving;
-		this.updateOnDrag = !isMoving; // update on drag only for the fixed image by default
+		this.updateOnDrag = !isMoving; // update on drag only for the fixed
+										// image by default
 		this.movingSourceIndexList = movingSourceIndexList;
+		this.targetSourceIndexList = targetSourceIndexList;
 		destXfm = new AffineTransform3D();
+
+		updateGrouping();
+	}
+
+	/**
+	 * Makes the first group contain all the moving images and the second group
+	 * contain all the fixed images
+	 * 
+	 * @param name
+	 * @return
+	 */
+	public int updateGrouping()
+	{
+		getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).setName( "moving images" );
+		getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).setName( "fixed images" );
+		int groupIndex = getVisibilityAndGrouping().getSourceGroups().size();
+		for ( int i = 0; i < sources.size(); i++ )
+		{
+			int idxP = Arrays.binarySearch( movingSourceIndexList, i );
+			int idxQ = Arrays.binarySearch( targetSourceIndexList, i );
+			if ( idxP >= 0 )
+			{
+				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).addSource( i );
+				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).removeSource( i );
+			}
+			else if ( idxQ >= 0 )
+			{
+				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).addSource( i );
+				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).removeSource( i );
+			}
+			else
+			{
+				getVisibilityAndGrouping().removeSourceFromGroup( i, MOVING_GROUP_INDEX );
+				getVisibilityAndGrouping().removeSourceFromGroup( i, TARGET_GROUP_INDEX );
+			}
+		}
+		getVisibilityAndGrouping().setGroupingEnabled( true );
+
+		return groupIndex;
 	}
 
 	public boolean isInFixedImageSpace()
@@ -82,7 +131,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public void setUpdateOnDrag( boolean updateOnDrag )
 	{
-		System.out.println("set updateOnDrag: " + updateOnDrag );
 		this.updateOnDrag = updateOnDrag;
 	}
 

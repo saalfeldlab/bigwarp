@@ -60,10 +60,8 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
-import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
-import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
@@ -82,7 +80,6 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -94,25 +91,11 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccess;
-import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
-import net.imglib2.RealRandomAccess;
-import net.imglib2.RealRandomAccessible;
 import net.imglib2.display.RealARGBColorConverter;
-import net.imglib2.exception.ImgLibException;
-import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.img.imageplus.ImagePlusImg;
-import net.imglib2.img.imageplus.ImagePlusImgFactory;
-import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.RealViews;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
@@ -125,8 +108,6 @@ import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.Views;
 
 public class BigWarp
 {
@@ -142,11 +123,7 @@ public class BigWarp
 
 	protected ArrayList< SourceAndConverter< ? > > sources;
 	
-	protected BigWarpExporter exporter;
-
-//	protected Object movingSourceType;
-//
-//	protected Object targetSourceType;
+	protected BigWarpExporter< ? > exporter;
 
 	protected final SetupAssignments setupAssignments;
 
@@ -300,13 +277,13 @@ public class BigWarp
 
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
-				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true, movingSourceIndexList );
+				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
 		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
-				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList );
+				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -379,6 +356,7 @@ public class BigWarp
 		activeSourcesDialogP.setTitle( "visibility and grouping ( moving )" );
 		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
+		
 		// set warp mag source to inactive at the start
 		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
 		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
@@ -1394,10 +1372,8 @@ public class BigWarp
 		for ( final SourceAndConverter< ? > sac : sources )
 		{
 			int idx = Arrays.binarySearch( warpUsIndices, i );
-			System.out.println( "index into warpUsIndices: " + idx );
 			if ( idx >= 0 )
 			{
-				System.out.println( "wrapped source index: " + i );
 				wrappedSource.add( wrapSourceAsTransformed( sac, "xfm_" + i, ndims ) );
 			}
 			else
