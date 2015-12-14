@@ -103,6 +103,7 @@ public class WarpNavigationActions
 
 		map.put( new ToggleInterPolationAction( viewer ) );
 		map.put( new ToggleFusedModeAction( viewer ) );
+		map.put( new ToggleGroupingAction( viewer ) );
 
 		for ( int i = 0; i < numSourceKeys; ++i )
 		{

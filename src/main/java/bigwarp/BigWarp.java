@@ -156,7 +156,9 @@ public class BigWarp
 
 	protected final HelpDialog helpDialog;
 
-	protected final VisibilityAndGroupingDialog activeSourcesDialog;
+	protected final VisibilityAndGroupingDialog activeSourcesDialogP;
+
+	protected final VisibilityAndGroupingDialog activeSourcesDialogQ;
 
 	final AffineTransform3D fixedViewXfm;
 
@@ -373,8 +375,10 @@ public class BigWarp
 		viewerP.setNumDim( ndims );
 		viewerQ.setNumDim( ndims );
 
-		activeSourcesDialog = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
-
+		activeSourcesDialogP = new VisibilityAndGroupingDialog( viewerFrameP, viewerP.getVisibilityAndGrouping() );
+		activeSourcesDialogP.setTitle( "visibility and grouping ( moving )" );
+		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
+		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
 		// set warp mag source to inactive at the start
 		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
 		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );

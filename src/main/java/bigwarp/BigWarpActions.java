@@ -47,7 +47,7 @@ public class BigWarpActions
 	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
-	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping";
+	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
 	public static final String SHOW_HELP = "help";
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
@@ -108,7 +108,10 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put(RESET_VIEWER, "R");
-		map.put( VISIBILITY_AND_GROUPING, "F6" );
+		
+		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F6" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F7" );
+		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
 
@@ -122,7 +125,8 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bw.activeSourcesDialog ) );
+		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ) );
+		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ) );
 
 		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -146,7 +150,7 @@ public class BigWarpActions
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
-		map.put( SHOW_WARPTYPE_DIALOG, "G" );
+		map.put( SHOW_WARPTYPE_DIALOG, "U" );
 		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
