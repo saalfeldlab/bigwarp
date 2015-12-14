@@ -684,7 +684,7 @@ public class BigWarp
 						}
 						catch ( final Exception e )
 						{
-							e.printStackTrace();
+							//e.printStackTrace();
 						}
 					}
 				}.start();
@@ -732,7 +732,7 @@ public class BigWarp
 						}
 						catch ( final Exception e )
 						{
-							e.printStackTrace();
+							//e.printStackTrace();
 						}
 					}
 				}.start();
@@ -836,7 +836,7 @@ public class BigWarp
 				}
 				catch ( final IOException e1 )
 				{
-					e1.printStackTrace();
+					//e1.printStackTrace();
 				}
 
 			}
@@ -886,7 +886,7 @@ public class BigWarp
 						}
 						catch ( final Exception e1 )
 						{
-							e1.printStackTrace();
+							//e1.printStackTrace();
 						}
 					}
 				}.start();
