@@ -248,9 +248,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	public synchronized void rotateView2dOld( boolean isClockwise )
 	{
-		if( !transformEnabled )
+		if ( !transformEnabled )
 			return;
-		
+
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
@@ -322,6 +322,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	public synchronized void rotateView2d( boolean isClockwise )
 	{
+		if ( !transformEnabled )
+			return;
+
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
@@ -393,10 +396,21 @@ public class BigWarpViewerPanel extends ViewerPanel
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
 	}
-	
+
+	@Override
+	public synchronized void align( AlignPlane plane )
+	{
+		if ( !transformEnabled )
+			return;
+
+		super.align( plane );
+	}
+
     public synchronized void animateTransformation( AffineTransform3D destinationXfm, int millis )
     {
-    	
+		if ( !transformEnabled )
+			return;
+
     	AffineTransform3D startXfm = new AffineTransform3D();
     	getState().getViewerTransform( startXfm );
     	
@@ -431,7 +445,7 @@ public class BigWarpViewerPanel extends ViewerPanel
     	animateTransformation( destinationXfm, 300 );
     }
     
-    public void setTransformEnabled( boolean enabled )
+    public synchronized void setTransformEnabled( boolean enabled )
     {
     	transformEnabled = enabled;
     }
