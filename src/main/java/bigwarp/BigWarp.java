@@ -1740,8 +1740,8 @@ public class BigWarp
 			return false;
 		}
 
-		getViewerFrameP().getViewerPanel().showMessage( "Estimating transformation..." );
-		getViewerFrameQ().getViewerPanel().showMessage( "Estimating transformation..." );
+//		getViewerFrameP().getViewerPanel().showMessage( "Estimating transformation..." );
+//		getViewerFrameQ().getViewerPanel().showMessage( "Estimating transformation..." );
 
 		// TODO restimateTransformation
 		// This distinction is unnecessary right now, because
