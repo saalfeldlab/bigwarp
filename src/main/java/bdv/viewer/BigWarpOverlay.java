@@ -108,7 +108,7 @@ public class BigWarpOverlay {
 				// at the location of the fixed point
 				if ( isMoving )
 				{
-					if ( landmarkModel.isWarpedPositionChanged( index ) )
+					if ( viewer.isInFixedImageSpace() && landmarkModel.isWarpedPositionChanged( index ) )
 						spot = landmarkModel.getWarpedPoints().get( index );
 					else if( viewer.isInFixedImageSpace() )
 						spot = landmarkModel.getPoints( false ).get( index );
