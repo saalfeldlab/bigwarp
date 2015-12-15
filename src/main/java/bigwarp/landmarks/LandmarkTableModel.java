@@ -782,7 +782,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 				break;
 			}	
 		}
+		boolean changed = activate == activeList.get( index );
 		activeList.set( index, activate );
+
+		if ( changed )
+			fireTableCellUpdated( index, ACTIVECOLUMN );
 	}
 
 

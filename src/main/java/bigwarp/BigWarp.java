@@ -2210,10 +2210,12 @@ public class BigWarp
 	public class LandmarkTableListener implements TableModelListener
 	{
 		@Override
-		public void tableChanged( final TableModelEvent arg0 )
+		public void tableChanged( final TableModelEvent e )
 		{
-			BigWarp.this.viewerP.requestRepaint();
-			BigWarp.this.viewerQ.requestRepaint();
+			// re-estimate if a a point was set to or from active
+			// note - this covers "resetting" points as well
+			if( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
+				BigWarp.this.restimateTransformation();
 		}
 	}
 
