@@ -1808,15 +1808,11 @@ public class BigWarp
 	 */
 	protected int detectNumDims()
 	{
-		System.out.println( "number of sources: " + sources.size() );
-
 		boolean isAnySource3d = false;
-		for( SourceAndConverter< ? > sac : sources )
+		for ( SourceAndConverter< ? > sac : sources )
 		{
-			System.out.println( "have source with name: " + sac.getSpimSource().getName());
 			long[] dims = new long[ sac.getSpimSource().getSource( 0, 0 ).numDimensions() ];
 			sac.getSpimSource().getSource( 0, 0 ).dimensions( dims );
-			System.out.println( "  of size : " + printArray( dims ));
 
 			if ( sac.getSpimSource().getSource( 0, 0 ).dimension( 2 ) > 1 )
 			{
@@ -1828,8 +1824,6 @@ public class BigWarp
 		int ndims = 2;
 		if ( isAnySource3d )
 			ndims = 3;
-
-		System.out.println( "ndims: " + ndims );
 
 		return ndims;
 	}
