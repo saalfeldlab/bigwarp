@@ -93,7 +93,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).setName( "moving images" );
 		getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).setName( "fixed images" );
-		int groupIndex = getVisibilityAndGrouping().getSourceGroups().size();
+		int numGroups = getVisibilityAndGrouping().getSourceGroups().size();
 		for ( int i = 0; i < sources.size(); i++ )
 		{
 			int idxP = Arrays.binarySearch( movingSourceIndexList, i );
@@ -114,9 +114,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 				getVisibilityAndGrouping().removeSourceFromGroup( i, TARGET_GROUP_INDEX );
 			}
 		}
-		getVisibilityAndGrouping().setGroupingEnabled( true );
 
-		return groupIndex;
+		// make only moving and target image groups active in fused mode
+		for ( int i = 2; i < numGroups; i++ )
+			getVisibilityAndGrouping().setGroupActive( i, false );
+
+		// only turn grouping enabled by default if there are multiple moving or
+		// target images
+		if ( movingSourceIndexList.length > 1 || targetSourceIndexList.length > 1 )
+			getVisibilityAndGrouping().setGroupingEnabled( true );
+
+		if( !isMoving )
+			getVisibilityAndGrouping().setCurrentGroup( 1 );
+
+		return numGroups;
 	}
 
 	public boolean isInFixedImageSpace()
