@@ -157,6 +157,14 @@ public class BigWarpActions
 		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 
 		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
+		// the few lines below are super ugly, but are necessary for robustness
+		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
 
 		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
 		// the few lines below are super ugly, but are necessary for robustness
