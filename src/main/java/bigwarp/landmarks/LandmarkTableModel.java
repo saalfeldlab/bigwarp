@@ -354,7 +354,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		names.set( row, name );
 		fireTableCellUpdated( row, NAMECOLUMN );
 	}
-	
+
+	public boolean getIsActive( int row )
+	{
+		return activeList.get( row );
+	}
+
 	public void setIsActive( int row, boolean isActive )
 	{
 		activeList.set( row, isActive );
@@ -676,7 +681,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		{
 			// Remember the "oldpt" even when an edit is not-undoable
 			// but don't overwrite an existing value
-			System.out.println("remembering lastPoint");
 			lastPoint = oldpt;
 		}
 

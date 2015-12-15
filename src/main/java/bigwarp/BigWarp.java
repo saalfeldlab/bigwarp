@@ -2396,6 +2396,9 @@ public class BigWarp
 				if ( b )
 					try
 					{
+						if ( !bw.getLandmarkPanel().getTableModel().getIsActive( index ) )
+							return;
+
 						final ThinPlateR2LogRSplineKernelTransform xfm = bw.getLandmarkPanel().getTableModel().getTransform();
 
 						// make a deep copy of the transformation and solve it
