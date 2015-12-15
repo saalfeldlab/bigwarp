@@ -209,6 +209,8 @@ public class BigWarp
 
 	private final double[] ptBack;
 
+	private SolveThread solverThread;
+
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode during the
 	 * click
@@ -487,6 +489,9 @@ public class BigWarp
 		}
 
 		fileFrame.setVisible( false );
+
+		solverThread = new SolveThread( this );
+		solverThread.start();
 
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
@@ -1752,10 +1757,12 @@ public class BigWarp
 //		else
 //			landmarkModel.transferUpdatesToModel();
 
-		landmarkModel.initTransformation();
-
-		// estimate the forward transformation
-		landmarkModel.getTransform().solve();
+//		landmarkModel.initTransformation();
+//
+//		// estimate the forward transformation
+//		landmarkModel.getTransform().solve();
+		
+		solverThread.requestResolve( true, -1, null );
 
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -1765,15 +1772,15 @@ public class BigWarp
 			firstWarpEstimation = false;
 		}
 
-		// reset active warped points
-		landmarkModel.resetWarpedPoints();
-
-		// re-compute warped points for non-active points
-		landmarkModel.updateWarpedPoints();
-
-		// update sources with the new transformation
-		setTransformationAll( landmarkModel.getTransform() );
-		fitBaselineWarpMagModel();
+//		// reset active warped points
+//		landmarkModel.resetWarpedPoints();
+//
+//		// re-compute warped points for non-active points
+//		landmarkModel.updateWarpedPoints();
+//
+//		// update sources with the new transformation
+//		setTransformationAll( landmarkModel.getTransform() );
+//		fitBaselineWarpMagModel();
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
@@ -2012,16 +2019,11 @@ public class BigWarp
 
 		private boolean isMoving;
 
-		private SolveThread solverThread;
-
 		protected MouseLandmarkListener( final BigWarpViewerPanel thisViewer )
 		{
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 			isMoving = ( thisViewer == BigWarp.this.viewerP );
-
-			solverThread = new SolveThread( BigWarp.this );
-			solverThread.start();
 		}
 
 		protected void setViewer( final BigWarpViewerPanel thisViewer )
@@ -2394,21 +2396,45 @@ public class BigWarp
 				if ( b )
 					try
 					{
-						if ( !bw.getLandmarkPanel().getTableModel().getIsActive( index ) )
-							return;
+						final ThinPlateR2LogRSplineKernelTransform xfm;
+						if ( index >= 0 )
+						{
+							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
+							if ( !bw.getLandmarkPanel().getTableModel().getIsActive( index ) )
+								return;
 
-						final ThinPlateR2LogRSplineKernelTransform xfm = bw.getLandmarkPanel().getTableModel().getTransform();
-
-						// make a deep copy of the transformation and solve it
-						if ( isMoving )
-							xfm.updateTargetLandmark( index, xfm.apply( pt ) );
+							// make a deep copy of the transformation and solve
+							// it
+							if ( isMoving )
+								xfm.updateTargetLandmark( index, xfm.apply( pt ) );
+							else
+								xfm.updateSourceLandmark( index, pt );
+						}
 						else
-							xfm.updateSourceLandmark( index, pt );
+						{
+							bw.landmarkModel.initTransformation();
+							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
+						}
 
 						xfm.solve();
 
-						// update the transform and warped point
-						bw.setTransformationMovingSourceOnly( xfm );
+						if ( index < 0 )
+						{
+							// reset active warped points
+							bw.landmarkModel.resetWarpedPoints();
+
+							// re-compute warped points for non-active points
+							bw.landmarkModel.updateWarpedPoints();
+
+							// update sources with the new transformation
+							bw.setTransformationAll( bw.landmarkModel.getTransform() );
+							bw.fitBaselineWarpMagModel();
+						}
+						else
+						{
+							// update the transform and warped point
+							bw.setTransformationMovingSourceOnly( xfm );
+						}
 
 						// update fixed point - but don't allow undo/redo
 						// and update warped point
@@ -2446,7 +2472,9 @@ public class BigWarp
 				pleaseResolve = true;
 				this.isMoving = isMoving;
 				this.index = index;
-				this.pt = Arrays.copyOf( newpt, newpt.length );
+				if ( newpt != null )
+					this.pt = Arrays.copyOf( newpt, newpt.length );
+
 				notify();
 			}
 		}
