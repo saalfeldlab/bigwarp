@@ -2157,7 +2157,9 @@ public class BigWarp
 				thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
 				currentLandmark.localize( ptarrayLoc );
 
-				if ( BigWarp.this.isMovingDisplayTransformed() && thisViewer.doUpdateOnDrag() )
+				if ( BigWarp.this.isMovingDisplayTransformed() &&
+						thisViewer.doUpdateOnDrag() &&
+						BigWarp.this.landmarkModel.isActive( selectedPointIndex ) )
 				{
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
