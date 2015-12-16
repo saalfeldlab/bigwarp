@@ -473,7 +473,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return "";
 	}
 	
-	public Boolean isWarpedPositionChanged( int i )
+	public Boolean isWarped( int i )
 	{
 		return doesPointHaveAndNeedWarp.get( i );
 	}
@@ -518,16 +518,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return doesPointHaveAndNeedWarp;
 	}
 
+	public void resetWarpedPoint( int i )
+	{
+		if ( activeList.get( i ) )
+			doesPointHaveAndNeedWarp.set( i, false );
+	}
+
 	public void resetWarpedPoints()
 	{
-		int N = doesPointHaveAndNeedWarp.size();
-		for( int i = 0; i < N; i++ )
-		{
-			if( activeList.get( i ))
-			{
-				doesPointHaveAndNeedWarp.set( i, false );
-			}
-		}
+		for ( int i = 0; i < doesPointHaveAndNeedWarp.size(); i++ )
+			resetWarpedPoint( i );
 	}
 
 	public void resetNeedsInverse(){
@@ -661,6 +661,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		 ************************************************/
 		if( isMoving && warpedPt != null )
 			updateWarpedPoint( index, warpedPt );
+		else
+			resetWarpedPoint( index );
 
 		if ( isUndoable )
 		{
@@ -695,7 +697,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		activateRow( index );
 
 		if( forceUpdateWarpedPts )
-			updateWarpedPoints(); // TODO this may be overkill
+			computeWarpedPoint( index );
 
 		updateNextRows();
 		firePointUpdated( index, isMoving );
@@ -721,29 +723,30 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * For any such landmarks that are found, compute the inverse transform and add the result to the fixed points line.
 	 * 
 	 */
-	public void updateWarpedPoints()
+	public void updateAllWarpedPoints()
 	{
 		for ( int i = 0; i < numRows; i++ )
-		{
 			if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumActiveLandmarks() > 3 )
-			{
-				double[] tgt = toPrimitive( movingPts.get( i ) );
-				double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
+				computeWarpedPoint( i );
 
-				double[] resini = estimatedXfm.apply( warpedPt );
-				double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+	}
 
-				estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
-				double[] resfin = estimatedXfm.apply( warpedPt );
-				double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+	public void computeWarpedPoint( int i )
+	{
+		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumActiveLandmarks() > 3 )
+		{
+			double[] tgt = toPrimitive( movingPts.get( i ) );
+			double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
 
-				// TODO should check for failure or non-convergence here
-				updateWarpedPoint( i, warpedPt );
-			}
-			else
-			{
-				doesPointHaveAndNeedWarp.set( i, false );
-			}
+			double[] resini = estimatedXfm.apply( warpedPt );
+			double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+
+			estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
+			double[] resfin = estimatedXfm.apply( warpedPt );
+			double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+
+			// TODO should check for failure or non-convergence here
+			updateWarpedPoint( i, warpedPt );
 		}
 	}
 
@@ -782,11 +785,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 				break;
 			}	
 		}
-		boolean changed = activate == activeList.get( index );
-		activeList.set( index, activate );
+		boolean changed = activate != activeList.get( index );
 
 		if ( changed )
+		{
+			activeList.set( index, activate );
 			fireTableCellUpdated( index, ACTIVECOLUMN );
+		}
 	}
 
 
@@ -950,8 +955,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 			numRows++;
 		}
 		
-		nextRowP = nextRow( true );
-		nextRowQ = nextRow( false );
+//		nextRowP = nextRow( true );
+//		nextRowQ = nextRow( false );
+		updateNextRows();
 		initTransformation();
 	}
 	

@@ -983,7 +983,7 @@ public class BigWarp
 		{
 			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false );
 
-			if ( !isMoving && !landmarkModel.isWarpedPositionChanged( selectedPointIndex ) )
+			if ( !isMoving && !landmarkModel.isWarped( selectedPointIndex ) )
 				landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
 		}
 		else
@@ -1070,7 +1070,7 @@ public class BigWarp
 	public int selectedLandmark( final double[] ptarray, final boolean isMoving )
 	{
 		int selectedPointIndex = -1;
-		if ( isMoving && landmarkModel.getTransform() != null && isMovingDisplayTransformed() )
+		if ( isMoving && landmarkModel.getTransform() != null && !isMovingDisplayTransformed() )
 		{
 			landmarkModel.getTransform().apply( ptarray, ptBack );
 			selectedPointIndex = selectedLandmarkHelper( ptBack, isMoving );
@@ -1087,9 +1087,10 @@ public class BigWarp
 		// TODO selectedLandmark
 		final int N = landmarkModel.getRowCount();
 
-		double radsq = 100;
+		// a point will be selected if you click inside the spot ( with a 5 pixel buffer )
+		double radsq = ( viewerSettings.getSpotSize() * viewerSettings.getSpotSize() ) + 5 ;
 		final AffineTransform3D viewerXfm = new AffineTransform3D();
-		if ( isMoving )
+		if ( isMoving && !isMovingDisplayTransformed() )
 		{
 			viewerP.getState().getViewerTransform( viewerXfm );
 			radsq = viewerP.getSettings().getSpotSize();
@@ -1108,7 +1109,19 @@ public class BigWarp
 
 		for ( int n = 0; n < N; n++ )
 		{
-			final Double[] lmpt = landmarkModel.getPoints( isMoving ).get( n );
+			final Double[] lmpt;
+			if( isMoving && landmarkModel.isWarped( n ) )
+			{
+				lmpt = landmarkModel.getWarpedPoints().get( n );
+			}
+			else if( isMoving && isMovingDisplayTransformed() )
+			{
+				lmpt =landmarkModel.getPoints( false ).get( n );
+			}
+			else
+			{
+				lmpt = landmarkModel.getPoints( isMoving ).get( n );
+			}
 
 			dist = 0.0;
 			for ( int i = 0; i < ndims; i++ )
@@ -2175,11 +2188,13 @@ public class BigWarp
 								selectedPointIndex,
 								BigWarp.this.landmarkModel.getTransform().apply( ptarrayLoc ),
 								false, isMoving, ptarrayLoc, false, false );
+						thisViewer.requestRepaint();
 					}
 					else
 					{
 						// The fixed image
 						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
+						thisViewer.requestRepaint();
 					}
 				}
 			}
@@ -2270,7 +2285,7 @@ public class BigWarp
 					viewer = BigWarp.this.viewerP;
 
 					if ( BigWarp.this.viewerP.getOverlay().getIsTransformed() )
-						if ( BigWarp.this.landmarkModel.isWarpedPositionChanged( row ) )
+						if ( BigWarp.this.landmarkModel.isWarped( row ) )
 							pt = LandmarkTableModel.toPrimitive( BigWarp.this.landmarkModel.getWarpedPoints().get( row ) );
 						else
 							offset = ndims;
@@ -2426,8 +2441,8 @@ public class BigWarp
 							// reset active warped points
 							bw.landmarkModel.resetWarpedPoints();
 
-							// re-compute warped points for non-active points
-							bw.landmarkModel.updateWarpedPoints();
+							// re-compute all warped points for non-active points
+							bw.landmarkModel.updateAllWarpedPoints();
 
 							// update sources with the new transformation
 							bw.setTransformationAll( bw.landmarkModel.getTransform() );
@@ -2445,7 +2460,13 @@ public class BigWarp
 						if ( !isMoving )
 							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false );
 
+						/*
+						 * repaint both panels so that: 
+						 * 1) new transform is displayed
+						 * 2) points are rendered
+						 */
 						bw.getViewerFrameP().getViewerPanel().requestRepaint();
+						bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 					}
 
 					catch ( final RejectedExecutionException e )
