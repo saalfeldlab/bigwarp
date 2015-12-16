@@ -148,6 +148,10 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public void toggleUpdateOnDrag()
 	{
 		setUpdateOnDrag( !updateOnDrag );
+		if( updateOnDrag )
+			showMessage( "Update on drag" );
+		else
+			showMessage( "No update on drag" );
 	}
 
 	public void addOverlay( BigWarpOverlay overlay ){
