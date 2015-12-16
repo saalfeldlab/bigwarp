@@ -380,8 +380,11 @@ public class BigWarp
 		viewerP.addOverlay( overlayP );
 		viewerQ.addOverlay( overlayQ );
 
-		dragOverlayP = new BigWarpDragOverlay( this, viewerP );
-		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ );
+		solverThread = new SolveThread( this );
+		solverThread.start();
+		
+		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
+		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
 		viewerP.addDragOverlay( dragOverlayP );
 		viewerQ.addDragOverlay( dragOverlayQ );
 
@@ -489,9 +492,6 @@ public class BigWarp
 		}
 
 		fileFrame.setVisible( false );
-
-		solverThread = new SolveThread( this );
-		solverThread.start();
 
 		// add focus listener
 		new BigwarpFocusListener( this );
@@ -1286,34 +1286,37 @@ public class BigWarp
 	 * Toggles whether the moving image is displayed after warping (in the same
 	 * space as the fixed image), or in its native space.
 	 */
-	public void toggleMovingImageDisplay()
+	public boolean toggleMovingImageDisplay()
 	{
-		boolean success = true;
-
 		// If this is the first time calling the toggle, there may not be enough
 		// points to estimate a reasonable transformation.  
-		// Check for this, and return early if an re-estimation did not occur
-		if( firstWarpEstimation )
-			success = restimateTransformation();
+		// return early if an re-estimation did not occur
+		boolean success = restimateTransformation();
+		if ( !success )
+		{
+			getViewerFrameP().getViewerPanel().showMessage(
+					"Require at least 4 points to estimate a transformation" );
+			getViewerFrameQ().getViewerPanel().showMessage(
+					"Require at least 4 points to estimate a transformation" );
+			return false;
+		}
 
-		if( !success )
-			return;
-		
 		final boolean newState = !getOverlayP().getIsTransformed();
 
 		if ( newState )
-			getViewerFrameP().getViewerPanel().showMessage( "Displaying warped" );
+			viewerP.showMessage( "Displaying warped" );
 		else
-			getViewerFrameP().getViewerPanel().showMessage( "Displaying raw" );
+			viewerP.showMessage( "Displaying raw" );
 
 		// Toggle whether moving image is displayed as transformed or not
 		setIsMovingDisplayTransformed( newState );
-		getViewerFrameP().getViewerPanel().requestRepaint();
+		viewerP.requestRepaint();
 
 		if ( viewerQ.getVisibilityAndGrouping().isFusedEnabled() )
 		{
-			getViewerFrameQ().getViewerPanel().requestRepaint();
+			viewerQ.requestRepaint();
 		}
+		return success;
 	}
 
 	protected void exportMovingImage( final File f, final ViewerState renderState, final ProgressWriter progressWriter ) throws IOException, InterruptedException
@@ -1748,22 +1751,10 @@ public class BigWarp
 
 	public boolean restimateTransformation()
 	{
-		// TODO - call this asynchronously during mouse drags
-		// (take logic from net.imglib2.ui.PainterThread )
-		// change the 'paintable.paint' line to re-solve
-
 		if ( landmarkModel.getActiveRowCount() < 4 )
 		{
-			// JOptionPane.showMessageDialog( landmarkFrame, "Require at least 4
-			// points to estimate a transformation" );
-			getViewerFrameP().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
-			getViewerFrameQ().getViewerPanel().showMessage( "Require at least 4 points to estimate a transformation" );
 			return false;
 		}
-
-//		getViewerFrameP().getViewerPanel().showMessage( "Estimating transformation..." );
-//		getViewerFrameQ().getViewerPanel().showMessage( "Estimating transformation..." );
-
 		// TODO restimateTransformation
 		// This distinction is unnecessary right now, because
 		// transferUpdatesToModel just calls initTransformation.. but this may
@@ -1773,11 +1764,6 @@ public class BigWarp
 //		else
 //			landmarkModel.transferUpdatesToModel();
 
-//		landmarkModel.initTransformation();
-//
-//		// estimate the forward transformation
-//		landmarkModel.getTransform().solve();
-		
 		solverThread.requestResolve( true, -1, null );
 
 		// display the warped version automatically if this is the first
@@ -1788,19 +1774,8 @@ public class BigWarp
 			firstWarpEstimation = false;
 		}
 
-//		// reset active warped points
-//		landmarkModel.resetWarpedPoints();
-//
-//		// re-compute warped points for non-active points
-//		landmarkModel.updateWarpedPoints();
-//
-//		// update sources with the new transformation
-//		setTransformationAll( landmarkModel.getTransform() );
-//		fitBaselineWarpMagModel();
-
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
-
 		return true;
 	}
 

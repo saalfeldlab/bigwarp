@@ -589,7 +589,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, boolean isWarped, boolean isUndoable )
 	{
 		//TODO point edit
-		if( isWarped )
+		if( isWarped && estimatedXfm.isSolved() )
 			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable );
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );

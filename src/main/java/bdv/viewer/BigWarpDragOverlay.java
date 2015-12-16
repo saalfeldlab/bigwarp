@@ -35,7 +35,7 @@ public class BigWarpDragOverlay
 	
 	private Color baseColor;
 	
-	public BigWarpDragOverlay( final BigWarp bw, final BigWarpViewerPanel viewer )
+	public BigWarpDragOverlay( final BigWarp bw, final BigWarpViewerPanel viewer, final SolveThread solveThread )
 	{
 		this.bw = bw;
 		this.viewer = viewer;
@@ -48,7 +48,7 @@ public class BigWarpDragOverlay
 		arad = viewer.getSettings().getSpotSize();
 		baseColor = viewer.getSettings().getSpotColor();
 
-		mouseListener = new WarpDragMouseListener( bw, viewer );
+		mouseListener = new WarpDragMouseListener( bw, viewer, solveThread );
 	}
 	
 	public void reset()
@@ -99,16 +99,15 @@ public class BigWarpDragOverlay
 		private int index;
 		double[] targetPtArray = new double[ ndim ];
 
-		private SolveThread solverThread;
+		final private SolveThread solverThread;
 
-		public WarpDragMouseListener( final BigWarp bw, final BigWarpViewerPanel thisViewer )
+		public WarpDragMouseListener( final BigWarp bw, final BigWarpViewerPanel thisViewer, SolveThread solverThread )
 		{
 			this.bw = bw;
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 
-			solverThread = new SolveThread( bw );
-			solverThread.start();
+			this.solverThread = solverThread;
 		}
 		
 		protected void setViewer( BigWarpViewerPanel thisViewer )
@@ -127,19 +126,15 @@ public class BigWarpDragOverlay
 				thisViewer.getGlobalMouseCoordinates( BigWarpDragOverlay.this.movingPoint );
 				thisViewer.getGlobalMouseCoordinates( BigWarpDragOverlay.this.targetPoint );
 
-				// ThinPlateR2LogRSplineKernelTransform xfm = bw.getLandmarkPanel().getTableModel().getTransform();
-
 				double[] movingPtArray = new double[ ndim ];
 				BigWarpDragOverlay.this.movingPoint.localize( movingPtArray );
 
 				// add undoable point edit - moving point
-				bw.getLandmarkPanel().getTableModel().pointEdit( -1, movingPtArray, false, true, true, true );
+				bw.getLandmarkPanel().getTableModel().pointEdit( -1, movingPtArray, true, true, true, true );
 				index = bw.getLandmarkPanel().getTableModel().getRowCount() - 1;
 				
 				// add point edit - fixed point, at the same place as the moving point but not undoable
 				bw.getLandmarkPanel().getTableModel().pointEdit( index, movingPtArray, false, false, false, false);
-
-				bw.restimateTransformation();
 
 				inProgress  = true;
 				completedOK = false;
@@ -185,7 +180,9 @@ public class BigWarpDragOverlay
 				targetPoint.localize(  targetPtArray );
 
 				// In the click-drag paradigm, the drag part always effects the fixed image
-				if( bw.isMovingDisplayTransformed() )
+				if( bw.isMovingDisplayTransformed() &&
+						thisViewer.doUpdateOnDrag() &&
+						bw.getLandmarkPanel().getTableModel().isActive( index ) )
 				{
 					solverThread.requestResolve( false, index, targetPtArray );
 				}
