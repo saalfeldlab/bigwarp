@@ -493,6 +493,9 @@ public class BigWarp
 		solverThread = new SolveThread( this );
 		solverThread.start();
 
+		// add focus listener
+		new BigwarpFocusListener( this );
+
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
 	}
