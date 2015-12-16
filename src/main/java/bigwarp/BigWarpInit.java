@@ -8,13 +8,10 @@ import bdv.SpimSource;
 import bdv.VolatileSpimSource;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
-import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
-import bigwarp.loader.BigWarpImageStackImageLoader;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
@@ -218,6 +215,42 @@ public class BigWarpInit
 	 * @param spimDataQ
 	 * @return
 	 */
+	public static BigWarpData createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
+	{
+		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
+		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
+
+		// TODO this may need improving
+		final AbstractSequenceDescription< ?, ?, ? > seqP = spimDataPList[ 0 ].getSequenceDescription();
+		final AbstractSequenceDescription< ?, ?, ? > seqQ = spimDataQList[ 0 ].getSequenceDescription();
+
+		int numMovingSources = 0;
+		for( AbstractSpimData< ? > spimDataP : spimDataPList )
+		{
+			numMovingSources += spimDataP.getSequenceDescription().getViewSetups().size();
+			BigWarpInit.initSetups( spimDataP, converterSetups, sources );
+		}
+
+		int numTargetSources = 0;
+		for( AbstractSpimData< ? > spimDataQ : spimDataQList )
+		{
+			numTargetSources += spimDataQ.getSequenceDescription().getViewSetups().size();
+			BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
+		}
+
+		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+
+		return new BigWarpData( sources, seqP, seqQ, converterSetups, movingSourceIndices, targetSourceIndices );
+	}
+
+	/**
+	 * Create {@link BigWarpData} from two {@link AbstractSpimData}.
+	 *
+	 * @param spimDataP
+	 * @param spimDataQ
+	 * @return
+	 */
 	public static BigWarpData createBigWarpData( final AbstractSpimData< ? > spimDataP, final AbstractSpimData< ? > spimDataQ )
 	{
 		final AbstractSequenceDescription< ?, ?, ? > seqP = spimDataP.getSequenceDescription();
@@ -245,13 +278,13 @@ public class BigWarpInit
 			final ImagePlusLoader loaderQ )
 	{
 		/* Load the first source */
-		final AbstractSpimData< ? > spimDataP = loaderP.load( 0 );
-		int numMovingChannels = spimDataP.getSequenceDescription().getViewSetups().keySet().size();
+		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
+		int numMovingChannels = loaderP.numChannels();
 
 		/*
 		 * Load the second source, giving each channel a different setupId
 		 */
-		final AbstractSpimData< ? > spimDataQ = loaderQ.load( numMovingChannels );
+		final AbstractSpimData< ? >[] spimDataQ = loaderQ.loadAll( numMovingChannels );
 
 		return createBigWarpData( spimDataP, spimDataQ );
 	}
@@ -299,6 +332,42 @@ public class BigWarpInit
 	}
 
 	/**
+	 * Create {@link BigWarpData} from two {@link ImagePlus ImagePlus} arrays.
+	 *
+	 * @param impP
+	 * @param impQ
+	 * @return
+	 */
+	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus[] impQ )
+	{
+		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
+	}
+
+	/**
+	 * Create {@link BigWarpData} from one {@link ImagePlus ImagePlus} (moving) and one {@link ImagePlus ImagePlus} array (target).
+	 *
+	 * @param impP
+	 * @param impQ
+	 * @return
+	 */
+	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus[] impQ )
+	{
+		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
+	}
+
+	/**
+	 * Create {@link BigWarpData} from one {@link ImagePlus ImagePlus} array (moving) and one {@link ImagePlus ImagePlus} (target).
+	 *
+	 * @param impP
+	 * @param impQ
+	 * @return
+	 */
+	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus impQ )
+	{
+		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
+	}
+
+	/**
 	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus}.
 	 *
 	 * @param xmlFilenameP
@@ -311,6 +380,18 @@ public class BigWarpInit
 	}
 
 	/**
+	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus} array.
+	 *
+	 * @param xmlFilenameP
+	 * @param impQ
+	 * @return
+	 */
+	public static BigWarpData createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus[] impQ )
+	{
+		return createBigWarpData( new XMLLoader( xmlFilenameP ), new ImagePlusLoader( impQ ) );
+	}
+
+	/**
 	 * Create {@link BigWarpData} from an {@link ImagePlus} and an XML file.
 	 *
 	 * @param impP
@@ -318,6 +399,18 @@ public class BigWarpInit
 	 * @return
 	 */
 	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	{
+		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
+	}
+
+	/**
+	 * Create {@link BigWarpData} from an {@link ImagePlus} array and an XML file.
+	 *
+	 * @param impP
+	 * @param xmlFilenameQ
+	 * @return
+	 */
+	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus[] impP, final String xmlFilenameQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 	}
