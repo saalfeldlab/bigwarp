@@ -1562,11 +1562,11 @@ public class BigWarp
 		}
 		catch ( final NotEnoughDataPointsException e )
 		{
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		catch ( final IllDefinedDataPointsException e )
 		{
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 
 	}
