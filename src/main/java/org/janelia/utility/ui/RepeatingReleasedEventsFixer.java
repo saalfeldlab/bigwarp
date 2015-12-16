@@ -63,6 +63,18 @@ public class RepeatingReleasedEventsFixer implements AWTEventListener {
 
 	private final Map<Integer,ReleasedAction> _map = new HashMap<Integer,ReleasedAction>();
 
+	int delayMillis;
+
+	public RepeatingReleasedEventsFixer( )
+	{
+		delayMillis = 50;
+	}
+
+	public RepeatingReleasedEventsFixer( int delay )
+	{
+		this.delayMillis = delay;
+	}
+
 	public void install() {
 		Toolkit.getDefaultToolkit().addAWTEventListener(this, AWTEvent.KEY_EVENT_MASK);
 	}
@@ -105,7 +117,7 @@ public class RepeatingReleasedEventsFixer implements AWTEventListener {
 		 * afterwards. The code with the ReleasedAction handles if the Timer thread actually fires the action due to
 		 * lags, by cancelling the action itself upon the PRESSED.
 		 */
-		final Timer timer = new Timer(2, null);
+		final Timer timer = new Timer( delayMillis, null );
 		ReleasedAction action = new ReleasedAction(keyEvent, timer);
 		timer.addActionListener(action);
 		timer.start();
