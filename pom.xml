@@ -102,9 +102,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>
-				com.googlecode.efficient-java-matrix-library
-			</groupId>
+			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
 			<artifactId>ejml</artifactId>
 			<version>0.24</version>
 		</dependency>
