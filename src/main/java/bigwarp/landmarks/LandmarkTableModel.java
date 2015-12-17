@@ -601,12 +601,15 @@ public class LandmarkTableModel extends AbstractTableModel {
 	}
 
 	/**
+	 * Changes a point's position, or adds a new point.
+	 * <p>
 	 * 
-	 * @param index
-	 * @param pt
-	 * @param isMoving
-	 * @param isWarped
-	 * @param isUndoable
+	 * @param index The index into this table that this edit will affect ( a value of -1 will add a new point )
+	 * @param pt the point position
+	 * @param isMoving is this point in the moving image space
+	 * @param warpedPt 
+	 * @param isUndoable is this action undo-able
+	 * @param forceUpdateWarpedPoints
 	 * @return true if a new row was added
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
@@ -734,19 +737,39 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	}
 
+	/**
+	 * Given an row in this table, updates the warped point position if
+	 * necessary.
+	 * <p>
+	 * An action is taken if, for the input row if:
+	 * <p>
+	 * <ul>
+	 * <li>1) There is a point in moving space, and
+	 * <li>2) There is not a point in target space, and
+	 * <li>3) A transformation has been estimated.
+	 * </ul>
+	 * <p>
+	 * If these conditions are satisfied, the position of the moving point in
+	 * target space by iteratively estimating the inverse of the thin plate
+	 * spline transformation.
+	 * 
+	 * @param i
+	 *            the row in the table
+	 */
 	public void computeWarpedPoint( int i )
 	{
-		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumActiveLandmarks() > 3 )
+		// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
+		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.isSolved() )
 		{
 			double[] tgt = toPrimitive( movingPts.get( i ) );
 			double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
 
-			double[] resini = estimatedXfm.apply( warpedPt );
-			double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+			// double[] resini = estimatedXfm.apply( warpedPt );
+			// double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
 
 			estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
-			double[] resfin = estimatedXfm.apply( warpedPt );
-			double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+			// double[] resfin = estimatedXfm.apply( warpedPt );
+			// double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
 
 			// TODO should check for failure or non-convergence here
 			updateWarpedPoint( i, warpedPt );
