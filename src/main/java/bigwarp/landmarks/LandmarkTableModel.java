@@ -590,7 +590,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		//TODO point edit
 		if( isWarped && estimatedXfm.isSolved() )
-			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable );
+			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable, false );
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
@@ -619,8 +619,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 				index = nextRowQ;
 		}
 
-		boolean isAdd = forceAdd || ( index == getRowCount() );
-		
+		if ( warpedPt != null )
+			forceUpdateWarpedPts = false;
+
+		boolean isAdd = forceAdd || (index == getRowCount());
+
 		if( isAdd )
 			addEmptyRow( index );
 		
