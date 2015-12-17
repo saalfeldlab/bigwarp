@@ -78,6 +78,21 @@
 		</contributor>
 	</contributors>
 
+	<scm>
+		<connection>scm:git:git://github.com/saalfeldlab/bigwarp</connection>
+		<developerConnection>scm:git:git@github.com:saalfeldlab/bigwarp</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/saalfeldlab/bigwarp</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/saalfeldlab/bigwarp/issues</url>
+	</issueManagement>
+	<ciManagement>
+		<system>Jenkins</system>
+		<url>http://jenkins.imagej.net/job/bigwarp/</url>
+	</ciManagement>
+
 	<repositories>
 		<repository>
 			<id>imagej.public</id>
