@@ -5,8 +5,9 @@
 
 	<parent>
 		<groupId>sc.fiji</groupId>
-		<artifactId>pom-bigdataviewer</artifactId>
-		<version>2.2.2</version>
+		<artifactId>pom-fiji</artifactId>
+		<version>19.0.0</version>
+		<relativePath />
 	</parent>
 
 	<artifactId>bigwarp_fiji</artifactId>
@@ -93,6 +94,10 @@
 		<url>http://jenkins.imagej.net/job/bigwarp/</url>
 	</ciManagement>
 
+	<properties>
+		<scijava.jvm.version>1.7</scijava.jvm.version>
+	</properties>
+
 	<repositories>
 		<repository>
 			<id>imagej.public</id>
@@ -100,6 +105,17 @@
 		</repository>
 	</repositories>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>sc.fiji</groupId>
+				<artifactId>pom-bigdataviewer</artifactId>
+				<version>${pom-bigdataviewer.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
