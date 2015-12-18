@@ -5,8 +5,9 @@
 
 	<parent>
 		<groupId>sc.fiji</groupId>
-		<artifactId>pom-bigdataviewer</artifactId>
-		<version>2.2.2</version>
+		<artifactId>pom-fiji</artifactId>
+		<version>19.0.0</version>
+		<relativePath />
 	</parent>
 
 	<artifactId>bigwarp_fiji</artifactId>
@@ -78,6 +79,25 @@
 		</contributor>
 	</contributors>
 
+	<scm>
+		<connection>scm:git:git://github.com/saalfeldlab/bigwarp</connection>
+		<developerConnection>scm:git:git@github.com:saalfeldlab/bigwarp</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/saalfeldlab/bigwarp</url>
+	</scm>
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/saalfeldlab/bigwarp/issues</url>
+	</issueManagement>
+	<ciManagement>
+		<system>Jenkins</system>
+		<url>http://jenkins.imagej.net/job/bigwarp/</url>
+	</ciManagement>
+
+	<properties>
+		<scijava.jvm.version>1.7</scijava.jvm.version>
+	</properties>
+
 	<repositories>
 		<repository>
 			<id>imagej.public</id>
@@ -85,11 +105,20 @@
 		</repository>
 	</repositories>
 
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>sc.fiji</groupId>
+				<artifactId>pom-bigdataviewer</artifactId>
+				<version>${pom-bigdataviewer.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
-			<groupId>
-				com.googlecode.efficient-java-matrix-library
-			</groupId>
+			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
 			<artifactId>ejml</artifactId>
 			<version>0.24</version>
 		</dependency>
