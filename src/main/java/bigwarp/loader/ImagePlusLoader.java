@@ -83,12 +83,7 @@ public class ImagePlusLoader implements Loader
 
 	@SuppressWarnings( "unchecked" )
 	@Override
-	public SpimDataMinimal load()
-	{
-		return loadAll( 0 )[ 0 ];
-	}
-
-	public SpimDataMinimal[] loadAll()
+	public SpimDataMinimal[] load()
 	{
 		return loadAll( 0 );
 	}

@@ -301,8 +301,8 @@ public class BigWarpInit
 			final Loader loaderQ )
 	{
 		/* Load the first source */
-		final AbstractSpimData< ? > spimDataP = loaderP.load();
-		final AbstractSpimData< ? > spimDataQ = loaderQ.load();
+		final AbstractSpimData< ? >[] spimDataP = loaderP.load();
+		final AbstractSpimData< ? >[] spimDataQ = loaderQ.load();
 
 		return createBigWarpData( spimDataP, spimDataQ );
 	}
