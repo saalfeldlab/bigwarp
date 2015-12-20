@@ -37,7 +37,7 @@ public class XMLLoader implements Loader
 
 	@SuppressWarnings( "unchecked" )
 	@Override
-	public SpimDataMinimal load()
+	public SpimDataMinimal[] load()
 	{
 		SpimDataMinimal spimData = null;
 		try
@@ -55,6 +55,6 @@ public class XMLLoader implements Loader
 			e.printStackTrace();
 		}
 
-		return spimData;
+		return new SpimDataMinimal[]{ spimData };
 	}
 }

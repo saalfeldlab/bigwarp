@@ -27,5 +27,5 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
  */
 public interface Loader
 {
-	public < S extends AbstractSequenceDescription< ?, ?, ? > > AbstractSpimData< S > load();
+	public < S extends AbstractSequenceDescription< ?, ?, ? > > AbstractSpimData< S >[] load();
 }

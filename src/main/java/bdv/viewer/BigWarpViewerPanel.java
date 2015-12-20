@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.imglib2.RealPoint;
@@ -25,8 +26,11 @@ import bdv.viewer.state.SourceState;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
-
 	private static final long serialVersionUID = 7706602964307210070L;
+
+	public static final int MOVING_GROUP_INDEX = 0;
+
+	public static final int TARGET_GROUP_INDEX = 1;
 
 	protected List< SourceAndConverter< ? > > sources;
 
@@ -46,32 +50,89 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	protected int ndims;
 
-	protected int movingSourceIndex = 0; //TODO HAVE A SETTER FOR THIS
+	final protected int[] movingSourceIndexList;
+
+	final protected int[] targetSourceIndexList;
 
 	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
 	
 	ViewerOptions options;
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving,
+			int[] movingSourceIndexList, int[] targetSourceIndexList )
 	{
-		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving );
+		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving )
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving, 
+			int[] movingSourceIndexList, int[] targetSourceIndexList  )
 	{
 		super( sources, 1, cache, optional );
 		this.sources = sources;
 		this.viewerSettings = viewerSettings;
 		options = optional;
 		this.isMoving = isMoving;
-		this.updateOnDrag = !isMoving; // update on drag only for the fixed image by default
+		this.updateOnDrag = !isMoving; // update on drag only for the fixed
+										// image by default
+		this.movingSourceIndexList = movingSourceIndexList;
+		this.targetSourceIndexList = targetSourceIndexList;
 		destXfm = new AffineTransform3D();
+
+		updateGrouping();
+	}
+
+	/**
+	 * Makes the first group contain all the moving images and the second group
+	 * contain all the fixed images
+	 * 
+	 * @param name
+	 * @return
+	 */
+	public int updateGrouping()
+	{
+		getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).setName( "moving images" );
+		getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).setName( "fixed images" );
+		int numGroups = getVisibilityAndGrouping().getSourceGroups().size();
+		for ( int i = 0; i < sources.size(); i++ )
+		{
+			int idxP = Arrays.binarySearch( movingSourceIndexList, i );
+			int idxQ = Arrays.binarySearch( targetSourceIndexList, i );
+			if ( idxP >= 0 )
+			{
+				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).addSource( i );
+				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).removeSource( i );
+			}
+			else if ( idxQ >= 0 )
+			{
+				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).addSource( i );
+				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).removeSource( i );
+			}
+			else
+			{
+				getVisibilityAndGrouping().removeSourceFromGroup( i, MOVING_GROUP_INDEX );
+				getVisibilityAndGrouping().removeSourceFromGroup( i, TARGET_GROUP_INDEX );
+			}
+		}
+
+		// make only moving and target image groups active in fused mode
+		for ( int i = 2; i < numGroups; i++ )
+			getVisibilityAndGrouping().setGroupActive( i, false );
+
+		// only turn grouping enabled by default if there are multiple moving or
+		// target images
+		if ( movingSourceIndexList.length > 1 || targetSourceIndexList.length > 1 )
+			getVisibilityAndGrouping().setGroupingEnabled( true );
+
+		if( !isMoving )
+			getVisibilityAndGrouping().setCurrentGroup( 1 );
+
+		return numGroups;
 	}
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ((WarpedSource<?>)(sources.get( movingSourceIndex ).getSpimSource())).isTransformed();
+		return !isMoving || ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()
@@ -81,13 +142,16 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public void setUpdateOnDrag( boolean updateOnDrag )
 	{
-		System.out.println("set updateOnDrag: " + updateOnDrag );
 		this.updateOnDrag = updateOnDrag;
 	}
 
 	public void toggleUpdateOnDrag()
 	{
 		setUpdateOnDrag( !updateOnDrag );
+		if( updateOnDrag )
+			showMessage( "Update on drag" );
+		else
+			showMessage( "No update on drag" );
 	}
 
 	public void addOverlay( BigWarpOverlay overlay ){
@@ -188,9 +252,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	public synchronized void rotateView2dOld( boolean isClockwise )
 	{
-		if( !transformEnabled )
+		if ( !transformEnabled )
 			return;
-		
+
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
@@ -262,6 +326,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	public synchronized void rotateView2d( boolean isClockwise )
 	{
+		if ( !transformEnabled )
+			return;
+
 		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
 		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
@@ -333,10 +400,21 @@ public class BigWarpViewerPanel extends ViewerPanel
 		currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( transform );
 	}
-	
+
+	@Override
+	public synchronized void align( AlignPlane plane )
+	{
+		if ( !transformEnabled )
+			return;
+
+		super.align( plane );
+	}
+
     public synchronized void animateTransformation( AffineTransform3D destinationXfm, int millis )
     {
-    	
+		if ( !transformEnabled )
+			return;
+
     	AffineTransform3D startXfm = new AffineTransform3D();
     	getState().getViewerTransform( startXfm );
     	
@@ -371,7 +449,7 @@ public class BigWarpViewerPanel extends ViewerPanel
     	animateTransformation( destinationXfm, 300 );
     }
     
-    public void setTransformEnabled( boolean enabled )
+    public synchronized void setTransformEnabled( boolean enabled )
     {
     	transformEnabled = enabled;
     }

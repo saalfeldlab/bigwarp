@@ -17,7 +17,6 @@ import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
-import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -25,6 +24,10 @@ import bigwarp.source.GridSource;
 public class BigWarpActions
 {
 	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
+
+	public static final String LANDMARK_MODE_ON  = "landmark mode on";
+	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
+
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
@@ -47,7 +50,7 @@ public class BigWarpActions
 	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
-	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping";
+	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
 	public static final String SHOW_HELP = "help";
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
@@ -108,7 +111,10 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
 		map.put(RESET_VIEWER, "R");
-		map.put( VISIBILITY_AND_GROUPING, "F6" );
+		
+		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F6" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F7" );
+		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
 
@@ -122,7 +128,8 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( VISIBILITY_AND_GROUPING, bw.activeSourcesDialog ) );
+		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ) );
+		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ) );
 
 		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -146,8 +153,29 @@ public class BigWarpActions
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.adder( inputMap );
 
-		map.put( SHOW_WARPTYPE_DIALOG, "G" );
+		map.put( SHOW_WARPTYPE_DIALOG, "U" );
 		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
+
+		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
+		// the few lines below are super ugly, but are necessary for robustness
+		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
+		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
+
+		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
+		// the few lines below are super ugly, but are necessary for robustness
+		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
+		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
+
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
@@ -168,6 +196,9 @@ public class BigWarpActions
 	{
 		final ActionMap actionMap = new ActionMap();
 		final NamedActionAdder map = new NamedActionAdder( actionMap );
+
+		map.put( new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ) );
+		map.put( new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ) );
 
 		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
 
@@ -217,9 +248,15 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+			if( bw.isInLandmarkMode() )
+			{
+				bw.getViewerFrameP().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
+				bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
+				return;
+			}
+
 			// TODO I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
-
 //			if( isRedo && manager.canRedo() ){
 			try { 
 
@@ -263,6 +300,28 @@ public class BigWarpActions
 				//System.err.println( " Undo / redo error, or nothing to do " );
 				//ex.printStackTrace();
 			}
+		}
+	}
+
+	public static class LandmarkModeAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4079013525930019558L;
+
+		private BigWarp bw;
+
+		private final boolean isOn;
+
+		public LandmarkModeAction( final String name, final BigWarp bw, final boolean on )
+		{
+			super( name );
+			this.bw = bw;
+			this.isOn = on;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.setInLandmarkMode( isOn );
 		}
 	}
 

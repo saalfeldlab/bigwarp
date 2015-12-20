@@ -1,0 +1,83 @@
+import java.awt.Color;
+import java.awt.Point;
+import java.io.File;
+
+import net.imglib2.type.numeric.ARGBType;
+import bdv.export.ProgressWriterConsole;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpInit;
+import ij.IJ;
+import ij.ImageJ;
+import ij.ImagePlus;
+import ij.measure.Calibration;
+
+int WIDTH  = 600;
+int HEIGHT = 600;
+
+fnLandmarks = ""; // can optionally point to a file with landmark points
+fnMoving = new String[]{ "http://imagej.nih.gov/ij/images/hela-cells.zip", 		  // hela
+				   		 "http://imagej.nih.gov/ij/images/FluorescentCells.zip"}; // cells
+fnTarget = "http://imagej.nih.gov/ij/images/boats.gif"; // boats
+
+try
+{
+    impMoving1 = IJ.openImage( fnMoving[ 0 ] );
+    impMoving2 = IJ.openImage( fnMoving[ 1 ] );
+    impTarget = IJ.openImage( fnTarget );
+
+    // set pixel resolution
+    Calibration cal = impMoving2.getCalibration();
+    cal.pixelWidth  = 0.05;
+	cal.pixelHeight = 0.05;
+	cal.pixelDepth  = 0.05;
+	cal.setUnit( "µm" );
+
+    bw = new BigWarp( 
+    	BigWarpInit.createBigWarpDataFromImages( new ImagePlus[]{ impMoving1, impMoving2 }, impTarget ), 
+    	"bigwarp multichannel demo", new ProgressWriterConsole() );
+    bw.setImageJInstance( IJ.getInstance() );
+
+	/* load the landmark points if there are any */
+	if ( !fnLandmarks.isEmpty() )
+		bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
+
+	/* Change color of landmark points to yellow */
+	bw.setSpotColor( new Color( 0, 0, 0, 255 ) );
+			
+	/* Adjust contrast */
+	bw.getSetupAssignments().getConverterSetups().get( 0 ).setDisplayRange( 0, 2000 );
+	bw.getSetupAssignments().getConverterSetups().get( 1 ).setDisplayRange( 0, 2000 );
+	bw.getSetupAssignments().getConverterSetups().get( 2 ).setDisplayRange( 0, 2000 );
+
+	/* Change moving image color to magenta */
+	bw.getSetupAssignments().getConverterSetups().get( 0 ).setColor( new ARGBType( ARGBType.rgba( 255, 0, 255, 255 )) ); // magenta
+	bw.getSetupAssignments().getConverterSetups().get( 1 ).setColor( new ARGBType( ARGBType.rgba( 0, 255, 255, 255 )) ); // cyan
+	bw.getSetupAssignments().getConverterSetups().get( 2 ).setColor( new ARGBType( ARGBType.rgba( 255, 255, 0, 255 )) ); // yellow
+	bw.getSetupAssignments().getConverterSetups().get( 3 ).setColor( new ARGBType( ARGBType.rgba( 255, 0, 0, 255 )) );   // red
+	bw.getSetupAssignments().getConverterSetups().get( 4 ).setColor( new ARGBType( ARGBType.rgba( 0, 255, 0, 255 )) );   // green
+	bw.getSetupAssignments().getConverterSetups().get( 5 ).setColor( new ARGBType( ARGBType.rgba( 0, 0, 255, 255 )) );   // blue
+
+	/* Set window sizes */
+	bw.getViewerFrameP().setSize( WIDTH, HEIGHT );
+	bw.getViewerFrameQ().setSize( WIDTH, HEIGHT );
+
+	/* Set window positions */
+	bw.getViewerFrameP().setLocation( 0, 0 );
+	Point location = bw.getViewerFrameP().getLocation();
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getViewerFrameQ().setLocation( location );
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getLandmarkPanel().setLocation( location );
+			
+	/* Repaint */
+	bw.getViewerFrameP().getViewerPanel().requestRepaint();
+	bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+
+}
+catch ( Exception e )
+{
+	e.printStackTrace();
+}
+

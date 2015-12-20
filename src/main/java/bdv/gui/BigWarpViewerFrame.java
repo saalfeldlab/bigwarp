@@ -38,9 +38,11 @@ public class BigWarpViewerFrame extends JFrame
 			final BigWarpViewerSettings viewerSettings,
 			final Cache cache,
 			final String title,
-			final boolean isMoving )
+			final boolean isMoving,
+			final int[] movingIndexList,
+			final int[] targetIndexList )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving );
+		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
 	
 	public BigWarpViewerFrame(
@@ -51,12 +53,15 @@ public class BigWarpViewerFrame extends JFrame
 			final Cache cache,
 			final ViewerOptions optional,
 			final String title,
-			final boolean isMoving )
+			final boolean isMoving,
+			final int[] movingIndexList,
+			final int[] targetIndexList )
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving );
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving, movingIndexList, targetIndexList );
 
+		// TODO this needs to change for multi-channel!
 		if( !isMoving )
 			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
 		
@@ -81,7 +86,7 @@ public class BigWarpViewerFrame extends JFrame
 		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 	}
-	
+
 	public boolean isMoving()
 	{
 		return viewer.getIsMoving();

@@ -76,6 +76,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	// keeps track of warped points so we don't always have to do it on the fly
 	protected ArrayList<Double[]> warpedPoints;
+
+	// keep track of the value of the last point that was edited but not-undoable
+	// this lets us both render points correctly, and create desirable undo behavior
+	// for point drags.
+	protected double[] lastPoint; 
 	
 	// keep track of edits for undo's and redo's
 	protected LandmarkUndoManager undoRedoManager;
@@ -102,6 +107,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		this.ndims = ndims;
 		PENDING_PT = new double[ ndims ];
 		Arrays.fill( PENDING_PT, Double.POSITIVE_INFINITY );
+		lastPoint = PENDING_PT;
 		
 		names = new ArrayList<String>();
 		activeList = new ArrayList<Boolean>();
@@ -348,7 +354,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		names.set( row, name );
 		fireTableCellUpdated( row, NAMECOLUMN );
 	}
-	
+
+	public boolean getIsActive( int row )
+	{
+		return activeList.get( row );
+	}
+
 	public void setIsActive( int row, boolean isActive )
 	{
 		activeList.set( row, isActive );
@@ -462,7 +473,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return "";
 	}
 	
-	public Boolean isWarpedPositionChanged( int i )
+	public Boolean isWarped( int i )
 	{
 		return doesPointHaveAndNeedWarp.get( i );
 	}
@@ -507,16 +518,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return doesPointHaveAndNeedWarp;
 	}
 
+	public void resetWarpedPoint( int i )
+	{
+		if ( activeList.get( i ) )
+			doesPointHaveAndNeedWarp.set( i, false );
+	}
+
 	public void resetWarpedPoints()
 	{
-		int N = doesPointHaveAndNeedWarp.size();
-		for( int i = 0; i < N; i++ )
-		{
-			if( activeList.get( i ))
-			{
-				doesPointHaveAndNeedWarp.set( i, false );
-			}
-		}
+		for ( int i = 0; i < doesPointHaveAndNeedWarp.size(); i++ )
+			resetWarpedPoint( i );
 	}
 
 	public void resetNeedsInverse(){
@@ -578,8 +589,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, boolean isWarped, boolean isUndoable )
 	{
 		//TODO point edit
-		if( isWarped )
-			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable );
+		if( isWarped && estimatedXfm.isSolved() )
+			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable, false );
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
@@ -590,12 +601,15 @@ public class LandmarkTableModel extends AbstractTableModel {
 	}
 
 	/**
+	 * Changes a point's position, or adds a new point.
+	 * <p>
 	 * 
-	 * @param index
-	 * @param pt
-	 * @param isMoving
-	 * @param isWarped
-	 * @param isUndoable
+	 * @param index The index into this table that this edit will affect ( a value of -1 will add a new point )
+	 * @param pt the point position
+	 * @param isMoving is this point in the moving image space
+	 * @param warpedPt 
+	 * @param isUndoable is this action undo-able
+	 * @param forceUpdateWarpedPoints
 	 * @return true if a new row was added
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
@@ -608,18 +622,28 @@ public class LandmarkTableModel extends AbstractTableModel {
 				index = nextRowQ;
 		}
 
-		boolean isAdd = forceAdd || ( index == getRowCount() );
-		
+		if ( warpedPt != null )
+			forceUpdateWarpedPts = false;
+
+		boolean isAdd = forceAdd || (index == getRowCount());
+
 		if( isAdd )
 			addEmptyRow( index );
 		
-		double[] oldpt = PENDING_PT;
+		double[] oldpt = copy( PENDING_PT );
 		if( !isAdd )
 		{
-			if( isMoving )
-				oldpt = toPrimitive( movingPts.get( index ) );
+			if ( lastPoint != PENDING_PT )
+			{
+				oldpt = copy( lastPoint );
+			}
 			else
-				oldpt = toPrimitive( targetPts.get( index ) );
+			{
+				if ( isMoving )
+					oldpt = toPrimitive( movingPts.get( index ) );
+				else
+					oldpt = toPrimitive( targetPts.get( index ) );
+			}
 		}
 		
 		ArrayList< Double[] > pts;
@@ -643,6 +667,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		 ************************************************/
 		if( isMoving && warpedPt != null )
 			updateWarpedPoint( index, warpedPt );
+		else
+			resetWarpedPoint( index );
 
 		if ( isUndoable )
 		{
@@ -657,6 +683,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 						oldpt, pt,
 						isMoving ) );
 			}
+			lastPoint = PENDING_PT;
+		}
+		else if( lastPoint == PENDING_PT )
+		{
+			// Remember the "oldpt" even when an edit is not-undoable
+			// but don't overwrite an existing value
+			lastPoint = oldpt;
 		}
 
 		/***********************
@@ -670,7 +703,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		activateRow( index );
 
 		if( forceUpdateWarpedPts )
-			updateWarpedPoints(); // TODO this may be overkill
+			computeWarpedPoint( index );
 
 		updateNextRows();
 		firePointUpdated( index, isMoving );
@@ -678,34 +711,68 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return isAdd;
 	}
 
+	public void setLastPoint( int i, boolean isMoving )
+	{
+		if( isMoving )
+			lastPoint = toPrimitive( movingPts.get( i ) );
+		else
+			lastPoint = toPrimitive( targetPts.get( i ) );
+	}
+
+	public void resetLastPoint()
+	{
+		lastPoint = PENDING_PT;
+	}
+
 	/**
 	 * Looks through the table for points where there is a point in moving space but not fixed space.
 	 * For any such landmarks that are found, compute the inverse transform and add the result to the fixed points line.
 	 * 
 	 */
-	public void updateWarpedPoints()
+	public void updateAllWarpedPoints()
 	{
 		for ( int i = 0; i < numRows; i++ )
-		{
 			if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumActiveLandmarks() > 3 )
-			{
-				double[] tgt = toPrimitive( movingPts.get( i ) );
-				double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
+				computeWarpedPoint( i );
 
-				double[] resini = estimatedXfm.apply( warpedPt );
-				double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+	}
 
-				estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
-				double[] resfin = estimatedXfm.apply( warpedPt );
-				double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+	/**
+	 * Given an row in this table, updates the warped point position if
+	 * necessary.
+	 * <p>
+	 * An action is taken if, for the input row if:
+	 * <p>
+	 * <ul>
+	 * <li>1) There is a point in moving space, and
+	 * <li>2) There is not a point in target space, and
+	 * <li>3) A transformation has been estimated.
+	 * </ul>
+	 * <p>
+	 * If these conditions are satisfied, the position of the moving point in
+	 * target space by iteratively estimating the inverse of the thin plate
+	 * spline transformation.
+	 * 
+	 * @param i
+	 *            the row in the table
+	 */
+	public void computeWarpedPoint( int i )
+	{
+		// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
+		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.isSolved() )
+		{
+			double[] tgt = toPrimitive( movingPts.get( i ) );
+			double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
 
-				// TODO should check for failure or non-convergence here
-				updateWarpedPoint( i, warpedPt );
-			}
-			else
-			{
-				doesPointHaveAndNeedWarp.set( i, false );
-			}
+			// double[] resini = estimatedXfm.apply( warpedPt );
+			// double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
+
+			estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
+			// double[] resfin = estimatedXfm.apply( warpedPt );
+			// double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+
+			// TODO should check for failure or non-convergence here
+			updateWarpedPoint( i, warpedPt );
 		}
 	}
 
@@ -744,7 +811,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 				break;
 			}	
 		}
-		activeList.set( index, activate );
+		boolean changed = activate != activeList.get( index );
+
+		if ( changed )
+		{
+			activeList.set( index, activate );
+			fireTableCellUpdated( index, ACTIVECOLUMN );
+		}
 	}
 
 
@@ -908,8 +981,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 			numRows++;
 		}
 		
-		nextRowP = nextRow( true );
-		nextRowQ = nextRow( false );
+//		nextRowP = nextRow( true );
+//		nextRowQ = nextRow( false );
+		updateNextRows();
 		initTransformation();
 	}
 	
