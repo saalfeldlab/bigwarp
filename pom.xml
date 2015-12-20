@@ -94,10 +94,6 @@
 		<url>http://jenkins.imagej.net/job/bigwarp/</url>
 	</ciManagement>
 
-	<properties>
-		<scijava.jvm.version>1.7</scijava.jvm.version>
-	</properties>
-
 	<repositories>
 		<repository>
 			<id>imagej.public</id>
@@ -154,6 +150,12 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer_fiji</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>sc.fiji</groupId>
+					<artifactId>SPIM_Registration</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 	</dependencies>
 </project>
