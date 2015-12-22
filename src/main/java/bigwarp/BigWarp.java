@@ -2026,40 +2026,6 @@ public class BigWarp
 		public void mouseClicked( final MouseEvent arg0 )
 		{}
 
-//		/**
-//		 * Returns the index of the landmark under the mouse position,
-//		 * or -1 if no landmark is at the current position
-//		 */
-		protected int selectedLandmarkLocal( final double[] pt, final boolean isMoving )
-		{
-			final int N = BigWarp.this.landmarkModel.getRowCount();
-
-			double dist = 0;
-			final double radsq = 100;
-			landmarkLoop: for ( int n = 0; n < N; n++ )
-			{
-
-				dist = 0;
-				final Double[] lmpt = BigWarp.this.landmarkModel.getPoints( isMoving ).get( n );
-
-				for ( int i = 0; i < ndims; i++ )
-				{
-					dist += ( pt[ i ] - lmpt[ i ] ) * ( pt[ i ] - lmpt[ i ] );
-
-					if ( dist > radsq )
-						continue landmarkLoop;
-				}
-
-				if ( BigWarp.this.landmarkFrame.isVisible() )
-				{
-					BigWarp.this.landmarkTable.setEditingRow( n );
-					BigWarp.this.landmarkFrame.repaint();
-				}
-				return n;
-			}
-			return -1;
-		}
-
 		@Override
 		public void mouseEntered( final MouseEvent arg0 )
 		{}
