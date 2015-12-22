@@ -820,18 +820,29 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 	}
 
-
-	// TODO the current implmentation avoids overlap in common use cases.
-	// Consider whether checking all names for overlaps is worth it.
+	/**
+	 * Returns a name for a row to be inserted at the given index.
+	 * 
+	 * @param index index of the row
+	 * @return a name for the new row
+	 */
 	private String nextName( int index )
 	{
+		// TODO the current implmentation avoids overlap in common use cases.
+		// Consider whether checking all names for overlaps is worth it.
 		final String s;
 		if( index == 0 )
 			s = "Pt-0";
 		else
 		{
-			// Increment the index in the name of the previous row
-			int i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			int i = index;
+			try
+			{
+				// Increment the index in the name of the previous row
+				i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			}
+			catch ( Exception e ){}
+
 			s = String.format( "Pt-%d", i );
 		}
 		return s;
