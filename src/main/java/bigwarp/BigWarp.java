@@ -1070,7 +1070,7 @@ public class BigWarp
 	public int selectedLandmark( final double[] ptarray, final boolean isMoving )
 	{
 		int selectedPointIndex = -1;
-		if ( isMoving && landmarkModel.getTransform() != null && !isMovingDisplayTransformed() )
+		if ( isMoving && landmarkModel.getTransform() != null && landmarkModel.getTransform().isSolved() && !isMovingDisplayTransformed() )
 		{
 			landmarkModel.getTransform().apply( ptarray, ptBack );
 			selectedPointIndex = selectedLandmarkHelper( ptBack, isMoving );
@@ -2154,7 +2154,7 @@ public class BigWarp
 				{
 					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					if( isMoving )
+					if( isMoving && landmarkModel.getTransform().isSolved() )
 					{
 						// The moving image:
 						// Update the warped point during the drag even if there is a corresponding fixed image point
