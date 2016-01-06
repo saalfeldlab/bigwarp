@@ -41,8 +41,8 @@ public class BigWarpLandmarkFrame extends JFrame {
 			}
 		} );
 		
-		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
-		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
+		SwingUtilities.replaceUIActionMap( lmPanel.getJTable(), keybindings.getConcatenatedActionMap() );
+		SwingUtilities.replaceUIInputMap(  lmPanel.getJTable(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 	}
 	
 	public void setLandmarkPanel( BigWarpLandmarkPanel panel )
