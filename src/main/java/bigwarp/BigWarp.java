@@ -373,7 +373,6 @@ public class BigWarp
 		landmarkModel = new LandmarkTableModel( ndims );
 		landmarkModellistener = new LandmarkTableListener();
 		landmarkModel.addTableModelListener( landmarkModellistener );
-		landmarkTable = new JTable( landmarkModel );
 
 		overlayP = new BigWarpOverlay( viewerP, landmarkModel );
 		overlayQ = new BigWarpOverlay( viewerQ, landmarkModel );
@@ -391,6 +390,7 @@ public class BigWarp
 		/* Set up landmark panel */
 		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
 		landmarkPanel.setOpaque( true );
+		landmarkTable = landmarkPanel.getJTable();
 		addDefaultTableMouseListener();
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
@@ -2048,7 +2048,11 @@ public class BigWarp
 				selectedPointIndex = BigWarp.this.selectedLandmark( ptarrayLoc, isMoving );
 
 				if ( selectedPointIndex >= 0 )
+				{
+					landmarkTable.setRowSelectionInterval( selectedPointIndex, selectedPointIndex );
+					landmarkFrame.repaint();
 					BigWarp.this.landmarkModel.setLastPoint( selectedPointIndex, isMoving );
+				}
 			}
 		}
 
