@@ -56,11 +56,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected ArrayList<Boolean>	activeList;
 	protected ArrayList<Double[]>	movingPts;
 	protected ArrayList<Double[]>	targetPts;
-	
-	// determines if the last point that was added has a pair
-	protected boolean isLastPointPaired = true; // initialize to true, when there are no points
-	protected boolean lastPointMoving = false; // "P"
-	
+
 	protected boolean pointUpdatePending = false; //
 	protected boolean pointUpdatePendingMoving = false; //
 	protected Double[] pointToOverride;	// hold a backup of a point for fallback
@@ -302,11 +298,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		pointUpdatePending = false;
 		
 		fireTableRowsUpdated( i, i );
-	}
-	
-	public boolean isMostRecentPointPaired()
-	{
-		return isLastPointPaired;
 	}
 	
 	@Override
