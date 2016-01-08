@@ -37,6 +37,8 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ViewerImgLoader;
@@ -233,6 +235,8 @@ public class BigWarp
 	final ProgressWriter progressWriter;
 
 	private static ImageJ ij;
+
+	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
 
 	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -1022,6 +1026,44 @@ public class BigWarp
 
 		return selectedPointIndex;
 	}
+
+	/**
+	 * Returns the index of the row to be selected for moving or target.
+	 * 
+	 * 
+	 * @param isMoving
+	 * @return
+	 */
+	public void updateRowSelection( boolean isMoving, int lastRowEdited )
+	{
+		logger.trace( "updateRowSelection " );
+
+		int i = landmarkModel.getNextRow( isMoving );
+		if ( i < landmarkTable.getRowCount() )
+		{
+			logger.trace( "landmarkTable ( updateRowSelection ) selecting row " + i );
+			landmarkTable.setRowSelectionInterval( i, i );
+		} else if( lastRowEdited >= 0 && lastRowEdited < landmarkTable.getRowCount() )
+			landmarkTable.setRowSelectionInterval( lastRowEdited, lastRowEdited );
+
+		landmarkPanel.repaint();
+	}
+
+	/**
+	 * Returns the index of the selected row, if it is unpaired, -1 otherwise
+	 * 
+	 * @param isMoving
+	 * @return
+	 */
+	public int getSelectedUnpairedRow( boolean isMoving )
+	{
+		int row = landmarkTable.getSelectedRow();
+		if( row >= 0 && ( isMoving ? !landmarkModel.isMovingPoint( row ) : !landmarkModel.isFixedPoint( row )))
+			return row;
+
+		return -1;
+	}
+
 	/**
 	 * Updates the global variable ptBack
 	 *
@@ -2099,6 +2141,11 @@ public class BigWarp
 			}
 
 			BigWarp.this.landmarkModel.resetLastPoint();
+
+			if( wasNewRowAdded )
+				updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
+			else
+				updateRowSelection( isMoving, selectedPointIndex );
 
 			selectedPointIndex = -1;
 		}
