@@ -1103,36 +1103,26 @@ public class BigWarp
 	}
 
 	/**
+	 * Returns the index of the landmark closest to the input point,
+	 * if it is within a certain distance threshold.
+	 * 
 	 * Updates the global variable ptBack
 	 *
 	 * @param ptarray
 	 * @param isMoving
 	 * @return
 	 */
-	public int selectedLandmark( final double[] ptarray, final boolean isMoving )
+	protected int selectedLandmark( final double[] pt, final boolean isMoving )
 	{
-		int selectedPointIndex = -1;
-		if ( isMoving && landmarkModel.getTransform() != null && landmarkModel.getTransform().isSolved() && !isMovingDisplayTransformed() )
-		{
-			landmarkModel.getTransform().apply( ptarray, ptBack );
-			selectedPointIndex = selectedLandmarkHelper( ptBack, isMoving );
-		}
-		else // check if the clicked point itself is in the table
-		{
-			selectedPointIndex = selectedLandmarkHelper( ptarray, isMoving );
-		}
-		return selectedPointIndex;
-	}
+		logger.trace( "clicked: " + XfmUtils.printArray( pt ) );
 
-	protected int selectedLandmarkHelper( final double[] pt, final boolean isMoving )
-	{
 		// TODO selectedLandmark
 		final int N = landmarkModel.getRowCount();
 
 		// a point will be selected if you click inside the spot ( with a 5 pixel buffer )
 		double radsq = ( viewerSettings.getSpotSize() * viewerSettings.getSpotSize() ) + 5 ;
 		final AffineTransform3D viewerXfm = new AffineTransform3D();
-		if ( isMoving && !isMovingDisplayTransformed() )
+		if ( isMoving ) //&& !isMovingDisplayTransformed() )
 		{
 			viewerP.getState().getViewerTransform( viewerXfm );
 			radsq = viewerP.getSettings().getSpotSize();
@@ -1149,16 +1139,19 @@ public class BigWarp
 		int bestIdx = -1;
 		double smallestDist = Double.MAX_VALUE;
 
+		logger.trace( "  selectedLandmarkHelper dist scale: " + scale );
+		logger.trace( "  selectedLandmarkHelper      radsq: " + radsq );
+
 		for ( int n = 0; n < N; n++ )
 		{
 			final Double[] lmpt;
-			if( isMoving && landmarkModel.isWarped( n ) )
+			if( isMoving && landmarkModel.isWarped( n ) && isMovingDisplayTransformed() )
 			{
 				lmpt = landmarkModel.getWarpedPoints().get( n );
 			}
 			else if( isMoving && isMovingDisplayTransformed() )
 			{
-				lmpt =landmarkModel.getPoints( false ).get( n );
+				lmpt = landmarkModel.getPoints( false ).get( n );
 			}
 			else
 			{
@@ -1172,6 +1165,7 @@ public class BigWarp
 			}
 
 			dist *= ( scale * scale );
+			logger.trace( "    dist squared of lm index : " + n + " is " + dist );
 			if ( dist < radsq && dist < smallestDist )
 			{
 				smallestDist = dist;
@@ -1184,7 +1178,7 @@ public class BigWarp
 			landmarkTable.setEditingRow( bestIdx );
 			landmarkFrame.repaint();
 		}
-
+		logger.trace( "selectedLandmark: " + bestIdx );
 		return bestIdx;
 	}
 
@@ -1334,6 +1328,7 @@ public class BigWarp
 		// points to estimate a reasonable transformation.  
 		// return early if an re-estimation did not occur
 		boolean success = restimateTransformation();
+		logger.trace( "toggleMovingImageDisplay, success: " + success );
 		if ( !success )
 		{
 			getViewerFrameP().getViewerPanel().showMessage(
@@ -2165,14 +2160,16 @@ public class BigWarp
 						thisViewer.doUpdateOnDrag() &&
 						BigWarp.this.landmarkModel.isActive( selectedPointIndex ) )
 				{
+					logger.trace("Drag resolve");
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
 				else
 				{
 					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					if( isMoving && landmarkModel.getTransform().isSolved() )
+					if( isMoving && landmarkModel.getTransform().isSolved() && isMovingDisplayTransformed() )
 					{
+						logger.trace("Drag moving transformed");
 						// The moving image:
 						// Update the warped point during the drag even if there is a corresponding fixed image point
 						// Do this so the point sticks on the mouse
@@ -2184,6 +2181,7 @@ public class BigWarp
 					}
 					else
 					{
+						logger.trace("Drag default");
 						// The fixed image
 						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
 						thisViewer.requestRepaint();
