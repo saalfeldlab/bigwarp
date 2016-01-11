@@ -82,6 +82,7 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
