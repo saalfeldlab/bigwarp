@@ -328,7 +328,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public void setIsActive( int row, boolean isActive )
 	{
 		activeList.set( row, isActive );
-		fireTableCellUpdated( row, ACTIVECOLUMN );
+
+		if( activeList.get( row ) != isActive )
+			fireTableCellUpdated( row, ACTIVECOLUMN );
 	}
 	
 	public Class<?> getColumnClass( int col ){
