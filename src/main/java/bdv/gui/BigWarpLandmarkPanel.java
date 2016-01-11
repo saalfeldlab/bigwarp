@@ -8,6 +8,11 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import bigwarp.landmarks.LandmarkTableModel;
 
@@ -18,7 +23,8 @@ public class BigWarpLandmarkPanel extends JPanel {
 	protected LandmarkTableModel tableModel;
 	protected JTable table;
 	
-	
+	public final Logger logger = LogManager.getLogger( BigWarpLandmarkPanel.class.getName() );
+
     public BigWarpLandmarkPanel( LandmarkTableModel tableModel ) {
         
     	super(new GridLayout(1,0));
@@ -44,6 +50,43 @@ public class BigWarpLandmarkPanel extends JPanel {
 		table.setPreferredScrollableViewportSize( new Dimension( 400, 800 ) );
 		table.setFillsViewportHeight( true );
 		table.setShowVerticalLines( false );
+
+		/*
+		 * Add a listener to update the next row the tableModel will edit
+		 * based on the selected row.
+		 * 
+		 * Specifically, when the user changes the selected row of the table, the
+		 * listener checks whether any of those rows are "incomplete."
+		 * If so, the first row in the selection that does not have a moving image
+		 * becomes the next row to be updated for the moving image.
+		 * The next target landmark to be updated is changed as well.
+		 */
+		table.getSelectionModel().addListSelectionListener( new ListSelectionListener()
+		{
+			@Override
+			public void valueChanged( ListSelectionEvent e )
+			{
+				boolean setMoving = false;
+				boolean setFixed = false;
+
+				for ( int row : table.getSelectedRows() )
+				{
+					if ( !tableModel.isMovingPoint( row ) && !setMoving )
+					{
+						tableModel.setNextRow( true, row );
+						setMoving = true;
+						logger.trace( "nextRow Moving: " + row );
+					}
+
+					if ( !tableModel.isFixedPoint( row ) && !setFixed )
+					{
+						tableModel.setNextRow( false, row );
+						setFixed = true;
+						logger.trace( "nextRow Fixed: " + row );
+					}
+				}
+			}
+		} );
     }
     
     public void setTableModel( LandmarkTableModel tableModel )
@@ -52,7 +95,8 @@ public class BigWarpLandmarkPanel extends JPanel {
 		genJTable();
 	}
     
-    public JTable getJTable(){
+    public JTable getJTable()
+    {
     	return table;
     }
 	
