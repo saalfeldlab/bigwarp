@@ -210,6 +210,8 @@ public class BigWarp
 
 	private SolveThread solverThread;
 
+	private long keyClickMaxLength = 250;
+
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode during the
 	 * click
@@ -2044,6 +2046,8 @@ public class BigWarp
 
 		private boolean isMoving;
 
+		private long pressTime;
+
 		protected MouseLandmarkListener( final BigWarpViewerPanel thisViewer )
 		{
 			setViewer( thisViewer );
@@ -2071,6 +2075,8 @@ public class BigWarp
 		@Override
 		public void mousePressed( final MouseEvent e )
 		{
+			pressTime = System.currentTimeMillis();
+
 			// shift down is reserved for drag overlay
 			if ( e.isShiftDown() ) { return; }
 
@@ -2093,6 +2099,11 @@ public class BigWarp
 		@Override
 		public void mouseReleased( final MouseEvent e )
 		{
+			long clickLength = System.currentTimeMillis() - pressTime;
+
+			if( clickLength < keyClickMaxLength )
+				return;
+
 			// shift down is reserved for drag overlay
 			if ( e.isShiftDown() ) { return; }
 
