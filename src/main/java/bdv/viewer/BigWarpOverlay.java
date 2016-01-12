@@ -5,10 +5,14 @@ import java.awt.Composite;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
+import java.util.Arrays;
+
+import javax.swing.JTable;
 
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.CoordinateTransform;
 import net.imglib2.realtransform.AffineTransform3D;
+import bdv.gui.BigWarpLandmarkPanel;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 
@@ -19,6 +23,8 @@ public class BigWarpOverlay {
 	
 	private BigWarpViewerPanel viewer;
 	
+	protected JTable table;
+
 	protected LandmarkTableModel landmarkModel;
 	
 	protected CoordinateTransform estimatedXfm;
@@ -30,10 +36,11 @@ public class BigWarpOverlay {
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
 	
-	public BigWarpOverlay( final BigWarpViewerPanel viewer, LandmarkTableModel landmarkModel )
+	public BigWarpOverlay( final BigWarpViewerPanel viewer, BigWarpLandmarkPanel landmarkpanel )
 	{
 		this.viewer = viewer;
-		this.landmarkModel = landmarkModel;
+		this.table = landmarkpanel.getJTable();
+		this.landmarkModel = landmarkpanel.getTableModel();
 
 		if( landmarkModel.getNumdims() == 3 )
 			is3d = true;
@@ -45,11 +52,6 @@ public class BigWarpOverlay {
 
 	public void paint( final Graphics2D g ) 
 	{
-//		if( viewer.isMoving )
-//		{
-//			System.out.println("painting moving image overlay");
-//		}
-
 		/*
 		 * Collect current view.
 		 */
@@ -59,6 +61,13 @@ public class BigWarpOverlay {
 		final Composite originalComposite = g.getComposite();
 		final Stroke originalStroke = g.getStroke();
 		final Color originalColor = g.getColor();
+
+		// get selected points
+		int[] selectedRows = table.getSelectedRows();
+		Arrays.sort( selectedRows );
+		boolean[] isSelected = new boolean[ landmarkModel.getRowCount() ];
+		for( int i : selectedRows )
+			isSelected[ i ] = true;
 
 		/*
 		 * Draw spots.
@@ -140,6 +149,13 @@ public class BigWarpOverlay {
 								( int ) ( viewerCoords[ 1 ] - arad ), 
 								( int ) ( 2 * arad ), ( int ) ( 2 * arad ) );
 					
+					if( isSelected[ index ] )
+					{
+						g.drawOval( ( int ) ( viewerCoords[ 0 ] - 2 * arad ),
+									( int ) ( viewerCoords[ 1 ] - 2 * arad ),
+									( int ) ( 4 * arad ), ( int ) ( 4 * arad ) );
+					}
+
 					if ( viewer.getSettings().areNamesVisible() )
 					{
 						final int tx = ( int ) ( viewerCoords[ 0 ] + arad + 5 );

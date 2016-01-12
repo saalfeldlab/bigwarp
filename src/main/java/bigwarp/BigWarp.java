@@ -174,10 +174,6 @@ public class BigWarp
 
 	protected final BigWarpDragOverlay dragOverlayQ;
 
-	protected double rad = 7;
-
-	protected double LANDMARK_DOT_SIZE = 14; // diameter of dots
-
 	protected RealPoint currentLandmark;
 
 	protected LandmarkTableModel landmarkModel;
@@ -262,6 +258,22 @@ public class BigWarp
 		ndims = 3;
 		ndims = detectNumDims();
 		ptBack = new double[ 3 ];
+
+		/*
+		 * Set up LandmarkTableModel, holds the data and interfaces with the
+		 * LandmarkPanel
+		 */
+		landmarkModel = new LandmarkTableModel( ndims );
+		landmarkModellistener = new LandmarkTableListener();
+		landmarkModel.addTableModelListener( landmarkModellistener );
+
+		/* Set up landmark panel */
+		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
+		landmarkPanel.setOpaque( true );
+		landmarkTable = landmarkPanel.getJTable();
+		addDefaultTableMouseListener();
+
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
 		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndexList );
 		baseXfmList = new AbstractModel< ? >[ 3 ];
@@ -371,16 +383,8 @@ public class BigWarp
 		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
 		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
 
-		/*
-		 * Set up LandmarkTableModel, holds the data and interfaces with the
-		 * LandmarkPanel
-		 */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModellistener = new LandmarkTableListener();
-		landmarkModel.addTableModelListener( landmarkModellistener );
-
-		overlayP = new BigWarpOverlay( viewerP, landmarkModel );
-		overlayQ = new BigWarpOverlay( viewerQ, landmarkModel );
+		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
+		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
 		viewerP.addOverlay( overlayP );
 		viewerQ.addOverlay( overlayQ );
 
@@ -391,14 +395,6 @@ public class BigWarp
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
 		viewerP.addDragOverlay( dragOverlayP );
 		viewerQ.addDragOverlay( dragOverlayQ );
-
-		/* Set up landmark panel */
-		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
-		landmarkPanel.setOpaque( true );
-		landmarkTable = landmarkPanel.getJTable();
-		addDefaultTableMouseListener();
-
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
 		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners();
