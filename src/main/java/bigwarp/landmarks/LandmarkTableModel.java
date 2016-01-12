@@ -972,9 +972,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 			
 			warpedPoints.add( new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( false );
-			
-			fireTableRowsInserted( numRows, numRows );
 			numRows++;
+			fireTableRowsInserted( numRows, numRows );
 		}
 
 		updateNextRows( 0 );
