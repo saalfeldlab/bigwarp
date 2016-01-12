@@ -2101,7 +2101,7 @@ public class BigWarp
 		{
 			long clickLength = System.currentTimeMillis() - pressTime;
 
-			if( clickLength < keyClickMaxLength )
+			if( clickLength < keyClickMaxLength && selectedPointIndex != -1 )
 				return;
 
 			// shift down is reserved for drag overlay

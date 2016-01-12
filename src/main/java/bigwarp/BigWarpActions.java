@@ -617,7 +617,6 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			System.out.println( "selecting: " + selection );
 			if ( selection < 0 || selection >= table.getRowCount() )
 				table.removeRowSelectionInterval( 0, table.getRowCount() - 1 );
 			else
