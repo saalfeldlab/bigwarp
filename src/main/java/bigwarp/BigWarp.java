@@ -945,6 +945,11 @@ public class BigWarp
 		return landmarkPanel;
 	}
 
+	public ThinPlateR2LogRSplineKernelTransform getTransform()
+	{
+		return landmarkPanel.getTableModel().getTransform();
+	}
+
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
 		if( inLandmarkMode == inLmMode )
