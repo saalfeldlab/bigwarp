@@ -377,15 +377,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		warpedPoints.remove( i );
 		
 		numRows--;
-		updateNextRows( i );
 
 		pointUpdatePending = isUpdatePending();
 
 		if( estimatedXfm != null && estimatedXfm.getNumLandmarks() >= (i+1) ){
 			estimatedXfm.removePoint( i );
 		}
-		
-		updateNextRows( i );
+
+		nextRowP = numRows;
+		nextRowQ = numRows;
+
 		fireTableRowsDeleted( i, i );
 	}
 	

@@ -66,27 +66,37 @@ public class BigWarpLandmarkPanel extends JPanel {
 			@Override
 			public void valueChanged( ListSelectionEvent e )
 			{
+				logger.trace( "table selection changed" );
 				boolean setMoving = false;
 				boolean setFixed = false;
+				int row = table.getSelectedRow();
 
-				for ( int row : table.getSelectedRows() )
+				// if no rows are selected, the next edit should add a new row
+				if( row < 0 )
 				{
-					if ( !tableModel.isMovingPoint( row ) && !setMoving )
-					{
-						tableModel.setNextRow( true, row );
-						setMoving = true;
-						logger.trace( "nextRow Moving: " + row );
-					}
-
-					if ( !tableModel.isFixedPoint( row ) && !setFixed )
-					{
-						tableModel.setNextRow( false, row );
-						setFixed = true;
-						logger.trace( "nextRow Fixed: " + row );
-					}
+					tableModel.setNextRow( true, tableModel.getRowCount() );
+					tableModel.setNextRow( false, tableModel.getRowCount() );
+					return;
 				}
+
+				if ( !tableModel.isMovingPoint( row ) && !setMoving )
+				{
+					tableModel.setNextRow( true, row );
+					setMoving = true;
+					logger.trace( "nextRow Moving: " + row );
+				} else
+					tableModel.setNextRow( true, tableModel.getRowCount() );
+
+				if ( !tableModel.isFixedPoint( row ) && !setFixed )
+				{
+					tableModel.setNextRow( false, row );
+					setFixed = true;
+					logger.trace( "nextRow Fixed: " + row );
+				} else
+					tableModel.setNextRow( false, tableModel.getRowCount() );
+
 			}
-		} );
+		});
     }
     
     public void setTableModel( LandmarkTableModel tableModel )

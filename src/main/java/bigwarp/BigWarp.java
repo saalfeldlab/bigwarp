@@ -1026,26 +1026,25 @@ public class BigWarp
 		return selectedPointIndex;
 	}
 
-	/**
-	 * Returns the index of the row to be selected for moving or target.
-	 * 
-	 * 
-	 * @param isMoving
-	 * @return
-	 */
 	public void updateRowSelection( boolean isMoving, int lastRowEdited )
+	{
+		updateRowSelection( landmarkModel, landmarkTable, isMoving, lastRowEdited );
+		landmarkPanel.repaint();
+	}
+
+	public static void updateRowSelection(
+			LandmarkTableModel landmarkModel, JTable table, 
+			boolean isMoving, int lastRowEdited )
 	{
 		logger.trace( "updateRowSelection " );
 
 		int i = landmarkModel.getNextRow( isMoving );
-		if ( i < landmarkTable.getRowCount() )
+		if ( i < table.getRowCount() )
 		{
-			logger.trace( "landmarkTable ( updateRowSelection ) selecting row " + i );
-			landmarkTable.setRowSelectionInterval( i, i );
-		} else if( lastRowEdited >= 0 && lastRowEdited < landmarkTable.getRowCount() )
-			landmarkTable.setRowSelectionInterval( lastRowEdited, lastRowEdited );
-
-		landmarkPanel.repaint();
+			logger.trace( "  landmarkTable ( updateRowSelection ) selecting row " + i );
+			table.setRowSelectionInterval( i, i );
+		} else if( lastRowEdited >= 0 && lastRowEdited < table.getRowCount() )
+			table.setRowSelectionInterval( lastRowEdited, lastRowEdited );
 	}
 
 	/**
@@ -2141,15 +2140,14 @@ public class BigWarp
 					// in the pair and should recompute
 					BigWarp.this.restimateTransformation();
 				}
+
+				if( wasNewRowAdded )
+					updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
+				else
+					updateRowSelection( isMoving, selectedPointIndex );
 			}
 
 			BigWarp.this.landmarkModel.resetLastPoint();
-
-			if( wasNewRowAdded )
-				updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
-			else
-				updateRowSelection( isMoving, selectedPointIndex );
-
 			selectedPointIndex = -1;
 		}
 
