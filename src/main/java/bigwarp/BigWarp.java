@@ -2256,6 +2256,9 @@ public class BigWarp
 				final int row = target.getSelectedRow();
 				final int column = target.getSelectedColumn();
 
+				if( row < 0 )
+					return;
+
 				double[] pt = null;
 				int offset = 0;
 
@@ -2314,6 +2317,15 @@ public class BigWarp
 				viewer.setTransformAnimator( animator );
 				viewer.transformChanged( transform );
 
+			}
+			else
+			{
+				final JTable target = ( JTable ) e.getSource();
+				final int row = target.rowAtPoint( e.getPoint() );
+
+				// if we click in the table but not on a row, deselect everything
+				if( row < 0 )
+					target.removeRowSelectionInterval( 0, target.getRowCount() - 1 );
 			}
 		}
 
