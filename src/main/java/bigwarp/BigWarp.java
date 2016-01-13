@@ -2052,11 +2052,17 @@ public class BigWarp
 
 		private long pressTime;
 
+		private RealPoint hoveredPoint;
+
+		private double[] hoveredArray;
+
 		protected MouseLandmarkListener( final BigWarpViewerPanel thisViewer )
 		{
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 			isMoving = ( thisViewer == BigWarp.this.viewerP );
+			hoveredArray = new double[ 3 ];
+			hoveredPoint = RealPoint.wrap( hoveredArray );
 		}
 
 		protected void setViewer( final BigWarpViewerPanel thisViewer )
@@ -2203,7 +2209,11 @@ public class BigWarp
 
 		@Override
 		public void mouseMoved( final MouseEvent e )
-		{}
+		{
+			thisViewer.getGlobalMouseCoordinates( hoveredPoint );
+			int hoveredIndex = BigWarp.this.selectedLandmark( hoveredArray, isMoving );
+			thisViewer.setHoveredIndex( hoveredIndex );
+		}
 
 		/**
 		 * Adds a point in the moving and fixed images at the same point.

@@ -30,6 +30,9 @@ public class BigWarpOverlay {
 	protected CoordinateTransform estimatedXfm;
 	
 	protected boolean isTransformed = false;
+
+	private int hoveredIndex;
+
 	protected final boolean isMoving;
 	protected final boolean is3d;
 	
@@ -49,6 +52,19 @@ public class BigWarpOverlay {
 
 		isMoving = viewer.getIsMoving();
 	}
+
+
+	public int getHoveredIndex()
+	{
+		return hoveredIndex;
+	}
+
+
+	public void setHoveredIndex( int hoveredIndex )
+	{
+		this.hoveredIndex = hoveredIndex;
+	}
+
 
 	public void paint( final Graphics2D g ) 
 	{
@@ -147,13 +163,21 @@ public class BigWarpOverlay {
 					// vary size
 					g.fillOval( ( int ) ( viewerCoords[ 0 ] - arad ), 
 								( int ) ( viewerCoords[ 1 ] - arad ), 
-								( int ) ( 2 * arad ), ( int ) ( 2 * arad ) );
+								( int ) ( 2 * arad + 1 ), ( int ) ( 2 * arad + 1) );
 					
 					if( isSelected[ index ] )
 					{
-						g.drawOval( ( int ) ( viewerCoords[ 0 ] - 2 * arad ),
-									( int ) ( viewerCoords[ 1 ] - 2 * arad ),
-									( int ) ( 4 * arad ), ( int ) ( 4 * arad ) );
+						g.drawOval( ( int ) ( viewerCoords[ 0 ] - arad - 2 ),
+									( int ) ( viewerCoords[ 1 ] - arad - 2 ),
+									( int ) ( 2 * arad + 4 ), ( int ) ( 2 * arad + 4 ) );
+					}
+					else if( hoveredIndex == index )
+					{
+						g.setColor( new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 ));
+						g.drawOval( ( int ) ( viewerCoords[ 0 ] - arad - 2 ),
+								( int ) ( viewerCoords[ 1 ] - arad - 2 ),
+								( int ) ( 2 * arad + 4 ), ( int ) ( 2 * arad + 4 ) );
+						g.setColor( color );
 					}
 
 					if ( viewer.getSettings().areNamesVisible() )
@@ -164,7 +188,10 @@ public class BigWarpOverlay {
 						String name = landmarkModel.getNames().get(index);
 						int strwidth = fm.stringWidth( name );
 						
-						textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
+						if( isSelected[ index ] || hoveredIndex == index )
+							textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 255 );
+						else
+							textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
 						
 						g.setColor( textBoxColor );
 						g.fillRect( tx - 1, ty - fonthgt + 2, strwidth + 2, fonthgt);

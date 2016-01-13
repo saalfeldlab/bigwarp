@@ -82,6 +82,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 		updateGrouping();
 	}
 
+	public void setHoveredIndex( int index )
+	{
+		if( index != overlay.getHoveredIndex() )
+		{
+			overlay.setHoveredIndex( index );
+
+			// repaint
+			if ( null != overlay ) {
+				overlay.setViewerState( state );
+			}
+		}
+	}
+
 	/**
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
