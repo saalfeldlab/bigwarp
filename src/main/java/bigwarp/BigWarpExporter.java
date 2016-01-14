@@ -112,7 +112,7 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 	}
 
 	@SuppressWarnings( { "unchecked", "deprecation" } )
-	protected ImagePlus exportMovingImagePlus( final boolean isVirtual )
+	public ImagePlus exportMovingImagePlus( final boolean isVirtual )
 	{
 		int numChannels = movingSourceIndexList.length;
 
