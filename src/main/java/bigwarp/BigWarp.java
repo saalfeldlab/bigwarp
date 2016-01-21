@@ -37,6 +37,8 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableCellEditor;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ViewerImgLoader;
@@ -80,6 +82,7 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -171,10 +174,6 @@ public class BigWarp
 
 	protected final BigWarpDragOverlay dragOverlayQ;
 
-	protected double rad = 7;
-
-	protected double LANDMARK_DOT_SIZE = 14; // diameter of dots
-
 	protected RealPoint currentLandmark;
 
 	protected LandmarkTableModel landmarkModel;
@@ -211,6 +210,8 @@ public class BigWarp
 
 	private SolveThread solverThread;
 
+	private long keyClickMaxLength = 250;
+
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode during the
 	 * click
@@ -233,6 +234,8 @@ public class BigWarp
 	final ProgressWriter progressWriter;
 
 	private static ImageJ ij;
+
+	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
 
 	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -257,6 +260,22 @@ public class BigWarp
 		ndims = 3;
 		ndims = detectNumDims();
 		ptBack = new double[ 3 ];
+
+		/*
+		 * Set up LandmarkTableModel, holds the data and interfaces with the
+		 * LandmarkPanel
+		 */
+		landmarkModel = new LandmarkTableModel( ndims );
+		landmarkModellistener = new LandmarkTableListener();
+		landmarkModel.addTableModelListener( landmarkModellistener );
+
+		/* Set up landmark panel */
+		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
+		landmarkPanel.setOpaque( true );
+		landmarkTable = landmarkPanel.getJTable();
+		addDefaultTableMouseListener();
+
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
 		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndexList );
 		baseXfmList = new AbstractModel< ? >[ 3 ];
@@ -366,17 +385,8 @@ public class BigWarp
 		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
 		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
 
-		/*
-		 * Set up LandmarkTableModel, holds the data and interfaces with the
-		 * LandmarkPanel
-		 */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModellistener = new LandmarkTableListener();
-		landmarkModel.addTableModelListener( landmarkModellistener );
-		landmarkTable = new JTable( landmarkModel );
-
-		overlayP = new BigWarpOverlay( viewerP, landmarkModel );
-		overlayQ = new BigWarpOverlay( viewerQ, landmarkModel );
+		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
+		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
 		viewerP.addOverlay( overlayP );
 		viewerQ.addOverlay( overlayQ );
 
@@ -387,13 +397,6 @@ public class BigWarp
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
 		viewerP.addDragOverlay( dragOverlayP );
 		viewerQ.addDragOverlay( dragOverlayQ );
-
-		/* Set up landmark panel */
-		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
-		landmarkPanel.setOpaque( true );
-		addDefaultTableMouseListener();
-
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
 		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners();
@@ -942,6 +945,11 @@ public class BigWarp
 		return landmarkPanel;
 	}
 
+	public ThinPlateR2LogRSplineKernelTransform getTransform()
+	{
+		return landmarkPanel.getTableModel().getTransform();
+	}
+
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
 		if( inLandmarkMode == inLmMode )
@@ -1022,6 +1030,43 @@ public class BigWarp
 
 		return selectedPointIndex;
 	}
+
+	public void updateRowSelection( boolean isMoving, int lastRowEdited )
+	{
+		updateRowSelection( landmarkModel, landmarkTable, isMoving, lastRowEdited );
+		landmarkPanel.repaint();
+	}
+
+	public static void updateRowSelection(
+			LandmarkTableModel landmarkModel, JTable table, 
+			boolean isMoving, int lastRowEdited )
+	{
+		logger.trace( "updateRowSelection " );
+
+		int i = landmarkModel.getNextRow( isMoving );
+		if ( i < table.getRowCount() )
+		{
+			logger.trace( "  landmarkTable ( updateRowSelection ) selecting row " + i );
+			table.setRowSelectionInterval( i, i );
+		} else if( lastRowEdited >= 0 && lastRowEdited < table.getRowCount() )
+			table.setRowSelectionInterval( lastRowEdited, lastRowEdited );
+	}
+
+	/**
+	 * Returns the index of the selected row, if it is unpaired, -1 otherwise
+	 * 
+	 * @param isMoving
+	 * @return
+	 */
+	public int getSelectedUnpairedRow( boolean isMoving )
+	{
+		int row = landmarkTable.getSelectedRow();
+		if( row >= 0 && ( isMoving ? !landmarkModel.isMovingPoint( row ) : !landmarkModel.isFixedPoint( row )))
+			return row;
+
+		return -1;
+	}
+
 	/**
 	 * Updates the global variable ptBack
 	 *
@@ -1061,36 +1106,26 @@ public class BigWarp
 	}
 
 	/**
+	 * Returns the index of the landmark closest to the input point,
+	 * if it is within a certain distance threshold.
+	 * 
 	 * Updates the global variable ptBack
 	 *
 	 * @param ptarray
 	 * @param isMoving
 	 * @return
 	 */
-	public int selectedLandmark( final double[] ptarray, final boolean isMoving )
+	protected int selectedLandmark( final double[] pt, final boolean isMoving )
 	{
-		int selectedPointIndex = -1;
-		if ( isMoving && landmarkModel.getTransform() != null && !isMovingDisplayTransformed() )
-		{
-			landmarkModel.getTransform().apply( ptarray, ptBack );
-			selectedPointIndex = selectedLandmarkHelper( ptBack, isMoving );
-		}
-		else // check if the clicked point itself is in the table
-		{
-			selectedPointIndex = selectedLandmarkHelper( ptarray, isMoving );
-		}
-		return selectedPointIndex;
-	}
+		logger.trace( "clicked: " + XfmUtils.printArray( pt ) );
 
-	protected int selectedLandmarkHelper( final double[] pt, final boolean isMoving )
-	{
 		// TODO selectedLandmark
 		final int N = landmarkModel.getRowCount();
 
 		// a point will be selected if you click inside the spot ( with a 5 pixel buffer )
 		double radsq = ( viewerSettings.getSpotSize() * viewerSettings.getSpotSize() ) + 5 ;
 		final AffineTransform3D viewerXfm = new AffineTransform3D();
-		if ( isMoving && !isMovingDisplayTransformed() )
+		if ( isMoving ) //&& !isMovingDisplayTransformed() )
 		{
 			viewerP.getState().getViewerTransform( viewerXfm );
 			radsq = viewerP.getSettings().getSpotSize();
@@ -1107,16 +1142,19 @@ public class BigWarp
 		int bestIdx = -1;
 		double smallestDist = Double.MAX_VALUE;
 
+		logger.trace( "  selectedLandmarkHelper dist scale: " + scale );
+		logger.trace( "  selectedLandmarkHelper      radsq: " + radsq );
+
 		for ( int n = 0; n < N; n++ )
 		{
 			final Double[] lmpt;
-			if( isMoving && landmarkModel.isWarped( n ) )
+			if( isMoving && landmarkModel.isWarped( n ) && isMovingDisplayTransformed() )
 			{
 				lmpt = landmarkModel.getWarpedPoints().get( n );
 			}
 			else if( isMoving && isMovingDisplayTransformed() )
 			{
-				lmpt =landmarkModel.getPoints( false ).get( n );
+				lmpt = landmarkModel.getPoints( false ).get( n );
 			}
 			else
 			{
@@ -1130,6 +1168,7 @@ public class BigWarp
 			}
 
 			dist *= ( scale * scale );
+			logger.trace( "    dist squared of lm index : " + n + " is " + dist );
 			if ( dist < radsq && dist < smallestDist )
 			{
 				smallestDist = dist;
@@ -1142,7 +1181,7 @@ public class BigWarp
 			landmarkTable.setEditingRow( bestIdx );
 			landmarkFrame.repaint();
 		}
-
+		logger.trace( "selectedLandmark: " + bestIdx );
 		return bestIdx;
 	}
 
@@ -1292,6 +1331,7 @@ public class BigWarp
 		// points to estimate a reasonable transformation.  
 		// return early if an re-estimation did not occur
 		boolean success = restimateTransformation();
+		logger.trace( "toggleMovingImageDisplay, success: " + success );
 		if ( !success )
 		{
 			getViewerFrameP().getViewerPanel().showMessage(
@@ -2010,11 +2050,19 @@ public class BigWarp
 
 		private boolean isMoving;
 
+		private long pressTime;
+
+		private RealPoint hoveredPoint;
+
+		private double[] hoveredArray;
+
 		protected MouseLandmarkListener( final BigWarpViewerPanel thisViewer )
 		{
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 			isMoving = ( thisViewer == BigWarp.this.viewerP );
+			hoveredArray = new double[ 3 ];
+			hoveredPoint = RealPoint.wrap( hoveredArray );
 		}
 
 		protected void setViewer( final BigWarpViewerPanel thisViewer )
@@ -2025,40 +2073,6 @@ public class BigWarp
 		@Override
 		public void mouseClicked( final MouseEvent arg0 )
 		{}
-
-//		/**
-//		 * Returns the index of the landmark under the mouse position,
-//		 * or -1 if no landmark is at the current position
-//		 */
-		protected int selectedLandmarkLocal( final double[] pt, final boolean isMoving )
-		{
-			final int N = BigWarp.this.landmarkModel.getRowCount();
-
-			double dist = 0;
-			final double radsq = 100;
-			landmarkLoop: for ( int n = 0; n < N; n++ )
-			{
-
-				dist = 0;
-				final Double[] lmpt = BigWarp.this.landmarkModel.getPoints( isMoving ).get( n );
-
-				for ( int i = 0; i < ndims; i++ )
-				{
-					dist += ( pt[ i ] - lmpt[ i ] ) * ( pt[ i ] - lmpt[ i ] );
-
-					if ( dist > radsq )
-						continue landmarkLoop;
-				}
-
-				if ( BigWarp.this.landmarkFrame.isVisible() )
-				{
-					BigWarp.this.landmarkTable.setEditingRow( n );
-					BigWarp.this.landmarkFrame.repaint();
-				}
-				return n;
-			}
-			return -1;
-		}
 
 		@Override
 		public void mouseEntered( final MouseEvent arg0 )
@@ -2071,6 +2085,8 @@ public class BigWarp
 		@Override
 		public void mousePressed( final MouseEvent e )
 		{
+			pressTime = System.currentTimeMillis();
+
 			// shift down is reserved for drag overlay
 			if ( e.isShiftDown() ) { return; }
 
@@ -2082,13 +2098,22 @@ public class BigWarp
 				selectedPointIndex = BigWarp.this.selectedLandmark( ptarrayLoc, isMoving );
 
 				if ( selectedPointIndex >= 0 )
+				{
+					landmarkTable.setRowSelectionInterval( selectedPointIndex, selectedPointIndex );
+					landmarkFrame.repaint();
 					BigWarp.this.landmarkModel.setLastPoint( selectedPointIndex, isMoving );
+				}
 			}
 		}
 
 		@Override
 		public void mouseReleased( final MouseEvent e )
 		{
+			long clickLength = System.currentTimeMillis() - pressTime;
+
+			if( clickLength < keyClickMaxLength && selectedPointIndex != -1 )
+				return;
+
 			// shift down is reserved for drag overlay
 			if ( e.isShiftDown() ) { return; }
 
@@ -2126,10 +2151,14 @@ public class BigWarp
 					// in the pair and should recompute
 					BigWarp.this.restimateTransformation();
 				}
+
+				if( wasNewRowAdded )
+					updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
+				else
+					updateRowSelection( isMoving, selectedPointIndex );
 			}
 
 			BigWarp.this.landmarkModel.resetLastPoint();
-
 			selectedPointIndex = -1;
 		}
 
@@ -2148,14 +2177,16 @@ public class BigWarp
 						thisViewer.doUpdateOnDrag() &&
 						BigWarp.this.landmarkModel.isActive( selectedPointIndex ) )
 				{
+					logger.trace("Drag resolve");
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
 				else
 				{
 					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					if( isMoving )
+					if( isMoving && landmarkModel.getTransform().isSolved() && isMovingDisplayTransformed() )
 					{
+						logger.trace("Drag moving transformed");
 						// The moving image:
 						// Update the warped point during the drag even if there is a corresponding fixed image point
 						// Do this so the point sticks on the mouse
@@ -2167,6 +2198,7 @@ public class BigWarp
 					}
 					else
 					{
+						logger.trace("Drag default");
 						// The fixed image
 						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
 						thisViewer.requestRepaint();
@@ -2177,7 +2209,11 @@ public class BigWarp
 
 		@Override
 		public void mouseMoved( final MouseEvent e )
-		{}
+		{
+			thisViewer.getGlobalMouseCoordinates( hoveredPoint );
+			int hoveredIndex = BigWarp.this.selectedLandmark( hoveredArray, isMoving );
+			thisViewer.setHoveredIndex( hoveredIndex );
+		}
 
 		/**
 		 * Adds a point in the moving and fixed images at the same point.
@@ -2244,6 +2280,9 @@ public class BigWarp
 				final int row = target.getSelectedRow();
 				final int column = target.getSelectedColumn();
 
+				if( row < 0 )
+					return;
+
 				double[] pt = null;
 				int offset = 0;
 
@@ -2302,6 +2341,15 @@ public class BigWarp
 				viewer.setTransformAnimator( animator );
 				viewer.transformChanged( transform );
 
+			}
+			else
+			{
+				final JTable target = ( JTable ) e.getSource();
+				final int row = target.rowAtPoint( e.getPoint() );
+
+				// if we click in the table but not on a row, deselect everything
+				if( row < 0 )
+					target.removeRowSelectionInterval( 0, target.getRowCount() - 1 );
 			}
 		}
 

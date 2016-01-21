@@ -9,6 +9,8 @@ import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import net.imglib2.ui.util.GuiUtil;
 import bdv.img.cache.Cache;
@@ -82,6 +84,16 @@ public class BigWarpViewerFrame extends JFrame
 				BigWarpViewerFrame.this.bw.closeAll();
 			}
 		} );
+
+		// repaint on table selection change so rendering of selected points is updated
+		bw.getLandmarkPanel().getJTable().getSelectionModel().addListSelectionListener( new ListSelectionListener()
+		{
+			@Override
+			public void valueChanged( ListSelectionEvent e )
+			{
+				viewer.requestRepaint();
+			}
+		});
 
 		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );

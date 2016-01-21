@@ -2,6 +2,7 @@ package bigwarp;
 
 import java.awt.Component;
 import java.awt.event.ActionEvent;
+import java.awt.event.KeyEvent;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -58,7 +59,9 @@ public class BigWarpActions
 
 	public static final String UNDO = "undo";
 	public static final String REDO = "redo";
-	
+
+	public static final String SELECT_TABLE_ROWS = "select table row %d";
+
 	public static final String DEBUG = "debug";
 	public static final String GARBAGE_COLLECTION = "garbage collection";
 
@@ -185,7 +188,9 @@ public class BigWarpActions
 
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
-		
+
+		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
+
 		map.put( GARBAGE_COLLECTION, "F9" );
 		map.put( DEBUG, "F8" );
 		
@@ -217,7 +222,9 @@ public class BigWarpActions
 		
 		map.put( new UndoRedoAction( UNDO, bw ) );
 		map.put( new UndoRedoAction( REDO, bw ) );
-		
+
+		map.put( new TableSelectionAction( String.format( SELECT_TABLE_ROWS, -1 ), bw.getLandmarkPanel().getJTable(), -1 ) );
+
 		map.put( new GarbageCollectionAction( GARBAGE_COLLECTION ) );
 		map.put( new DebugAction( DEBUG, bw ) );
 			
@@ -593,4 +600,27 @@ public class BigWarpActions
 		}
 	}
 	
+	public static class TableSelectionAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -4647679094757721276L;
+
+		private final JTable table;
+		private final int selection;
+
+		public TableSelectionAction( final String name, JTable table, int selection )
+		{
+			super( name );
+			this.table = table;
+			this.selection = selection;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			if ( selection < 0 || selection >= table.getRowCount() )
+				table.removeRowSelectionInterval( 0, table.getRowCount() - 1 );
+			else
+				table.setRowSelectionInterval( selection, selection );
+		}
+	}
 }

@@ -18,13 +18,14 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.SerializationUtils;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import bigwarp.landmarks.actions.AddPointEdit;
 import bigwarp.landmarks.actions.DeleteRowEdit;
 import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import jitk.spline.TransformInverseGradientDescent;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -56,11 +57,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected ArrayList<Boolean>	activeList;
 	protected ArrayList<Double[]>	movingPts;
 	protected ArrayList<Double[]>	targetPts;
-	
-	// determines if the last point that was added has a pair
-	protected boolean isLastPointPaired = true; // initialize to true, when there are no points
-	protected boolean lastPointMoving = false; // "P"
-	
+
 	protected boolean pointUpdatePending = false; //
 	protected boolean pointUpdatePendingMoving = false; //
 	protected Double[] pointToOverride;	// hold a backup of a point for fallback
@@ -101,6 +98,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	final String[] columnNames;
 	
+	public final Logger logger = LogManager.getLogger( LandmarkTableModel.class.getName() );
+
 	public LandmarkTableModel( int ndims )
 	{
 		super();
@@ -239,35 +238,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	    byte[] data    = SerializationUtils.serialize( estimatedXfm );
 	    FileUtils.writeByteArrayToFile( ffwd, data );
 	}
-	
-	private void updateNextRows()
-	{
-		nextRowP = numRows;
-		nextRowQ = numRows;
-		for ( int i = 0; i < numRows; i++ )
-		{
-			if ( Double.isInfinite( movingPts.get( i )[ 0 ] ))
-			{
-				pointUpdatePendingMoving = true;
-				
-				if( i < nextRowP )
-					nextRowP = i;
-				
-				setIsActive( i, false );
-			}
-			
-			if ( Double.isInfinite( targetPts.get( i )[ 0 ] ))
-			{
-				pointUpdatePendingMoving = true;
-				
-				if( i < nextRowQ )
-					nextRowQ = i;
-				
-				setIsActive( i, false );
-			}
-		}
-		pointUpdatePendingMoving = false;
-	}
 
 	public boolean isPointUpdatePending()
 	{
@@ -302,11 +272,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 		pointUpdatePending = false;
 		
 		fireTableRowsUpdated( i, i );
-	}
-	
-	public boolean isMostRecentPointPaired()
-	{
-		return isLastPointPaired;
 	}
 	
 	@Override
@@ -363,7 +328,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public void setIsActive( int row, boolean isActive )
 	{
 		activeList.set( row, isActive );
-		fireTableCellUpdated( row, ACTIVECOLUMN );
+
+		if( activeList.get( row ) != isActive )
+			fireTableCellUpdated( row, ACTIVECOLUMN );
 	}
 	
 	public Class<?> getColumnClass( int col ){
@@ -410,15 +377,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		warpedPoints.remove( i );
 		
 		numRows--;
-		nextRowP = nextRow( true  );
-		nextRowQ = nextRow( false );
+
 		pointUpdatePending = isUpdatePending();
 
 		if( estimatedXfm != null && estimatedXfm.getNumLandmarks() >= (i+1) ){
 			estimatedXfm.removePoint( i );
 		}
-		
-		updateNextRows();
+
+		nextRowP = numRows;
+		nextRowQ = numRows;
+
 		fireTableRowsDeleted( i, i );
 	}
 	
@@ -432,47 +400,69 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		return false;
 	}
-	
-	public int nextRow( boolean isMoving )
+
+	public void setNextRow( boolean isMoving, int row )
 	{
-		ArrayList< Double[] > pts;
 		if( isMoving )
-			pts = movingPts;
+			nextRowP = row;
 		else
-			pts = targetPts;
-		
-		if( pts.size() == 0 ){
-			return 0;
+			nextRowQ = row;
+	}
+
+	public void updateNextRows( int lastAddedIndex )
+	{
+		nextRowP = numRows;
+		nextRowQ = numRows;
+
+		pointUpdatePendingMoving = false;
+		for ( int i = lastAddedIndex; i < numRows; i++ )
+		{
+			// moving image
+			if ( Double.isInfinite( movingPts.get( i )[ 0 ] ) )
+			{
+				pointUpdatePendingMoving = true;
+
+				if ( i < nextRowP )
+					nextRowP = i;
+
+				setIsActive( i, false );
+			}
+
+			// target image
+			if ( Double.isInfinite( targetPts.get( i )[ 0 ] ) )
+			{
+				pointUpdatePendingMoving = true;
+
+				if ( i < nextRowQ )
+					nextRowQ = i;
+
+				setIsActive( i, false );
+			}
 		}
-		
-		int i = 0 ;
-		while( i < pts.size() && pts.get( i )[ 0 ] < Double.POSITIVE_INFINITY )
-			i++;
-		
-		return i;
+
+		// try wrapping
+		if ( lastAddedIndex > 0 && !pointUpdatePendingMoving )
+			updateNextRows( 0 );
+
+		logger.trace(" updateNextRows  - moving: " + nextRowP + "  -  target:  " + nextRowQ );
+		// nextRowP = ( nextRowP == numRows ) ? -1 : numRows;
+		// nextRowQ = ( nextRowQ == numRows ) ? -1 : numRows;
 	}
 	
 	/**
-	 * Method to help enforce that landmark points are added in pairs.
-	 * @return Message if there is an error, empty string otherwise  
+	 * Returns the next row to be updated for the moving or target columns.
+	 * 
+	 * @param isMoving
+	 * @return
 	 */
-	public String alternateCheck( boolean isMoving )
+	public int getNextRow( boolean isMoving )
 	{
-		// check conditions
-		if( !isLastPointPaired )
-		{
-			if( lastPointMoving && isMoving )
-			{
-				return "Error, last point added was in moving image, add in fixed image next";
-			}
-			else if( !lastPointMoving && !isMoving )
-			{
-				return "Error, last point added was in fixed image, add in moving image next";
-			}
-		}
-		return "";
+		if( isMoving )
+			return nextRowP;
+		else
+			return nextRowQ;
 	}
-	
+
 	public Boolean isWarped( int i )
 	{
 		return doesPointHaveAndNeedWarp.get( i );
@@ -695,17 +685,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 		/***********************
 		 * Update next indices *
 		 ***********************/
-		if( isMoving )
-			nextRowP = nextRow( isMoving );
-		else
-			nextRowQ = nextRow( isMoving );
+		updateNextRows( index );
 
 		activateRow( index );
 
 		if( forceUpdateWarpedPts )
 			computeWarpedPoint( index );
 
-		updateNextRows();
 		firePointUpdated( index, isMoving );
 
 		return isAdd;
@@ -820,18 +806,29 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 	}
 
-
-	// TODO the current implmentation avoids overlap in common use cases.
-	// Consider whether checking all names for overlaps is worth it.
+	/**
+	 * Returns a name for a row to be inserted at the given index.
+	 * 
+	 * @param index index of the row
+	 * @return a name for the new row
+	 */
 	private String nextName( int index )
 	{
+		// TODO the current implmentation avoids overlap in common use cases.
+		// Consider whether checking all names for overlaps is worth it.
 		final String s;
 		if( index == 0 )
 			s = "Pt-0";
 		else
 		{
-			// Increment the index in the name of the previous row
-			int i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			int i = index;
+			try
+			{
+				// Increment the index in the name of the previous row
+				i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
+			}
+			catch ( Exception e ){}
+
 			s = String.format( "Pt-%d", i );
 		}
 		return s;
@@ -976,14 +973,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 			
 			warpedPoints.add( new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( false );
-			
-			fireTableRowsInserted( numRows, numRows );
 			numRows++;
+			fireTableRowsInserted( numRows, numRows );
 		}
-		
-//		nextRowP = nextRow( true );
-//		nextRowQ = nextRow( false );
-		updateNextRows();
+
+		updateNextRows( 0 );
 		initTransformation();
 	}
 	
