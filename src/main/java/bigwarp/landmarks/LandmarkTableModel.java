@@ -357,7 +357,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		deleteRowHelper( i );
 	}
 
-	public void deleteRowHelper( int i )
+	public synchronized void deleteRowHelper( int i )
 	{
 		if( i >= names.size() )
 		{
@@ -409,7 +409,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			nextRowQ = row;
 	}
 
-	public void updateNextRows( int lastAddedIndex )
+	public synchronized void updateNextRows( int lastAddedIndex )
 	{
 		nextRowP = numRows;
 		nextRowQ = numRows;
@@ -585,7 +585,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
 
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	public synchronized boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
 		return pointEdit( index, pt, forceAdd, isMoving, warpedPt, isUndoable, true );
 	}
@@ -742,7 +742,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * @param i
 	 *            the row in the table
 	 */
-	public void computeWarpedPoint( int i )
+	public synchronized void computeWarpedPoint( int i )
 	{
 		// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
 		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.isSolved() )
