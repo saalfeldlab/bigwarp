@@ -2348,7 +2348,7 @@ public class BigWarp
 				final int row = target.rowAtPoint( e.getPoint() );
 
 				// if we click in the table but not on a row, deselect everything
-				if( row < 0 )
+				if( row < 0 && target.getRowCount() > 0  )
 					target.removeRowSelectionInterval( 0, target.getRowCount() - 1 );
 			}
 		}
