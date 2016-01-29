@@ -12,14 +12,14 @@ import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
 import mpicbg.models.AbstractModel;
+import bdv.BigDataViewerActions.LoadSettingsAction;
+import bdv.BigDataViewerActions.SaveSettingsAction;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.tools.bookmarks.Bookmarks;
 import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
 import bdv.util.KeyProperties.KeyStrokeAdder;
-import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -161,6 +161,9 @@ public class BigWarpActions
 		map.put( new SetBookmarkAction( bw ) );
 		map.put( new GoToBookmarkAction( bw ) );
 		map.put( new GoToBookmarkRotationAction( bw ) );
+
+		map.put( new SaveSettingsAction( bw ) );
+		map.put( new LoadSettingsAction( bw ) );
 
 		return actionMap;
 	}
@@ -697,5 +700,41 @@ public class BigWarpActions
 			else if ( bw.getViewerFrameP().isActive() )
 				bw.bookmarkEditorQ.initGoToBookmarkRotation();
 		}
+	}
+
+	public static class SaveSettingsAction extends AbstractNamedAction
+	{
+		BigWarp bw;
+		public SaveSettingsAction( final BigWarp bw )
+		{
+			super( SAVE_SETTINGS );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.saveSettings();
+		}
+
+		private static final long serialVersionUID = 1L;
+	}
+
+	public static class LoadSettingsAction extends AbstractNamedAction
+	{
+		BigWarp bw;
+		public LoadSettingsAction( final BigWarp bw )
+		{
+			super( LOAD_SETTINGS );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.loadSettings();
+		}
+
+		private static final long serialVersionUID = 1L;
 	}
 }

@@ -13,6 +13,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -40,6 +41,12 @@ import javax.swing.table.TableCellEditor;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
@@ -120,6 +127,10 @@ public class BigWarp
 	protected static final int DEFAULT_WIDTH = 600;
 
 	protected static final int DEFAULT_HEIGHT = 400;
+
+	public static final int GRID_SOURCE_ID = 1696993146;
+
+	public static final int WARPMAG_SOURCE_ID = 956736363;
 
 	// descriptive names for indexing sources
 	protected int[] movingSourceIndexList;
@@ -627,6 +638,18 @@ public class BigWarp
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
 
 		final JMenuBar viewerMenuBar = new JMenuBar();
+
+		JMenu fileMenu = new JMenu( "File" );
+		viewerMenuBar.add( fileMenu );
+
+		final JMenuItem miLoadSettings = new JMenuItem( actionMap.get( BigWarpActions.LOAD_SETTINGS ) );
+		miLoadSettings.setText( "Load settings" );
+		fileMenu.add( miLoadSettings );
+
+		final JMenuItem miSaveSettings = new JMenuItem( actionMap.get( BigWarpActions.SAVE_SETTINGS ) );
+		miSaveSettings.setText( "Save settings" );
+		fileMenu.add( miSaveSettings );
+
 		final JMenu settingsMenu = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
 
@@ -1502,8 +1525,7 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		final int id = ( int ) ( Math.random() * Integer.MAX_VALUE );
-		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
 
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
@@ -1531,8 +1553,7 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		final int id = ( int ) ( Math.random() * Integer.MAX_VALUE );
-		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
 
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
@@ -2554,5 +2575,82 @@ public class BigWarp
 				notify();
 			}
 		}
+	}
+
+	protected void saveSettings()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showSaveDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				saveSettings( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void saveSettings( final String xmlFilename ) throws IOException
+	{
+		final Element root = new Element( "Settings" );
+
+		Element viewerPNode = new Element( "viewerP" );
+		Element viewerQNode = new Element( "viewerQ" );
+
+		root.addContent( viewerPNode );
+		root.addContent( viewerQNode );
+
+		viewerPNode.addContent( viewerP.stateToXml() );
+		viewerQNode.addContent( viewerQ.stateToXml() );
+
+		root.addContent( setupAssignments.toXml() );
+		root.addContent( bookmarks.toXml() );
+		final Document doc = new Document( root );
+		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+		xout.output( doc, new FileWriter( xmlFilename ) );
+	}
+
+	protected void loadSettings()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showOpenDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				loadSettings( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final Exception e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void loadSettings( final String xmlFilename ) throws IOException,
+			JDOMException
+	{
+		final SAXBuilder sax = new SAXBuilder();
+		final Document doc = sax.build( xmlFilename );
+		final Element root = doc.getRootElement();
+		viewerP.stateFromXml( root.getChild( "viewerP" ) );
+		viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
+		setupAssignments.restoreFromXml( root );
+		bookmarks.restoreFromXml( root );
+		activeSourcesDialogP.update();
+		activeSourcesDialogQ.update();
+
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
 	}
 }
