@@ -55,6 +55,8 @@ import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.bookmarks.Bookmarks;
+import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
@@ -141,6 +143,12 @@ public class BigWarp
 	protected final VisibilityAndGroupingDialog activeSourcesDialogQ;
 
 	final AffineTransform3D fixedViewXfm;
+
+	private final Bookmarks bookmarks;
+
+	protected final BookmarksEditor bookmarkEditorP;
+
+	protected final BookmarksEditor bookmarkEditorQ;
 
 	private final BigWarpViewerFrame viewerFrameP;
 
@@ -498,6 +506,10 @@ public class BigWarp
 
 		// add focus listener
 		new BigwarpFocusListener( this );
+
+		bookmarks = new Bookmarks();
+		bookmarkEditorP = new BookmarksEditor( viewerP, viewerFrameP.getKeybindings(), bookmarks );
+		bookmarkEditorQ = new BookmarksEditor( viewerQ, viewerFrameQ.getKeybindings(), bookmarks );
 
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
@@ -905,6 +917,11 @@ public class BigWarp
 		} );
 	}
 
+	public Bookmarks getBookmarks()
+	{
+		return bookmarks;
+	}
+
 	public BigWarpViewerFrame getViewerFrameP()
 	{
 		return viewerFrameP;
@@ -1286,6 +1303,18 @@ public class BigWarp
 			return;
 
 		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
+	}
+
+	public void goToBookmark()
+	{
+		if ( viewerFrameP.isActive() )
+		{
+			bookmarkEditorP.initGoToBookmark();
+		}
+		else if ( viewerFrameQ.isActive() )
+		{
+			bookmarkEditorQ.initGoToBookmark();
+		}
 	}
 
 	public void resetView()
