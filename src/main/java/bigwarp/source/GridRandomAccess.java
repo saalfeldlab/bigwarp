@@ -63,7 +63,7 @@ public class GridRandomAccess< T extends RealType<T>> extends AbstractLocalizabl
 	public RandomAccess<T> copy() 
 	{
 		return new GridRandomAccess< T >( new long[ position.length ], value.copy(), 
-				((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy()  );
+				((ThinPlateR2LogRSplineKernelTransform)warp) );
 	}
 
 	public RandomAccess<T> copyRandomAccess() 

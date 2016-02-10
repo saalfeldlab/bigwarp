@@ -1626,21 +1626,22 @@ public class BigWarp
 
 	protected void fitBaselineWarpMagModel()
 	{
-		final double[][] p = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
-		final double[][] q = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
+		final int numActive = landmarkModel.numActive();
+		final double[][] p = new double[ ndims ][ numActive ];
+		final double[][] q = new double[ ndims ][ numActive ];
 		final double[] w = new double[ landmarkModel.getTransform().getNumLandmarks() ];
 
 		int k = 0;
 		for ( int i = 0; i < landmarkModel.getTransform().getNumLandmarks(); i++ )
 		{
-			if ( landmarkModel.getTransform().isActive( i ) )
+			if ( landmarkModel.isActive( i ) )
 			{
 				w[ k ] = 1.0;
 
 				for ( int d = 0; d < ndims; d++ )
 				{
-					p[ d ][ k ] = landmarkModel.getTransform().getSourceLandmarks()[ d ][ i ];
-					q[ d ][ k ] = landmarkModel.getTransform().getTargetLandmarks()[ d ][ i ];
+					p[ d ][ k ] = landmarkModel.getMovingPoint( i )[ d ];
+					q[ d ][ k ] = landmarkModel.getFixedPoint( i )[ d ];
 				}
 				k++;
 			}
@@ -1835,8 +1836,8 @@ public class BigWarp
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
-		wmSrc.setWarp( transform.deepCopy() );
-		gSrc.setWarp( transform.deepCopy() );
+		wmSrc.setWarp( transform );
+		gSrc.setWarp( transform );
 	}
 
 	public boolean restimateTransformation()
@@ -2234,7 +2235,7 @@ public class BigWarp
 				{
 					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					if( isMoving && landmarkModel.getTransform().isSolved() && isMovingDisplayTransformed() )
+					if( isMoving && isMovingDisplayTransformed() )
 					{
 						logger.trace("Drag moving transformed");
 						// The moving image:
@@ -2488,26 +2489,29 @@ public class BigWarp
 					try
 					{
 						final ThinPlateR2LogRSplineKernelTransform xfm;
-						if ( index >= 0 )
+						if ( index >= 0 ) // a point position is modified
 						{
-							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
-							if ( !bw.getLandmarkPanel().getTableModel().getIsActive( index ) )
+							LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
+							if ( !tableModel.getIsActive( index ) )
 								return;
 
-							// make a deep copy of the transformation and solve
-							// it
-							if ( isMoving )
-								xfm.updateTargetLandmark( index, xfm.apply( pt ) );
-							else
-								xfm.updateSourceLandmark( index, pt );
+							int numActive = tableModel.numActive();
+							int ndims = tableModel.getNumdims();
+							// TODO: better to pass a factory here so the transformation can be any
+							// CoordinateTransform ( not just a TPS )
+							double[][] mvgPts = new double[ ndims ][ numActive ];
+							double[][] tgtPts = new double[ ndims ][ numActive ];
+
+							tableModel.copyLandmarks( mvgPts, tgtPts );
+
+							// need to find the "inverse TPS" so exchange moving and tgt
+							xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
 						}
-						else
+						else // a point is added
 						{
 							bw.landmarkModel.initTransformation();
 							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
 						}
-
-						xfm.solve();
 
 						if ( index < 0 )
 						{

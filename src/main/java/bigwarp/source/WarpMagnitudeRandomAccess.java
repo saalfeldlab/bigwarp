@@ -26,7 +26,7 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	{
 		super( dimensions.length );
 		if( warp != null)
-			this.warp = ((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy();
+			this.warp = ((ThinPlateR2LogRSplineKernelTransform)warp);
 		if( base != null )
 			this.base = base.copy();
 		this.value = value;

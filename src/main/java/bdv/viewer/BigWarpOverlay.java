@@ -220,9 +220,9 @@ public class BigWarpOverlay {
 		this.state = state;
 	}
 	
-	public void setEstimatedTransform( ThinPlateR2LogRSplineKernelTransform estimatedXfm )
+	public void setEstimatedTransform( final ThinPlateR2LogRSplineKernelTransform estimatedXfm )
 	{
-		this.estimatedXfm = estimatedXfm.deepCopy();
+		this.estimatedXfm = estimatedXfm;
 	}
 	
 	public boolean getIsTransformed()
