@@ -193,7 +193,7 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 		else
 		{
 			GridRealRandomAccess< T > ra = new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
-					((ThinPlateR2LogRSplineKernelTransform)warp).deepCopy(), this.method  );
+					((ThinPlateR2LogRSplineKernelTransform)warp), this.method  );
 			ra.gridSpacing = this.gridSpacing;
 			ra.gridWidth = this.gridWidth;
 			ra.gridHalfWidth = this.gridHalfWidth;

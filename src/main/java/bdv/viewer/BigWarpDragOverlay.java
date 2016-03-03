@@ -181,7 +181,6 @@ public class BigWarpDragOverlay
 
 				// In the click-drag paradigm, the drag part always effects the fixed image
 				if( bw.isMovingDisplayTransformed() &&
-						thisViewer.doUpdateOnDrag() &&
 						bw.getLandmarkPanel().getTableModel().isActive( index ) )
 				{
 					solverThread.requestResolve( false, index, targetPtArray );

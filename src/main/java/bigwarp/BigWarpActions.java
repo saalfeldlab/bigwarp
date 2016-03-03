@@ -12,6 +12,8 @@ import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
 import mpicbg.models.AbstractModel;
+import bdv.BigDataViewerActions.LoadSettingsAction;
+import bdv.BigDataViewerActions.SaveSettingsAction;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.util.AbstractNamedAction;
@@ -56,6 +58,10 @@ public class BigWarpActions
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
+
+	public static final String SET_BOOKMARK = "set bookmark";
+	public static final String GO_TO_BOOKMARK = "go to bookmark";
+	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
 
 	public static final String UNDO = "undo";
 	public static final String REDO = "redo";
@@ -123,6 +129,10 @@ public class BigWarpActions
 
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 
+		map.put( GO_TO_BOOKMARK, "B" );
+		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
+		map.put( SET_BOOKMARK, "shift B" );
+
 		return inputMap;
 	}
 
@@ -147,6 +157,13 @@ public class BigWarpActions
 
 		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
 			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
+
+		map.put( new SetBookmarkAction( bw ) );
+		map.put( new GoToBookmarkAction( bw ) );
+		map.put( new GoToBookmarkRotationAction( bw ) );
+
+		map.put( new SaveSettingsAction( bw ) );
+		map.put( new LoadSettingsAction( bw ) );
 
 		return actionMap;
 	}
@@ -622,5 +639,102 @@ public class BigWarpActions
 			else
 				table.setRowSelectionInterval( selection, selection );
 		}
+	}
+
+	public static class SetBookmarkAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -4060308986781809606L;
+		BigWarp bw;
+
+		public SetBookmarkAction( final BigWarp bw )
+		{
+			super( SET_BOOKMARK );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			if ( bw.getViewerFrameP().isActive() )
+				bw.bookmarkEditorP.initSetBookmark();
+			else if ( bw.getViewerFrameQ().isActive() )
+				bw.bookmarkEditorQ.initSetBookmark();
+		}
+
+	}
+
+	public static class GoToBookmarkAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 8777199828772379323L;
+		BigWarp bw;
+
+		public GoToBookmarkAction( final BigWarp bw )
+		{
+			super( GO_TO_BOOKMARK );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.goToBookmark();
+		}
+	}
+
+	public static class GoToBookmarkRotationAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -6169895035295179820L;
+		BigWarp bw;
+
+		public GoToBookmarkRotationAction( final BigWarp bw )
+		{
+			super( GO_TO_BOOKMARK_ROTATION );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			if ( bw.getViewerFrameP().isActive() )
+				bw.bookmarkEditorP.initGoToBookmarkRotation();
+			else if ( bw.getViewerFrameP().isActive() )
+				bw.bookmarkEditorQ.initGoToBookmarkRotation();
+		}
+	}
+
+	public static class SaveSettingsAction extends AbstractNamedAction
+	{
+		BigWarp bw;
+		public SaveSettingsAction( final BigWarp bw )
+		{
+			super( SAVE_SETTINGS );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.saveSettings();
+		}
+
+		private static final long serialVersionUID = 1L;
+	}
+
+	public static class LoadSettingsAction extends AbstractNamedAction
+	{
+		BigWarp bw;
+		public LoadSettingsAction( final BigWarp bw )
+		{
+			super( LOAD_SETTINGS );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.loadSettings();
+		}
+
+		private static final long serialVersionUID = 1L;
 	}
 }

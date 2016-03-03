@@ -23,17 +23,17 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 		this.ndims = ndims;
 	}
 	
-	public TpsTransformWrapper( int ndims, ThinPlateR2LogRSplineKernelTransform tps )
+	public TpsTransformWrapper( int ndims, final ThinPlateR2LogRSplineKernelTransform tps )
 	{
 		this( ndims );
 		setTps( tps );
 	}
 	
-	public void setTps( ThinPlateR2LogRSplineKernelTransform tps )
+	public void setTps( final ThinPlateR2LogRSplineKernelTransform tps )
 	{
 		assert( tps.getNumDims() == 2 || tps.getNumDims() == 3 );
-		
-		this.tps = tps.deepCopy();
+
+		this.tps = tps;
 	}
 
 	@Override
@@ -97,7 +97,7 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 		if( tps == null )
 			return new TpsTransformWrapper( this.ndims );
 		else
-			return new TpsTransformWrapper( this.ndims, this.tps.deepCopy() );
+			return new TpsTransformWrapper( this.ndims, this.tps );
 	}
 
 	public void write( File f ){}

@@ -13,6 +13,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -40,6 +41,12 @@ import javax.swing.table.TableCellEditor;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
 
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
@@ -55,6 +62,8 @@ import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.bookmarks.Bookmarks;
+import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
@@ -119,6 +128,10 @@ public class BigWarp
 
 	protected static final int DEFAULT_HEIGHT = 400;
 
+	public static final int GRID_SOURCE_ID = 1696993146;
+
+	public static final int WARPMAG_SOURCE_ID = 956736363;
+
 	// descriptive names for indexing sources
 	protected int[] movingSourceIndexList;
 
@@ -141,6 +154,12 @@ public class BigWarp
 	protected final VisibilityAndGroupingDialog activeSourcesDialogQ;
 
 	final AffineTransform3D fixedViewXfm;
+
+	private final Bookmarks bookmarks;
+
+	protected final BookmarksEditor bookmarkEditorP;
+
+	protected final BookmarksEditor bookmarkEditorQ;
 
 	private final BigWarpViewerFrame viewerFrameP;
 
@@ -499,6 +518,10 @@ public class BigWarp
 		// add focus listener
 		new BigwarpFocusListener( this );
 
+		bookmarks = new Bookmarks();
+		bookmarkEditorP = new BookmarksEditor( viewerP, viewerFrameP.getKeybindings(), bookmarks );
+		bookmarkEditorQ = new BookmarksEditor( viewerQ, viewerFrameQ.getKeybindings(), bookmarks );
+
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
 	}
@@ -615,6 +638,18 @@ public class BigWarp
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
 
 		final JMenuBar viewerMenuBar = new JMenuBar();
+
+		JMenu fileMenu = new JMenu( "File" );
+		viewerMenuBar.add( fileMenu );
+
+		final JMenuItem miLoadSettings = new JMenuItem( actionMap.get( BigWarpActions.LOAD_SETTINGS ) );
+		miLoadSettings.setText( "Load settings" );
+		fileMenu.add( miLoadSettings );
+
+		final JMenuItem miSaveSettings = new JMenuItem( actionMap.get( BigWarpActions.SAVE_SETTINGS ) );
+		miSaveSettings.setText( "Save settings" );
+		fileMenu.add( miSaveSettings );
+
 		final JMenu settingsMenu = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
 
@@ -903,6 +938,11 @@ public class BigWarp
 				}.start();
 			}
 		} );
+	}
+
+	public Bookmarks getBookmarks()
+	{
+		return bookmarks;
 	}
 
 	public BigWarpViewerFrame getViewerFrameP()
@@ -1288,6 +1328,18 @@ public class BigWarp
 		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
 	}
 
+	public void goToBookmark()
+	{
+		if ( viewerFrameP.isActive() )
+		{
+			bookmarkEditorP.initGoToBookmark();
+		}
+		else if ( viewerFrameQ.isActive() )
+		{
+			bookmarkEditorQ.initGoToBookmark();
+		}
+	}
+
 	public void resetView()
 	{
 		final RandomAccessibleInterval< ? > interval = getSources().get( 1 ).getSpimSource().getSource( 0, 0 );
@@ -1473,8 +1525,7 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		final int id = ( int ) ( Math.random() * Integer.MAX_VALUE );
-		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
 
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
@@ -1502,8 +1553,7 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		final int id = ( int ) ( Math.random() * Integer.MAX_VALUE );
-		converterSetups.add( new RealARGBColorConverterSetup( id, converter, vconverter ) );
+		converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
 
 		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
 		sources.add( soc );
@@ -1576,21 +1626,22 @@ public class BigWarp
 
 	protected void fitBaselineWarpMagModel()
 	{
-		final double[][] p = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
-		final double[][] q = new double[ ndims ][ landmarkModel.getTransform().getNumActiveLandmarks() ];
+		final int numActive = landmarkModel.numActive();
+		final double[][] p = new double[ ndims ][ numActive ];
+		final double[][] q = new double[ ndims ][ numActive ];
 		final double[] w = new double[ landmarkModel.getTransform().getNumLandmarks() ];
 
 		int k = 0;
 		for ( int i = 0; i < landmarkModel.getTransform().getNumLandmarks(); i++ )
 		{
-			if ( landmarkModel.getTransform().isActive( i ) )
+			if ( landmarkModel.isActive( i ) )
 			{
 				w[ k ] = 1.0;
 
 				for ( int d = 0; d < ndims; d++ )
 				{
-					p[ d ][ k ] = landmarkModel.getTransform().getSourceLandmarks()[ d ][ i ];
-					q[ d ][ k ] = landmarkModel.getTransform().getTargetLandmarks()[ d ][ i ];
+					p[ d ][ k ] = landmarkModel.getMovingPoint( i )[ d ];
+					q[ d ][ k ] = landmarkModel.getFixedPoint( i )[ d ];
 				}
 				k++;
 			}
@@ -1785,8 +1836,8 @@ public class BigWarp
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
-		wmSrc.setWarp( transform.deepCopy() );
-		gSrc.setWarp( transform.deepCopy() );
+		wmSrc.setWarp( transform );
+		gSrc.setWarp( transform );
 	}
 
 	public boolean restimateTransformation()
@@ -2184,7 +2235,7 @@ public class BigWarp
 				{
 					// Make a non-undoable edit so that the point can be displayed correctly
 					// the undoable action is added on mouseRelease
-					if( isMoving && landmarkModel.getTransform().isSolved() && isMovingDisplayTransformed() )
+					if( isMoving && isMovingDisplayTransformed() )
 					{
 						logger.trace("Drag moving transformed");
 						// The moving image:
@@ -2348,7 +2399,7 @@ public class BigWarp
 				final int row = target.rowAtPoint( e.getPoint() );
 
 				// if we click in the table but not on a row, deselect everything
-				if( row < 0 )
+				if( row < 0 && target.getRowCount() > 0  )
 					target.removeRowSelectionInterval( 0, target.getRowCount() - 1 );
 			}
 		}
@@ -2438,26 +2489,29 @@ public class BigWarp
 					try
 					{
 						final ThinPlateR2LogRSplineKernelTransform xfm;
-						if ( index >= 0 )
+						if ( index >= 0 ) // a point position is modified
 						{
-							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
-							if ( !bw.getLandmarkPanel().getTableModel().getIsActive( index ) )
+							LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
+							if ( !tableModel.getIsActive( index ) )
 								return;
 
-							// make a deep copy of the transformation and solve
-							// it
-							if ( isMoving )
-								xfm.updateTargetLandmark( index, xfm.apply( pt ) );
-							else
-								xfm.updateSourceLandmark( index, pt );
+							int numActive = tableModel.numActive();
+							int ndims = tableModel.getNumdims();
+							// TODO: better to pass a factory here so the transformation can be any
+							// CoordinateTransform ( not just a TPS )
+							double[][] mvgPts = new double[ ndims ][ numActive ];
+							double[][] tgtPts = new double[ ndims ][ numActive ];
+
+							tableModel.copyLandmarks( mvgPts, tgtPts );
+
+							// need to find the "inverse TPS" so exchange moving and tgt
+							xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
 						}
-						else
+						else // a point is added
 						{
 							bw.landmarkModel.initTransformation();
 							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
 						}
-
-						xfm.solve();
 
 						if ( index < 0 )
 						{
@@ -2525,5 +2579,82 @@ public class BigWarp
 				notify();
 			}
 		}
+	}
+
+	protected void saveSettings()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showSaveDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				saveSettings( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void saveSettings( final String xmlFilename ) throws IOException
+	{
+		final Element root = new Element( "Settings" );
+
+		Element viewerPNode = new Element( "viewerP" );
+		Element viewerQNode = new Element( "viewerQ" );
+
+		root.addContent( viewerPNode );
+		root.addContent( viewerQNode );
+
+		viewerPNode.addContent( viewerP.stateToXml() );
+		viewerQNode.addContent( viewerQ.stateToXml() );
+
+		root.addContent( setupAssignments.toXml() );
+		root.addContent( bookmarks.toXml() );
+		final Document doc = new Document( root );
+		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
+		xout.output( doc, new FileWriter( xmlFilename ) );
+	}
+
+	protected void loadSettings()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showOpenDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				loadSettings( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final Exception e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void loadSettings( final String xmlFilename ) throws IOException,
+			JDOMException
+	{
+		final SAXBuilder sax = new SAXBuilder();
+		final Document doc = sax.build( xmlFilename );
+		final Element root = doc.getRootElement();
+		viewerP.stateFromXml( root.getChild( "viewerP" ) );
+		viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
+		setupAssignments.restoreFromXml( root );
+		bookmarks.restoreFromXml( root );
+		activeSourcesDialogP.update();
+		activeSourcesDialogQ.update();
+
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
 	}
 }
