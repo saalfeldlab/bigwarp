@@ -171,7 +171,7 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 		return ip;
 	}
 
-	public static < T extends RealType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl )
+	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl )
 	{
 		final long[] dimensions = new long[ itvl.numDimensions() ];
 		itvl.dimensions( dimensions );
