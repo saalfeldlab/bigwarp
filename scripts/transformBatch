@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+# Usage:
+# transformBatch <num-dimensions> <landmarks-file> <moving-image-file> <template-image-file> <destination-file>
+# 
+# The template image is used to determine the size of the output image;
+# usually, one chooses the target image used for the transformation.
+#
+# Note: the image resolutions of the moving and template images matters!
+
+cp=`cat bigwarp_classpath.cp`
+java -cp "$cp" -Xmx4000m bigwarp.BigWarpBatchTransform "$@"

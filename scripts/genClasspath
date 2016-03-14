@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Get the current version of bigwarp as described in the pom
+# do some cleaning (ie trim white space)
+bigwarpVersion=`grep -A 1 '<artifactId>bigwarp_fiji' ../pom.xml | tail -n 1 | sed -e 's/<version>//g' -e 's:</version>::g' -e 's: ::g' | tr -d '[[:space:]]'`
+
+# get full path to the jar
+thisdir=`pwd`
+cd ../target
+tgtdir=`pwd`
+bigwarpJar=`ls $tgtdir/"bigwarp_fiji-$bigwarpVersion".jar`
+echo $a
+cd $thisdir
+
+# Get the list of dependencies
+cd ..
+depList=`mvn dependency:build-classpath | grep 'Dependencies classpath' -A 1 | tail -n 1`
+echo "$depList"
+cd $thisdir
+
+# make a classpath
+cp="$bigwarpJar:$depList"
+echo $cp > bigwarp_classpath.cp
