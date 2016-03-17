@@ -557,7 +557,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
 
-	public synchronized boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
 		return pointEdit( index, pt, forceAdd, isMoving, warpedPt, isUndoable, true );
 	}
@@ -717,7 +717,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public synchronized void computeWarpedPoint( int i )
 	{
 		// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
-		if ( !isFixedPoint( i ) && isMovingPoint( i ) )
+		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumLandmarks() > 0 )
 		{
 			double[] tgt = toPrimitive( movingPts.get( i ) );
 			double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
