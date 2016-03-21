@@ -40,6 +40,7 @@ public class WarpNavigationActions
 	 *            Navigation actions are targeted at this {@link ViewerPanel}.
 	 * @param keyProperties
 	 *            user-defined key-bindings.
+	 * @param is2d does this bigwarp instance work on 2d images 
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,

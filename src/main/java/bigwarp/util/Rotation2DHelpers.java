@@ -7,9 +7,9 @@ public class Rotation2DHelpers
 	
 	/**
 	 * Returns the shorter angle between the starting and ending angle.
-	 * @param angleStart
-	 * @param angleEnd
-	 * @return
+	 * @param angleStart starting angle
+	 * @param angleEnd ending angle
+	 * @return the angle
 	 */
 	public static double shorterAngleBetweenRotations( double angleStart, double angleEnd )
 	{
@@ -53,6 +53,10 @@ public class Rotation2DHelpers
 
 	/**
 	 * Taken from http://albert.rierol.net/java_tricks.html
+	 * 
+	 * @param x x coordinate
+	 * @param y y coordinate
+	 * @return the angle
 	 */
 	public static double getAngle(double x, double y) {
 		// calculate angle

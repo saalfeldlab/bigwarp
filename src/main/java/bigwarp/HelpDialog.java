@@ -28,6 +28,8 @@ public class HelpDialog extends JDialog
 	/**
 	 * Instantiates and displays a JFrame that lists the help file for the SPIM
 	 * viewer UI.
+	 * 
+	 * @param owner the parent frame
 	 */
 	public HelpDialog( final Frame owner )
 	{

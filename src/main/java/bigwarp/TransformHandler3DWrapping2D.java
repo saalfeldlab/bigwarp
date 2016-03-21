@@ -31,7 +31,7 @@ public class TransformHandler3DWrapping2D extends MouseAdapter implements KeyLis
 	}
 	
 	/**
-	 * Whom to notify when the {@link #affine current transform} is changed.
+	 * Whom to notify when the current transform is changed.
 	 */
 	protected TransformListener< AffineTransform3D > listener;
 	

@@ -18,6 +18,8 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	
 	/**
 	 * Initialize as identity transform
+	 * 
+	 * @param ndims number of dimensions this tps acts on
 	 */
 	public TpsTransformWrapper( int ndims ){
 		this.ndims = ndims;

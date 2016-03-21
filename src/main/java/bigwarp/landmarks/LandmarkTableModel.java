@@ -30,7 +30,7 @@ import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
 /**
- * @author John Bogovic
+ * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  *
  */
 public class LandmarkTableModel extends AbstractTableModel {
@@ -424,8 +424,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	/**
 	 * Returns the next row to be updated for the moving or target columns.
 	 * 
-	 * @param isMoving
-	 * @return
+	 * @param isMoving isMoving
+	 * @return index of the next row
 	 */
 	public int getNextRow( boolean isMoving )
 	{
@@ -568,10 +568,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * 
 	 * @param index The index into this table that this edit will affect ( a value of -1 will add a new point )
 	 * @param pt the point position
+	 * @param forceAdd force addition of a new point at the specified index
 	 * @param isMoving is this point in the moving image space
-	 * @param warpedPt 
+	 * @param warpedPt position of the warped point
 	 * @param isUndoable is this action undo-able
-	 * @param forceUpdateWarpedPoints
+	 * @param forceUpdateWarpedPts updated warped point positions
 	 * @return true if a new row was added
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
@@ -701,8 +702,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * <p>
 	 * An action is taken if, for the input row if:
 	 * <p>
-	 * <ul>
-	 * <li>1) There is a point in moving space, and
+	 * <ul><li>1) There is a point in moving space, and
 	 * <li>2) There is not a point in target space, and
 	 * <li>3) A transformation has been estimated.
 	 * </ul>
@@ -711,8 +711,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * target space by iteratively estimating the inverse of the thin plate
 	 * spline transformation.
 	 * 
-	 * @param i
-	 *            the row in the table
+	 * @param i the row in the table
 	 */
 	public synchronized void computeWarpedPoint( int i )
 	{
@@ -829,7 +828,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * since the last time a transform was estimated.
 	 * 
 	 * Not currently in use, but may be in the future 
-	 * @param index
+	 * @param index the row index
 	 */
 	@SuppressWarnings("unused")
 	private void markAsChanged( int index )
@@ -866,8 +865,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	/**
 	 * Loads this table from a file
-	 * @param f
-	 * @throws IOException 
+	 * @param f the file
+	 * @param invert invert the moving and target point sets
+	 * @throws IOException an exception
 	 */
 	public void load( File f, boolean invert ) throws IOException
 	{
@@ -979,8 +979,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	/**
 	 * Saves the table to a file
 	 * @param f the file
-	 * @return true if successful 
-	 * @throws IOException 
+	 * @throws IOException an exception
 	 */
 	public void save( File f ) throws IOException
 	{
@@ -1081,7 +1080,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	/**
 	 * Returns a new LandmarkTableModel but makes the moving points fixed and vice versa.
 	 *
-	 * @return
+	 * @return the LandmarkTableModel
 	 */
 	public LandmarkTableModel invert()
 	{

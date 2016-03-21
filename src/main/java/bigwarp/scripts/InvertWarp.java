@@ -8,7 +8,7 @@ import bigwarp.landmarks.LandmarkTableModel;
 /**
  * Inverts a set of landmark point pairs so moving points become fixex and vice versa.
  *  
- * @author John Bogovic <bogovicj@janelia.hhmi.org>
+ * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  *
  */
 public class InvertWarp

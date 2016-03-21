@@ -1017,10 +1017,10 @@ public class BigWarp
 
 	/**
 	 *
-	 * @param ptarray
-	 * @param isMoving
-	 * @param selectedPointIndex
-	 * @param viewer
+	 * @param ptarray location of the clicked point
+	 * @param isMoving is the viewer in moving space
+	 * @param selectedPointIndex the index of the selected point
+	 * @param viewer the BigWarpViewerPanel clicked on
 	 */
 	public void updatePointLocation( final double[] ptarray, final boolean isMoving, final int selectedPointIndex, final BigWarpViewerPanel viewer )
 	{
@@ -1095,8 +1095,8 @@ public class BigWarp
 	/**
 	 * Returns the index of the selected row, if it is unpaired, -1 otherwise
 	 * 
-	 * @param isMoving
-	 * @return
+	 * @param isMoving isMoving
+	 * @return index of the selected row
 	 */
 	public int getSelectedUnpairedRow( boolean isMoving )
 	{
@@ -1110,8 +1110,9 @@ public class BigWarp
 	/**
 	 * Updates the global variable ptBack
 	 *
-	 * @param ptarray
-	 * @param isMoving
+	 * @param ptarray the point location
+	 * @param isMoving is the point location in moving image space
+	 * @return an error string if an error occurred, empty string otherwise
 	 */
 	public String addPoint( final double[] ptarray, final boolean isMoving, final BigWarpViewerPanel viewer )
 	{
@@ -1129,8 +1130,9 @@ public class BigWarp
 	/**
 	 * Updates the global variable ptBack
 	 *
-	 * @param ptarray
-	 * @param isMoving
+	 * @param ptarray the point location
+	 * @param isMoving is the point location in moving image space
+	 * @return true if a new row was created
 	 */
 	public boolean addPoint( final double[] ptarray, final boolean isMoving )
 	{
@@ -1151,9 +1153,9 @@ public class BigWarp
 	 * 
 	 * Updates the global variable ptBack
 	 *
-	 * @param ptarray
-	 * @param isMoving
-	 * @return
+	 * @param pt the point location
+	 * @param isMoving is the point location in moving image space
+	 * @return the index of the selected landmark
 	 */
 	protected int selectedLandmark( final double[] pt, final boolean isMoving )
 	{
@@ -1257,11 +1259,10 @@ public class BigWarp
 	}
 
 	/**
-	 * Changes the view transformation of 'panelToChange' to match that of
-	 * 'panelToMatch'
-	 *
-	 * @param panelToChange
-	 * @param panelToMatch
+	 * Changes the view transformation of 'panelToChange' to match that of 'panelToMatch' 
+	 * @param panelToChange the viewer panel whose transform will change
+	 * @param panelToMatch the viewer panel the transform will come from
+	 * @param toPreconcat currently unused
 	 */
 	protected void matchWindowTransforms( final BigWarpViewerPanel panelToChange, final BigWarpViewerPanel panelToMatch, final AffineTransform3D toPreconcat )
 	{
@@ -1376,6 +1377,8 @@ public class BigWarp
 	/**
 	 * Toggles whether the moving image is displayed after warping (in the same
 	 * space as the fixed image), or in its native space.
+	 * 
+	 * @return true of the display mode changed
 	 */
 	public boolean toggleMovingImageDisplay()
 	{
@@ -1506,11 +1509,11 @@ public class BigWarp
 	}
 
 	/**
-	 * This is the sahnehaubchen :-)
-	 *
-	 * @param sources
-	 * @param name
-	 * @param data
+	 * 
+	 * @param sources the source list 
+	 * @param converterSetups the converterSetups 
+	 * @param name a name of the new source
+	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
 	private static int addWarpMagnitudeSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
@@ -1534,11 +1537,11 @@ public class BigWarp
 	}
 
 	/**
-	 * This is the sahnehaubchen :-)
-	 *
-	 * @param sources
-	 * @param name
-	 * @param data
+	 * 
+	 * @param sources the source list 
+	 * @param converterSetups the converterSetups 
+	 * @param name a name of the new source
+	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
 	private static int addGridSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
@@ -1893,7 +1896,7 @@ public class BigWarp
 
 	/**
 	 * The display will be in 3d if any of the input sources are 3d.
-	 * @return
+	 * @return dimension of the input sources
 	 */
 	protected int detectNumDims()
 	{

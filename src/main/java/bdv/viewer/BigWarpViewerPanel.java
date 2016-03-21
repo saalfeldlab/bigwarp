@@ -99,8 +99,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
 	 * 
-	 * @param name
-	 * @return
+	 * @return the number sources in the moving group
 	 */
 	public int updateGrouping()
 	{

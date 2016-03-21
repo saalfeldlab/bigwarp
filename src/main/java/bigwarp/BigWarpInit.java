@@ -211,9 +211,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link AbstractSpimData}.
 	 *
-	 * @param spimDataP
-	 * @param spimDataQ
-	 * @return
+	 * @param spimDataPList array of moving SpimData
+	 * @param spimDataQList array of fixed SpimData
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
 	{
@@ -247,9 +247,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link AbstractSpimData}.
 	 *
-	 * @param spimDataP
-	 * @param spimDataQ
-	 * @return
+	 * @param spimDataP array of moving SpimData
+	 * @param spimDataQ array of fixed SpimData
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpData( final AbstractSpimData< ? > spimDataP, final AbstractSpimData< ? > spimDataQ )
 	{
@@ -292,9 +292,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link Loader Loaders} that generate {@link AbstractSpimData}.
 	 *
-	 * @param loaderP
-	 * @param loaderQ
-	 * @return
+	 * @param loaderP moving image source loader
+	 * @param loaderQ fixed image source loader
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpData(
 			final Loader loaderP,
@@ -310,9 +310,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two XML files.
 	 *
-	 * @param xmlFilenameP
-	 * @param xmlFilenameQ
-	 * @return
+	 * @param xmlFilenameP moving source XML
+	 * @param xmlFilenameQ fixed source XML
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
@@ -322,9 +322,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link ImagePlus ImagePluses}.
 	 *
-	 * @param impP
-	 * @param impQ
-	 * @return
+	 * @param impP moving source ImagePlus
+	 * @param impQ fixed source ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
@@ -334,9 +334,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link ImagePlus ImagePlus} arrays.
 	 *
-	 * @param impP
-	 * @param impQ
-	 * @return
+	 * @param impP array of moving sources ImagePlus
+	 * @param impQ array of fixed sources ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus[] impQ )
 	{
@@ -346,9 +346,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from one {@link ImagePlus ImagePlus} (moving) and one {@link ImagePlus ImagePlus} array (target).
 	 *
-	 * @param impP
-	 * @param impQ
-	 * @return
+	 * @param impP moving source ImagePlus
+	 * @param impQ array of fixed sources ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus[] impQ )
 	{
@@ -358,9 +358,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from one {@link ImagePlus ImagePlus} array (moving) and one {@link ImagePlus ImagePlus} (target).
 	 *
-	 * @param impP
-	 * @param impQ
-	 * @return
+	 * @param impP array of fixed sources ImagePlus
+	 * @param impQ fixed source ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus impQ )
 	{
@@ -370,9 +370,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus}.
 	 *
-	 * @param xmlFilenameP
-	 * @param impQ
-	 * @return
+	 * @param xmlFilenameP movingSource XML
+	 * @param impQ fixed source ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
@@ -382,9 +382,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus} array.
 	 *
-	 * @param xmlFilenameP
-	 * @param impQ
-	 * @return
+	 * @param xmlFilenameP movingSource XML
+	 * @param impQ array of fixed sources ImagePlus
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus[] impQ )
 	{
@@ -394,9 +394,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an {@link ImagePlus} and an XML file.
 	 *
-	 * @param impP
-	 * @param xmlFilenameQ
-	 * @return
+	 * @param impP moving source ImagePlus
+	 * @param xmlFilenameQ fixed source XML
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
@@ -406,9 +406,9 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an {@link ImagePlus} array and an XML file.
 	 *
-	 * @param impP
-	 * @param xmlFilenameQ
-	 * @return
+	 * @param impP array of moving sources ImagePlus
+	 * @param xmlFilenameQ fixed source XML
+	 * @return BigWarpData
 	 */
 	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus[] impP, final String xmlFilenameQ )
 	{

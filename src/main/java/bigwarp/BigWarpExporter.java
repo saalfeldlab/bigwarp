@@ -92,7 +92,9 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 	/**
 	 * Returns true if moving image sources are all of the same type.
 	 * 
-	 * @return
+	 * @param sources the sources
+	 * @param movingSourceIndexList list of indexes for moving sources
+	 * @return true if all moving sources are of the same type
 	 */
 	public static < T > boolean isTypeListFullyConsistent( ArrayList< SourceAndConverter< ? >> sources, int[] movingSourceIndexList )
 	{
