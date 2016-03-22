@@ -4,7 +4,9 @@ import ij.IJ;
 import ij.ImagePlus;
 
 import java.util.ArrayList;
+import java.util.Properties;
 
+import jitk.spline.XfmUtils;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
@@ -31,6 +33,7 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
@@ -175,22 +178,37 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 
 	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl )
 	{
+		// A bit of hacking to make slices the 4th dimension and channels the 3rd
+		// since that's how ImagePlusImgFactory does it
+		MixedTransformView< T > raip = Views.permute( rai, 2, 3 );
+
 		final long[] dimensions = new long[ itvl.numDimensions() ];
-		itvl.dimensions( dimensions );
+		for( int d = 0; d < itvl.numDimensions(); d++ )
+		{
+			if( d == 2 )
+				dimensions[ d ] = itvl.dimension( 3 );
+			else if( d == 3 )
+				dimensions[ d ] = itvl.dimension( 2 );
+			else
+				dimensions[ d ] = itvl.dimension( d );
+		}
 
 		// create the image plus image
 		final T t = rai.randomAccess().get();
 		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
-		final ImagePlusImg< T, ? > target = factory.create( itvl, t );
+		final ImagePlusImg< T, ? > target = factory.create( dimensions, t );
+
+		long[] dims = new long[ target.numDimensions() ];
+		target.dimensions( dims );
 
 		double k = 0;
-
 		long N = 1;
 		for ( int i = 0; i < itvl.numDimensions(); i++ )
 			N *= dimensions[ i ];
 
 		final net.imglib2.Cursor< T > c = target.cursor();
-		final RandomAccess< T > ra = rai.randomAccess();
+
+		final RandomAccess< T > ra = raip.randomAccess();
 		while ( c.hasNext() )
 		{
 			c.fwd();
