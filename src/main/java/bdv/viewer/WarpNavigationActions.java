@@ -5,10 +5,11 @@ import java.awt.event.ActionEvent;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
+import org.scijava.ui.behaviour.KeyStrokeAdder;
+
 import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
-import bdv.util.KeyProperties.KeyStrokeAdder;
 import bdv.viewer.InputActionBindings;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.AlignPlane;
@@ -57,7 +58,7 @@ public class WarpNavigationActions
 	public static InputMap createInputMap( final KeyProperties keyProperties, boolean is2d )
 	{
 		final InputMap inputMap = new InputMap();
-		final KeyStrokeAdder map = keyProperties.adder( inputMap );
+		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
 		map.put( TOGGLE_INTERPOLATION, "I" );
 		map.put( TOGGLE_FUSED_MODE, "F" );

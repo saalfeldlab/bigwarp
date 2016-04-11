@@ -11,6 +11,8 @@ import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
+import org.scijava.ui.behaviour.KeyStrokeAdder;
+
 import mpicbg.models.AbstractModel;
 import bdv.BigDataViewerActions.LoadSettingsAction;
 import bdv.BigDataViewerActions.SaveSettingsAction;
@@ -19,7 +21,6 @@ import bdv.tools.ToggleDialogAction;
 import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
-import bdv.util.KeyProperties.KeyStrokeAdder;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -117,7 +118,7 @@ public class BigWarpActions
 	public static InputMap createInputMapViewer( final KeyProperties keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
-		final KeyStrokeAdder map = keyProperties.adder( inputMap );
+		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
 		map.put(RESET_VIEWER, "R");
 		
@@ -171,7 +172,7 @@ public class BigWarpActions
 	public static InputMap createInputMap( final KeyProperties keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
-		final KeyStrokeAdder map = keyProperties.adder( inputMap );
+		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
 		map.put( SHOW_WARPTYPE_DIALOG, "U" );
 		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
