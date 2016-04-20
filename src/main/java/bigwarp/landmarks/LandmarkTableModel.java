@@ -885,12 +885,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		int ndims = 3;
 		int expectedRowLength = 8;
+		int numRowsTmp = 0;
 		
-		numRows = 0;
 		for( String[] row : rows )
 		{
 			// detect a file with 2d landmarks
-			if( numRows == 0 && row.length == 6 )
+			if( numRowsTmp == 0 && // only check for the first row
+					row.length == 6 )
 			{
 				ndims = 2;
 				expectedRowLength = 6;
@@ -926,10 +927,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 			
 			warpedPoints.add( new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( false );
-			numRows++;
+			numRowsTmp++;
 			fireTableRowsInserted( numRows, numRows );
 		}
 
+		numRows = numRowsTmp;
 		updateNextRows( 0 );
 		initTransformation();
 	}
