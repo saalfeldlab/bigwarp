@@ -264,7 +264,6 @@ public class BigWarp
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		sources = data.sources;
-//		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
 		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 
@@ -308,7 +307,6 @@ public class BigWarp
 		// transformations to
 		// rotations and scalings of the 2d plane ( z = 0 )
 		boolean is2d = ( ndims == 2 );
-		System.out.println( "is2d: " + is2d );
 		final ViewerOptions optionsP = BigWarpViewerOptions.options( is2d );
 		final ViewerOptions optionsQ = BigWarpViewerOptions.options( is2d );
 
@@ -325,7 +323,6 @@ public class BigWarp
 				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
-
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to
@@ -351,6 +348,15 @@ public class BigWarp
 				overlayRendererField.set( viewerP, overlayRenderP );
 				overlayRendererField.set( viewerQ, overlayRenderQ );
 				overlayRendererField.setAccessible( false );
+
+				AffineTransform3D xfm = new AffineTransform3D();
+				viewerP.getState().getViewerTransform( xfm );
+				xfm.set( 0.0, 2, 3 );
+				viewerP.getState().setViewerTransform( xfm );
+
+				viewerQ.getState().getViewerTransform( xfm );
+				xfm.set( 0.0, 2, 3 );
+				viewerQ.getState().setViewerTransform( xfm );
 
 			}
 			catch ( final Exception e )
