@@ -47,7 +47,9 @@ import org.jdom2.JDOMException;
 import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
+import bdv.BehaviourTransformEventHandler3D;
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -119,6 +121,7 @@ import net.imglib2.ui.InteractiveDisplayCanvasComponent;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
+import net.imglib2.ui.TransformEventHandlerFactory;
 import net.imglib2.ui.TransformListener;
 
 public class BigWarp
@@ -260,11 +263,6 @@ public class BigWarp
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
-		/* The code below if awt listeners are added before this is called */
-//		System.out.println("install fixer vanilla");
-//		repeatedKeyEventsFixer = new RepeatingReleasedEventsFixer();
-//		repeatedKeyEventsFixer.install();
-
 		sources = data.sources;
 //		AbstractSequenceDescription<?, ?, ?> seq = data.seq;
 		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
@@ -309,9 +307,10 @@ public class BigWarp
 		// If the images are 2d, use a transform handler that limits
 		// transformations to
 		// rotations and scalings of the 2d plane ( z = 0 )
-
-		final ViewerOptions optionsP = ViewerOptions.options();
-		final ViewerOptions optionsQ = ViewerOptions.options();
+		boolean is2d = ( ndims == 2 );
+		System.out.println( "is2d: " + is2d );
+		final ViewerOptions optionsP = BigWarpViewerOptions.options( is2d );
+		final ViewerOptions optionsQ = BigWarpViewerOptions.options( is2d );
 
 		viewerSettings = new BigWarpViewerSettings();
 
@@ -327,7 +326,11 @@ public class BigWarp
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
-		if ( ndims == 2 )
+
+		// If the images are 2d, use a transform handler that limits
+		// transformations to
+		// rotations and scalings of the 2d plane ( z = 0 )
+		if ( is2d )
 		{
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Class< ? extends InteractiveDisplayCanvasComponent > c_idcc = viewerP.getDisplay().getClass();
@@ -348,25 +351,6 @@ public class BigWarp
 				overlayRendererField.set( viewerP, overlayRenderP );
 				overlayRendererField.set( viewerQ, overlayRenderQ );
 				overlayRendererField.setAccessible( false );
-
-				final Field handlerField = c_idcc.getDeclaredField( "handler" );
-				handlerField.setAccessible( true );
-
-				viewerP.getDisplay().removeHandler( handlerField.get( viewerP.getDisplay() ) );
-				viewerQ.getDisplay().removeHandler( handlerField.get( viewerQ.getDisplay() ) );
-
-				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D.factory().create( viewerP.getDisplay() );
-				pHandler.setCanvasSize( viewerP.getDisplay().getWidth(), viewerP.getDisplay().getHeight(), false );
-
-				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D.factory().create( viewerQ.getDisplay() );
-				qHandler.setCanvasSize( viewerQ.getDisplay().getWidth(), viewerQ.getDisplay().getHeight(), false );
-
-				handlerField.set( viewerP.getDisplay(), pHandler );
-				handlerField.set( viewerQ.getDisplay(), qHandler );
-
-				viewerP.getDisplay().addHandler( pHandler );
-				viewerQ.getDisplay().addHandler( qHandler );
-				handlerField.setAccessible( false );
 
 			}
 			catch ( final Exception e )
@@ -2456,6 +2440,47 @@ public class BigWarp
 		public String toString()
 		{
 			return "Dummy Transform Handler";
+		}
+	}
+
+	protected static class DummyBehaviourTransformEventHandler extends
+			BehaviourTransformEventHandler3D
+	{
+
+		public DummyBehaviourTransformEventHandler(
+				TransformListener< AffineTransform3D > listener, InputTriggerConfig config )
+		{
+			super( listener, config );
+		}
+
+		@Override
+		public AffineTransform3D getTransform()
+		{
+			return null;
+		}
+	}
+
+	protected static class BigWarpViewerOptions extends ViewerOptions
+	{
+
+		private TransformEventHandlerFactory< AffineTransform3D > factory;
+
+		public TransformEventHandlerFactory< AffineTransform3D > getTransformEventHandlerFactory()
+		{
+			return factory;
+		}
+
+		public static BigWarpViewerOptions options( boolean is2d )
+		{
+			BigWarpViewerOptions out = new BigWarpViewerOptions();
+			if ( is2d )
+			{
+				out.factory = BehaviourTransformEventHandler2D.factory();
+			} else
+			{
+				out.factory = BehaviourTransformEventHandler3D.factory();
+			}
+			return out;
 		}
 	}
 

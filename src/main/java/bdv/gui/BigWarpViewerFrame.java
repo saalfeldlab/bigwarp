@@ -12,14 +12,18 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.scijava.ui.behaviour.MouseAndKeyHandler;
+
+import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.util.GuiUtil;
+import bdv.BehaviourTransformEventHandler;
 import bdv.img.cache.Cache;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.TriggerBehaviourBindings;
 import bdv.viewer.ViewerOptions;
-import bdv.viewer.ViewerPanel;
 import bigwarp.BigWarp;
 
 public class BigWarpViewerFrame extends JFrame
@@ -28,7 +32,9 @@ public class BigWarpViewerFrame extends JFrame
 	protected final BigWarpViewerPanel viewer;
 	
 	private final InputActionBindings keybindings;
-	
+
+	private final TriggerBehaviourBindings triggerbindings;
+
 	private final BigWarp bw;
 
 	private static final long serialVersionUID = -7630931733043185034L;
@@ -68,6 +74,7 @@ public class BigWarpViewerFrame extends JFrame
 			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
 		
 		keybindings = new InputActionBindings();
+		triggerbindings = new TriggerBehaviourBindings();
 
 		getRootPane().setDoubleBuffered( true );
 		setPreferredSize( new Dimension( width, height ) );
@@ -97,6 +104,15 @@ public class BigWarpViewerFrame extends JFrame
 
 		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
+
+		final MouseAndKeyHandler mouseAndKeyHandler = new MouseAndKeyHandler();
+		mouseAndKeyHandler.setInputMap( triggerbindings.getConcatenatedInputTriggerMap() );
+		mouseAndKeyHandler.setBehaviourMap( triggerbindings.getConcatenatedBehaviourMap() );
+		viewer.getDisplay().addHandler( mouseAndKeyHandler );
+
+		final TransformEventHandler< ? > tfHandler = viewer.getDisplay().getTransformEventHandler();
+		if ( tfHandler instanceof BehaviourTransformEventHandler )
+			( ( BehaviourTransformEventHandler< ? > ) tfHandler ).install( triggerbindings );
 	}
 
 	public boolean isMoving()
