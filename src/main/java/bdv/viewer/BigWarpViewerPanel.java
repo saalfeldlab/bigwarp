@@ -261,70 +261,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		return viewerSettings;
 	}
-	
-	public synchronized void rotateView2dOld( boolean isClockwise )
-	{
-		if ( !transformEnabled )
-			return;
-
-		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
-		final AffineTransform3D sourceTransform = new AffineTransform3D();
-		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
-		
-		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
-
-		double[] q = new double[ 4 ];
-		double[][] R = new double[ 4 ][ 4 ];
-		sourceTransform.toMatrix( R );
-		LinAlgHelpers.quaternionFromR( R, q );
-
-		double angle = LinAlgHelpers.angleFromR( R );
-		double[] axis = new double[ 3 ];
-		if( isClockwise )
-			axis[ 2 ] = 1;
-		else
-			axis[ 2 ] = -1;
-		
-		double PI2 = Math.PI / 2;
-		while( angle > PI2 )
-			angle -= PI2;
-
-		angle = PI2 - angle;
-		
-		if( angle < PI2 / 16 )
-			angle = PI2;
-		
-		double[] rot = new double[ 4 ];
-		LinAlgHelpers.quaternionFromAngleAxis( axis, angle, rot );
-		
-		double[] qTarget = new double[ 4 ];
-		LinAlgHelpers.quaternionMultiply( rot, q, qTarget );
-
-		double centerX;
-		double centerY;
-		if ( mouseCoordinates.isMouseInsidePanel() )
-		{
-			centerX = mouseCoordinates.getX();
-			centerY = mouseCoordinates.getY();
-		}
-		else
-		{
-			centerY = getHeight() / 2.0;
-			centerX = getWidth() / 2.0;
-		}
-	
-		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget, 300 );
-		currentAnimator.setTime( System.currentTimeMillis() );
-		transformChanged( transform );
-		
-	}
 
 	public void displayViewerTransforms()
 	{
-//		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
-//		final AffineTransform3D sourceTransform = new AffineTransform3D();
-//		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
-		
 		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
 		
 		final AffineTransform3D stateTransform = new AffineTransform3D();
