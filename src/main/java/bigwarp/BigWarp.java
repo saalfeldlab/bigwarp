@@ -330,9 +330,34 @@ public class BigWarp
 		if ( is2d )
 		{
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
-			final Class< ? extends InteractiveDisplayCanvasComponent > c_idcc = viewerP.getDisplay().getClass();
+			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
 			try
 			{
+				final Field handlerField = c_idcc.getDeclaredField( "handler" );
+				handlerField.setAccessible( true );
+
+				viewerP.getDisplay().removeHandler(
+						handlerField.get( viewerP.getDisplay() ) );
+				viewerQ.getDisplay().removeHandler(
+						handlerField.get( viewerQ.getDisplay() ) );
+
+				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D
+						.factory().create( viewerP.getDisplay() );
+				pHandler.setCanvasSize( viewerP.getDisplay().getWidth(), viewerP
+						.getDisplay().getHeight(), false );
+
+				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D
+						.factory().create( viewerQ.getDisplay() );
+				qHandler.setCanvasSize( viewerQ.getDisplay().getWidth(), viewerQ
+						.getDisplay().getHeight(), false );
+
+				handlerField.set( viewerP.getDisplay(), pHandler );
+				handlerField.set( viewerQ.getDisplay(), qHandler );
+
+				viewerP.getDisplay().addHandler( pHandler );
+				viewerQ.getDisplay().addHandler( qHandler );
+				handlerField.setAccessible( false );
+
 				final Field overlayRendererField = c_vp.getDeclaredField( "multiBoxOverlayRenderer" );
 				overlayRendererField.setAccessible( true );
 
@@ -348,15 +373,6 @@ public class BigWarp
 				overlayRendererField.set( viewerP, overlayRenderP );
 				overlayRendererField.set( viewerQ, overlayRenderQ );
 				overlayRendererField.setAccessible( false );
-
-				AffineTransform3D xfm = new AffineTransform3D();
-				viewerP.getState().getViewerTransform( xfm );
-				xfm.set( 0.0, 2, 3 );
-				viewerP.getState().setViewerTransform( xfm );
-
-				viewerQ.getState().getViewerTransform( xfm );
-				xfm.set( 0.0, 2, 3 );
-				viewerQ.getState().setViewerTransform( xfm );
 
 			}
 			catch ( final Exception e )
