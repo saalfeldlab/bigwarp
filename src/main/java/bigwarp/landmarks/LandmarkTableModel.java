@@ -719,16 +719,14 @@ public class LandmarkTableModel extends AbstractTableModel {
 		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumLandmarks() > 0 )
 		{
 			double[] tgt = toPrimitive( movingPts.get( i ) );
-			double[] warpedPt = estimatedXfm.initialGuessAtInverse( tgt, 5.0 );
 
-			// double[] resini = estimatedXfm.apply( warpedPt );
-			// double err_ini = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resini ) );
-
-			estimatedXfm.inverseTol( tgt, warpedPt, 0.5, 200 );
-			// double[] resfin = estimatedXfm.apply( warpedPt );
-			// double err = Math.sqrt( TransformInverseGradientDescent.sumSquaredErrors( tgt, resfin ) );
+			double[] warpedPt = new double[ ndims ];
+			@SuppressWarnings("unused")
+			double error = estimatedXfm.inverse( tgt, warpedPt, 0.5, 500 );
 
 			// TODO should check for failure or non-convergence here
+			// can use the error returned by the inverse method to do this. 
+			// BUT - it's not clear what to do upon failure 
 			updateWarpedPoint( i, warpedPt );
 		}
 	}
