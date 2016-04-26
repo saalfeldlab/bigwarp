@@ -846,9 +846,17 @@ public class BigWarp
 					e1.printStackTrace();
 				}
 
-				// landmarkTable.repaint();
-				landmarkFrame.repaint();
+				boolean didCompute = restimateTransformation();
 
+				// didCompute = false means that there were not enough points
+				// in the loaded points, so we should display the 'raw' moving
+				// image
+				if ( !didCompute )
+					setIsMovingDisplayTransformed( false );
+
+				viewerP.requestRepaint();
+				viewerQ.requestRepaint();
+				landmarkFrame.repaint();
 			}
 		} );
 
