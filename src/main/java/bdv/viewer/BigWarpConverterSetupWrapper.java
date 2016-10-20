@@ -65,4 +65,10 @@ public class BigWarpConverterSetupWrapper implements ConverterSetup {
 		return cs.getDisplayRangeMax();
 	}
 
+	@Override
+	public void setViewer( RequestRepaint arg0 )
+	{
+		// do nothing
+	}
+
 }

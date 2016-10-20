@@ -14,8 +14,6 @@ import javax.swing.table.TableCellEditor;
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 
 import mpicbg.models.AbstractModel;
-import bdv.BigDataViewerActions.LoadSettingsAction;
-import bdv.BigDataViewerActions.SaveSettingsAction;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.util.AbstractNamedAction;
