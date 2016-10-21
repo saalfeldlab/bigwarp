@@ -1996,7 +1996,7 @@ public class BigWarp
 			BigWarp bw;
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
-			else if ( fnP.endsWith( "png" ) && fnQ.endsWith( "png" ) )
+			else
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
@@ -2007,11 +2007,6 @@ public class BigWarp
 					System.err.println( "Error reading images" );
 					return;
 				}
-			}
-			else
-			{
-				System.err.println( "Error reading files - should both be xmls or both image files" );
-				return;
 			}
 
 			if ( !fnLandmarks.isEmpty() )
