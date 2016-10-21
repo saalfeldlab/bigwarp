@@ -1161,6 +1161,11 @@ public class BigWarp
 		return didAdd;
 	}
 
+	protected int selectedLandmark( final double[] pt, final boolean isMoving )
+	{
+		return selectedLandmark( pt, isMoving, true );
+	}
+
 	/**
 	 * Returns the index of the landmark closest to the input point,
 	 * if it is within a certain distance threshold.
@@ -1171,7 +1176,7 @@ public class BigWarp
 	 * @param isMoving is the point location in moving image space
 	 * @return the index of the selected landmark
 	 */
-	protected int selectedLandmark( final double[] pt, final boolean isMoving )
+	protected int selectedLandmark( final double[] pt, final boolean isMoving, final boolean selectInTable )
 	{
 		logger.trace( "clicked: " + XfmUtils.printArray( pt ) );
 
@@ -1232,8 +1237,13 @@ public class BigWarp
 			}
 		}
 
-		if ( landmarkFrame.isVisible() )
+		if ( selectInTable && landmarkFrame.isVisible() )
 		{
+			if( landmarkTable.isEditing())
+			{
+				landmarkTable.getCellEditor().stopCellEditing();
+			}
+
 			landmarkTable.setEditingRow( bestIdx );
 			landmarkFrame.repaint();
 		}
@@ -2279,7 +2289,7 @@ public class BigWarp
 		public void mouseMoved( final MouseEvent e )
 		{
 			thisViewer.getGlobalMouseCoordinates( hoveredPoint );
-			int hoveredIndex = BigWarp.this.selectedLandmark( hoveredArray, isMoving );
+			int hoveredIndex = BigWarp.this.selectedLandmark( hoveredArray, isMoving, false );
 			thisViewer.setHoveredIndex( hoveredIndex );
 		}
 

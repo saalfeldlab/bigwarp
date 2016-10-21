@@ -1023,6 +1023,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public void setValueAt(Object value, int row, int col)
 	{
+		if( row < 0 || col < 0
+			|| row >= numRows || col >= numCols )
+		{
+			System.out.println( "Warning: row (" + row + ") or column (" + col  + ") out of range." );
+			return;
+		}
+
         if (DEBUG)
         {
             System.out.println("Setting value at " + row + "," + col
