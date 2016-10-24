@@ -329,7 +329,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void deleteRow( int i )
 	{
-		if( getRowCount() > 0 )
+		if( getRowCount() > 0 && i > 0)
 		{
 			undoRedoManager.addEdit( new DeleteRowEdit( this, i ) );
 			deleteRowHelper( i );
