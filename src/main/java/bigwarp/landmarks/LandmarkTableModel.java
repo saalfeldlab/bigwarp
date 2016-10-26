@@ -85,15 +85,15 @@ public class LandmarkTableModel extends AbstractTableModel {
 	final static String[] columnNames3d = new String[]
 			{
 			"Name", "Active",
-			"px","py","pz",
-			"qx","qy","qz"
+			"mvg-x","mvg-y","mvg-z",
+			"fix-x","fix-y","fix-z"
 			};
 	
 	final static String[] columnNames2d = new String[]
 			{
 			"Name", "Active",
-			"px","py",
-			"qx","qy"
+			"mvg-x","mvg-y",
+			"fix-x","fix-y"
 			};
 	
 	final String[] columnNames;
