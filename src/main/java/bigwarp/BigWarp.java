@@ -7,6 +7,7 @@ import java.awt.FileDialog;
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -257,6 +258,10 @@ public class BigWarp
 	protected boolean firstWarpEstimation = true;
 
 	JMenu landmarkMenu;
+
+	private static final BufferedImage cursorImg = new BufferedImage( 1, 1, BufferedImage.TYPE_INT_ARGB);
+	private static final Cursor blankCursor = Toolkit.getDefaultToolkit().createCustomCursor(
+	    cursorImg, new Point(0, 0), "blank cursor");
 
 	final ProgressWriter progressWriter;
 
@@ -1026,8 +1031,30 @@ public class BigWarp
 			disableTransformHandlers();
 			viewerP.showMessage( "Landmark mode on ( Moving image )" );
 			viewerQ.showMessage( "Landmark mode on ( Fixed image )" );
-			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
-			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
+
+			if( crossOverlayP.getWidth() > 0 )
+			{
+				viewerFrameP.setCursor( blankCursor );
+				viewerFrameQ.setCursor( blankCursor );
+
+				if( viewerFrameP.isFocused() )
+				{
+					RealPoint pt = new RealPoint( 3 );
+					viewerFrameP.getViewerPanel().getGlobalMouseCoordinates( pt );
+					crossOverlayP.setLocation( pt );
+				}
+				else if( viewerFrameQ.isFocused() )
+				{
+					RealPoint pt = new RealPoint( 3 );
+					viewerFrameQ.getViewerPanel().getGlobalMouseCoordinates( pt );
+					crossOverlayQ.setLocation( pt );
+				}
+			}
+			else
+			{
+				viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
+				viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
+			}
 		}
 		else
 		{

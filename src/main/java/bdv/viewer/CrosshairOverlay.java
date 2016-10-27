@@ -85,6 +85,11 @@ public class CrosshairOverlay
 		this.width = width;
 	}
 
+	public double getWidth()
+	{
+		return width;
+	}
+
 	public void setLocation( RealPoint newPoint )
 	{
 		location.setPosition( newPoint );
