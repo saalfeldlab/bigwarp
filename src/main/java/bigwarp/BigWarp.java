@@ -73,6 +73,7 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.CrosshairOverlay;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.SourceAndConverter;
@@ -191,6 +192,10 @@ public class BigWarp
 	protected final BigWarpOverlay overlayP;
 
 	protected final BigWarpOverlay overlayQ;
+
+	protected final CrosshairOverlay crossOverlayP;
+
+	protected final CrosshairOverlay crossOverlayQ;
 
 	protected final BigWarpDragOverlay dragOverlayP;
 
@@ -402,7 +407,7 @@ public class BigWarp
 		activeSourcesDialogP.setTitle( "visibility and grouping ( moving )" );
 		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
-		
+
 		// set warp mag source to inactive at the start
 		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
 		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
@@ -415,9 +420,16 @@ public class BigWarp
 		viewerP.addOverlay( overlayP );
 		viewerQ.addOverlay( overlayQ );
 
+		crossOverlayP = new CrosshairOverlay( this, viewerP );
+		crossOverlayQ = new CrosshairOverlay( this, viewerQ );
+		crossOverlayP.setWidth( 25 );
+		crossOverlayQ .setWidth( 25 );
+		viewerP.addCrosshairOverlay( crossOverlayP );
+		viewerQ.addCrosshairOverlay( crossOverlayQ );
+
 		solverThread = new SolveThread( this );
 		solverThread.start();
-		
+
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
 		viewerP.addDragOverlay( dragOverlayP );
@@ -2286,6 +2298,12 @@ public class BigWarp
 			thisViewer.getGlobalMouseCoordinates( hoveredPoint );
 			int hoveredIndex = BigWarp.this.selectedLandmark( hoveredArray, isMoving, false );
 			thisViewer.setHoveredIndex( hoveredIndex );
+
+			if( BigWarp.this.isInLandmarkMode() )
+			{
+				thisViewer.getCrosshairOverlay().setLocation( hoveredPoint );
+				thisViewer.requestRepaint();
+			}
 		}
 
 		/**

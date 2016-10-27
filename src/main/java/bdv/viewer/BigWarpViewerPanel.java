@@ -37,7 +37,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpViewerSettings viewerSettings;
 	
 	protected BigWarpOverlay overlay;
-	
+
+	protected CrosshairOverlay crossOverlay;
+
 	protected BigWarpDragOverlay dragOverlay;
 	
 	protected boolean isMoving;
@@ -170,8 +172,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.overlay = overlay;
 	}
 	
-	public BigWarpOverlay getOverlay( ){
+	public BigWarpOverlay getOverlay()
+	{
 		return overlay;
+	}
+
+	public void addCrosshairOverlay( CrosshairOverlay crossOverlay )
+	{
+		this.crossOverlay = crossOverlay;
+	}
+
+	public CrosshairOverlay getCrosshairOverlay()
+	{
+		return crossOverlay;
 	}
 
 	public void addDragOverlay( BigWarpDragOverlay dragOverlay ){
@@ -246,12 +259,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if ( requiresRepaint )
 			display.repaint();
 		
-		if ( null != overlay ) {
+		if ( overlay != null )
+		{
 			overlay.setViewerState( state );
 			overlay.paint( ( Graphics2D ) g );
 		}
 		
-		if ( dragOverlay != null ) {
+		if ( crossOverlay != null )
+		{
+			crossOverlay.setViewerState( state );
+			crossOverlay.paint( ( Graphics2D ) g );
+		}
+
+		if ( dragOverlay != null )
+		{
 			//dragOverlay.setViewerState( state );
 			dragOverlay.paint( ( Graphics2D ) g );
 		}

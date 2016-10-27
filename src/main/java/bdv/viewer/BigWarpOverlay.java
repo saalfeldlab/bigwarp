@@ -16,29 +16,31 @@ import bdv.gui.BigWarpLandmarkPanel;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 
-public class BigWarpOverlay {
-	
+public class BigWarpOverlay
+{
+
 	/** The viewer state. */
 	private ViewerState state;
-	
+
 	private BigWarpViewerPanel viewer;
-	
+
 	protected JTable table;
 
 	protected LandmarkTableModel landmarkModel;
-	
+
 	protected CoordinateTransform estimatedXfm;
-	
+
 	protected boolean isTransformed = false;
 
 	private int hoveredIndex;
 
 	protected final boolean isMoving;
+
 	protected final boolean is3d;
-	
+
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
-	
+
 	public BigWarpOverlay( final BigWarpViewerPanel viewer, BigWarpLandmarkPanel landmarkpanel )
 	{
 		this.viewer = viewer;
