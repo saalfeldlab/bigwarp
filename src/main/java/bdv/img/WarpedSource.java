@@ -48,8 +48,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	private final SetCacheHints sourceSetCacheHints;
 	
 	private final TpsTransformWrapper tpsXfm;
-	
-	private AffineTransform3D viewXfm;
 
 	private boolean isTransformed;
 	
@@ -66,11 +64,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 
 		sourceSetCacheHints = SetCacheHints.class.isInstance( source ) ?
 				( SetCacheHints ) source : SetCacheHints.empty;
-	}
-	
-	public void setViewTransform( AffineTransform3D viewXfm )
-	{
-		this.viewXfm = viewXfm;
 	}
 
 	@Override
@@ -113,10 +106,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
-		// System.out.println("WS: getInterpolatedSource");
-		final AffineTransform3D transform = new AffineTransform3D();
-		source.getSourceTransform( t, level, transform );
-		final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
 
 		if( isTransformed )
 			return RealViews.transformReal( sourceRealAccessible, tpsXfm );
@@ -127,13 +117,13 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-		transform.identity();
+		source.getSourceTransform( t, level, transform );
 	}
 
 	@Override
 	public AffineTransform3D getSourceTransform( final int t, final int level )
 	{
-		return new AffineTransform3D();
+		return source.getSourceTransform( t, level );
 	}
 
 	@Override
