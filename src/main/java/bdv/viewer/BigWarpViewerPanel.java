@@ -21,6 +21,7 @@ import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.RotationAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
+import bdv.viewer.overlay.CrosshairOverlay;
 import bdv.viewer.animate.SimilarityTransformAnimator2D;
 import bdv.viewer.state.SourceState;
 

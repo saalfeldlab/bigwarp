@@ -1,10 +1,11 @@
-package bdv.viewer;
+package bdv.viewer.overlay;
 
 import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
 
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.state.ViewerState;
 import bigwarp.BigWarp;
 import net.imglib2.RealPoint;
