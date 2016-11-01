@@ -106,24 +106,35 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
-		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
-
 		if( isTransformed )
+		{
+			final AffineTransform3D transform = new AffineTransform3D();
+			source.getSourceTransform( t, level, transform );
+			final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 			return RealViews.transformReal( sourceRealAccessible, tpsXfm );
+		}
 		else
-			return sourceRealAccessible;
+		{
+			return source.getInterpolatedSource( t, level, method );
+		}
 	}
 
 	@Override
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-		source.getSourceTransform( t, level, transform );
+		if( isTransformed )
+			transform.identity();
+		else
+			source.getSourceTransform( t, level, transform );
 	}
 
 	@Override
 	public AffineTransform3D getSourceTransform( final int t, final int level )
 	{
-		return source.getSourceTransform( t, level );
+		if( isTransformed )
+			return new AffineTransform3D();
+		else
+			return source.getSourceTransform( t, level );
 	}
 
 	@Override

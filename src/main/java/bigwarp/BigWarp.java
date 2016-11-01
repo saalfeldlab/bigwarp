@@ -335,8 +335,7 @@ public class BigWarp
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
 		// If the images are 2d, use a transform handler that limits
-		// transformations to
-		// rotations and scalings of the 2d plane ( z = 0 )
+		// transformations to rotations and scalings of the 2d plane ( z = 0 )
 		if ( is2d )
 		{
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;

@@ -241,7 +241,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 			
 		g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
 		g.setColor( Color.white );
-		g.drawString( mousePosGlobalString, ( int ) g.getClipBounds().getWidth() - 170, 12 );
+		int actual_width = g.getFontMetrics().stringWidth( mousePosGlobalString );
+		g.drawString( mousePosGlobalString, ( int ) g.getClipBounds().getWidth() - actual_width - 10, 28 );
 
 		boolean requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
 
