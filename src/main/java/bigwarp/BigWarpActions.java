@@ -19,6 +19,7 @@ import bdv.tools.ToggleDialogAction;
 import bdv.util.AbstractNamedAction;
 import bdv.util.AbstractNamedAction.NamedActionAdder;
 import bdv.util.KeyProperties;
+import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -57,6 +58,10 @@ public class BigWarpActions
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
+
+	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
+	public static final String WARP_TO_NEXT_POINT = "warp to next landmark %s";
+	public static final String WARP_TO_NEAREST_POINT = "warp to nearest landmark";
 
 	public static final String SET_BOOKMARK = "set bookmark";
 	public static final String GO_TO_BOOKMARK = "go to bookmark";
@@ -128,6 +133,11 @@ public class BigWarpActions
 
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 
+		map.put( WARP_TO_SELECTED_POINT, "D" );
+		map.put( String.format( WARP_TO_NEXT_POINT, true), "ctrl D" );
+		map.put( String.format( WARP_TO_NEXT_POINT, false), "ctrl shift D" );
+		map.put( WARP_TO_NEAREST_POINT, "E" );
+
 		map.put( GO_TO_BOOKMARK, "B" );
 		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
 		map.put( SET_BOOKMARK, "shift B" );
@@ -153,6 +163,10 @@ public class BigWarpActions
 		map.put( new ResetActiveViewerAction( bw ));
 		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ) );
 		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ) );
+		map.put( new WarpToSelectedAction( bw ));
+		map.put( new WarpToNextAction( bw, true ));
+		map.put( new WarpToNextAction( bw, false ));
+		map.put( new WarpToNearest( bw ));
 
 		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
 			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
@@ -735,5 +749,100 @@ public class BigWarpActions
 		}
 
 		private static final long serialVersionUID = 1L;
+	}
+
+	public static class WarpToSelectedAction extends AbstractNamedAction
+	{
+		final BigWarp bw;
+
+		public WarpToSelectedAction( final BigWarp bw )
+		{
+			super( WARP_TO_SELECTED_POINT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
+
+			int row = 0;
+			if( selectedRows.length > 0 )
+				row = selectedRows[ 0 ];
+
+			if( bw.getViewerFrameP().isActive() )
+				bw.warpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
+			else
+				bw.warpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
+		}
+
+		private static final long serialVersionUID = 5233843444920094805L;
+	}
+
+	public static class WarpToNearest extends AbstractNamedAction
+	{
+		final BigWarp bw;
+		public WarpToNearest( final BigWarp bw )
+		{
+			super( WARP_TO_NEAREST_POINT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			if( bw.getViewerFrameP().isActive() )
+				bw.warpToNearest( bw.getViewerFrameP().getViewerPanel() );
+			else
+				bw.warpToNearest( bw.getViewerFrameQ().getViewerPanel() );
+		}
+		private static final long serialVersionUID = 3244181492305479433L;
+	}
+
+	public static class WarpToNextAction extends AbstractNamedAction
+	{
+		final BigWarp bw;
+		final int inc;
+
+		public WarpToNextAction( final BigWarp bw, boolean fwd )
+		{
+			super( String.format( WARP_TO_NEXT_POINT, fwd) );
+			this.bw = bw;
+			if( fwd )
+				inc = 1;
+			else
+				inc = -1;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
+
+			int row = 0;
+			if( selectedRows.length > 0 )
+				row = selectedRows[ selectedRows.length - 1 ];
+
+			row = row + inc; // increment to get the *next* row
+
+			// wrap to start if necessary
+			if( row >= bw.getLandmarkPanel().getTableModel().getRowCount() )
+				row = 0;
+			else if( row < 0 )
+				row = bw.getLandmarkPanel().getTableModel().getRowCount() - 1;
+
+			// select new row
+			bw.getLandmarkPanel().getJTable().setRowSelectionInterval( row, row );
+
+			if( bw.getViewerFrameP().isActive() )
+			{
+				bw.warpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
+			}
+			else
+			{
+				bw.warpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
+			}
+		}
+		private static final long serialVersionUID = 8515568118251877405L;
 	}
 }

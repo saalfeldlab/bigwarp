@@ -1352,6 +1352,66 @@ public class BigWarp
 		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
 	}
 
+	public void warpToNearest( BigWarpViewerPanel viewer )
+	{
+		RealPoint mousePt = new RealPoint( ndims );
+		viewer.getGlobalMouseCoordinates( mousePt );
+		warpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
+	}
+
+	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
+	{
+		int offset = 0;
+		double[] pt = null;
+		if( viewer.getIsMoving() && viewer.getOverlay().getIsTransformed() )
+		{
+			if ( BigWarp.this.landmarkModel.isWarped( row ) )
+			{
+				pt = LandmarkTableModel.toPrimitive( BigWarp.this.landmarkModel.getWarpedPoints().get( row ) );
+			}
+			else
+			{
+				offset = ndims;
+			}
+		}else if( !viewer.getIsMoving() )
+		{
+			offset = ndims;
+		}
+
+		if ( pt == null )
+		{
+			if ( ndims == 3 )
+
+				pt = new double[] {
+						(Double) landmarkModel.getValueAt( row, offset + 2 ),
+						(Double) landmarkModel.getValueAt( row, offset + 3 ),
+						(Double) landmarkModel.getValueAt( row, offset + 4 ) };
+			else
+				pt = new double[] {
+						(Double) landmarkModel.getValueAt( row, offset + 2 ),
+						(Double) landmarkModel.getValueAt( row, offset + 3 ), 0.0 };
+		}
+
+		// we have an unmatched point
+		if ( Double.isInfinite( pt[ 0 ] ) )
+			return;
+
+		final AffineTransform3D transform = viewer.getDisplay().getTransformEventHandler().getTransform();
+		final AffineTransform3D xfmCopy = transform.copy();
+		xfmCopy.set( 0.0, 0, 3 );
+		xfmCopy.set( 0.0, 1, 3 );
+		xfmCopy.set( 0.0, 2, 3 );
+
+		final double[] center = new double[] { viewer.getWidth() / 2, viewer.getHeight() / 2, 0 };
+		final double[] ptxfm = new double[ 3 ];
+		xfmCopy.apply( pt, ptxfm );
+
+		// this should work fine in the 2d case
+		final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
+		viewer.setTransformAnimator( animator );
+		viewer.transformChanged( transform );
+	}
+
 	public void goToBookmark()
 	{
 		if ( viewerFrameP.isActive() )

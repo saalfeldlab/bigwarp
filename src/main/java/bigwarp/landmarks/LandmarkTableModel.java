@@ -26,6 +26,7 @@ import bigwarp.landmarks.actions.DeleteRowEdit;
 import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import net.imglib2.RealLocalizable;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -732,6 +733,62 @@ public class LandmarkTableModel extends AbstractTableModel {
 			// BUT - it's not clear what to do upon failure 
 			updateWarpedPoint( i, warpedPt );
 		}
+	}
+
+	public int getIndexNearestTo( double[] pt, boolean isMoving )
+	{
+		Double[] p;
+		double minDist = Double.MAX_VALUE;
+		int minIndex = -1;
+		for( int i = 0; i < numRows; i++ )
+		{
+			p = getPoint( isMoving, i );
+			double thisdist = squaredDistance( p, pt );
+			if( thisdist < minDist )
+			{
+				minDist = thisdist;
+				minIndex = i;
+			}
+		}
+		return minIndex;
+	}
+
+	public double squaredDistance( Double[] p, double[] q )
+	{
+		double dist = 0;
+		for( int j = 0; j < p.length; j++ )
+		{
+			dist += ( p[j] - q[j] ) * ( p[j] - q[j] );
+		}
+		return dist;
+	}
+
+	public int getIndexNearestTo( RealLocalizable pt, boolean isMoving )
+	{
+		Double[] p;
+		double minDist = Double.MAX_VALUE;
+		int minIndex = -1;
+		for( int i = 0; i < numRows; i++ )
+		{
+			p = getPoint( isMoving, i );
+			double thisdist = squaredDistance( p, pt );
+			if( thisdist < minDist )
+			{
+				minDist = thisdist;
+				minIndex = i;
+			}
+		}
+		return minIndex;
+	}
+
+	public double squaredDistance( Double[] p, RealLocalizable q )
+	{
+		double dist = 0;
+		for( int j = 0; j < p.length; j++ )
+		{
+			dist += ( p[j].doubleValue() - q.getDoublePosition( j ) ) * ( p[j].doubleValue() - q.getDoublePosition( j ) );
+		}
+		return dist;
 	}
 
 	public Double[] getPoint( boolean isMoving, int index )
