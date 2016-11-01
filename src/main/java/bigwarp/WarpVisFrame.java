@@ -52,6 +52,10 @@ public class WarpVisFrame extends JDialog
 	private final JColorChooser colorChooser;
 	protected final JSlider landmarkSizeSlider;
 	
+	// landmark point options
+	private final JButton crosshairColorButton;
+	protected final JSlider crosshairWidthSlider;
+
 	// warp magnitude
 	protected ButtonGroup warpMagButtons;
 	protected JRadioButton warpMagAffineButton;
@@ -85,12 +89,12 @@ public class WarpVisFrame extends JDialog
 		
 		final Container content = getContentPane();
 		
-		setSize( 500, 400 );
+		setSize( 600, 600 );
 		
+		// LANDMARK POINT
 		JPanel landmarkPointOptionsPanel = new JPanel();
 		landmarkPointOptionsPanel.setLayout( new BoxLayout( landmarkPointOptionsPanel, BoxLayout.X_AXIS ));
-		
-		
+
 		landmarkColorButton = new JButton( new ColorIcon( settings.getSpotColor() ) );
 		colorChooser = new JColorChooser();
 		
@@ -109,9 +113,32 @@ public class WarpVisFrame extends JDialog
 								"landmark size & color" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 		
-		// 
+
+		// CROSSHAIR 
+		JPanel crosshairOptionsPanel = new JPanel();
+		crosshairOptionsPanel.setLayout( new BoxLayout( crosshairOptionsPanel, BoxLayout.X_AXIS ));
+		System.out.println("Warp vis crosshair");
+		crosshairColorButton = new JButton();
+		crosshairWidthSlider = new JSlider();
+//		crosshairWidthSlider.setValue( bw.get );
+		crosshairWidthSlider.setMinimum( 0 );
+		crosshairWidthSlider.setMaximum( 100 );
+
+		crosshairOptionsPanel.add( crosshairColorButton );
+		crosshairOptionsPanel.add( crosshairWidthSlider );
+
+		crosshairOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"crosshair width & color" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
+
+		// WARP VISUALIZATION TYPE
 		JPanel visTypePanel = new JPanel();
-		visTypePanel.setLayout(  new BoxLayout( visTypePanel, BoxLayout.Y_AXIS) );
+		visTypePanel.setLayout(  new BoxLayout( visTypePanel, BoxLayout.X_AXIS) );
 		visTypePanel.setBorder( BorderFactory.createCompoundBorder(
 				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
 				BorderFactory.createCompoundBorder(
@@ -139,16 +166,16 @@ public class WarpVisFrame extends JDialog
 		setWarpVisOffButton = new JRadioButton( "Off" );
 		setWarpGridButton = new JRadioButton( "Grid" );
 		setWarpMagButton = new JRadioButton( "Magnitude" );
-		
+
 		visTypeGroup.add( setWarpVisOffButton );
 		visTypeGroup.add( setWarpGridButton );
 		visTypeGroup.add( setWarpMagButton );
-		
+
 		visTypePanel.add( setWarpVisOffButton );
 		visTypePanel.add( setWarpGridButton );
 		visTypePanel.add( setWarpMagButton );
-		
-		
+
+
 		// buttons for warp magnitude options
 		warpMagAffineButton = new JRadioButton( "Affine baseline" );
 		warpMagSimilarityButton = new JRadioButton("Similarity baseline");
@@ -158,29 +185,30 @@ public class WarpVisFrame extends JDialog
 		warpMagButtons.add( warpMagAffineButton );
 		warpMagButtons.add( warpMagSimilarityButton );
 		warpMagButtons.add( warpMagRigidButton );
-		
+
 		// buttons for warp grid options 
 		warpGridLineButton = new JRadioButton( "Line grid " );
 		warpGridModButton  = new JRadioButton( "Modulo grid" );
-		
+
 		warpGridButtons = new ButtonGroup();
 		warpGridButtons.add( warpGridLineButton );
 		warpGridButtons.add( warpGridModButton );
-		
+
 		gridSpacingSlider = new JSlider( JSlider.HORIZONTAL, minGridSpacing, maxGridSpacing, defaultGridSpacing );
 		gridWidthSlider = new JSlider( JSlider.HORIZONTAL, minGridWidth, maxGridWidth, defaultGridWidth );
+
 		// label the sliders
-		gridSpacingLabel = new JLabel("Grid Spacing", JLabel.CENTER);
-		gridWidthLabel = new JLabel("Grid Width", JLabel.CENTER);
-		gridSpacingLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-		gridWidthLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		gridSpacingLabel = new JLabel( "Grid Spacing", JLabel.CENTER );
+		gridWidthLabel = new JLabel( "Grid Width", JLabel.CENTER );
+		gridSpacingLabel.setAlignmentX( Component.CENTER_ALIGNMENT );
+		gridWidthLabel.setAlignmentX( Component.CENTER_ALIGNMENT );
 		bigSpace = Box.createVerticalStrut( 20 );
 		smallSpace = Box.createVerticalStrut( 10 );
 		
 		typeOptionPanel.add( warpMagAffineButton );
 		typeOptionPanel.add( warpMagSimilarityButton );
 		typeOptionPanel.add( warpMagRigidButton );
-		
+
 		typeOptionPanel.add( warpGridLineButton );
 		typeOptionPanel.add( warpGridModButton );
 		typeOptionPanel.add( bigSpace );
@@ -189,12 +217,18 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( smallSpace );
 		typeOptionPanel.add( gridWidthLabel );
 		typeOptionPanel.add( gridWidthSlider );
-		
+
 		typeOptionPanel.add( noOptionsLabel );
 		
-		content.add( landmarkPointOptionsPanel, BorderLayout.NORTH );
-		content.add( visTypePanel, BorderLayout.WEST );
-		content.add( typeOptionPanel, BorderLayout.EAST );
+		content.setLayout( new BoxLayout( content, BoxLayout.Y_AXIS ));
+		content.add( landmarkPointOptionsPanel );
+		content.add( crosshairOptionsPanel );
+		content.add( visTypePanel );
+		content.add( typeOptionPanel );
+
+//		content.add( landmarkPointOptionsPanel, BorderLayout.NORTH );
+//		content.add( visTypePanel, BorderLayout.WEST );
+//		content.add( typeOptionPanel, BorderLayout.EAST );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
 		
@@ -239,6 +273,19 @@ public class WarpVisFrame extends JDialog
 				settings.setSpotSize( landmarkSizeSlider.getValue() );
 				bw.viewerP.requestRepaint();
 				bw.viewerQ.requestRepaint();
+			}
+		});
+
+		crosshairWidthSlider.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				if( e.getSource() != crosshairWidthSlider ) return;
+
+				System.out.println( "setting crosshair width to : " + crosshairWidthSlider.getValue() );
+				bw.crossOverlayP.setWidth( crosshairWidthSlider.getValue() );
+				bw.crossOverlayQ.setWidth( crosshairWidthSlider.getValue() );
 			}
 		});
 		
