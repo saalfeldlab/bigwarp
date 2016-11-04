@@ -60,10 +60,46 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	public void apply( final RealLocalizable source, final RealPositionable target ){}
 
 	@Override
-	public void applyInverse( final double[] source, final double[] target ){}
+	public void applyInverse( final double[] source, final double[] target )
+	{
+		if ( tps == null )
+		{
+			for ( int d = 0; d < target.length; ++d )
+				source[ d ] = target[ d ];
+
+			return;
+		}
+
+		double[] pt = new double[ tps.getNumDims() ];
+		for ( int d = 0; d < tps.getNumDims(); ++d )
+			pt[ d ] = target[ d ];
+
+		double[] ptxfm = tps.apply( pt );
+
+		for ( int d = 0; d < tps.getNumDims(); ++d )
+			source[ d ] = ptxfm[ d ];
+	}
 
 	@Override
-	public void applyInverse( final float[] source, final float[] target ){}
+	public void applyInverse( final float[] source, final float[] target )
+	{
+		if ( tps == null )
+		{
+			for ( int d = 0; d < target.length; ++d )
+				source[ d ] = target[ d ];
+
+			return;
+		}
+
+		double[] pt = new double[ tps.getNumDims() ];
+		for ( int d = 0; d < tps.getNumDims(); ++d )
+			pt[ d ] = target[ d ];
+
+		double[] ptxfm = tps.apply( pt );
+
+		for ( int d = 0; d < tps.getNumDims(); ++d )
+			source[ d ] = (float) ptxfm[ d ];
+	}
 
 	@Override
 	public void applyInverse( final RealPositionable source, final RealLocalizable target )
