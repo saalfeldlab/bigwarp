@@ -884,10 +884,10 @@ public class BigWarp
 				fc.showSaveDialog( landmarkFrame );
 				final File file = fc.getSelectedFile();
 
-				setLastDirectory( file.getParentFile() );
-
 				if ( file == null )
 					return;
+
+				setLastDirectory( file.getParentFile() );
 
 				try
 				{
@@ -928,10 +928,10 @@ public class BigWarp
 				final ViewerState state = viewerP.getState().copy();
 				final File file = fc.getSelectedFile();
 
-				setLastDirectory( file.getParentFile() );
-
 				if ( file == null )
 					return;
+
+				setLastDirectory( file.getParentFile() );
 
 				// TODO exportThread
 				new Thread()
