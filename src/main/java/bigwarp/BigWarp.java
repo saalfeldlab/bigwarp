@@ -1354,7 +1354,7 @@ public class BigWarp
 
 	public void warpToNearest( BigWarpViewerPanel viewer )
 	{
-		RealPoint mousePt = new RealPoint( ndims );
+		RealPoint mousePt = new RealPoint( 3 ); // need 3d point even for 2d images
 		viewer.getGlobalMouseCoordinates( mousePt );
 		warpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
 	}
@@ -1405,6 +1405,9 @@ public class BigWarp
 		final double[] center = new double[] { viewer.getWidth() / 2, viewer.getHeight() / 2, 0 };
 		final double[] ptxfm = new double[ 3 ];
 		xfmCopy.apply( pt, ptxfm );
+
+		// select appropriate row in the table
+		landmarkTable.setRowSelectionInterval( row, row );
 
 		// this should work fine in the 2d case
 		final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
