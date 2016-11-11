@@ -50,23 +50,23 @@ import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 import bdv.BehaviourTransformEventHandler3D;
+import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
+import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.img.WarpedSource;
-import bdv.img.cache.Cache;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
+import bdv.tools.bookmarks.Bookmarks;
+import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.tools.bookmarks.Bookmarks;
-import bdv.tools.bookmarks.BookmarksEditor;
-import bdv.util.KeyProperties;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -117,7 +117,6 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
-import net.imglib2.ui.InteractiveDisplayCanvasComponent;
 import net.imglib2.ui.PainterThread;
 import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
@@ -297,7 +296,8 @@ public class BigWarp
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
-		fixedViewXfm = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0 );
+		fixedViewXfm = new AffineTransform3D();
+		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
 		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
@@ -313,14 +313,14 @@ public class BigWarp
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
-				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCache(), optionsP, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCacheControl(), optionsP, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings, 
-				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCache(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -440,7 +440,7 @@ public class BigWarp
 																// before action
 																// maps are made
 
-		final KeyProperties keyProperties = KeyProperties.readPropertyFile();
+		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( null );
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
 
@@ -1542,7 +1542,7 @@ public class BigWarp
 		final MyTarget target = new MyTarget();
 		final int numRenderThreads = 1;
 
-		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), new double[] { 1 }, 0, false, numRenderThreads, null, false, viewerP.getOptionValues().getAccumulateProjectorFactory(), new Cache.Dummy() );
+		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), new double[] { 1 }, 0, false, numRenderThreads, null, false, viewerP.getOptionValues().getAccumulateProjectorFactory(), new CacheControl.Dummy() );
 
 		progressWriter.setProgress( 0 );
 

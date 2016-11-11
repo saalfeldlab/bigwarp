@@ -8,9 +8,11 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
-import net.imglib2.ui.util.GuiUtil;
+import org.scijava.ui.behaviour.util.InputActionBindings;
+
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
+import net.imglib2.ui.util.GuiUtil;
 
 public class BigWarpLandmarkFrame extends JFrame {
 

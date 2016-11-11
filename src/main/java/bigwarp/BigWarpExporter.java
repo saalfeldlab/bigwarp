@@ -128,7 +128,8 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 //		RandomAccessibleInterval< RealType< ? >> tmp = (RandomAccessibleInterval< RealType <? > > )sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 		
 		// go from physical space to fixed image space
-		final AffineTransform3D fixedImgXfm = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0 );
+		final AffineTransform3D fixedImgXfm = new AffineTransform3D();
+		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedImgXfm );
 		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
 		
 		// TODO - 	require for now that all moving image types are the same.  
@@ -153,7 +154,8 @@ public class BigWarpExporter< T extends RealType< T > & NativeType< T >  >
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 			
 			// go from moving to physical space
-			final AffineTransform3D movingImgXfm = sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0 );
+			final AffineTransform3D movingImgXfm = new AffineTransform3D();
+			sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0, movingImgXfm );
 
 			// apply the transformations
 			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( RealViews.affine( raiRaw, movingImgXfm ), fixedXfmInv );
