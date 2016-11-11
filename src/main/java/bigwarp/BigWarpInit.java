@@ -254,7 +254,6 @@ public class BigWarpInit
 		
 		if( names != null )
 		{
-			System.out.println(  "renaming sources" );
 			return new BigWarpData( wrapSourcesAsRenamable( sources, names ),
 					seqP, seqQ, converterSetups, movingSourceIndices, targetSourceIndices );
 		}
@@ -274,7 +273,6 @@ public class BigWarpInit
 			SourceAndConverter< ? > renamableSource = wrapSourceAsRenamable( sac );
 			if( names != null )
 			{
-				System.out.println( "setting name: " + names[i] ); 
 				((RenamableSource<?>)renamableSource.getSpimSource()).setName( names[ i ] );
 			}
 			wrappedSource.add( renamableSource );
@@ -336,8 +334,6 @@ public class BigWarpInit
 			final ImagePlusLoader loaderQ,
 			final String[] names )
 	{
-		System.out.println( "cbwd ipl: " + names[0] + " " 
-				+ names[1]);
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
 		int numMovingChannels = loaderP.numChannels();
@@ -408,7 +404,6 @@ public class BigWarpInit
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
-		System.out.println( "cbwdfi" );
 		String[] names = new String[]{ impP.getTitle(), impQ.getTitle() };
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), names );
 	}
