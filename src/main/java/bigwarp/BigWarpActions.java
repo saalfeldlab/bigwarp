@@ -12,17 +12,14 @@ import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
+import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.InputActionBindings;
 
-import mpicbg.models.AbstractModel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.util.AbstractNamedAction;
-import bdv.util.AbstractNamedAction.NamedActionAdder;
-import bdv.util.KeyProperties;
-import bdv.viewer.BigWarpViewerPanel;
-import bdv.viewer.InputActionBindings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
+import mpicbg.models.AbstractModel;
 
 public class BigWarpActions
 {
@@ -89,7 +86,7 @@ public class BigWarpActions
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
 			final BigWarp bw,
-			final KeyProperties keyProperties )
+			final KeyStrokeAdder.Factory keyProperties )
 	{
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
 		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
@@ -101,7 +98,7 @@ public class BigWarpActions
 			final InputActionBindings inputActionBindings,
 			final BigWarp bw,
 			final JTable landmarkTable,
-			final KeyProperties keyProperties )
+			final KeyStrokeAdder.Factory keyProperties )
 	{
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
@@ -118,7 +115,7 @@ public class BigWarpActions
 		parentInputMap.put(   enterUpKS, "released" );
 	}
 
-	public static InputMap createInputMapViewer( final KeyProperties keyProperties )
+	public static InputMap createInputMapViewer( final KeyStrokeAdder.Factory keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
@@ -148,40 +145,40 @@ public class BigWarpActions
 	public static ActionMap createActionMapViewer( final BigWarp bw )
 	{
 		final ActionMap actionMap = new ActionMap();
-		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ) );
-		map.put( new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ) );
+		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
+		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
+		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
 
-		for( BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
+		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
-			map.put( new SetWarpVisTypeAction( t, bw ));
-			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ));
-			map.put( new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ));
+			new SetWarpVisTypeAction( t, bw ).put( actionMap );
+			new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ).put( actionMap );
+			new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ).put( actionMap );
 		}
 
-		map.put( new ResetActiveViewerAction( bw ));
-		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ) );
-		map.put( new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ) );
-		map.put( new WarpToSelectedAction( bw ));
-		map.put( new WarpToNextAction( bw, true ));
-		map.put( new WarpToNextAction( bw, false ));
-		map.put( new WarpToNearest( bw ));
+		new ResetActiveViewerAction( bw ).put( actionMap );
+		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ).put( actionMap );
+		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ).put( actionMap );
+		new WarpToSelectedAction( bw ).put( actionMap );
+		new WarpToNextAction( bw, true ).put( actionMap );
+		new WarpToNextAction( bw, false ).put( actionMap );
+		new WarpToNearest( bw ).put( actionMap );
 
-		for( GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
-			map.put( new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ));
+		for( final GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
+			new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ).put( actionMap );
 
-		map.put( new SetBookmarkAction( bw ) );
-		map.put( new GoToBookmarkAction( bw ) );
-		map.put( new GoToBookmarkRotationAction( bw ) );
+		new SetBookmarkAction( bw ).put( actionMap );
+		new GoToBookmarkAction( bw ).put( actionMap );
+		new GoToBookmarkRotationAction( bw ).put( actionMap );
 
-		map.put( new SaveSettingsAction( bw ) );
-		map.put( new LoadSettingsAction( bw ) );
+		new SaveSettingsAction( bw ).put( actionMap );
+		new LoadSettingsAction( bw ).put( actionMap );
 
 		return actionMap;
 	}
 
-	public static InputMap createInputMap( final KeyProperties keyProperties )
+	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties )
 	{
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
@@ -230,33 +227,33 @@ public class BigWarpActions
 	public static ActionMap createActionMap( final BigWarp bw )
 	{
 		final ActionMap actionMap = new ActionMap();
-		final NamedActionAdder map = new NamedActionAdder( actionMap );
 
-		map.put( new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ) );
-		map.put( new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ) );
+		new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ).put( actionMap );
+		new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ).put( actionMap );
 
-		map.put( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ) );
+		new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ).put( actionMap );
 
-		map.put( new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ) );
-		map.put( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ) );
+		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
+		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 
-		map.put( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ));
-		map.put( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ));
-		map.put( new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ));
-		map.put( new EstimateWarpAction( ESTIMATE_WARP, bw ));
+		new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ).put( actionMap );
+		new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ).put( actionMap );
+		new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ).put( actionMap );
+		new EstimateWarpAction( ESTIMATE_WARP, bw ).put( actionMap );
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
-			AbstractModel<?> xfm = bw.baseXfmList[ i ];
-			map.put( new SetWarpMagBaseAction( String.format( WARPMAG_BASE, xfm.getClass().getName()), bw, i ));
+			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
+			new SetWarpMagBaseAction( String.format( WARPMAG_BASE, xfm.getClass().getName()), bw, i ).put( actionMap );
 		}
-		
-		map.put( new UndoRedoAction( UNDO, bw ) );
-		map.put( new UndoRedoAction( REDO, bw ) );
 
-		map.put( new TableSelectionAction( String.format( SELECT_TABLE_ROWS, -1 ), bw.getLandmarkPanel().getJTable(), -1 ) );
+		new UndoRedoAction( UNDO, bw ).put( actionMap );
+		new UndoRedoAction( REDO, bw ).put( actionMap );
 
-		map.put( new GarbageCollectionAction( GARBAGE_COLLECTION ) );
-		map.put( new DebugAction( DEBUG, bw ) );
+		new TableSelectionAction( String.format( SELECT_TABLE_ROWS, -1 ), bw.getLandmarkPanel().getJTable(), -1 ).put( actionMap );
+
+		new GarbageCollectionAction( GARBAGE_COLLECTION ).put( actionMap );
+		new DebugAction( DEBUG, bw ).put( actionMap );
+
 			
 		return actionMap;
 	}

@@ -6,12 +6,9 @@ import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
+import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.InputActionBindings;
 
-import bdv.util.AbstractNamedAction;
-import bdv.util.AbstractNamedAction.NamedActionAdder;
-import bdv.util.KeyProperties;
-import bdv.viewer.InputActionBindings;
-import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerPanel.AlignPlane;
 
 public class WarpNavigationActions 
@@ -46,7 +43,7 @@ public class WarpNavigationActions
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
 			final BigWarpViewerPanel viewer,
-			final KeyProperties keyProperties,
+			final KeyStrokeAdder.Factory keyProperties,
 			final boolean is2d )
 	{
 		inputActionBindings.addActionMap( "navigation", createActionMap( viewer ) );
@@ -55,7 +52,7 @@ public class WarpNavigationActions
 		viewer.getActionMap().get( "navigation" );
 	}
 
-	public static InputMap createInputMap( final KeyProperties keyProperties, boolean is2d )
+	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties, final boolean is2d )
 	{
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
@@ -101,26 +98,23 @@ public class WarpNavigationActions
 
 	public static void addToActionMap( final ActionMap actionMap, final BigWarpViewerPanel viewer, final int numSourceKeys )
 	{
-		final NamedActionAdder map = new NamedActionAdder( actionMap );
-
-		map.put( new ToggleInterPolationAction( viewer ) );
-		map.put( new ToggleFusedModeAction( viewer ) );
-		map.put( new ToggleGroupingAction( viewer ) );
+		new ToggleInterPolationAction( viewer ).put( actionMap );
+		new ToggleFusedModeAction( viewer ).put( actionMap );
+		new ToggleGroupingAction( viewer ).put( actionMap );
 
 		for ( int i = 0; i < numSourceKeys; ++i )
 		{
-			map.put( new SetCurrentSourceOrGroupAction( viewer, i ) );
-			map.put( new ToggleSourceOrGroupVisibilityAction( viewer, i ) );
+			new SetCurrentSourceOrGroupAction( viewer, i ).put( actionMap );
+			new ToggleSourceOrGroupVisibilityAction( viewer, i ).put( actionMap );
 		}
 
 		for ( final AlignPlane plane : AlignPlane.values() )
-			map.put( new AlignPlaneAction( viewer, plane ) );
-		
-		map.put( new RotatePlaneAction( viewer, rotationDirections2d.CLOCKWISE ) ); // clockwise
-		map.put( new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ) ); // counterclockwise
+			new AlignPlaneAction( viewer, plane ).put( actionMap );
 
-		
-		map.put( new DisplayXfmAction( viewer ) );
+		new RotatePlaneAction( viewer, rotationDirections2d.CLOCKWISE ).put( actionMap ); // clockwise
+		new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ).put( actionMap ); // counterclockwise
+
+		new DisplayXfmAction( viewer ).put( actionMap );
 	}
 
 	private static abstract class NavigationAction extends AbstractNamedAction

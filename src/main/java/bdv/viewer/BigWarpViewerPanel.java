@@ -8,21 +8,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import bdv.cache.CacheControl;
+import bdv.img.WarpedSource;
+import bdv.util.Affine3DHelpers;
+import bdv.util.Prefs;
+import bdv.viewer.animate.OverlayAnimator;
+import bdv.viewer.animate.RotationAnimator2D;
+import bdv.viewer.animate.SimilarityTransformAnimator2D;
+import bdv.viewer.animate.SimilarityTransformAnimator3D;
+import bdv.viewer.state.SourceState;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
-import bdv.img.WarpedSource;
-import bdv.img.cache.Cache;
-import bdv.util.Affine3DHelpers;
-import bdv.util.Prefs;
-import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerPanel;
-import bdv.viewer.animate.OverlayAnimator;
-import bdv.viewer.animate.RotationAnimator;
-import bdv.viewer.animate.RotationAnimator2D;
-import bdv.viewer.animate.SimilarityTransformAnimator3D;
-import bdv.viewer.animate.SimilarityTransformAnimator2D;
-import bdv.viewer.state.SourceState;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
@@ -59,13 +56,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 	ViewerOptions options;
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, boolean isMoving,
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
 			int[] movingSourceIndexList, int[] targetSourceIndexList )
 	{
 		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final Cache cache, final ViewerOptions optional, boolean isMoving, 
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final ViewerOptions optional, boolean isMoving, 
 			int[] movingSourceIndexList, int[] targetSourceIndexList  )
 	{
 		super( sources, 1, cache, optional );

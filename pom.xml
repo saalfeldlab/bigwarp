@@ -90,6 +90,10 @@
 		</repository>
 	</repositories>
 
+	<properties>
+		<pom-bigdataviewer.version>4.0.1</pom-bigdataviewer.version>
+	</properties>
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>

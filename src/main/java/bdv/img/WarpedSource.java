@@ -1,13 +1,13 @@
 package bdv.img;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import bdv.img.cache.CacheHints;
+import bdv.cache.CacheHints;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
 import bdv.viewer.render.SetCacheHints;
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -126,15 +126,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 			transform.identity();
 		else
 			source.getSourceTransform( t, level, transform );
-	}
-
-	@Override
-	public AffineTransform3D getSourceTransform( final int t, final int level )
-	{
-		if( isTransformed )
-			return new AffineTransform3D();
-		else
-			return source.getSourceTransform( t, level );
 	}
 
 	@Override

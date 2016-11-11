@@ -49,12 +49,6 @@ public class RenamableSource< T > implements Source< T >
 	}
 
 	@Override
-	public AffineTransform3D getSourceTransform( int t, int level )
-	{
-		return src.getSourceTransform( t, level );
-	}
-
-	@Override
 	public T getType()
 	{
 		return src.getType();

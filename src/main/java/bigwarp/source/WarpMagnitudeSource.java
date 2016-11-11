@@ -169,12 +169,6 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	}
 
 	@Override
-	public AffineTransform3D getSourceTransform(int t, int level)
-	{
-		return sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level );
-	}
-
-	@Override
 	public T getType()
 	{
 		return type;

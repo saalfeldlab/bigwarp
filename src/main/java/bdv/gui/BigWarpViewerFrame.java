@@ -13,18 +13,18 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
 import org.scijava.ui.behaviour.MouseAndKeyHandler;
+import org.scijava.ui.behaviour.util.InputActionBindings;
+import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
-import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.util.GuiUtil;
 import bdv.BehaviourTransformEventHandler;
-import bdv.img.cache.Cache;
+import bdv.cache.CacheControl;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
-import bdv.viewer.InputActionBindings;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.TriggerBehaviourBindings;
 import bdv.viewer.ViewerOptions;
 import bigwarp.BigWarp;
+import net.imglib2.ui.TransformEventHandler;
+import net.imglib2.ui.util.GuiUtil;
 
 public class BigWarpViewerFrame extends JFrame
 {
@@ -44,7 +44,7 @@ public class BigWarpViewerFrame extends JFrame
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
-			final Cache cache,
+			final CacheControl cache,
 			final String title,
 			final boolean isMoving,
 			final int[] movingIndexList,
@@ -58,7 +58,7 @@ public class BigWarpViewerFrame extends JFrame
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
-			final Cache cache,
+			final CacheControl cache,
 			final ViewerOptions optional,
 			final String title,
 			final boolean isMoving,
