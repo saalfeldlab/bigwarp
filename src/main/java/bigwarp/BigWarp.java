@@ -65,6 +65,7 @@ import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
+import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.BigWarpConverterSetupWrapper;
@@ -75,6 +76,7 @@ import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
@@ -108,6 +110,9 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
+import net.imglib2.histogram.DiscreteFrequencyDistribution;
+import net.imglib2.histogram.Histogram1d;
+import net.imglib2.histogram.Real1dBinMapper;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -122,6 +127,7 @@ import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformEventHandlerFactory;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.view.Views;
 
 public class BigWarp
 {
@@ -470,17 +476,22 @@ public class BigWarp
 		inLandmarkMode = false;
 		setupKeyListener();
 
+		// set initial transforms so data are visible
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
-
-		viewerFrameP.setVisible( true );
-		viewerFrameQ.setVisible( true );
-		landmarkFrame.setVisible( true );
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
 		viewerP.getState().getViewerTransform( initialViewP );
 		viewerQ.getState().getViewerTransform( initialViewQ );
+
+		// set brightness contrast to appropriate values
+		initBrightness( 0.001, 0.999, viewerP.getState(), setupAssignments );
+		initBrightness( 0.001, 0.999, viewerQ.getState(), setupAssignments );
+
+		viewerFrameP.setVisible( true );
+		viewerFrameQ.setVisible( true );
+		landmarkFrame.setVisible( true );
 
 		checkBoxInputMaps();
 
@@ -528,6 +539,49 @@ public class BigWarp
 
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
+	}
+
+	/**
+	 * TODO Make a PR that updates this method in InitializeViewerState in bdv-core
+	 * @param cumulativeMinCutoff
+	 * @param cumulativeMaxCutoff
+	 * @param state
+	 * @param setupAssignments
+	 */
+	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final SetupAssignments setupAssignments )
+	{
+		int srcidx = state.getCurrentSource();
+		final Source< ? > source = state.getSources().get( srcidx ).getSpimSource();
+		final int timepoint = state.getCurrentTimepoint();
+		if ( !source.isPresent( timepoint ) )
+			return;
+		if ( !UnsignedShortType.class.isInstance( source.getType() ) )
+			return;
+		@SuppressWarnings( "unchecked" )
+		final RandomAccessibleInterval< UnsignedShortType > img = ( RandomAccessibleInterval< UnsignedShortType > ) source.getSource( timepoint, source.getNumMipmapLevels() - 1 );
+		final long z = ( img.min( 2 ) + img.max( 2 ) + 1 ) / 2;
+
+		final int numBins = 6535;
+		final Histogram1d< UnsignedShortType > histogram = new Histogram1d<>( Views.iterable( Views.hyperSlice( img, 2, z ) ), new Real1dBinMapper< UnsignedShortType >( 0, 65535, numBins, false ) );
+		final DiscreteFrequencyDistribution dfd = histogram.dfd();
+		final long[] bin = new long[] { 0 };
+		double cumulative = 0;
+		int i = 0;
+		for ( ; i < numBins && cumulative < cumulativeMinCutoff; ++i )
+		{
+			bin[ 0 ] = i;
+			cumulative += dfd.relativeFrequency( bin );
+		}
+		final int min = i * 65535 / numBins;
+		for ( ; i < numBins && cumulative < cumulativeMaxCutoff; ++i )
+		{
+			bin[ 0 ] = i;
+			cumulative += dfd.relativeFrequency( bin );
+		}
+		final int max = i * 65535 / numBins;
+		final MinMaxGroup minmax = setupAssignments.getMinMaxGroups().get( srcidx );
+		minmax.getMinBoundedValue().setCurrentValue( min );
+		minmax.getMaxBoundedValue().setCurrentValue( max );
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
