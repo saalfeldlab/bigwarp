@@ -307,20 +307,19 @@ public class BigWarp
 		// transformations to
 		// rotations and scalings of the 2d plane ( z = 0 )
 		boolean is2d = ( ndims == 2 );
-		final ViewerOptions optionsP = BigWarpViewerOptions.options( is2d );
-		final ViewerOptions optionsQ = BigWarpViewerOptions.options( is2d );
+		final ViewerOptions options = BigWarpViewerOptions.options( is2d );
 
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCacheControl(), optionsP, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCacheControl(), options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
 		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), optionsQ, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -440,7 +439,7 @@ public class BigWarp
 																// before action
 																// maps are made
 
-		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( null );
+		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
 
