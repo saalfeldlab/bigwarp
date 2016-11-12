@@ -268,6 +268,7 @@ public class BigWarp
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
+		ij = IJ.getInstance();
 		sources = data.sources;
 		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
@@ -674,14 +675,6 @@ public class BigWarp
 		this.lastDirectory = dir;
 	}
 
-	public void setImageJInstance( final ImageJ ij )
-	{
-		BigWarp.ij = ij;
-
-		if ( BigWarp.ij != null )
-			setupImageJExportOption();
-	}
-
 	public void setSpotColor( final Color c )
 	{
 		viewerSettings.setSpotColor( c );
@@ -700,6 +693,15 @@ public class BigWarp
 		JMenu fileMenu = new JMenu( "File" );
 		viewerMenuBar.add( fileMenu );
 
+		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
+		openItem.setText( "Import landmarks" );
+		fileMenu.add( openItem );
+
+		final JMenuItem saveItem = new JMenuItem( actionMap.get( BigWarpActions.SAVE_LANDMARKS ));
+		saveItem.setText( "Export landmarks" );
+		fileMenu.add( saveItem );
+
+		fileMenu.addSeparator();
 		final JMenuItem miLoadSettings = new JMenuItem( actionMap.get( BigWarpActions.LOAD_SETTINGS ) );
 		miLoadSettings.setText( "Load settings" );
 		fileMenu.add( miLoadSettings );
@@ -707,6 +709,18 @@ public class BigWarp
 		final JMenuItem miSaveSettings = new JMenuItem( actionMap.get( BigWarpActions.SAVE_SETTINGS ) );
 		miSaveSettings.setText( "Save settings" );
 		fileMenu.add( miSaveSettings );
+
+		if( ij != null )
+		{
+			fileMenu.addSeparator();
+			final JMenuItem exportToVImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_VIRTUAL_IP ) );
+			exportToVImagePlus.setText( "Export as Virtual ImagePlus" );
+			fileMenu.add( exportToVImagePlus );
+
+			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
+			exportToImagePlus.setText( "Export as ImagePlus" );
+			fileMenu.add( exportToImagePlus );
+		}
 
 		final JMenu settingsMenu = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
@@ -747,113 +761,42 @@ public class BigWarp
 
 	protected void setupImageJExportOption()
 	{
-		final JMenuItem exportToVImagePlus = new JMenuItem( "Export as Virtual ImagePlus" );
+		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
+
+		final JMenuItem exportToVImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_VIRTUAL_IP ) );
+		exportToVImagePlus.setText( "Export as Virtual ImagePlus" );
 		landmarkMenu.add( exportToVImagePlus );
-		exportToVImagePlus.addMouseListener( new MouseListener()
-		{
-			@Override
-			public void mouseClicked( final MouseEvent e )
-			{}
 
-			@Override
-			public void mouseEntered( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseExited( final MouseEvent e )
-			{}
-
-			@Override
-			public void mousePressed( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseReleased( final MouseEvent e )
-			{
-				new Thread()
-				{
-					@Override
-					public void run()
-					{
-						try
-						{
-							if( ij == null )
-								return;
-
-							BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
-							ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( true );
-
-							if ( ip != null )
-								ip.show();
-						}
-						catch ( final Exception e )
-						{
-							//e.printStackTrace();
-						}
-					}
-				}.start();
-			}
-		} );
-
-		final JMenuItem exportToImagePlus = new JMenuItem( "Export as ImagePlus" );
+		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
+		exportToImagePlus.setText( "Export as ImagePlus" );
 		landmarkMenu.add( exportToImagePlus );
-		exportToImagePlus.addMouseListener( new MouseListener()
-		{
-			@Override
-			public void mouseClicked( final MouseEvent e )
-			{}
 
-			@Override
-			public void mouseEntered( final MouseEvent e )
-			{}
+	}
 
-			@Override
-			public void mouseExited( final MouseEvent e )
-			{}
+	public void exportAsImagePlus( boolean virtual )
+	{
+		if( ij == null )
+			return;
 
-			@Override
-			public void mousePressed( final MouseEvent e )
-			{}
+		BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
+		ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( virtual );
 
-			@Override
-			public void mouseReleased( final MouseEvent e )
-			{
-				new Thread()
-				{
-					@Override
-					public void run()
-					{
-						try
-						{
-							if( ij == null )
-								return;
-
-							BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
-							ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( false );
-
-							if ( ip != null )
-								ip.show();
-						}
-						catch ( final Exception e )
-						{
-							//e.printStackTrace();
-						}
-					}
-				}.start();
-			}
-		} );
-
+		if ( ip != null )
+			ip.show();
 	}
 
 	protected void setUpLandmarkMenus()
 	{
-		final JMenuBar landmarkMenuBar = new JMenuBar();
+		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
 
+		final JMenuBar landmarkMenuBar = new JMenuBar();
 		landmarkMenu = new JMenu( "File" );
-		final JMenuItem openItem = new JMenuItem( "Import landmarks" );
+		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
+		openItem.setText( "Import landmarks" );
 		landmarkMenu.add( openItem );
 
-		final JMenuItem saveItem = new JMenuItem( "Export landmarks" );
+		final JMenuItem saveItem = new JMenuItem( actionMap.get( BigWarpActions.SAVE_LANDMARKS ));
+		saveItem.setText( "Export landmarks" );
 		landmarkMenu.add( saveItem );
 
 		landmarkMenu.addSeparator();
@@ -861,149 +804,10 @@ public class BigWarp
 
 		landmarkMenuBar.add( landmarkMenu );
 		landmarkFrame.setJMenuBar( landmarkMenuBar );
+		//	exportMovingImage( file, state, progressWriter );
 
-		openItem.addMouseListener( new MouseListener()
-		{
-			@Override
-			public void mouseClicked( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseEntered( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseExited( final MouseEvent e )
-			{}
-
-			@Override
-			public void mousePressed( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseReleased( final MouseEvent e )
-			{
-				final JFileChooser fc = new JFileChooser( getLastDirectory() );
-
-				fc.showOpenDialog( landmarkFrame );
-				final File file = fc.getSelectedFile();
-
-				setLastDirectory( file.getParentFile() );
-				try
-				{
-					landmarkModel.load( file );
-				}
-				catch ( final IOException e1 )
-				{
-					e1.printStackTrace();
-				}
-
-				boolean didCompute = restimateTransformation();
-
-				// didCompute = false means that there were not enough points
-				// in the loaded points, so we should display the 'raw' moving
-				// image
-				if ( !didCompute )
-					setIsMovingDisplayTransformed( false );
-
-				viewerP.requestRepaint();
-				viewerQ.requestRepaint();
-				landmarkFrame.repaint();
-			}
-		} );
-
-		saveItem.addMouseListener( new MouseListener()
-		{
-			@Override
-			public void mouseClicked( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseEntered( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseExited( final MouseEvent e )
-			{}
-
-			@Override
-			public void mousePressed( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseReleased( final MouseEvent e )
-			{
-				final JFileChooser fc = new JFileChooser( getLastDirectory() );
-				fc.showSaveDialog( landmarkFrame );
-				final File file = fc.getSelectedFile();
-
-				if ( file == null )
-					return;
-
-				setLastDirectory( file.getParentFile() );
-
-				try
-				{
-					landmarkModel.save( file );
-				}
-				catch ( final IOException e1 )
-				{
-					//e1.printStackTrace();
-				}
-
-			}
-		} );
-
-		exportImageItem.addMouseListener( new MouseListener()
-		{
-			@Override
-			public void mouseClicked( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseEntered( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseExited( final MouseEvent e )
-			{}
-
-			@Override
-			public void mousePressed( final MouseEvent e )
-			{}
-
-			@Override
-			public void mouseReleased( final MouseEvent e )
-			{
-				final JFileChooser fc = new JFileChooser( getLastDirectory() );
-				fc.showSaveDialog( landmarkFrame );
-
-				final ViewerState state = viewerP.getState().copy();
-				final File file = fc.getSelectedFile();
-
-				if ( file == null )
-					return;
-
-				setLastDirectory( file.getParentFile() );
-
-				// TODO exportThread
-				new Thread()
-				{
-					@Override
-					public void run()
-					{
-						try
-						{
-							exportMovingImage( file, state, progressWriter );
-						}
-						catch ( final Exception e1 )
-						{
-							//e1.printStackTrace();
-						}
-					}
-				}.start();
-			}
-		} );
+		if( ij != null )
+			setupImageJExportOption();
 	}
 
 	public Bookmarks getBookmarks()
@@ -2757,6 +2561,78 @@ public class BigWarp
 				notify();
 			}
 		}
+	}
+
+	protected void saveLandmarks()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "landmarks.csv" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showSaveDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				System.out.println("save landmarks");
+				saveLandmarks( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void saveLandmarks( final String filename ) throws IOException
+	{
+		landmarkModel.save(new File( filename ));
+	}
+
+	protected void loadLandmarks()
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedSettingsFile = new File( "landmarks.csv" );
+
+		fileChooser.setSelectedFile( proposedSettingsFile );
+		final int returnVal = fileChooser.showOpenDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedSettingsFile = fileChooser.getSelectedFile();
+			try
+			{
+				loadLandmarks( proposedSettingsFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	protected void loadLandmarks( final String filename )
+	{
+		File file = new File( filename );
+		setLastDirectory( file.getParentFile() );
+		try
+		{
+			landmarkModel.load( file );
+		}
+		catch ( final IOException e1 )
+		{
+			e1.printStackTrace();
+		}
+
+		boolean didCompute = restimateTransformation();
+
+		// didCompute = false means that there were not enough points
+		// in the loaded points, so we should display the 'raw' moving
+		// image
+		if ( !didCompute )
+			setIsMovingDisplayTransformed( false );
+
+		viewerP.requestRepaint();
+		viewerQ.requestRepaint();
+		landmarkFrame.repaint();
 	}
 
 	protected void saveSettings()

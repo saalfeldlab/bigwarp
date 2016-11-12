@@ -34,10 +34,10 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 	public static void main( final String[] args )
 	{
-		System.setProperty( "apple.laf.useScreenMenuBar", "true" );
+//		System.setProperty( "apple.laf.useScreenMenuBar", "true" );
 		new ImageJ();
-		IJ.run("Confocal Series (2.2MB)");
-//		IJ.run("Fly Brain (1MB)");
+		IJ.run("Boats (356K)");
+		IJ.run("Boats (356K)");
 		new BigWarpImagePlusPlugIn().run( null );
 	}
 
@@ -77,8 +77,9 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         {
         	new RepeatingReleasedEventsFixer().install();
 			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  null );
-			final ImageJ ij = IJ.getInstance();
-			bw.setImageJInstance( ij );
+			bw.getViewerFrameP().getViewerPanel().requestRepaint();
+			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+			bw.getLandmarkFrame().repaint();
 		}
         catch (final SpimDataException e)
         {

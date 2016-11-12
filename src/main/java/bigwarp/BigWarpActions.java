@@ -42,11 +42,11 @@ public class BigWarpActions
 	public static final String SET_WARPTYPE_VIS = "set warp vis type %s" ;
 	public static final String SET_WARPTYPE_VIS_P = "p " + SET_WARPTYPE_VIS;
 	public static final String SET_WARPTYPE_VIS_Q = "q " + SET_WARPTYPE_VIS;
-	
+
 	public static final String WARPMAG_BASE = "set warpmag base %s";
 	public static final String WARPVISGRID = "set warp vis grid %s";
 	public static final String WARPVISDIALOG = "warp vis dialog";
-	
+
 	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
@@ -55,6 +55,11 @@ public class BigWarpActions
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
+	public static final String LOAD_LANDMARKS = "load landmarks";
+	public static final String SAVE_LANDMARKS = "save landmarks";
+
+	public static final String EXPORT_IP = "export imageplus";
+	public static final String EXPORT_VIRTUAL_IP = "export virtual imageplus";
 
 	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
 	public static final String WARP_TO_NEXT_POINT = "warp to next landmark %s";
@@ -216,6 +221,12 @@ public class BigWarpActions
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
 
+		map.put( SAVE_LANDMARKS, "control S" );
+		map.put( LOAD_LANDMARKS, "control O" );
+
+		map.put( EXPORT_IP, "control E" );
+		map.put( EXPORT_VIRTUAL_IP, "control shift E" );
+
 		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
 
 		map.put( GARBAGE_COLLECTION, "F9" );
@@ -235,6 +246,11 @@ public class BigWarpActions
 
 		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
+
+		new ExportImagePlusAction( bw ).put( actionMap );
+		new ExportVirtualImagePlusAction( bw ).put( actionMap );
+		new LoadLandmarksAction( bw ).put( actionMap );
+		new SaveLandmarksAction( bw ).put( actionMap );
 
 		new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ).put( actionMap );
 		new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ).put( actionMap );
@@ -841,5 +857,70 @@ public class BigWarpActions
 			}
 		}
 		private static final long serialVersionUID = 8515568118251877405L;
+	}
+
+	public static class LoadLandmarksAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -5405137757290988030L;
+		BigWarp bw;
+		public LoadLandmarksAction( final BigWarp bw )
+		{
+			super( LOAD_LANDMARKS );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			System.out.println("load landmarks");
+			bw.loadLandmarks();
+		}
+	}
+
+	public static class SaveLandmarksAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 7897687176745034315L;
+		BigWarp bw;
+		public SaveLandmarksAction( final BigWarp bw )
+		{
+			super( SAVE_LANDMARKS );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.saveLandmarks();
+		}
+	}
+
+	public static class ExportImagePlusAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -8109832912959931917L;
+		BigWarp bw;
+		public ExportImagePlusAction( final BigWarp bw )
+		{
+			super( EXPORT_IP );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.exportAsImagePlus(false );
+		}
+	}
+
+	public static class ExportVirtualImagePlusAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 3503492908985540676L;
+		BigWarp bw;
+		public ExportVirtualImagePlusAction( final BigWarp bw )
+		{
+			super( EXPORT_VIRTUAL_IP );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.exportAsImagePlus( true );
+		}
 	}
 }
