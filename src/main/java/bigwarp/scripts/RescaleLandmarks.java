@@ -7,11 +7,20 @@ import java.util.ArrayList;
 import bigwarp.landmarks.LandmarkTableModel;
 
 /**
- * Scales a set of landmark points.
- * Both landmark and target points were 
+ * Scales a set of landmark points. Useful if one changes
+ * the resolution of images on which landmarks were placed.
  * 
  * Inputs:
- * (space separated scales( (input path) (output path)
+ * (input landmarks csv path)
+ * (output landmarks csv path)
+ * (comma separated moving landmark scales)
+ * (comma separated target landmark scales)
+ * 
+ * Example inputs:
+ * landmarks.csv
+ * landmarks-scaled.csv
+ * 2,2,2
+ * 0.5,0.5,0.5
  * 
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  *
@@ -21,30 +30,35 @@ public class RescaleLandmarks
 
 	public static void main( String[] args ) throws IOException
 	{
-		double[] scales = parseArray( args[0] );
-		int ndims = scales.length;
-		String pts_fn = args[1];
-		String output_fn = args[2];
+		String pts_fn = args[ 0 ];
+		String output_fn = args[ 1 ];
 
+		double[] movingScales = parseArray( args[ 2 ] );
+		double[] targetScales = parseArray( args[ 3 ] );
+		int ndims = movingScales.length;
+		
 		LandmarkTableModel ltm = new LandmarkTableModel( ndims );
-		
-		// read the existing point pairs 
-		ltm.load( new File( pts_fn) );
-		
-		ArrayList< Double[] > movingPts = ltm.getPoints( true );
-		ArrayList< Double[] > targetPts = ltm.getPoints( false );
-		for( int i = 0; i < ltm.getRowCount(); i++ )
-		{
-			
-			scale( movingPts.get(i), scales );
-			scale( targetPts.get(i), scales );
-		}
-		
+
+		// read the existing point pairs
+		ltm.load( new File( pts_fn ) );
+
+		scaleLandmarks( ltm, movingScales, true );
+		scaleLandmarks( ltm, targetScales, false );
+
 		// write it out
-		ltm.save( new File( output_fn) );
-		
+		ltm.save( new File( output_fn ) );
+
 		System.out.println( "finished" );
 		System.exit( 0 );
+	}
+
+	public static void scaleLandmarks( LandmarkTableModel ltm, double[] scales, boolean isMoving )
+	{
+		ArrayList< Double[] > pts = ltm.getPoints( isMoving );
+		for( int i = 0; i < ltm.getRowCount(); i++ )
+		{
+			scale( pts.get(i), scales );
+		}
 	}
 	
 	public static void scale( Double[] point, double[] scale )
@@ -65,5 +79,5 @@ public class RescaleLandmarks
 		}
 		return out;
 	}
-	
+
 }
