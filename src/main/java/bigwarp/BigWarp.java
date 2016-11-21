@@ -501,21 +501,23 @@ public class BigWarp
 		fileDialog = new FileDialog( fileFrame );
 		lastDirectory = null;
 
-		if ( BigWarpExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
+		if ( BigWarpRealExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
 		{
 			Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 			if ( ByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< ByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( ByteType ) baseType );
+				exporter = new BigWarpRealExporter< ByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( ByteType ) baseType );
 			else if ( UnsignedByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType );
+				exporter = new BigWarpRealExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType );
 			else if ( IntType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType );
+				exporter = new BigWarpRealExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType );
 			else if ( UnsignedShortType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< UnsignedShortType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedShortType ) baseType );
+				exporter = new BigWarpRealExporter< UnsignedShortType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedShortType ) baseType );
 			else if ( FloatType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType );
+				exporter = new BigWarpRealExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType );
 			else if ( DoubleType.class.isInstance( baseType ) )
-				exporter = new BigWarpExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
+				exporter = new BigWarpRealExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
+			else if ( ARGBType.class.isInstance( baseType ) )
+				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList );
 			else
 			{
 				System.err.println( "Can't export type " + baseType.getClass() );
@@ -524,7 +526,7 @@ public class BigWarp
 		}
 		else
 		{
-			exporter = new BigWarpExporter< FloatType >(
+			exporter = new BigWarpRealExporter< FloatType >(
 					sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(),
 					new FloatType(), true );
 		}
