@@ -2,6 +2,7 @@ package bigwarp;
 
 import ij.IJ;
 import ij.ImagePlus;
+import jitk.spline.XfmUtils;
 
 import java.util.ArrayList;
 
@@ -33,6 +34,7 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Util;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.viewer.Interpolation;
@@ -169,7 +171,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		}
 		
 		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
-
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
@@ -181,7 +182,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		}
 		else
 		{
-			System.out.println( "copy with " + nThreads );
+			System.out.println( "render with " + nThreads + " threads.");
 			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
 
 			if ( destinterval.numDimensions() == 3 )
@@ -199,10 +200,17 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 						destIntervalPerm, factory, nThreads );
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}
-			else
+			else if ( destinterval.numDimensions() == 2 )
 			{
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( raiStack,
-						destinterval, factory, nThreads );
+				final long[] dimensions = new long[ 4 ];
+				dimensions[ 0 ] = destinterval.dimension( 0 );	// x
+				dimensions[ 1 ] = destinterval.dimension( 1 );	// y
+				dimensions[ 2 ] = numChannels; 					// c
+				dimensions[ 3 ] = 1; 							// z 
+				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+						Views.addDimension( Views.extendMirrorDouble( raiStack )),
+						destIntervalPerm, factory, nThreads );
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}
 		}

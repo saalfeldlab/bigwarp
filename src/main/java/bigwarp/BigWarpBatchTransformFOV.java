@@ -28,7 +28,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.ConstantUtils;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.generic.AbstractSpimData;
-import mpicbg.spim.data.generic.sequence.BasicImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.generic.sequence.ImgLoaderHint;
@@ -39,9 +38,6 @@ import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.TimePoint;
 import mpicbg.spim.data.sequence.TimePoints;
-import bdv.ViewerImgLoader;
-import bdv.ViewerSetupImgLoader;
-import bdv.cache.CacheControl;
 import bdv.img.WarpedSource;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -83,6 +79,7 @@ public class BigWarpBatchTransformFOV
 	@Parameter(names = {"--help", "-h"}, help = true)
 	private boolean help;
 
+	private long[] dimsFull;
 	private double[] spacingFull;
 	private double[] offsetFull;
 
@@ -121,22 +118,38 @@ public class BigWarpBatchTransformFOV
 		}
 
 		int nd = alg.dims.length;
-		if( alg.offset.length == 1 )
+		if( alg.offset.length < 3 )
 		{
-			alg.offsetFull = fill( alg.offset, nd );
+			alg.offsetFull = fill( alg.offset, nd, 0.0 );
 		}
 		else
 		{
 			alg.offsetFull = alg.offset;
 		}
 
-		if( alg.spacing.length == 1 )
+		if( alg.spacing.length < 3 )
 		{
-			alg.spacingFull = fill( alg.spacing, nd );
+			alg.spacingFull = fill( alg.spacing, nd, 1.0 );
 		}
 		else
 		{
 			alg.spacingFull  = alg.spacing;
+		}
+
+		if( alg.dims.length == 1 )
+		{
+			alg.dimsFull = new long[ 3 ];
+			Arrays.fill( alg.dimsFull, alg.dims[ 0 ] );
+		}
+		else if( alg.dims.length == 2 )
+		{
+			alg.dimsFull = new long[ 3 ];
+			System.arraycopy( alg.dims, 0, alg.dimsFull, 0, 2 );
+			alg.dimsFull[ 2 ] = 1;
+		}
+		else if( alg.dims.length == 3 )
+		{
+			alg.dimsFull = alg.dims;
 		}
 
 		return alg;
@@ -149,9 +162,9 @@ public class BigWarpBatchTransformFOV
 
 		long startTime = System.currentTimeMillis();
 		int nd = dims.length;
-		if( nd != 3 )
+		if( nd != 3 && nd != 2 )
 		{
-			System.err.println( "For 3D use only");
+			System.err.println( "For 2D or 3D use only" );
 			return;
 		}
 
@@ -170,7 +183,6 @@ public class BigWarpBatchTransformFOV
 
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData() };
 		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
-
 
 		Interpolation interpolation = Interpolation.valueOf( interpType );
 		int[] movingSourceIndexList = new int[]{ 0 };
@@ -245,9 +257,9 @@ public class BigWarpBatchTransformFOV
 		String punit = "px";
 
 		final FinalVoxelDimensions voxelSize = new FinalVoxelDimensions( punit, pw, ph, pd );
-		final long w = dims[ 0 ];
-		final long h = dims[ 1 ];
-		final long d = dims[ 2 ];
+		final long w = dimsFull[ 0 ];
+		final long h = dimsFull[ 1 ];
+		final long d = dimsFull[ 2 ];
 		final FinalDimensions size = new FinalDimensions( new long[] { w, h, d } );
 
 		// create setups from channels
@@ -282,10 +294,20 @@ public class BigWarpBatchTransformFOV
 		return spimData;
 	}
 
-	public static double[] fill( double[] in, int ndim )
+	public static double[] fill( double[] in, int ndim, double zVal )
 	{
-		double[] out = new double[ ndim ];
-		Arrays.fill( out, in[ 0 ] );
+		double[] out = new double[ 3 ];
+		if( in.length == 1 && ndim == 2 )
+		{
+			Arrays.fill( out, in[ 0 ] );
+			out[ 2 ] = zVal;
+		}
+		else if( in.length == 2 && ndim == 2 )
+		{
+			System.arraycopy( in, 0, out, 0, 2 );
+			out[ 2 ] = zVal;
+		}
+
 		return out;
 	}
 

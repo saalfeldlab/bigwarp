@@ -1,13 +1,16 @@
 package bigwarp;
 
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import bdv.viewer.Interpolation;
 import ij.IJ;
 import ij.ImagePlus;
+import jitk.spline.XfmUtils;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -17,6 +20,8 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.util.Intervals;
+import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
@@ -89,7 +94,8 @@ public interface BigWarpExporter <T>
 		{
 			splitPoints[ i ] = splitPoints[ i - 1 ] + del;
 		}
-		// System.out.println( "split points: " + XfmUtils.printArray( splitPoints ));
+//		System.out.println( "dim2split: " + dim2split );
+//		System.out.println( "split points: " + XfmUtils.printArray( splitPoints ));
 
 		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
 
@@ -103,25 +109,33 @@ public interface BigWarpExporter <T>
 			{
 				public Boolean call()
 				{
-					final FinalInterval subItvl = getSubInterval( target, dim2split, start, end );
-					final IntervalView< T > subTgt = Views.interval( target, subItvl );
-
-					final Cursor< T > c = subTgt.cursor();
-					final RandomAccess< T > ra = raible.randomAccess();
-					while ( c.hasNext() )
+					try
 					{
-						c.fwd();
-						ra.setPosition( c );
-						c.get().set( ra.get() );
+						final FinalInterval subItvl = getSubInterval( target, dim2split, start, end );
+						final IntervalView< T > subTgt = Views.interval( target, subItvl );
+						final Cursor< T > c = subTgt.cursor();
+						final RandomAccess< T > ra = raible.randomAccess();
+						while ( c.hasNext() )
+						{
+							c.fwd();
+							ra.setPosition( c );
+							c.get().set( ra.get() );
+						}
+						return true;
 					}
-					return true;
+					catch( Exception e )
+					{
+						e.printStackTrace();
+					}
+					return false;
 				}
 			});
 		}
 		try
 		{
-			threadPool.invokeAll( jobs );
+			List< Future< Boolean > > futures = threadPool.invokeAll( jobs );
 			threadPool.shutdown(); // wait for all jobs to finish
+
 		}
 		catch ( InterruptedException e1 )
 		{
