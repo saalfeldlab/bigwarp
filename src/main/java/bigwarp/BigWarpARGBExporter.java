@@ -5,6 +5,7 @@ import ij.ImagePlus;
 
 import java.util.ArrayList;
 
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
@@ -72,8 +73,13 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 		return true;
 	}
 
-	@SuppressWarnings( { "unchecked" } )
 	public ImagePlus exportMovingImagePlus( final boolean isVirtual )
+	{
+		return exportMovingImagePlus( isVirtual, 1 );
+	}
+
+	@SuppressWarnings( { "unchecked" } )
+	public ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads )
 	{
 		int numChannels = movingSourceIndexList.length;
 
@@ -113,9 +119,38 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 		{
 			ip = ImageJFunctions.wrap( raiStack, "warped_moving_image" );
 		}
-		else
+		else if( nThreads == 1 )
 		{
 			ip = copyToImageStack( raiStack, raiStack );
+		}
+		else
+		{
+			System.out.println( "copy with " + nThreads );
+			final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >();
+
+			if ( destinterval.numDimensions() == 3 )
+			{
+				System.out.println(" 3d hack " );
+				// A bit of hacking to make slices the 4th dimension and
+				// channels the 3rd since that's how ImagePlusImgFactory does it
+				MixedTransformView< ARGBType > raip = Views.permute( raiStack, 2, 3 );
+				final long[] dimensions = new long[ 4 ];
+				dimensions[ 0 ] = destinterval.dimension( 0 );	// x
+				dimensions[ 1 ] = destinterval.dimension( 1 );	// y
+				dimensions[ 2 ] = numChannels; 					// c
+				dimensions[ 3 ] = destinterval.dimension( 2 ); 	// z 
+				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+
+				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raip,
+						destIntervalPerm, factory, nThreads );
+				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+			}
+			else
+			{
+				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raiStack,
+						destinterval, factory, nThreads );
+				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+			}
 		}
 
 		return ip;

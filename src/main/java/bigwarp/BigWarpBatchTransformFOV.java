@@ -147,6 +147,7 @@ public class BigWarpBatchTransformFOV
 		if( help )
 			return;
 
+		long startTime = System.currentTimeMillis();
 		int nd = dims.length;
 		if( nd != 3 )
 		{
@@ -216,9 +217,14 @@ public class BigWarpBatchTransformFOV
 			exporter = null;
 		}
 
-		ImagePlus ipout = exporter.exportMovingImagePlus( false );
-
+		System.out.println( "exporting ");
+		ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
+		System.out.println( "saving");
 		IJ.save( ipout, outputFilePath );
+
+		long endTime = System.currentTimeMillis();
+		System.out.println( "total time: " + (endTime - startTime) + " ms");
+		System.exit( 0 );
 	}
 
 	public final SpimDataMinimal createSpimData()
@@ -292,6 +298,12 @@ public class BigWarpBatchTransformFOV
 		{
 			this.type = type;
 			this.dim = info.dims;
+		}
+
+		public DummyImageLoader( final T type, final long[] dims )
+		{
+			this.type = type;
+			this.dim = dims;
 		}
 
 		@Override
