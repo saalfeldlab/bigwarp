@@ -21,7 +21,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import loci.formats.FormatException;
 import loci.formats.ImageReader;
-import loci.formats.in.TiffReader;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.registration.ViewRegistration;

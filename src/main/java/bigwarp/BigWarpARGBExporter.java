@@ -130,7 +130,6 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 
 			if ( destinterval.numDimensions() == 3 )
 			{
-				System.out.println(" 3d hack " );
 				// A bit of hacking to make slices the 4th dimension and
 				// channels the 3rd since that's how ImagePlusImgFactory does it
 				MixedTransformView< ARGBType > raip = Views.permute( raiStack, 2, 3 );

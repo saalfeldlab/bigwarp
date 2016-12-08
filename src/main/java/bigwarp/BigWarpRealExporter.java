@@ -186,7 +186,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 
 			if ( destinterval.numDimensions() == 3 )
 			{
-				System.out.println(" 3d hack " );
 				// A bit of hacking to make slices the 4th dimension and
 				// channels the 3rd since that's how ImagePlusImgFactory does it
 				MixedTransformView< T > raip = Views.permute( raiStack, 2, 3 );

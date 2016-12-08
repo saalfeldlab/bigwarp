@@ -8,7 +8,6 @@ import java.util.concurrent.Executors;
 import bdv.viewer.Interpolation;
 import ij.IJ;
 import ij.ImagePlus;
-import jitk.spline.XfmUtils;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
