@@ -132,7 +132,7 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 			{
 				// A bit of hacking to make slices the 4th dimension and
 				// channels the 3rd since that's how ImagePlusImgFactory does it
-				MixedTransformView< ARGBType > raip = Views.permute( raiStack, 2, 3 );
+
 				final long[] dimensions = new long[ 4 ];
 				dimensions[ 0 ] = destinterval.dimension( 0 );	// x
 				dimensions[ 1 ] = destinterval.dimension( 1 );	// y
@@ -140,7 +140,7 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 				dimensions[ 3 ] = destinterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
 
-				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raip,
+				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}

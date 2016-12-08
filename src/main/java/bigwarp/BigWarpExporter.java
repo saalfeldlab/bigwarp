@@ -23,6 +23,7 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
+import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 
 public interface BigWarpExporter <T>
@@ -68,11 +69,14 @@ public interface BigWarpExporter <T>
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
-			final RandomAccessible< T > raible,
+			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
 			final int nThreads )
 	{
+		// TODO I wish I didn't have to do this inside this method
+		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
+
 		// what dimension should we split across?
 		int nd = raible.numDimensions();
 		int tmp = nd - 1;

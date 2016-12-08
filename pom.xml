@@ -170,15 +170,5 @@
 			<artifactId>formats-bsd</artifactId>
 			<version>5.2.4</version>
 		</dependency>
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>bio-formats_plugins</artifactId>
-			<version>5.2.4</version>
-		</dependency>
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>formats-gpl</artifactId>
-			<version>5.2.4</version>
-		</dependency>
 	</dependencies>
 </project>

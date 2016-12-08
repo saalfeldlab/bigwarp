@@ -189,14 +189,14 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 			{
 				// A bit of hacking to make slices the 4th dimension and
 				// channels the 3rd since that's how ImagePlusImgFactory does it
-				MixedTransformView< T > raip = Views.permute( raiStack, 2, 3 );
 				final long[] dimensions = new long[ 4 ];
 				dimensions[ 0 ] = destinterval.dimension( 0 );	// x
 				dimensions[ 1 ] = destinterval.dimension( 1 );	// y
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = destinterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( raip,
+				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}
