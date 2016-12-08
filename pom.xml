@@ -155,5 +155,30 @@
 			<artifactId>jcommander</artifactId>
 			<version>1.48</version>
 		</dependency>
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>formats-common</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>formats-api</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>formats-bsd</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>bio-formats_plugins</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>ome</groupId>
+			<artifactId>formats-gpl</artifactId>
+			<version>5.2.4</version>
+		</dependency>
 	</dependencies>
 </project>
