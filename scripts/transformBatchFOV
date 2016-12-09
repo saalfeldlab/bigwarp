@@ -9,5 +9,6 @@
 #
 # Note: the image resolutions of the moving and template images matters!
 
-cp=`cat bigwarp_classpath.cp`
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cp=`cat $DIR/bigwarp_classpath.cp`
 java -cp "$cp" -Xmx4000m bigwarp.BigWarpBatchTransformFOV "$@"
