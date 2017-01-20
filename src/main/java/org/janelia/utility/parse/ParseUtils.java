@@ -11,9 +11,9 @@ public class ParseUtils
 	 * @param in
 	 * @return
 	 */
-	public static double[] parseDoubleArray( String in )
+	public static double[] parseDoubleArray( String in, String delimiter )
 	{
-		String[] ina = in.split( "," );
+		String[] ina = in.split( delimiter );
 		double[] out = new double[ ina.length ];
 
 		for ( int i = 0; i < ina.length; i++ )
@@ -23,14 +23,25 @@ public class ParseUtils
 	}
 
 	/**
+	 * Parses a string of the form "#,#,#,...#" and returns a double array
+	 * 
+	 * @param in
+	 * @return
+	 */
+	public static double[] parseDoubleArray( String in )
+	{
+		return parseDoubleArray( in, "," );
+	}
+
+	/**
 	 * Parses a string of the form "#,#,#,...#" and returns a float array
 	 * 
 	 * @param in
 	 * @return
 	 */
-	public static float[] parseFloatArray( String in )
+	public static float[] parseFloatArray( String in, String delimiter )
 	{
-		String[] ina = in.split( "," );
+		String[] ina = in.split( delimiter );
 		float[] out = new float[ ina.length ];
 
 		for ( int i = 0; i < ina.length; i++ )
@@ -39,21 +50,9 @@ public class ParseUtils
 		return out;
 	}
 
-	/**
-	 * Parses a string of the form "#,#,#,...#" and returns an int array
-	 * 
-	 * @param in
-	 * @return
-	 */
-	public static int[] parseIntArray( String in )
+	public static float[] parseFloatArray( String in )
 	{
-		String[] ina = in.split( "," );
-		int[] out = new int[ ina.length ];
-
-		for ( int i = 0; i < ina.length; i++ )
-			out[ i ] = Integer.parseInt( ina[ i ] );
-
-		return out;
+		return parseFloatArray( in, "," );
 	}
 
 	/**
@@ -62,15 +61,44 @@ public class ParseUtils
 	 * @param in
 	 * @return
 	 */
-	public static long[] parseLongArray( String in )
+	public static int[] parseIntArray( String in, String delimiter )
 	{
-		String[] ina = in.split( "," );
-		long[] out = new long[ ina.length ];
+		String[] ina = in.split( delimiter );
+		int[] out = new int[ ina.length ];
 
 		for ( int i = 0; i < ina.length; i++ )
 			out[ i ] = Integer.parseInt( ina[ i ] );
 
 		return out;
+	}
+
+	public static int[] parseIntArray( String in )
+	{
+		return parseIntArray( in, "," );
+	}
+
+	/**
+	 * Parses a string of the form "#,#,#,...#" and returns an int array
+	 * 
+	 * @param in
+	 * @return
+	 */
+	public static long[] parseLongArray( String in, String delimiter )
+	{
+		String[] ina = in.split( delimiter );
+		long[] out = new long[ ina.length ];
+		System.out.println( ina.length );
+		for ( int i = 0; i < ina.length; i++ )
+		{
+			System.out.println( ina[i] );
+			out[ i ] = Long.parseLong( ina[ i ] );
+		}
+		return out;
+	}
+
+	public static long[] parseLongArray( String in )
+	{
+		return parseLongArray( in, "," );
 	}
 
 	public static class DoubleArrayConverter implements IStringConverter< double[] >
