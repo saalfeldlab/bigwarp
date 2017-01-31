@@ -1577,7 +1577,7 @@ public class BigWarp
 		final int numActive = landmarkModel.numActive();
 		final double[][] p = new double[ ndims ][ numActive ];
 		final double[][] q = new double[ ndims ][ numActive ];
-		final double[] w = new double[ landmarkModel.getTransform().getNumLandmarks() ];
+		final double[] w = new double[ numActive ];
 
 		int k = 0;
 		for ( int i = 0; i < landmarkModel.getTransform().getNumLandmarks(); i++ )
