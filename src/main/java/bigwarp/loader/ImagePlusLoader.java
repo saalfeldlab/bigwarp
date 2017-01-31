@@ -85,7 +85,7 @@ public class ImagePlusLoader implements Loader
 	@Override
 	public SpimDataMinimal[] load()
 	{
-		return loadAll( 0 );
+		return loadAll( 255 );
 	}
 
 	public SpimDataMinimal[] loadAll( int startid )
