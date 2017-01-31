@@ -2710,7 +2710,7 @@ public class BigWarp
 		activeSourcesDialogP.update();
 		activeSourcesDialogQ.update();
 
-		viewerP.requestRepaint();
-		viewerQ.requestRepaint();
+		viewerFrameP.repaint();
+		viewerFrameQ.repaint();
 	}
 }
