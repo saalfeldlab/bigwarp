@@ -32,30 +32,34 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected List< SourceAndConverter< ? > > sources;
 
 	protected BigWarpViewerSettings viewerSettings;
-	
+
 	protected BigWarpOverlay overlay;
-	
+
 	protected BigWarpDragOverlay dragOverlay;
-	
+
 	protected boolean isMoving;
 
 	protected boolean updateOnDrag;
 
 	protected boolean transformEnabled = true;
-	
+
 	protected AffineTransform3D destXfm;
-	
+
 	protected int ndims;
 
 	final protected int[] movingSourceIndexList;
 
 	final protected int[] targetSourceIndexList;
 
+	protected boolean boxOverlayVisible = true;
+
+	protected boolean textOverlayVisible = true;
+
 	// root two over two
-	public static final double R2o2 = Math.sqrt( 2 ) / 2; 
-	
+	public static final double R2o2 = Math.sqrt( 2 ) / 2;
+
 	ViewerOptions options;
-	
+
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
 			int[] movingSourceIndexList, int[] targetSourceIndexList )
 	{
@@ -77,6 +81,16 @@ public class BigWarpViewerPanel extends ViewerPanel
 		destXfm = new AffineTransform3D();
 
 		updateGrouping();
+	}
+
+	public void toggleTextOverlayVisible()
+	{
+		textOverlayVisible = !textOverlayVisible;
+	}
+
+	public void toggleBoxOverlayVisible()
+	{
+		boxOverlayVisible = !boxOverlayVisible;
 	}
 
 	public void setHoveredIndex( int index )
@@ -201,12 +215,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 	@Override
 	public void drawOverlays( final Graphics g )
 	{
-		multiBoxOverlayRenderer.setViewerState( state );
-		multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
-		multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
+		boolean requiresRepaint = false;
+		if( boxOverlayVisible )
+		{
+			multiBoxOverlayRenderer.setViewerState( state );
+			multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
+			multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
+			requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
+		}
 
-		sourceInfoOverlayRenderer.setViewerState( state );
-		sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
+		if( textOverlayVisible )
+		{
+			sourceInfoOverlayRenderer.setViewerState( state );
+			sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
+		}
 
 		if ( Prefs.showScaleBar() )
 		{
@@ -214,21 +236,27 @@ public class BigWarpViewerPanel extends ViewerPanel
 			scaleBarOverlayRenderer.paint( ( Graphics2D ) g );
 		}
 
-		final RealPoint gPos = new RealPoint( 3 );
-		getGlobalMouseCoordinates( gPos );
-		
-		final String mousePosGlobalString;
-		if( ndims == 2 )
-			mousePosGlobalString = String.format( "(%6.1f,%6.1f)", gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ));
-		else
-			mousePosGlobalString = String.format( "(%6.1f,%6.1f,%6.1f)", gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ), gPos.getDoublePosition( 2 ) );
-			
-		g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-		g.setColor( Color.white );
-		int actual_width = g.getFontMetrics().stringWidth( mousePosGlobalString );
-		g.drawString( mousePosGlobalString, ( int ) g.getClipBounds().getWidth() - actual_width - 10, 28 );
+		if( textOverlayVisible )
+		{
+			final RealPoint gPos = new RealPoint( 3 );
+			getGlobalMouseCoordinates( gPos );
 
-		boolean requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
+			final String mousePosGlobalString;
+			if ( ndims == 2 )
+				mousePosGlobalString = String.format( "(%6.1f,%6.1f)",
+						gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ) );
+			else
+				mousePosGlobalString = String.format( "(%6.1f,%6.1f,%6.1f)",
+						gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ),
+						gPos.getDoublePosition( 2 ) );
+
+			g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
+			g.setColor( Color.white );
+			int actual_width = g.getFontMetrics().stringWidth( mousePosGlobalString );
+			g.drawString( 
+					mousePosGlobalString,
+					(int) g.getClipBounds().getWidth() - actual_width - 10, 28 );
+		}
 
 		final long currentTimeMillis = System.currentTimeMillis();
 		final ArrayList< OverlayAnimator > overlayAnimatorsToRemove = new ArrayList< OverlayAnimator >();

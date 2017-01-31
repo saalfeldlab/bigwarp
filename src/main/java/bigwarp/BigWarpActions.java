@@ -31,6 +31,7 @@ public class BigWarpActions
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
+	public static final String TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE  = "toggle box and text overlay visible";
 	public static final String ESTIMATE_WARP = "estimate warp";
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
@@ -229,8 +230,9 @@ public class BigWarpActions
 
 		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
 
+		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
 		map.put( GARBAGE_COLLECTION, "F9" );
-		map.put( DEBUG, "F8" );
+		map.put( DEBUG, "F10" );
 		
 		return inputMap;
 	}
@@ -254,6 +256,7 @@ public class BigWarpActions
 
 		new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ).put( actionMap );
 		new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ).put( actionMap );
+		new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ).put( actionMap );
 		new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ).put( actionMap );
 		new EstimateWarpAction( ESTIMATE_WARP, bw ).put( actionMap );
 
@@ -496,6 +499,30 @@ public class BigWarpActions
 		public void actionPerformed( ActionEvent e )
 		{
 			bw.toggleNameVisibility();	
+		}
+	}
+
+	public static class ToggleBoxAndTexOverlayVisibility extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -900781969157241037L;
+
+		private BigWarp bw;
+
+		public ToggleBoxAndTexOverlayVisibility( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.getViewerFrameP().getViewerPanel().toggleBoxOverlayVisible();
+			bw.getViewerFrameQ().getViewerPanel().toggleBoxOverlayVisible();
+			bw.getViewerFrameP().getViewerPanel().toggleTextOverlayVisible();
+			bw.getViewerFrameQ().getViewerPanel().toggleTextOverlayVisible();
+			bw.getViewerFrameP().repaint();
+			bw.getViewerFrameQ().repaint();
 		}
 	}
 
