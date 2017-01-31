@@ -492,6 +492,8 @@ public class BigWarp
 
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
+
+		landmarkFrame.pack();
 		landmarkFrame.setVisible( true );
 
 		checkBoxInputMaps();
