@@ -1,6 +1,5 @@
 package bigwarp.source;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
@@ -26,7 +25,7 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	{
 		super( dimensions.length );
 		if( warp != null)
-			this.warp = ((ThinPlateR2LogRSplineKernelTransform)warp);
+			this.warp = warp;
 		if( base != null )
 			this.base = base.copy();
 		this.value = value;
