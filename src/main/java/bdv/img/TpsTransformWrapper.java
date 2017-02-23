@@ -15,7 +15,11 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	protected int ndims;
 	
 	protected ThinPlateR2LogRSplineKernelTransform tps;
-	
+
+	private int invMaxIters = 3000;
+
+	protected double invTolerance = 0.05;
+
 	/**
 	 * Initialize as identity transform
 	 * 
@@ -50,14 +54,40 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 		return ndims;
 	}
 
+	public void setInvMaxIters(int invMaxIters)
+	{
+		this.invMaxIters = invMaxIters;
+	}
+
+	public void setInvTolerance( double tolerance )
+	{
+		this.invTolerance = tolerance;
+	}
+
 	@Override
-	public void apply( final double[] source, final double[] target ){}
+	public void apply( final double[] source, final double[] target )
+	{ 
+		double[] guess = tps.initialGuessAtInverse( source );
+		double error = tps.inverseTol( source, guess, invTolerance, invMaxIters );
+//		System.out.println( "error: " + error );
+		System.arraycopy( guess, 0, target, 0, target.length );
+	}
 
 	@Override
 	public void apply( final float[] source, final float[] target ){}
 
 	@Override
-	public void apply( final RealLocalizable source, final RealPositionable target ){}
+	public void apply( final RealLocalizable source, final RealPositionable target )
+	{
+		double[] srcd = new double[ source.numDimensions() ];
+		double[] tgtd = new double[ target.numDimensions() ];
+
+		source.localize( srcd );
+		apply( srcd, tgtd );
+
+		for( int i = 0; i < target.numDimensions(); i++ )
+			target.setPosition( tgtd[ i ], i );
+	}
 
 	@Override
 	public void applyInverse( final double[] source, final double[] target )
