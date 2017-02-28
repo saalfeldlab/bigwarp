@@ -989,6 +989,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			fireTableRowsInserted( numRows, numRows );
 		}
 
+		this.ndims = ndims;
 		numRows = numRowsTmp;
 		updateNextRows( 0 );
 		initTransformation();

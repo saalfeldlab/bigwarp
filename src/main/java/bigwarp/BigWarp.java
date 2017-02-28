@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
@@ -219,8 +220,6 @@ public class BigWarp
 
 	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
 
-	protected int ndims;
-
 	protected TransformEventHandler< AffineTransform3D > handlerQ;
 
 	protected TransformEventHandler< AffineTransform3D > handlerP;
@@ -266,6 +265,11 @@ public class BigWarp
 
 	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
+		this( data, windowTitle,  BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
+	}
+
+	public BigWarp( final BigWarpData data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
+	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
@@ -279,9 +283,12 @@ public class BigWarp
 		Arrays.sort( movingSourceIndexList );
 		Arrays.sort( targetSourceIndexList );
 
-		ndims = 3;
-		ndims = detectNumDims();
+
 		ptBack = new double[ 3 ];
+
+		int ndims = 3;
+		if( options.is2d )
+			ndims = 2;
 
 		/*
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
@@ -310,12 +317,6 @@ public class BigWarp
 		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
 		setGridType( GridSource.GRID_TYPE.LINE );
 
-		// If the images are 2d, use a transform handler that limits
-		// transformations to
-		// rotations and scalings of the 2d plane ( z = 0 )
-		boolean is2d = ( ndims == 2 );
-		final ViewerOptions options = BigWarpViewerOptions.options( is2d );
-
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
@@ -332,7 +333,7 @@ public class BigWarp
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
-		if ( is2d )
+		if ( options.is2d )
 		{
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
@@ -1083,7 +1084,7 @@ public class BigWarp
 			}
 
 			dist = 0.0;
-			for ( int i = 0; i < ndims; i++ )
+			for ( int i = 0; i < landmarkModel.getNumdims(); i++ )
 			{
 				dist += ( pt[ i ] - lmpt[ i ] ) * ( pt[ i ] - lmpt[ i ] );
 			}
@@ -1223,6 +1224,7 @@ public class BigWarp
 	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
 	{
 		int offset = 0;
+		int ndims = landmarkModel.getNumdims();
 		double[] pt = null;
 		if( viewer.getIsMoving() && viewer.getOverlay().getIsTransformed() )
 		{
@@ -1577,6 +1579,7 @@ public class BigWarp
 	protected void fitBaselineWarpMagModel()
 	{
 		final int numActive = landmarkModel.numActive();
+		final int ndims = landmarkModel.getNumdims();
 		final double[][] p = new double[ ndims ][ numActive ];
 		final double[][] q = new double[ ndims ][ numActive ];
 		final double[] w = new double[ numActive ];
@@ -1846,6 +1849,15 @@ public class BigWarp
 	 * @return dimension of the input sources
 	 */
 	protected int detectNumDims()
+	{
+		return detectNumDims( sources );
+	}
+
+	/**
+	 * The display will be in 3d if any of the input sources are 3d.
+	 * @return dimension of the input sources
+	 */
+	protected static int detectNumDims( Collection< SourceAndConverter< ? > > sources )
 	{
 		boolean isAnySource3d = false;
 		for ( SourceAndConverter< ? > sac : sources )
@@ -2258,6 +2270,7 @@ public class BigWarp
 		@Override
 		public void mouseClicked( final MouseEvent e )
 		{
+			final int ndims = landmarkModel.getNumdims();
 			if ( BigWarp.this.isInLandmarkMode() )
 			{
 				final JTable target = ( JTable ) e.getSource();
@@ -2420,6 +2433,7 @@ public class BigWarp
 
 	protected static class BigWarpViewerOptions extends ViewerOptions
 	{
+		public final boolean is2d;
 
 		private TransformEventHandlerFactory< AffineTransform3D > factory;
 
@@ -2428,9 +2442,14 @@ public class BigWarp
 			return factory;
 		}
 
-		public static BigWarpViewerOptions options( boolean is2d )
+		public BigWarpViewerOptions( final boolean is2d )
 		{
-			BigWarpViewerOptions out = new BigWarpViewerOptions();
+			this.is2d = is2d;
+		}
+
+		public static BigWarpViewerOptions options( final boolean is2d )
+		{
+			BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
 			if ( is2d )
 			{
 				out.factory = BehaviourTransformEventHandler2D.factory();
