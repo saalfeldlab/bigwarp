@@ -18,6 +18,7 @@ import net.imglib2.FinalDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -38,6 +39,7 @@ import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.TimePoint;
 import mpicbg.spim.data.sequence.TimePoints;
+import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -192,7 +194,9 @@ public class BigWarpBatchTransformFOV
 				ltm.getNumdims(),
 				movingSourceIndexList );
 
-		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( xfm );
+
+		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( xfm.getNumDims(), xfm )); 
+		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( irXfm );
 		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).setIsTransformed( true );
 
 		BigWarpExporter< ? > exporter;

@@ -7,12 +7,13 @@ import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
 import bdv.viewer.render.SetCacheHints;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
 
@@ -46,8 +47,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	 * nothing.
 	 */
 	private final SetCacheHints sourceSetCacheHints;
-	
-	private final TpsTransformWrapper tpsXfm;
+
+	private InverseRealTransform xfm;
 
 	private boolean isTransformed;
 	
@@ -57,7 +58,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 		this.name = name;
 		this.isTransformed = false;
 		
-		this.tpsXfm = new TpsTransformWrapper( 3 );
+		this.xfm = null;
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
@@ -72,10 +73,9 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 		return source.isPresent( t );
 	}
 	
-	public void updateTransform( ThinPlateR2LogRSplineKernelTransform tps )
+	public void updateTransform( InverseRealTransform xfm )
 	{
-		//a deep copy of the transform is used internally
-		tpsXfm.setTps( tps );
+		this.xfm = xfm;
 	}
 	
 	public void setIsTransformed( boolean isTransformed )
@@ -111,7 +111,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
 			final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
-			return RealViews.transformReal( sourceRealAccessible, tpsXfm );
+			if( xfm == null )
+				return sourceRealAccessible;
+			else
+				return new RealTransformRealRandomAccessible< T, InverseRealTransform >( sourceRealAccessible, xfm );
 		}
 		else
 		{
