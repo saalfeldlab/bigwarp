@@ -91,8 +91,8 @@
 		<url>https://github.com/saalfeldlab/bigwarp/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/bigwarp/</url>
+		<system>Travis CI</system>
+		<url>https://travis-ci.org/saalfeldlab/bigwarp</url>
 	</ciManagement>
 
 	<properties>
