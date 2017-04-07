@@ -4,23 +4,28 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>sc.fiji</groupId>
-		<artifactId>pom-fiji</artifactId>
-		<version>26.1.1</version>
+		<groupId>org.scijava</groupId>
+		<artifactId>pom-scijava</artifactId>
+		<version>14.0.0</version>
 		<relativePath />
 	</parent>
 
+	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
 	<version>2.1.6-SNAPSHOT</version>
 
-	<name>bigwarp_fiji</name>
+	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
 	<url>http://imagej.net/BigWarp</url>
 	<inceptionYear>2015</inceptionYear>
+	<organization>
+		<name>Fiji</name>
+		<url>https://fiji.sc/</url>
+	</organization>
 	<licenses>
 		<license>
 			<name>GNU General Public License v2+</name>
-			<url>http://www.gnu.org/licenses/gpl.html</url>
+			<url>https://www.gnu.org/licenses/old-licenses/gpl-2.0.html</url>
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
@@ -68,6 +73,13 @@
 		</contributor>
 	</contributors>
 
+	<mailingLists>
+		<mailingList>
+			<name>ImageJ Forum</name>
+			<archive>http://forum.imagej.net/</archive>
+		</mailingList>
+	</mailingLists>
+
 	<scm>
 		<connection>scm:git:git://github.com/saalfeldlab/bigwarp</connection>
 		<developerConnection>scm:git:git@github.com:saalfeldlab/bigwarp</developerConnection>
@@ -79,9 +91,15 @@
 		<url>https://github.com/saalfeldlab/bigwarp/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Jenkins</system>
-		<url>http://jenkins.imagej.net/job/bigwarp/</url>
+		<system>Travis CI</system>
+		<url>https://travis-ci.org/saalfeldlab/bigwarp</url>
 	</ciManagement>
+
+	<properties>
+		<license.licenseName>gpl_v2</license.licenseName>
+		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
+		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
+	</properties>
 
 	<repositories>
 		<repository>
@@ -90,21 +108,6 @@
 		</repository>
 	</repositories>
 
-	<properties>
-		<pom-bigdataviewer.version>4.0.1</pom-bigdataviewer.version>
-	</properties>
-
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>sc.fiji</groupId>
-				<artifactId>pom-bigdataviewer</artifactId>
-				<version>${pom-bigdataviewer.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
