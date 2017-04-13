@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -70,6 +71,9 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.transformation.ManualTransformation;
+import bdv.tools.transformation.TransformedSource;
+import bdv.tools.transformation.BigWarpManualTransformationEditor;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -171,6 +175,12 @@ public class BigWarp
 	protected final BookmarksEditor bookmarkEditorP;
 
 	protected final BookmarksEditor bookmarkEditorQ;
+
+	protected final ManualTransformation manualTransform;
+
+	protected final BigWarpManualTransformationEditor manualTransformEditorP;
+
+	protected final BigWarpManualTransformationEditor manualTransformEditorQ;
 
 	private final BigWarpViewerFrame viewerFrameP;
 
@@ -332,6 +342,10 @@ public class BigWarp
 				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
+
+		manualTransform = new ManualTransformation( sources );
+		manualTransformEditorP = new BigWarpManualTransformationEditor( this, viewerP, getViewerFrameP().getKeybindings());
+		manualTransformEditorQ = new BigWarpManualTransformationEditor( this, viewerQ, getViewerFrameQ().getKeybindings());
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
@@ -629,6 +643,20 @@ public class BigWarp
 		this.updateWarpOnPtChange = updateWarpOnPtChange;
 	}
 
+	public void toggleManualTransform()
+	{
+		if ( viewerFrameP.isActive() )
+		{
+			System.out.println("toggle manual xfm p");
+			manualTransformEditorP.toggle();
+		}
+		else if ( viewerFrameQ.isActive() )
+		{
+		System.out.println("toggle manual xfm q");
+			manualTransformEditorQ.toggle();
+		}
+	}
+
 	public void toggleUpdateWarpOnChange()
 	{
 		this.updateWarpOnPtChange = !this.updateWarpOnPtChange;
@@ -659,6 +687,14 @@ public class BigWarp
 	public void toggleInLandmarkMode()
 	{
 		setInLandmarkMode( !inLandmarkMode );
+	}
+
+	/**
+	 * Returns true if the ith source is moving
+	 */
+	public boolean isMoving( int i )
+	{
+		return Arrays.binarySearch( movingSourceIndexList, i ) >= 0;
 	}
 
 	public boolean isUpdateWarpOnChange()
@@ -778,6 +814,16 @@ public class BigWarp
 		exportToImagePlus.setText( "Export as ImagePlus" );
 		landmarkMenu.add( exportToImagePlus );
 
+	}
+
+	public void exportAsVirtualImagePlus()
+	{
+		exportAsImagePlus(true);
+	}
+
+	public void exportAsImagePlus()
+	{
+		exportAsImagePlus(false);
 	}
 
 	public void exportAsImagePlus( boolean virtual )
@@ -1451,7 +1497,7 @@ public class BigWarp
 			}
 			else
 			{
-				wrappedSource.add( sac );
+				wrappedSource.add( wrapSourceAffine( sac ));
 			}
 
 			i++;
@@ -1524,6 +1570,18 @@ public class BigWarp
 		else
 		{
 			return new SourceAndConverter< T >( new WarpedSource< T >( src.getSpimSource(), name ), src.getConverter(), wrapSourceAsTransformed( src.asVolatile(), name + "_vol", ndims ) );
+		}
+	}
+
+	private static < T > SourceAndConverter< T > wrapSourceAffine( final SourceAndConverter< T > src )
+	{
+		if ( src.asVolatile() == null )
+		{
+			return new SourceAndConverter< T >( new TransformedSource< T >( src.getSpimSource()), src.getConverter(), null );
+		}
+		else
+		{
+			return new SourceAndConverter< T >( new TransformedSource< T >( src.getSpimSource()), src.getConverter(), wrapSourceAffine( src.asVolatile()) );
 		}
 	}
 

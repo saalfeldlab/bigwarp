@@ -1,6 +1,7 @@
 package bigwarp;
 
 import java.awt.Component;
+import java.awt.Dialog;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 
@@ -13,6 +14,7 @@ import javax.swing.table.TableCellEditor;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
@@ -21,7 +23,7 @@ import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import mpicbg.models.AbstractModel;
 
-public class BigWarpActions
+public class BigWarpActions extends Actions
 {
 	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
 
@@ -35,6 +37,8 @@ public class BigWarpActions
 	public static final String ESTIMATE_WARP = "estimate warp";
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
+	public static final String MANUAL_AFFINE_TRANSFOFRM = "togtle manual transformation";
+
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
 //	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
 //	public static final String TOGGLE_WARPMAG_VIS_Q = "toggle warp magnitude q";
@@ -78,6 +82,18 @@ public class BigWarpActions
 	public static final String DEBUG = "debug";
 	public static final String GARBAGE_COLLECTION = "garbage collection";
 
+	static final String[] MANUAL_TRANSFORM_KEYS = new String[]{ "M" };
+	static final String[] UNDO_KEYS = new String[]{ "control Z" };
+	static final String[] REDO_KEYS = new String[]{ "control Y" };
+
+	static final String[] EXPORT_IP_KEYS = new String[]{ "control E" };
+	static final String[] EXPORT_VIRTIP_KEYS = new String[]{ "control shift E" };
+
+	static final String[] SAVE_LANDMARKS_KEYS = new String[]{ "control S" };
+	static final String[] LOAD_LANDMARKS_KEYS = new String[]{ "control O" };
+
+	static final String[] SHOW_HELP_KEYS = new String[]{ "F1" };
+
 	/**
 	 * Create BigWarp actions and install them in the specified
 	 * {@link InputActionBindings}.
@@ -98,6 +114,27 @@ public class BigWarpActions
 		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 		inputActionBindings.addInputMap( "bwv", createInputMapViewer( keyProperties ) );
+
+		installNewActionBindings(inputActionBindings, bw, keyProperties);
+	}
+
+	public static void installNewActionBindings(
+			final InputActionBindings inputActionBindings,
+			final BigWarp bw,
+			final KeyStrokeAdder.Factory keyProperties )
+	{
+		final BigWarpActions actions = new BigWarpActions( keyProperties );
+		actions.toggleDialogAction( bw.helpDialog, SHOW_HELP, SHOW_HELP_KEYS );
+
+		actions.runnableAction(bw::exportAsImagePlus, EXPORT_IP, EXPORT_IP_KEYS );
+		actions.runnableAction(bw::exportAsVirtualImagePlus, EXPORT_VIRTUAL_IP, EXPORT_VIRTIP_KEYS );
+
+		actions.runnableAction(bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
+		actions.runnableAction(bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS);
+
+		actions.runnableAction( bw::toggleManualTransform, MANUAL_AFFINE_TRANSFOFRM, MANUAL_TRANSFORM_KEYS );
+
+		actions.install( inputActionBindings, "bigwarp");
 	}
 	
 	public static void installLandmarkPanelActionBindings(
@@ -222,11 +259,11 @@ public class BigWarpActions
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
 
-		map.put( SAVE_LANDMARKS, "control S" );
-		map.put( LOAD_LANDMARKS, "control O" );
+//		map.put( SAVE_LANDMARKS, "control S" );
+//		map.put( LOAD_LANDMARKS, "control O" );
 
-		map.put( EXPORT_IP, "control E" );
-		map.put( EXPORT_VIRTUAL_IP, "control shift E" );
+//		map.put( EXPORT_IP, "control E" );
+//		map.put( EXPORT_VIRTUAL_IP, "control shift E" );
 
 		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
 
@@ -249,10 +286,10 @@ public class BigWarpActions
 		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 
-		new ExportImagePlusAction( bw ).put( actionMap );
-		new ExportVirtualImagePlusAction( bw ).put( actionMap );
-		new LoadLandmarksAction( bw ).put( actionMap );
-		new SaveLandmarksAction( bw ).put( actionMap );
+//		new ExportImagePlusAction( bw ).put( actionMap );
+//		new ExportVirtualImagePlusAction( bw ).put( actionMap );
+//		new LoadLandmarksAction( bw ).put( actionMap );
+//		new SaveLandmarksAction( bw ).put( actionMap );
 
 		new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ).put( actionMap );
 		new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ).put( actionMap );
@@ -277,7 +314,17 @@ public class BigWarpActions
 		return actionMap;
 	}
 
-	private BigWarpActions(){}
+	private BigWarpActions( final KeyStrokeAdder.Factory keyConfig )
+	{
+		super( keyConfig, new String[]{"bigwarp"});
+	}
+
+	public void toggleDialogAction( final Dialog dialog, final String name, final String... defaultKeyStrokes )
+
+	{
+		keyStrokeAdder.put( name, defaultKeyStrokes );
+		new ToggleDialogAction( name, dialog ).put( getActionMap() );
+	}
 
 	public static class UndoRedoAction extends AbstractNamedAction
 	{

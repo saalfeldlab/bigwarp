@@ -1,6 +1,7 @@
 package bdv.img;
 
 import bdv.cache.CacheHints;
+import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
@@ -17,7 +18,7 @@ import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
 
-public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCacheHints
+public class WarpedSource < T > extends TransformedSource< T >
 {
 
 	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name, int ndims )
@@ -54,6 +55,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	
 	public WarpedSource( final Source< T > source, final String name )
 	{
+		super( source );
 		this.source = source;
 		this.name = name;
 		this.isTransformed = false;
@@ -109,7 +111,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 		if( isTransformed )
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
-			source.getSourceTransform( t, level, transform );
+			super.getSourceTransform( t, level, transform );
 			final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 			if( xfm == null )
 				return sourceRealAccessible;
@@ -118,17 +120,18 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 		}
 		else
 		{
-			return source.getInterpolatedSource( t, level, method );
+			return super.getInterpolatedSource( t, level, method );
 		}
 	}
 
 	@Override
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
+
 		if( isTransformed )
-			transform.identity();
+			transform.identity(); // TODO why is this the case
 		else
-			source.getSourceTransform( t, level, transform );
+			super.getSourceTransform( t, level, transform );
 	}
 
 	@Override
