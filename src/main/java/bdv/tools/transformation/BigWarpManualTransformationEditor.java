@@ -210,6 +210,7 @@ public class BigWarpManualTransformationEditor implements TransformListener< Aff
 			for ( final TransformedSource< ? > source : sourcesToFix )
 				source.setIncrementalTransform( tmp );
 			viewer.setCurrentViewerTransform( frozenTransform );
+			bw.getLandmarkPanel().getTableModel().applyAffine( liveTransform.inverse(), true );
 			viewer.showMessage( "fixed manual transform" );
 		}
 	}
@@ -225,6 +226,8 @@ public class BigWarpManualTransformationEditor implements TransformListener< Aff
 
 		for ( final TransformedSource< ? > source : sourcesToFix )
 			source.setIncrementalTransform( liveTransform.inverse() );
+
+//		bw.getLandmarkPanel().getTableModel().applyAffine( liveTransform, true );
 	}
 
 }

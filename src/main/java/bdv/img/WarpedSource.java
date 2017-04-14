@@ -128,10 +128,10 @@ public class WarpedSource < T > extends TransformedSource< T >
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
 
-		if( isTransformed )
-			transform.identity(); // TODO why is this the case
-		else
-			super.getSourceTransform( t, level, transform );
+//		if( isTransformed )
+//			transform.identity(); // TODO why is this the case
+//		else
+		super.getSourceTransform( t, level, transform );
 	}
 
 	@Override

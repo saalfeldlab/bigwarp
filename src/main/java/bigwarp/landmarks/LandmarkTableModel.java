@@ -27,6 +27,8 @@ import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
+import net.imglib2.realtransform.AffineTransform;
+import net.imglib2.realtransform.AffineTransform3D;
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.CSVWriter;
 
@@ -69,6 +71,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected boolean			 elementDeleted = false;
 	protected ArrayList<Boolean> needsInverse;
 	
+	// the pre-transformation
+	protected AffineTransform affine;
+
 	// the transformation 
 	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
 	
@@ -654,8 +659,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 		else if( lastPoint == PENDING_PT )
 		{
-			// Remember the "oldpt" even when an edit is not-undoable
-			// but don't overwrite an existing value
+
+			/***********************
+			 * Remember the "oldpt" even when an edit is not-undoable
+			 * but don't overwrite an existing value
+			 ***********************/
 			lastPoint = oldpt;
 		}
 
@@ -1176,6 +1184,35 @@ public class LandmarkTableModel extends AbstractTableModel {
 		return inv;
 	}
 
+	public void applyAffine( AffineTransform3D xfm, boolean moving )
+	{
+		ArrayList<Double[]> pts;
+		int offset = 2;
+		if( moving )
+		{
+			pts = movingPts;
+		}
+		else
+		{
+			offset += ndims;
+			pts = targetPts;
+		}
+
+		double[] p = new double[ ndims ];
+		double[] pXfm = new double[ ndims ];
+		int i = 0;
+		for( Double[] pt : pts )
+		{
+			toPrimitive( pt, p );
+			xfm.apply( p, pXfm );
+
+			for( int d = 0; d < ndims; d++ )
+				setValueAt( pXfm[ d ], i, offset + d );
+		}
+
+		initTransformation();
+	}
+
 	public LandmarkUndoManager getUndoManager()
 	{
 		return undoRedoManager;
@@ -1189,7 +1226,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		return out;
 	}
-	
+
+	public static Double[] toDouble( double[] in )
+	{
+		Double[] out = new Double[ in.length ];
+		for ( int i = 0; i < in.length; i++ )
+			out[ i ] = in[ i ];
+
+		return out;
+	}
+
 	public static double[] toPrimitive( Double[] in )
 	{
 		double[] out = new double[ in.length ];
@@ -1197,5 +1243,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 			out[ i ] = in[ i ];
 
 		return out;
+	}
+
+	public static void toPrimitive( Double[] in, double[] out )
+	{
+		for ( int i = 0; i < in.length; i++ )
+			out[ i ] = in[ i ];
 	}
 }
