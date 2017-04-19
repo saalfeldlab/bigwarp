@@ -3,6 +3,7 @@ package bigwarp;
 import ij.IJ;
 import ij.ImagePlus;
 import jitk.spline.XfmUtils;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 
 import java.util.ArrayList;
 
@@ -123,7 +124,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		return exportMovingImagePlus( isVirtual, 1 );
 	}
 
-	@SuppressWarnings( { "unchecked", "deprecation" } )
+	@SuppressWarnings( { "unchecked" } )
 	public ImagePlus exportMovingImagePlus( final boolean isVirtual, final int nThreads )
 	{
 		int numChannels = movingSourceIndexList.length;
@@ -137,6 +138,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		// go from physical space to fixed image space
 		final AffineTransform3D fixedImgXfm = new AffineTransform3D();
 		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedImgXfm );
+		VoxelDimensions voxdim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
+
 		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
 		
 		// TODO - 	require for now that all moving image types are the same.  
@@ -214,6 +217,11 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}
 		}
+
+		ip.getCalibration().pixelWidth = voxdim.dimension( 0 );
+		ip.getCalibration().pixelHeight = voxdim.dimension( 1 );
+		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
+		ip.getCalibration().setUnit( voxdim.unit() );
 
 		return ip;
 	}

@@ -2,6 +2,7 @@ package bigwarp;
 
 import ij.IJ;
 import ij.ImagePlus;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 
 import java.util.ArrayList;
 
@@ -93,6 +94,7 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 		final AffineTransform3D fixedImgXfm = new AffineTransform3D();
 		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedImgXfm );
 		final AffineTransform3D fixedXfmInv = fixedImgXfm.inverse(); // get to the pixel space of the fixed image
+		VoxelDimensions voxdim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
 		
 		// TODO - 	require for now that all moving image types are the same.  
 		// 		  	this is not too unreasonable, I think.		int numChannels = movingSourceIndexList.length;
@@ -151,6 +153,11 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
 			}
 		}
+
+		ip.getCalibration().pixelWidth = voxdim.dimension( 0 );
+		ip.getCalibration().pixelHeight = voxdim.dimension( 1 );
+		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
+		ip.getCalibration().setUnit( voxdim.unit() );
 
 		return ip;
 	}
