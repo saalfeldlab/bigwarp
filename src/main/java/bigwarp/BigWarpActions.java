@@ -59,6 +59,7 @@ public class BigWarpActions
 	public static final String LOAD_LANDMARKS = "load landmarks";
 	public static final String SAVE_LANDMARKS = "save landmarks";
 
+	public static final String SAVE_WARPED = "save warped";
 	public static final String EXPORT_IP = "export imageplus";
 	public static final String EXPORT_VIRTUAL_IP = "export virtual imageplus";
 
@@ -227,6 +228,7 @@ public class BigWarpActions
 
 		map.put( EXPORT_IP, "control E" );
 		map.put( EXPORT_VIRTUAL_IP, "control shift E" );
+		map.put( SAVE_WARPED, "control alt shift E" );
 
 		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
 
@@ -249,6 +251,7 @@ public class BigWarpActions
 		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 
+		new SaveWarpedAction( bw ).put( actionMap );
 		new ExportImagePlusAction( bw ).put( actionMap );
 		new ExportVirtualImagePlusAction( bw ).put( actionMap );
 		new LoadLandmarksAction( bw ).put( actionMap );
@@ -932,6 +935,23 @@ public class BigWarpActions
 		public void actionPerformed(ActionEvent e)
 		{
 			bw.exportAsImagePlus( false );
+		}
+	}
+
+	public static class SaveWarpedAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4965249994677649713L;
+
+		BigWarp bw;
+		public SaveWarpedAction( final BigWarp bw )
+		{
+			super( SAVE_WARPED );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.saveMovingImageToFile();
 		}
 	}
 

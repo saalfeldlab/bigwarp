@@ -782,11 +782,44 @@ public class BigWarp
 
 	public void exportAsImagePlus( boolean virtual )
 	{
+		exportAsImagePlus( virtual, "" );
+	}
+
+	public void saveMovingImageToFile()
+	{
+		System.out.println( "saveMovingImageToFile" );
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() );
+
+		fileChooser.setSelectedFile( proposedFile );
+		final int returnVal = fileChooser.showSaveDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedFile = fileChooser.getSelectedFile();
+			try
+			{
+				System.out.println("save warped image");
+				exportAsImagePlus( false, proposedFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void exportAsImagePlus( boolean virtual, String path )
+	{
 		if( ij == null )
 			return;
 
 		BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
 		ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( virtual );
+
+		if( !path.isEmpty())
+		{
+			IJ.save( ip, path );
+			return;
+		}
 
 		if ( ip != null )
 			ip.show();
@@ -812,6 +845,10 @@ public class BigWarp
 		landmarkMenuBar.add( landmarkMenu );
 		landmarkFrame.setJMenuBar( landmarkMenuBar );
 		//	exportMovingImage( file, state, progressWriter );
+
+		final JMenuItem saveExport = new JMenuItem( actionMap.get( BigWarpActions.SAVE_WARPED ) );
+		saveExport.setText( "Save warped image" );
+		landmarkMenu.add( saveExport );
 
 		if( ij != null )
 			setupImageJExportOption();
