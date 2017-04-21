@@ -1814,7 +1814,10 @@ public class BigWarp
 		{
 			int idx = movingSourceIndexList [ i ];
 
-			InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( transform.getNumDims(), transform )); 
+			// the xfm must always be 3d for bdv to be happy.
+			// when bigwarp has 2d images though, the z- component will be left unchanged
+			InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
+
 			// the updateTransform method creates a copy of the transform
 			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( xfm );
 			if ( sources.get( 0 ).asVolatile() != null )
