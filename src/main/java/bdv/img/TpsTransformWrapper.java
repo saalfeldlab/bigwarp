@@ -42,6 +42,11 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 		this.tps = tps;
 	}
 
+	public ThinPlateR2LogRSplineKernelTransform getTps()
+	{
+		return tps;
+	}
+
 	@Override
 	public int numSourceDimensions()
 	{
