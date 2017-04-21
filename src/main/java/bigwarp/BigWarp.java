@@ -1402,67 +1402,6 @@ public class BigWarp
 		return success;
 	}
 
-	protected void exportMovingImage( final File f, final ViewerState renderState, final ProgressWriter progressWriter ) throws IOException, InterruptedException
-	{
-		// Source< ? > movingSrc = sources.get( 1 ).getSpimSource();
-		final RandomAccessibleInterval< ? > interval = sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-
-		// stolen from bdv.tools.RecordMovieDialog
-		class MyTarget implements RenderTarget
-		{
-			BufferedImage bi;
-
-			@Override
-			public BufferedImage setBufferedImage( final BufferedImage bufferedImage )
-			{
-				bi = bufferedImage;
-				return null;
-			}
-
-			@Override
-			public int getWidth()
-			{
-				return ( int ) ( interval.max( 0 ) - interval.min( 0 ) + 1 );
-			}
-
-			@Override
-			public int getHeight()
-			{
-				return ( int ) ( interval.max( 1 ) - interval.min( 1 ) + 1 );
-			}
-		}
-
-		final int minz = ( int ) interval.min( 2 );
-		final int maxz = ( int ) interval.max( 2 );
-
-//		if( ndims == 2 && maxz == 0 )
-//			maxz = 0;
-
-		final AffineTransform3D viewXfm = new AffineTransform3D();
-		viewXfm.identity();
-
-		final MyTarget target = new MyTarget();
-		final int numRenderThreads = 1;
-
-		final MultiResolutionRenderer renderer = new MultiResolutionRenderer( target, new PainterThread( null ), new double[] { 1 }, 0, false, numRenderThreads, null, false, viewerP.getOptionValues().getAccumulateProjectorFactory(), new CacheControl.Dummy() );
-
-		progressWriter.setProgress( 0 );
-
-		// step through z, rendering each slice as an image and writing it to
-		for ( int z = minz; z <= maxz; z++ )
-		{
-			viewXfm.set( -z, 2, 3 );
-			renderState.setViewerTransform( viewXfm );
-			renderer.requestRepaint();
-			renderer.paint( renderState );
-
-			final File thiszFile = new File( String.format( "%s_z-%04d.png", f.getAbsolutePath(), z ) );
-			progressWriter.setProgress( ( double ) ( z - minz + 1 ) / ( maxz - minz + 1 ) );
-
-			ImageIO.write( target.bi, "png", thiszFile );
-		}
-	}
-
 	protected void addDefaultTableMouseListener()
 	{
 		landmarkTableListener = new MouseLandmarkTableListener();
