@@ -171,6 +171,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 		System.out.println("nextRowQ: " + nextRowQ );
 	}
 
+	public String toString()
+	{
+		String str = "";
+		for( int i = 0; i < numRows; i++ )
+		{
+			str += Arrays.toString( movingPts.get( i ) ) + " -> " +
+					Arrays.toString( targetPts.get( i )) + "\n";
+		}
+		return str;
+	}
+
 	public boolean validateTransformPoints()
 	{
 		for( int i = 0; i < numRows; i++ )
@@ -1170,7 +1181,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			for ( int d = 0; d < ndims; d++ )
 				tmp[ d ] = thisTarget[ d ];
 
-			inv.add( tmp, true );
+			inv.setPoint( i, true, tmp );
 		}
 
 		return inv;
