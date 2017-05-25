@@ -1,12 +1,10 @@
 package bdv.img;
 
-import bdv.cache.CacheHints;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
-import bdv.viewer.render.SetCacheHints;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -17,7 +15,7 @@ import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
 
-public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCacheHints
+public class WarpedSource < T > implements Source< T >, MipmapOrdering
 {
 
 	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name, int ndims )
@@ -41,13 +39,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	 */
 	private final MipmapOrdering sourceMipmapOrdering;
 
-	/**
-	 * This is either the {@link #source} itself, if it implements
-	 * {@link SetCacheHints}, or a {@link SetCacheHints} doing
-	 * nothing.
-	 */
-	private final SetCacheHints sourceSetCacheHints;
-
 	private InverseRealTransform xfm;
 
 	private boolean isTransformed;
@@ -62,9 +53,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
-
-		sourceSetCacheHints = SetCacheHints.class.isInstance( source ) ?
-				( SetCacheHints ) source : SetCacheHints.empty;
 	}
 
 	@Override
@@ -153,12 +141,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering, SetCache
 	public int getNumMipmapLevels()
 	{
 		return source.getNumMipmapLevels();
-	}
-
-	@Override
-	public void setCacheHints( final int level, final CacheHints cacheHints )
-	{
-		sourceSetCacheHints.setCacheHints( level, cacheHints );
 	}
 
 	@Override
