@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>14.0.0</version>
+		<version>15.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -99,6 +99,11 @@
 		<license.licenseName>gpl_v2</license.licenseName>
 		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
+
+		<jcommander.version>1.48</jcommander.version>
+		<!-- TEMP: until pom-scijava 16.0.0 is released. -->
+		<opencsv.version>3.9</opencsv.version>
+		<jitk-tps.version>2.1.1</jitk-tps.version>
 	</properties>
 
 	<repositories>
@@ -129,11 +134,11 @@
 		<dependency>
 			<groupId>jitk</groupId>
 			<artifactId>jitk-tps</artifactId>
-			<version>2.1.0</version>
 		</dependency>
 		<dependency>
-			<groupId>au.com.bytecode</groupId>
+			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
+			<version>${opencsv.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>mpicbg</groupId>
@@ -156,22 +161,19 @@
 		<dependency>
 			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
-			<version>1.48</version>
+			<version>${jcommander.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>formats-common</artifactId>
-			<version>5.2.4</version>
+			<groupId>org.openmicroscopy</groupId>
+			<artifactId>ome-common</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>ome</groupId>
 			<artifactId>formats-api</artifactId>
-			<version>5.2.4</version>
 		</dependency>
 		<dependency>
 			<groupId>ome</groupId>
 			<artifactId>formats-bsd</artifactId>
-			<version>5.2.4</version>
 		</dependency>
 	</dependencies>
 </project>

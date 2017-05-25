@@ -27,8 +27,8 @@ import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
-import au.com.bytecode.opencsv.CSVReader;
-import au.com.bytecode.opencsv.CSVWriter;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
 
 /**
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
