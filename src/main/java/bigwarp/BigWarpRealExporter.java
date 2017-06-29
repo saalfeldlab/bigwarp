@@ -1,12 +1,12 @@
 package bigwarp;
 
-import ij.IJ;
-import ij.ImagePlus;
-import jitk.spline.XfmUtils;
-import mpicbg.spim.data.sequence.VoxelDimensions;
-
 import java.util.ArrayList;
 
+import bdv.viewer.Interpolation;
+import bdv.viewer.SourceAndConverter;
+import ij.IJ;
+import ij.ImagePlus;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -35,11 +35,7 @@ import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
-import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
-import bdv.viewer.Interpolation;
-import bdv.viewer.SourceAndConverter;
 
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > implements BigWarpExporter<T>
 {
@@ -90,6 +86,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 	}
 	
 
+	@Override
 	public void setInterp( Interpolation interp )
 	{
 		this.interp = interp;
@@ -119,11 +116,13 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		return true;
 	}
 
+	@Override
 	public ImagePlus exportMovingImagePlus( final boolean isVirtual )
 	{
 		return exportMovingImagePlus( isVirtual, 1 );
 	}
 
+	@Override
 	@SuppressWarnings( { "unchecked" } )
 	public ImagePlus exportMovingImagePlus( final boolean isVirtual, final int nThreads )
 	{
@@ -231,14 +230,18 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 	{
 		// A bit of hacking to make slices the 4th dimension and channels the 3rd
 		// since that's how ImagePlusImgFactory does it
-		MixedTransformView< T > raip = Views.permute( rai, 2, 3 );
+		RandomAccessible< T > raip;
+		if ( rai.numDimensions() > 3 )
+			raip = Views.permute( rai, 2, 3 );
+		else
+			raip = rai;
 
 		final long[] dimensions = new long[ itvl.numDimensions() ];
 		for( int d = 0; d < itvl.numDimensions(); d++ )
 		{
-			if( d == 2 )
+			if ( d == 2 && itvl.numDimensions() > 3 )
 				dimensions[ d ] = itvl.dimension( 3 );
-			else if( d == 3 )
+			else if ( d == 3 && itvl.numDimensions() > 3 )
 				dimensions[ d ] = itvl.dimension( 2 );
 			else
 				dimensions[ d ] = itvl.dimension( d );
@@ -386,9 +389,9 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		public void convert( ARGBType input, FloatType output )
 		{
 			int v = input.getIndex();
-			float r = ( float ) ARGBType.red( v );
-			float g = ( float ) ARGBType.green( v );
-			float b = ( float ) ARGBType.blue( v );
+			float r = ARGBType.red( v );
+			float g = ARGBType.green( v );
+			float b = ARGBType.blue( v );
 			output.set( r + g + b );
 		}
 
