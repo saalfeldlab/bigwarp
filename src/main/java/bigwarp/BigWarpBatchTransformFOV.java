@@ -171,11 +171,8 @@ public class BigWarpBatchTransformFOV
 
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		ltm.load( new File( landmarkFilePath ));
-		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
 		ImagePlus impP = IJ.openImage( imageFilePath );
-
-		String[] names = generateNames( impP );
 
 		/* Load the first source */
 		final ImagePlusLoader loaderP = new ImagePlusLoader( impP );
@@ -183,9 +180,24 @@ public class BigWarpBatchTransformFOV
 		int numMovingChannels = loaderP.numChannels();
 
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData() };
+
+		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
+		final ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
+
+		System.out.println( "saving" );
+		IJ.save( ipout, outputFilePath );
+
+		long endTime = System.currentTimeMillis();
+		System.out.println( "total time: " + ( endTime - startTime ) + " ms" );
+		System.exit( 0 );
+	}
+
+	public static BigWarpExporter< ? > applyBigWarpHelper( AbstractSpimData< ? >[] spimDataP, AbstractSpimData< ? >[] spimDataQ,
+			ImagePlus impP, LandmarkTableModel ltm, Interpolation interpolation )
+	{
+		String[] names = generateNames( impP );
 		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
 
-		Interpolation interpolation = Interpolation.valueOf( interpType );
 		int numChannels = impP.getNChannels();
 		System.out.println( numChannels + " channels" );
 		int[] movingSourceIndexList = new int[ numChannels ];
@@ -199,6 +211,7 @@ public class BigWarpBatchTransformFOV
 				ltm.getNumdims(),
 				movingSourceIndexList );
 
+		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
 		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
 		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( irXfm );
@@ -238,17 +251,11 @@ public class BigWarpBatchTransformFOV
 			exporter = null;
 		}
 
-		System.out.println( "exporting ");
-		ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
-		System.out.println( "saving");
-		IJ.save( ipout, outputFilePath );
-
-		long endTime = System.currentTimeMillis();
-		System.out.println( "total time: " + (endTime - startTime) + " ms");
-		System.exit( 0 );
+		return exporter;
 	}
 
-	public String[] generateNames( ImagePlus imp )
+
+	public static String[] generateNames( ImagePlus imp )
 	{
 		String[] names = new String[ imp.getNChannels() + 1 ];
 		for ( int i = 0; i < imp.getNChannels(); i++ )
