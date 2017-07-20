@@ -5,6 +5,7 @@ import java.io.Serializable;
 
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPositionable;
+import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 
@@ -161,7 +162,7 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	@Override
 	public InvertibleRealTransform inverse()
 	{
-		return null;
+		return new InverseRealTransform( this );
 	}
 
 	@Override
