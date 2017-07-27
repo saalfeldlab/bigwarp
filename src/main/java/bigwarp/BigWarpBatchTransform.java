@@ -1,24 +1,20 @@
 package bigwarp;
 
-import ij.IJ;
-import ij.ImagePlus;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 
-import net.imglib2.FinalDimensions;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
-import net.imglib2.type.numeric.real.DoubleType;
-import net.imglib2.type.numeric.real.FloatType;
+import bdv.spimdata.SequenceDescriptionMinimal;
+import bdv.spimdata.SpimDataMinimal;
+import bdv.spimdata.WrapBasicImgLoader;
+import bdv.viewer.Interpolation;
+import bigwarp.BigWarpBatchTransformFOV.DummyImageLoader;
+import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.loader.ImagePlusLoader;
+import ij.IJ;
+import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import loci.formats.FormatException;
 import loci.formats.ImageReader;
@@ -30,17 +26,9 @@ import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.TimePoint;
 import mpicbg.spim.data.sequence.TimePoints;
-import bdv.img.TpsTransformWrapper;
-import bdv.img.WarpedSource;
-import bdv.spimdata.SequenceDescriptionMinimal;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.WrapBasicImgLoader;
-import bdv.viewer.Interpolation;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
-import bigwarp.BigWarpBatchTransformFOV.DummyImageLoader;
-import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.loader.ImagePlusLoader;
+import net.imglib2.FinalDimensions;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarpBatchTransform
 {
@@ -72,54 +60,9 @@ public class BigWarpBatchTransform
 		int numMovingChannels = loaderP.numChannels();
 
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData( gmeta ) };
-		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
-
-		Interpolation interpolation = Interpolation.NLINEAR;
-		int[] movingSourceIndexList = new int[]{ 0 };
-		int[] targetSourceIndexList = new int[]{ 1 };
-		ArrayList< SourceAndConverter< ? >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-				data.sources, 
-				ltm.getNumdims(),
-				movingSourceIndexList );
-
-		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( xfm.getNumDims(), xfm )); 
-		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( irXfm );
-		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).setIsTransformed( true );
-
-		BigWarpExporter< ? > exporter;
-		Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
-		if ( ByteType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< ByteType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(ByteType) baseType );
-		else if ( UnsignedByteType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< UnsignedByteType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedByteType) baseType );
-		else if ( IntType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< IntType >( sourcesxfm, movingSourceIndexList,
-					targetSourceIndexList, interpolation, (IntType) baseType );
-		else if ( UnsignedShortType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< UnsignedShortType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedShortType) baseType );
-		else if ( FloatType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< FloatType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(FloatType) baseType );
-		else if ( DoubleType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< DoubleType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(DoubleType) baseType );
-		else if ( ARGBType.class.isInstance( baseType ) )
-			exporter = new BigWarpARGBExporter( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList );
-		else
-		{
-			System.err.println( "Can't export type " + baseType.getClass() );
-			exporter = null;
-		}
-
+		
+		BigWarpExporter< ? > exporter = BigWarpBatchTransformFOV.applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.NLINEAR );
+		
 		ImagePlus ipout = exporter.exportMovingImagePlus( false );
 
 		IJ.save( ipout, dstName );

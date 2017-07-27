@@ -1,8 +1,5 @@
 package bigwarp;
 
-import ij.IJ;
-import ij.ImagePlus;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -14,6 +11,30 @@ import org.janelia.utility.parse.ParseUtils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
+import bdv.img.TpsTransformWrapper;
+import bdv.img.WarpedSource;
+import bdv.spimdata.SequenceDescriptionMinimal;
+import bdv.spimdata.SpimDataMinimal;
+import bdv.spimdata.WrapBasicImgLoader;
+import bdv.viewer.Interpolation;
+import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp.BigWarpData;
+import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.loader.ImagePlusLoader;
+import ij.IJ;
+import ij.ImagePlus;
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import mpicbg.spim.data.generic.AbstractSpimData;
+import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
+import mpicbg.spim.data.generic.sequence.BasicViewSetup;
+import mpicbg.spim.data.generic.sequence.ImgLoaderHint;
+import mpicbg.spim.data.generic.sequence.TypedBasicImgLoader;
+import mpicbg.spim.data.registration.ViewRegistration;
+import mpicbg.spim.data.registration.ViewRegistrations;
+import mpicbg.spim.data.sequence.Channel;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
+import mpicbg.spim.data.sequence.TimePoint;
+import mpicbg.spim.data.sequence.TimePoints;
 import net.imglib2.FinalDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -27,28 +48,6 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.ConstantUtils;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.spim.data.generic.AbstractSpimData;
-import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
-import mpicbg.spim.data.generic.sequence.BasicViewSetup;
-import mpicbg.spim.data.generic.sequence.ImgLoaderHint;
-import mpicbg.spim.data.generic.sequence.TypedBasicImgLoader;
-import mpicbg.spim.data.registration.ViewRegistration;
-import mpicbg.spim.data.registration.ViewRegistrations;
-import mpicbg.spim.data.sequence.Channel;
-import mpicbg.spim.data.sequence.FinalVoxelDimensions;
-import mpicbg.spim.data.sequence.TimePoint;
-import mpicbg.spim.data.sequence.TimePoints;
-import bdv.img.TpsTransformWrapper;
-import bdv.img.WarpedSource;
-import bdv.spimdata.SequenceDescriptionMinimal;
-import bdv.spimdata.SpimDataMinimal;
-import bdv.spimdata.WrapBasicImgLoader;
-import bdv.viewer.Interpolation;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
-import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.loader.ImagePlusLoader;
 
 public class BigWarpBatchTransformFOV
 {
@@ -122,7 +121,7 @@ public class BigWarpBatchTransformFOV
 		int nd = alg.dims.length;
 		if( alg.offset.length < 3 )
 		{
-			alg.offsetFull = fill( alg.offset, nd, 0.0 );
+			alg.offsetFull = fill( alg.offset, nd );
 		}
 		else
 		{
@@ -131,7 +130,7 @@ public class BigWarpBatchTransformFOV
 
 		if( alg.spacing.length < 3 )
 		{
-			alg.spacingFull = fill( alg.spacing, nd, 1.0 );
+			alg.spacingFull = fill( alg.spacing, nd );
 		}
 		else
 		{
@@ -172,11 +171,8 @@ public class BigWarpBatchTransformFOV
 
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		ltm.load( new File( landmarkFilePath ));
-		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
 		ImagePlus impP = IJ.openImage( imageFilePath );
-
-		String[] names = new String[]{ impP.getTitle(), "target_interval" };
 
 		/* Load the first source */
 		final ImagePlusLoader loaderP = new ImagePlusLoader( impP );
@@ -184,18 +180,40 @@ public class BigWarpBatchTransformFOV
 		int numMovingChannels = loaderP.numChannels();
 
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData() };
+
+		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
+		final ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
+
+		System.out.println( "saving" );
+		IJ.save( ipout, outputFilePath );
+
+		long endTime = System.currentTimeMillis();
+		System.out.println( "total time: " + ( endTime - startTime ) + " ms" );
+		System.exit( 0 );
+	}
+
+	public static BigWarpExporter< ? > applyBigWarpHelper( AbstractSpimData< ? >[] spimDataP, AbstractSpimData< ? >[] spimDataQ,
+			ImagePlus impP, LandmarkTableModel ltm, Interpolation interpolation )
+	{
+		String[] names = generateNames( impP );
 		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
 
-		Interpolation interpolation = Interpolation.valueOf( interpType );
-		int[] movingSourceIndexList = new int[]{ 0 };
-		int[] targetSourceIndexList = new int[]{ 1 };
+		int numChannels = impP.getNChannels();
+		System.out.println( numChannels + " channels" );
+		int[] movingSourceIndexList = new int[ numChannels ];
+		for ( int i = 0; i < numChannels; i++ )
+		{
+			movingSourceIndexList[ i ] = i;
+		}
+		int[] targetSourceIndexList = new int[] { numChannels };
 		ArrayList< SourceAndConverter< ? >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				data.sources, 
 				ltm.getNumdims(),
 				movingSourceIndexList );
 
+		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
-		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( xfm.getNumDims(), xfm )); 
+		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
 		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( irXfm );
 		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).setIsTransformed( true );
 
@@ -233,14 +251,19 @@ public class BigWarpBatchTransformFOV
 			exporter = null;
 		}
 
-		System.out.println( "exporting ");
-		ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
-		System.out.println( "saving");
-		IJ.save( ipout, outputFilePath );
+		return exporter;
+	}
 
-		long endTime = System.currentTimeMillis();
-		System.out.println( "total time: " + (endTime - startTime) + " ms");
-		System.exit( 0 );
+
+	public static String[] generateNames( ImagePlus imp )
+	{
+		String[] names = new String[ imp.getNChannels() + 1 ];
+		for ( int i = 0; i < imp.getNChannels(); i++ )
+		{
+			names[ i ] = imp.getTitle();
+		}
+		names[ imp.getNChannels() ] = "target_interval";
+		return names;
 	}
 
 	public final SpimDataMinimal createSpimData()
@@ -298,18 +321,21 @@ public class BigWarpBatchTransformFOV
 		return spimData;
 	}
 
-	public static double[] fill( double[] in, int ndim, double zVal )
+	public static double[] fill( double[] in, int ndim )
 	{
 		double[] out = new double[ 3 ];
-		if( in.length == 1 && ndim == 2 )
+		if ( in.length == 1 )
 		{
 			Arrays.fill( out, in[ 0 ] );
-			out[ 2 ] = zVal;
 		}
-		else if( in.length == 2 && ndim == 2 )
+		else if ( in.length >= ndim )
 		{
 			System.arraycopy( in, 0, out, 0, 2 );
-			out[ 2 ] = zVal;
+		}
+		else
+		{
+			System.err.println( "Array length is less than dimensions!" );
+			return null;
 		}
 
 		return out;
