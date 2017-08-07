@@ -3,12 +3,12 @@ package bigwarp.source;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
-import mpicbg.models.CoordinateTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
@@ -28,7 +28,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	
 	protected T type;
 	
-	public GridSource( String name, BigWarpData data, T t, CoordinateTransform warp  )
+	public GridSource( String name, BigWarpData data, T t, RealTransform warp  )
 	{
 		this.name = name;
 		this.type = t.copy();
@@ -62,7 +62,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 //		
 //	}
 	
-	public void setWarp( CoordinateTransform warp )
+	public void setWarp( RealTransform warp )
 	{
 		gridImg.ra.warp = warp;
 	}

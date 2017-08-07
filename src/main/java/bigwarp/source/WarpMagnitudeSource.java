@@ -4,8 +4,8 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractModel;
-import mpicbg.models.CoordinateTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.Interval;
@@ -13,6 +13,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
@@ -77,7 +78,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		return maxVal;
 	}
 	
-	public void setWarp( CoordinateTransform warp )
+	public void setWarp( RealTransform warp )
 	{
 		warpMagImg.ra.warp = warp;
 	}
@@ -101,7 +102,10 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		System.out.println("at ( 0 0 0 ): ");
 		System.out.println( "get val: " + rra.get());
 		double[] baseRes = warpMagImg.ra.base.apply( pt );
-		double[] warpRes = warpMagImg.ra.warp.apply( pt );
+		
+		double[] warpRes = new double[ warpMagImg.ra.warp.numTargetDimensions() ]; 
+		warpMagImg.ra.warp.apply( pt, warpRes );
+
 		System.out.println( "base res: " + baseRes[0] + " " + baseRes[1]);
 		System.out.println( "warp res: " + warpRes[0] + " " + warpRes[1]);
 		

@@ -1771,8 +1771,9 @@ public class BigWarp
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
-		wmSrc.setWarp( transform );
-		gSrc.setWarp( transform );
+		TpsTransformWrapper tpsRealXfm = new TpsTransformWrapper( 3, transform );
+		wmSrc.setWarp( tpsRealXfm );
+		gSrc.setWarp( tpsRealXfm );
 	}
 
 	public boolean restimateTransformation()

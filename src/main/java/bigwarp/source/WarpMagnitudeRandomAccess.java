@@ -1,17 +1,17 @@
 package bigwarp.source;
 
 import mpicbg.models.AbstractModel;
-import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 
 public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 
-	CoordinateTransform warp;
+	RealTransform warp;
 	AbstractModel<?> base; 
 	
 	T value;
@@ -21,7 +21,7 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 		this( dimensions, null, null, null );
 	}
 	
-	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, CoordinateTransform warp, AbstractModel<?> base )
+	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, RealTransform warp, AbstractModel<?> base )
 	{
 		super( dimensions.length );
 		if( warp != null)
@@ -40,9 +40,11 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 		double[] mypt = new double[ this.numDimensions() ];
 		this.localize( mypt );
 		
-		double[] warpRes = warp.apply( mypt );
+		double[] warpRes = new double[ warp.numTargetDimensions() ]; 
+		warp.apply( mypt, warpRes );
+
 		double[] baseRes = base.apply( mypt );
-		
+
 		double dist = 0.0;
 		for( int d = 0; d < warpRes.length; d++ )
 			dist += ( warpRes[ d ] - baseRes[ d ] ) * ( warpRes[ d ] - baseRes[ d ] );  

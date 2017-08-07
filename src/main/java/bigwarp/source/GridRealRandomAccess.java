@@ -1,12 +1,11 @@
 package bigwarp.source;
 
 import bigwarp.source.GridSource.GRID_TYPE;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
 
@@ -14,7 +13,7 @@ import net.imglib2.type.numeric.real.DoubleType;
 public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 
-	protected CoordinateTransform warp;
+	protected RealTransform warp;
 
 	private T value;
 	private GRID_TYPE method = GRID_TYPE.MOD;
@@ -30,12 +29,12 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 		this( dimensions, null, null );
 	}
 
-	protected GridRealRandomAccess( double[] dimensions, T value, CoordinateTransform warp )
+	protected GridRealRandomAccess( double[] dimensions, T value, RealTransform warp )
 	{
 		this( dimensions, value, warp, GRID_TYPE.MOD );
 	}
 
-	protected GridRealRandomAccess( double[] dimensions, T value, CoordinateTransform warp, GRID_TYPE method )
+	protected GridRealRandomAccess( double[] dimensions, T value, RealTransform warp, GRID_TYPE method )
 	{
 		super( dimensions.length );
 		this.value = value;
@@ -92,10 +91,14 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	{
 		double[] warpRes;
 		if( warp != null )
-			warpRes = warp.apply( pt );
+		{
+			warpRes = new double[ warp.numTargetDimensions() ];
+			warp.apply( pt, warpRes );
+		}
 		else
+		{
 			warpRes = pt;
-
+		}
 		int nd = warpRes.length;
 		if( is2d )
 			nd = 2;
@@ -127,9 +130,7 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 			}
 			
 		}
-		
-//		if( i > 0 ) val /= i;
- 
+
 		T out = value.copy();
 		if( val < gridWidth )
 		{
@@ -146,10 +147,15 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	{
 		double[] warpRes;
 		if( warp != null )
-			warpRes = warp.apply( pt );
+		{
+			warpRes = new double[ warp.numTargetDimensions() ];
+			warp.apply( pt, warpRes );
+		}
 		else
+		{
 			warpRes = pt;
-		
+		}
+
 		double val = 0.0;
 		for( int d = 0; d < warpRes.length; d++ )
 		{
@@ -193,7 +199,7 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 		else
 		{
 			GridRealRandomAccess< T > ra = new GridRealRandomAccess< T >( new double[ position.length ], value.copy(), 
-					((ThinPlateR2LogRSplineKernelTransform)warp), this.method  );
+					warp, this.method  );
 			ra.gridSpacing = this.gridSpacing;
 			ra.gridWidth = this.gridWidth;
 			ra.gridHalfWidth = this.gridHalfWidth;

@@ -1,18 +1,18 @@
 package bigwarp.source;
 
-import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 
 public class GridRandomAccessibleInterval<T extends RealType<T>> extends AbstractInterval implements RandomAccessibleInterval<T> 
 {
-	CoordinateTransform warp;
+	RealTransform warp;
 	GridRandomAccess< T > ra;
 	
-	public GridRandomAccessibleInterval( Interval interval, T t, CoordinateTransform warp )
+	public GridRandomAccessibleInterval( Interval interval, T t, RealTransform warp )
 	{
 		super( interval );
 		this.warp = warp;

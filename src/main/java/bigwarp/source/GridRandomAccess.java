@@ -1,16 +1,16 @@
 package bigwarp.source;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.CoordinateTransform;
+
 import net.imglib2.AbstractLocalizable;
 import net.imglib2.Localizable;
 import net.imglib2.RandomAccess;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 
 public class GridRandomAccess< T extends RealType<T>> extends AbstractLocalizable implements RandomAccess< T >
 {
 
-	CoordinateTransform warp;
+	RealTransform warp;
 	T value;
 	
 	protected GridRandomAccess( long[] dimensions )
@@ -18,7 +18,7 @@ public class GridRandomAccess< T extends RealType<T>> extends AbstractLocalizabl
 		this( dimensions, null, null );
 	}
 	
-	protected GridRandomAccess( long[] dimensions, T value, CoordinateTransform warp )
+	protected GridRandomAccess( long[] dimensions, T value, RealTransform warp )
 	{
 		super( dimensions.length );
 		this.value = value;
@@ -30,8 +30,9 @@ public class GridRandomAccess< T extends RealType<T>> extends AbstractLocalizabl
 		
 		double[] mypt = new double[ this.numDimensions() ];
 		this.localize( mypt );
-		
-		double[] warpRes = warp.apply( mypt );
+
+		double[] warpRes = new double[ warp.numTargetDimensions() ];
+		warp.apply( mypt, warpRes );
 		 
 		T out = value.copy();
 		
@@ -62,8 +63,7 @@ public class GridRandomAccess< T extends RealType<T>> extends AbstractLocalizabl
 
 	public RandomAccess<T> copy() 
 	{
-		return new GridRandomAccess< T >( new long[ position.length ], value.copy(), 
-				((ThinPlateR2LogRSplineKernelTransform)warp) );
+		return new GridRandomAccess< T >( new long[ position.length ], value.copy(), warp );
 	}
 
 	public RandomAccess<T> copyRandomAccess() 
