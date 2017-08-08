@@ -716,7 +716,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * necessary.
 	 * <p>
 	 * An action is taken if, for the input row if:
-	 * <p>
 	 * <ul><li>1) There is a point in moving space, and
 	 * <li>2) There is not a point in target space, and
 	 * <li>3) A transformation has been estimated.

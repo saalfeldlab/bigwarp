@@ -213,6 +213,7 @@ public class BigWarpOverlay {
 
 	/**
 	 * Update data to show in the overlay.
+	 * @param state the viewer state
 	 */
 	public void setViewerState( final ViewerState state )
 	{
