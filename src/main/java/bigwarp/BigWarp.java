@@ -1622,15 +1622,15 @@ public class BigWarp
 			}
 
 		}
-
-		int offImgIndex = 0;
-		int onImgIndex = 1;
-
-		if ( viewerFrame == viewerFrameP )
-		{
-			offImgIndex = 1;
-			onImgIndex = 0;
-		}
+//
+//		int offImgIndex = 0;
+//		int onImgIndex = 1;
+//
+//		if ( viewerFrame == viewerFrameP )
+//		{
+//			offImgIndex = 1;
+//			onImgIndex = 0;
+//		}
 
 		if ( landmarkModel.getTransform() == null )
 		{
@@ -1646,7 +1646,7 @@ public class BigWarp
 			// turn warp mag on
 			vg.setSourceActive( warpMagSourceIndex, true );
 			vg.setSourceActive( gridSourceIndex, false );
-			vg.setSourceActive( offImgIndex, false );
+//			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
 			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
@@ -1656,17 +1656,20 @@ public class BigWarp
 			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
 			vg.setFusedEnabled( true );
+			vg.setGroupingEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
 			break;
 		}
 		case GRID:
 		{
 			// turn grid vis on
+			
 			vg.setSourceActive( warpMagSourceIndex, false );
 			vg.setSourceActive( gridSourceIndex, true );
-			vg.setSourceActive( offImgIndex, false );
+//			vg.setSourceActive( offImgIndex, false );
 
 			vg.setFusedEnabled( true );
+			vg.setGroupingEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Grid" );
 			break;
 		}
@@ -1674,9 +1677,9 @@ public class BigWarp
 		{
 			vg.setSourceActive( warpMagSourceIndex, false );
 			vg.setSourceActive( gridSourceIndex, false );
-			vg.setSourceActive( offImgIndex, true );
+//			vg.setSourceActive( offImgIndex, true );
 
-			vg.setFusedEnabled( false );
+//			vg.setFusedEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Turning off warp vis" );
 			break;
 		}
@@ -1685,8 +1688,8 @@ public class BigWarp
 
 	public void toggleWarpVisMode( BigWarpViewerFrame viewerFrame )
 	{
-		int offImgIndex = 0;
-		int onImgIndex = 1;
+//		int offImgIndex = 0;
+//		int onImgIndex = 1;
 		if ( viewerFrame == null )
 		{
 			if ( viewerFrameP.isActive() )
@@ -1701,11 +1704,11 @@ public class BigWarp
 				return;
 		}
 
-		if ( viewerFrame == viewerFrameP )
-		{
-			offImgIndex = 1;
-			onImgIndex = 0;
-		}
+//		if ( viewerFrame == viewerFrameP )
+//		{
+//			offImgIndex = 1;
+//			onImgIndex = 0;
+//		}
 
 		if ( landmarkModel.getTransform() == null )
 		{
@@ -1723,7 +1726,7 @@ public class BigWarp
 		{
 			vg.setSourceActive( warpMagSourceIndex, false );
 
-			vg.setSourceActive( offImgIndex, true );
+//			vg.setSourceActive( offImgIndex, true );
 
 			vg.setFusedEnabled( false );
 			viewerFrame.getViewerPanel().showMessage( "Removing Warp Magnitude" );
@@ -1731,7 +1734,7 @@ public class BigWarp
 		else // warp mag is invisible, turn it on
 		{
 			vg.setSourceActive( warpMagSourceIndex, true );
-			vg.setSourceActive( offImgIndex, false );
+//			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
 			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );

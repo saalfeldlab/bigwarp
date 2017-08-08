@@ -2,14 +2,12 @@ package bigwarp;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import bdv.BigDataViewer;
 import bdv.SpimSource;
 import bdv.VolatileSpimSource;
 import bdv.img.RenamableSource;
-import bdv.img.WarpedSource;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
@@ -391,6 +389,7 @@ public class BigWarpInit
 	{
 		File fP = new File( xmlFilenameP );
 		File fQ = new File( xmlFilenameQ );
+		// TODO: wrong when XMLLoaders return multichannel sources
 		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ),
 				new String[]{ fP.getName(), fQ.getName() });
 	}
@@ -404,7 +403,7 @@ public class BigWarpInit
 	 */
 	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
-		String[] names = new String[]{ impP.getTitle(), impQ.getTitle() };
+		String[] names = namesFromImagePluses(impP, impQ);
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), names );
 	}
 
@@ -490,5 +489,47 @@ public class BigWarpInit
 	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus[] impP, final String xmlFilenameQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
+	}
+	
+	
+	/**
+	 * Create a {@link String} array of names from two {@link ImagePlus}es, essentially
+	 * concatenating the results from calling {@link namesFromImagePlus} with each.
+	 *
+	 * @param impP first image to generate names from
+	 * @param impQ second image to generate names from
+	 * @return String array of names from both images
+	 */
+	public static String[] namesFromImagePluses(ImagePlus impP, ImagePlus impQ) {
+		String[] names = new String[impP.getNChannels() + impQ.getNChannels()];
+
+		String[] impPnames = namesFromImagePlus(impP);
+		String[] impQnames = namesFromImagePlus(impP);
+
+		int i = 0;
+		for(String name : impPnames)
+			names[i++] = name;
+		for(String name : impQnames)
+			names[i++] = name;
+
+		return names;
+	}
+
+	/**
+	 * Create a {@link String} array of names from an {@link ImagePlus}. Each channel
+	 * is given its own name, in the format of [title]-[channel #], unless there is
+	 * only one channel.
+	 *
+	 * @param imp image to generate names from
+	 * @return String array of names
+	 */
+	public static String[] namesFromImagePlus(ImagePlus imp)
+	{
+		if(imp.getNChannels() == 1)
+			return new String[] { imp.getTitle() };
+		String[] names = new String[imp.getNChannels()];
+		for(int i = 0; i < names.length; ++i)
+			names[i] = imp.getTitle() + "-" + i;
+		return names;
 	}
 }

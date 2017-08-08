@@ -257,13 +257,16 @@ public class BigWarpBatchTransformFOV
 
 	public static String[] generateNames( ImagePlus imp )
 	{
-		String[] names = new String[ imp.getNChannels() + 1 ];
-		for ( int i = 0; i < imp.getNChannels(); i++ )
+		String[] namesWithTarget = new String[ imp.getNChannels() + 1 ];
+		String[] names = BigWarpInit.namesFromImagePlus(imp);
+		
+		for(int i = 0; i < names.length; i ++)
 		{
-			names[ i ] = imp.getTitle();
+			namesWithTarget[i] = names[i];
 		}
-		names[ imp.getNChannels() ] = "target_interval";
-		return names;
+		
+		namesWithTarget[ imp.getNChannels() ] = "target_interval";
+		return namesWithTarget;
 	}
 
 	public final SpimDataMinimal createSpimData()
