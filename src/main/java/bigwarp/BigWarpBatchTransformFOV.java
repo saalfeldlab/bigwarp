@@ -205,7 +205,9 @@ public class BigWarpBatchTransformFOV
 		{
 			movingSourceIndexList[ i ] = i;
 		}
-		int[] targetSourceIndexList = new int[] { numChannels };
+		
+		int[] targetSourceIndexList = data.targetSourceIndices;
+		
 		ArrayList< SourceAndConverter< ? >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				data.sources, 
 				ltm.getNumdims(),
@@ -213,10 +215,13 @@ public class BigWarpBatchTransformFOV
 
 		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
-		InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
-		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).updateTransform( irXfm );
-		((WarpedSource< ? >) (sourcesxfm.get( 0 ).getSpimSource())).setIsTransformed( true );
-
+		for ( int i = 0; i < numChannels; i++ )
+		{
+			InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
+			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm );
+			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
+		}
+		
 		BigWarpExporter< ? > exporter;
 		Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 		if ( ByteType.class.isInstance( baseType ) )

@@ -217,8 +217,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 			}
 		}
 
-		ip.getCalibration().pixelWidth = voxdim.dimension( 0 );
-		ip.getCalibration().pixelHeight = voxdim.dimension( 1 );
+		ip.getCalibration().pixelWidth = 1.0/voxdim.dimension( 0 );
+		ip.getCalibration().pixelHeight = 1.0/voxdim.dimension( 1 );
 		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
 		ip.getCalibration().setUnit( voxdim.unit() );
 		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );
