@@ -17,6 +17,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import loci.formats.FormatException;
+import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
