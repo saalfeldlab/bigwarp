@@ -1,21 +1,23 @@
 package bigwarp.landmarks;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JTable;
 
-import junit.framework.TestCase;
-
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
 import bigwarp.landmarks.LandmarkTableModel;
 
-public class LandmarkModelTests extends TestCase
+public class LandmarkModelTest
 {
 	private BigWarpLandmarkPanel panel;
 
@@ -23,12 +25,12 @@ public class LandmarkModelTests extends TestCase
 
 	private LandmarkTableModel ltm;
 
-	public final Logger logger = LogManager.getLogger( LandmarkModelTests.class.getName() );
+	public final Logger logger = LogManager.getLogger( LandmarkModelTest.class.getName() );
 
-	@Override
-	protected void setUp()
+	@Before
+	public void before()
 	{
-		final String fnLandmarks = "src/main/resources/testPoints.csv";
+		final String fnLandmarks = "src/test/resources/testPoints.csv";
 		ltm = new LandmarkTableModel( 2 );
 
 		try
@@ -116,8 +118,8 @@ public class LandmarkModelTests extends TestCase
 
 	}
 
-	@Override
-	protected void tearDown()
+	@After
+	public void after()
 	{
 		ltm = null;
 		table = null;
