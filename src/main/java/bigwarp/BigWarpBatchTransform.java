@@ -17,6 +17,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import loci.formats.FormatException;
+import loci.formats.IFormatReader;
 import loci.formats.ImageReader;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
@@ -49,8 +50,6 @@ public class BigWarpBatchTransform
 		// read image properties from the header
 		ImageReader reader = new ImageReader();
 		reader.setId( template );
-		Hashtable< String, Object > gmeta = reader.getGlobalMetadata();
-		System.out.println( gmeta );
 
 		String[] names = new String[]{ impP.getTitle(), "target_interval" };
 
@@ -59,7 +58,7 @@ public class BigWarpBatchTransform
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
 		int numMovingChannels = loaderP.numChannels();
 
-		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData( gmeta ) };
+		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData( reader ) };
 		
 		BigWarpExporter< ? > exporter = BigWarpBatchTransformFOV.applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.NLINEAR );
 		
@@ -69,8 +68,11 @@ public class BigWarpBatchTransform
 
 	}
 
-	public static final SpimDataMinimal createSpimData( Hashtable< String, Object > gmeta )
+	public static final SpimDataMinimal createSpimData( IFormatReader reader )
 	{
+		Hashtable< String, Object > gmeta = reader.getGlobalMetadata();
+		System.out.println( gmeta ); // header stuff here TODO
+		
 		// get relevant metadata
 		double pw = 1.0;
 		double ph = 1.0;
@@ -91,10 +93,13 @@ public class BigWarpBatchTransform
 		final File basePath = new File( "." );
 
 		String punit = "px";
+		if( gmeta.keySet().contains( "Unit" ))
+			punit = (String) gmeta.get( "Unit" );
+		
 		final FinalVoxelDimensions voxelSize = new FinalVoxelDimensions( punit, pw, ph, pd );
 		final long w = ((Long)gmeta.get("ImageWidth")).longValue();
 		final long h = ((Long)gmeta.get("ImageLength")).longValue();
-		final long d = Long.parseLong( (String)gmeta.get("images") );
+		final long d = reader.getSizeZ(); //Long.parseLong( (String)gmeta.get("images") );
 
 		long[] dims = new long[]{ w, h, d };
 		final FinalDimensions size = new FinalDimensions( new long[] { w, h, d } );
@@ -115,7 +120,7 @@ public class BigWarpBatchTransform
 
 		// create ViewRegistrations from the images calibration
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
-		sourceTransform.set( pw, 0, 0, 0, 0, ph, 0, 0, 0, 0, pd, 0 );
+		sourceTransform.set( 1.0/pw, 0, 0, 0, 0, 1.0/ph, 0, 0, 0, 0, pd, 0 );
 		final ArrayList< ViewRegistration > registrations = new ArrayList< ViewRegistration >();
 		for ( int t = 0; t < numTimepoints; ++t )
 			for ( int s = 0; s < numSetups; ++s )
