@@ -6,10 +6,12 @@ public class ParseUtils
 {
 
 	/**
-	 * Parses a string of the form "#,#,#,...#" and returns a double array
+	 * Parses a string of the form "#,#,#,...#" and returns a double array,
+	 * with a specified delimiter.
 	 * 
-	 * @param in
-	 * @return
+	 * @param in the string
+	 * @param delimiter the delimiter
+	 * @return the double array
 	 */
 	public static double[] parseDoubleArray( String in, String delimiter )
 	{
@@ -25,8 +27,8 @@ public class ParseUtils
 	/**
 	 * Parses a string of the form "#,#,#,...#" and returns a double array
 	 * 
-	 * @param in
-	 * @return
+	 * @param in the string
+	 * @return the double array
 	 */
 	public static double[] parseDoubleArray( String in )
 	{
@@ -34,10 +36,12 @@ public class ParseUtils
 	}
 
 	/**
-	 * Parses a string of the form "#,#,#,...#" and returns a float array
+	 * Parses a string of the form "#,#,#,...#" and returns a double array,
+	 * with a specified delimiter.
 	 * 
-	 * @param in
-	 * @return
+	 * @param in the string
+	 * @param delimiter the delimiter
+	 * @return the float array
 	 */
 	public static float[] parseFloatArray( String in, String delimiter )
 	{
@@ -50,6 +54,12 @@ public class ParseUtils
 		return out;
 	}
 
+	/**
+	 * Parses a string of the form "#,#,#,...#" and returns a float array
+	 * 
+	 * @param in the string
+	 * @return the float array
+	 */
 	public static float[] parseFloatArray( String in )
 	{
 		return parseFloatArray( in, "," );
@@ -58,8 +68,9 @@ public class ParseUtils
 	/**
 	 * Parses a string of the form "#,#,#,...#" and returns an int array
 	 * 
-	 * @param in
-	 * @return
+	 * @param in the string
+	 * @param delimiter the delimiter
+	 * @return the int array
 	 */
 	public static int[] parseIntArray( String in, String delimiter )
 	{
@@ -72,16 +83,23 @@ public class ParseUtils
 		return out;
 	}
 
+	/**
+	 * Parses a string of the form "#,#,#,...#" and returns a int array
+	 * 
+	 * @param in the string
+	 * @return the int array
+	 */
 	public static int[] parseIntArray( String in )
 	{
 		return parseIntArray( in, "," );
 	}
 
 	/**
-	 * Parses a string of the form "#,#,#,...#" and returns an int array
+	 * Parses a string of the form "#,#,#,...#" and returns a long array
 	 * 
-	 * @param in
-	 * @return
+	 * @param in the string
+	 * @param delimiter the delimiter
+	 * @return the long array
 	 */
 	public static long[] parseLongArray( String in, String delimiter )
 	{
@@ -96,6 +114,12 @@ public class ParseUtils
 		return out;
 	}
 
+	/**
+	 * Parses a string of the form "#,#,#,...#" and returns a long array
+	 * 
+	 * @param in the string
+	 * @return the long array
+	 */
 	public static long[] parseLongArray( String in )
 	{
 		return parseLongArray( in, "," );

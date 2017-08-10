@@ -9,9 +9,8 @@ import java.util.Arrays;
 
 import javax.swing.JTable;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.CoordinateTransform;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -27,7 +26,7 @@ public class BigWarpOverlay {
 
 	protected LandmarkTableModel landmarkModel;
 	
-	protected CoordinateTransform estimatedXfm;
+	protected RealTransform estimatedXfm;
 	
 	protected boolean isTransformed = false;
 
@@ -214,13 +213,14 @@ public class BigWarpOverlay {
 
 	/**
 	 * Update data to show in the overlay.
+	 * @param state the viewer state
 	 */
 	public void setViewerState( final ViewerState state )
 	{
 		this.state = state;
 	}
 	
-	public void setEstimatedTransform( final ThinPlateR2LogRSplineKernelTransform estimatedXfm )
+	public void setEstimatedTransform( final RealTransform estimatedXfm )
 	{
 		this.estimatedXfm = estimatedXfm;
 	}

@@ -551,10 +551,10 @@ public class BigWarp
 
 	/**
 	 * TODO Make a PR that updates this method in InitializeViewerState in bdv-core
-	 * @param cumulativeMinCutoff
-	 * @param cumulativeMaxCutoff
-	 * @param state
-	 * @param setupAssignments
+	 * @param cumulativeMinCutoff the min image intensity
+	 * @param cumulativeMaxCutoff the max image intensity
+	 * @param state the viewer state 
+	 * @param setupAssignments the setup assignments 
 	 */
 	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final SetupAssignments setupAssignments )
 	{
@@ -1026,6 +1026,7 @@ public class BigWarp
 	 *
 	 * @param ptarray the point location
 	 * @param isMoving is the point location in moving image space
+	 * @param viewer the viewer panel
 	 * @return an error string if an error occurred, empty string otherwise
 	 */
 	public String addPoint( final double[] ptarray, final boolean isMoving, final BigWarpViewerPanel viewer )
@@ -1074,6 +1075,7 @@ public class BigWarp
 	 *
 	 * @param pt the point location
 	 * @param isMoving is the point location in moving image space
+	 * @param selectInTable also select the landmark in the table 
 	 * @return the index of the selected landmark
 	 */
 	protected int selectedLandmark( final double[] pt, final boolean isMoving, final boolean selectInTable )
@@ -1774,8 +1776,9 @@ public class BigWarp
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
-		wmSrc.setWarp( transform );
-		gSrc.setWarp( transform );
+		TpsTransformWrapper tpsRealXfm = new TpsTransformWrapper( 3, transform );
+		wmSrc.setWarp( tpsRealXfm );
+		gSrc.setWarp( tpsRealXfm );
 	}
 
 	public boolean restimateTransformation()
@@ -1840,6 +1843,7 @@ public class BigWarp
 
 	/**
 	 * The display will be in 3d if any of the input sources are 3d.
+	 * @param sources the sources
 	 * @return dimension of the input sources
 	 */
 	protected static int detectNumDims( Collection< SourceAndConverter< ? > > sources )
@@ -2210,6 +2214,8 @@ public class BigWarp
 
 		/**
 		 * Adds a point in the moving and fixed images at the same point.
+		 * @param pt the point
+		 * @param isMovingImage is the point in moving image space
 		 */
 		public void addFixedPoint( final RealPoint pt, final boolean isMovingImage )
 		{
