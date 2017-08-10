@@ -80,7 +80,19 @@ public class TpsTransformWrapper implements InvertibleRealTransform, Serializabl
 	}
 
 	@Override
-	public void apply( final float[] source, final float[] target ){}
+	public void apply( final float[] source, final float[] target )
+	{
+		double[] sourceDouble = new double[ source.length ];
+		for ( int d = 0; d < source.length; ++d )
+			sourceDouble[ d ] = source[ d ];
+
+		double[] guessDouble = tps.initialGuessAtInverse( sourceDouble );
+		double error = tps.inverseTol( sourceDouble, guessDouble, invTolerance, invMaxIters );
+//		System.out.println( "error: " + error );
+
+		for ( int d = 0; d < target.length; ++d )
+			target[ d ] = ( float ) guessDouble[ d ];
+	}
 
 	@Override
 	public void apply( final RealLocalizable source, final RealPositionable target )
