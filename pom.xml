@@ -101,6 +101,8 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
+
+		<jitk-tps.version>3.0.0</jitk-tps.version>
 	</properties>
 
 	<repositories>
@@ -131,7 +133,6 @@
 		<dependency>
 			<groupId>jitk</groupId>
 			<artifactId>jitk-tps</artifactId>
-			<version>2.1.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.opencsv</groupId>
