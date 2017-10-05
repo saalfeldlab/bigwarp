@@ -103,6 +103,9 @@
 		<jcommander.version>1.48</jcommander.version>
 
 		<jitk-tps.version>3.0.0</jitk-tps.version>
+
+		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
+		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 	</properties>
 
 	<repositories>
