@@ -1,11 +1,11 @@
 language: java
 jdk: oraclejdk8
 branches:
-  only: master
+  only:
+  - master
+  - "/.*-[0-9]+\\..*/"
 install: true
 script: ".travis/build.sh"
-after_success: ".travis/notify.sh Travis-Success"
-after_failure: ".travis/notify.sh Travis-Failure"
 env:
   global:
   - secure: ZWYDLUo/634wSyvOvvLl7i1FSs6Md3YVohQ2HyB/pv4fFFj5CQJnEJJKRbYKZKui0mHzdvci8uE6RQU5Lm0L9n0p1AIz59ODRn3V7sAslUOQUapE2PZFxUVE3ByUU1UQbN3r/HsGB4lGuV6TdnEVotk/PfwVWlYdwwMgHoqZdIE2X0RzWbHPsdiE3TtBqe0cHutvGyENKfvyGmOQ7y8zED/UNcG7ZPSvfBhMdqj/wFT+T54NJ2m/PaRJH+DGIScyXBBjzd2oyJbzVVnCP9bwD7iRsnHCpuZJMECCzWiNWx1+7sE+BKPv0+X7WMXmDcv9+15lKBbxtHP8u+jpPbNhC6YNpR0ps/+WqFvIx2jw7vWoIHwOhmoxzJXSPOB0EN8b370dfk+b3xsSrT40lVmIb0mSLDHPqV2n4H+QUJV4y5LE9dOwUqZvXbnkY34fmiMAjsdhnfDim6Hag7UeabjbrMwQKgHZb4ZVsZ8D+mcDcMm+yairHoW0+i7sqxPFnBN+MOZ26CjWvmKFvWCFfq4MUuX50YzEGvG02kFepnnGDbu6VNhKt2r6UnHNA58yLW0SoxrvWdxEss5JBddMiGET5S98BU0u+psPYmNyXibxT5pI9vU4Gaynoq6j1gC3AMBM/0KjAkGdSW+uC/ajSVuwmG8AlmvGiTTULzH2X58R4Yk=

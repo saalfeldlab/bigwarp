@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>16.1.0</version>
+		<version>17.1.1</version>
 		<relativePath />
 	</parent>
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>3.0.1-SNAPSHOT</version>
+	<version>3.0.2-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -101,6 +101,11 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
+
+		<jitk-tps.version>3.0.0</jitk-tps.version>
+
+		<!-- NB: Deploy releases to the ImageJ Maven repository. -->
+		<releaseProfiles>deploy-to-imagej</releaseProfiles>
 	</properties>
 
 	<repositories>
@@ -131,7 +136,6 @@
 		<dependency>
 			<groupId>jitk</groupId>
 			<artifactId>jitk-tps</artifactId>
-			<version>2.1.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.opencsv</groupId>
