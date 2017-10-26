@@ -126,7 +126,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addStringField( "landmarks_image_file", "" );
 		gd.addStringField( "moving_image_file", "" );
 		gd.addStringField( "target_space_file", "" );
-		System.out.println( "cow" );
+		gd.addChoice( "interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
+		gd.addNumericField( "threads", 1, 0 );
 		gd.showDialog();
 
 		if ( gd.wasCanceled() )
@@ -135,6 +136,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		String landmarksPath = gd.getNextString();
 		String movingPath = gd.getNextString();
 		String targetPath = gd.getNextString();
+		String interpType = gd.getNextChoice();
 
 		ImagePlus movingIp = IJ.openImage( movingPath );
 		ImagePlus targetIp = movingIp;
@@ -156,7 +158,14 @@ public class ApplyBigwarpPlugin implements PlugIn
 			return;
 		}
 
-		ImagePlus warpedIp = apply( movingIp, targetIp, ltm, Interpolation.NLINEAR, 8 );
+		Interpolation interp = Interpolation.NLINEAR;
+		if( interpType.equals( "Nearest Neighbor" ))
+			interp = Interpolation.NEARESTNEIGHBOR;
+
+		int nThreads = (int)gd.getNextNumber();
+		System.out.println( nThreads );
+
+		ImagePlus warpedIp = apply( movingIp, targetIp, ltm, interp, nThreads );
 		warpedIp.show();
 	}
 
