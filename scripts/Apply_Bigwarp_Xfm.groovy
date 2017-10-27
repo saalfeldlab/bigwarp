@@ -2,7 +2,7 @@
 // @File(label="Moving image file") movingPath
 // @File(label="Target image file (optional)", required=false) targetPath
 // @String(label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
-// @int(label="Number of threads", min=1, max=64) nThreads
+// @Integer(label="Number of threads", min=1, max=64, value=1) nThreads
 
 import java.io.File;
 import java.io.IOException;
