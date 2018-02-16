@@ -20,6 +20,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name, int ndims )
 	{
+		System.out.println("WarpedSource wrap");
 		return new SourceAndConverter< T >(
 				new WarpedSource< T >( wrap.getSpimSource(), name ),
 				wrap.getConverter(),
@@ -147,5 +148,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	public synchronized MipmapHints getMipmapHints( final AffineTransform3D screenTransform, final int timepoint, final int previousTimepoint )
 	{
 		return sourceMipmapOrdering.getMipmapHints( screenTransform, timepoint, previousTimepoint );
+	}
+	
+	public Source< T > getWrappedSource()
+	{
+		return source;
 	}
 }

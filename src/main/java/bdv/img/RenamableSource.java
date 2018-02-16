@@ -77,4 +77,9 @@ public class RenamableSource< T > implements Source< T >
 		return src.getNumMipmapLevels();
 	}
 
+	public Source<T> getWrappedSource()
+	{
+		return src;
+	}
+
 }

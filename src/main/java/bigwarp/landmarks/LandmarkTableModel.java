@@ -151,6 +151,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		return estimatedXfm;
 	}
+
+	public double[][] getAffinePart()
+	{
+		return estimatedXfm.getAffine();
+	}
 	
 	public void printDistances()
 	{

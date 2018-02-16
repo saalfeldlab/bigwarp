@@ -20,6 +20,7 @@ import bdv.tools.ToggleDialogAction;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import mpicbg.models.AbstractModel;
+import net.imglib2.realtransform.AffineTransform3D;
 
 public class BigWarpActions
 {
@@ -66,6 +67,8 @@ public class BigWarpActions
 	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
 	public static final String WARP_TO_NEXT_POINT = "warp to next landmark %s";
 	public static final String WARP_TO_NEAREST_POINT = "warp to nearest landmark";
+
+	public static final String MANUAL_TRANSFORM = "toggle manual transformation";
 
 	public static final String SET_BOOKMARK = "set bookmark";
 	public static final String GO_TO_BOOKMARK = "go to bookmark";
@@ -137,6 +140,8 @@ public class BigWarpActions
 
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 
+		map.put( MANUAL_TRANSFORM, "M" );
+
 		map.put( WARP_TO_SELECTED_POINT, "D" );
 		map.put( String.format( WARP_TO_NEXT_POINT, true), "ctrl D" );
 		map.put( String.format( WARP_TO_NEXT_POINT, false), "ctrl shift D" );
@@ -181,6 +186,8 @@ public class BigWarpActions
 
 		new SaveSettingsAction( bw ).put( actionMap );
 		new LoadSettingsAction( bw ).put( actionMap );
+
+		new ManualTransformAction( MANUAL_TRANSFORM, bw ).put( actionMap );
 
 		return actionMap;
 	}
@@ -436,6 +443,13 @@ public class BigWarpActions
 
 			System.out.println( "viewerP is Transformed: " + bw.isMovingDisplayTransformed() );
 
+			AffineTransform3D t = new AffineTransform3D(); 
+			bw.getViewerFrameP().getViewerPanel().getState().getViewerTransform( t );
+			System.out.println( "viewer p xfm : " + t );
+
+			bw.getViewerFrameQ().getViewerPanel().getState().getViewerTransform( t );
+			System.out.println( "viewer q xfm : " + t );
+
 			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
 			// ltm.printState();
 			// ltm.validateTransformPoints();
@@ -445,6 +459,25 @@ public class BigWarpActions
 			ltm.printWarpedPoints();
 
 			System.out.println( " " );
+		}
+	}
+	
+	public static class ManualTransformAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4258201098741823204L;
+
+		private BigWarp bw;
+
+		public ManualTransformAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.manualTransformation();
 		}
 	}
 	
@@ -520,6 +553,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+			System.out.println("Toggling box and text overlays");
 			bw.getViewerFrameP().getViewerPanel().toggleBoxOverlayVisible();
 			bw.getViewerFrameQ().getViewerPanel().toggleBoxOverlayVisible();
 			bw.getViewerFrameP().getViewerPanel().toggleTextOverlayVisible();

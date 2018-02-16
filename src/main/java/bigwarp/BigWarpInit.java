@@ -12,6 +12,7 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.transformation.TransformedSource;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
@@ -23,11 +24,14 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.Angle;
 import mpicbg.spim.data.sequence.Channel;
+import net.imglib2.Volatile;
 import net.imglib2.converter.Converter;
 import net.imglib2.display.ARGBARGBColorConverter;
 import net.imglib2.display.ARGBtoRandomARGBColorConverter;
+import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.volatiles.VolatileARGBType;
 
 public class BigWarpInit
@@ -209,6 +213,57 @@ public class BigWarpInit
 	{
 		BigDataViewer.initSetups(spimData, converterSetups, sources);
 	}
+	
+	public static < T extends RealType< T >> void initSource(
+			final Source< T > src,
+			final T type,
+			final int setupId,
+			final String setupName,
+			final List< ConverterSetup > converterSetups,
+			final List< SourceAndConverter< ? > > sources )
+	{
+
+		final double typeMin = Math.max( 0, Math.min( type.getMinValue(), 65535 ) );
+		final double typeMax = Math.max( 0, Math.min( type.getMaxValue(), 65535 ) );
+		final RealARGBColorConverter< T > converter = new RealARGBColorConverter.Imp1<>( typeMin, typeMax );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+
+		final SourceAndConverter< T > soc = new SourceAndConverter<>( src, converter );
+
+		sources.add( soc );
+		converterSetups.add( new RealARGBColorConverterSetup( setupId, converter ) );
+	}
+	
+//	public static < T extends RealType< T >, V extends Volatile< T > & RealType< V > > void initSourceVolatile(
+//			final Source< T > src,
+//			final T type,
+//			final int setupId,
+//			final String setupName,
+//			final List< ConverterSetup > converterSetups,
+//			final List< SourceAndConverter< ? > > sources )
+//	{
+//
+//		final double typeMin = Math.max( 0, Math.min( type.getMinValue(), 65535 ) );
+//		final double typeMax = Math.max( 0, Math.min( type.getMaxValue(), 65535 ) );
+//		final RealARGBColorConverter< V > vconverter = new RealARGBColorConverter.Imp0<>( typeMin, typeMax );
+//		vconverter.setColor( new ARGBType( 0xffffffff ) );
+//		final RealARGBColorConverter< T > converter = new RealARGBColorConverter.Imp1<>( typeMin, typeMax );
+//		converter.setColor( new ARGBType( 0xffffffff ) );
+//
+//		final VolatileSpimSource< T, V > vs = new VolatileSpimSource<>( spimData, setupId, setupName );
+//		final SpimSource< T > s = vs.nonVolatile();
+//
+//		// Decorate each source with an extra transformation, that can be
+//		// edited manually in this viewer.
+//		final TransformedSource< V > tvs = new TransformedSource<>( vs );
+//		final TransformedSource< T > ts = new TransformedSource<>( s, tvs );
+//
+//		final SourceAndConverter< V > vsoc = new SourceAndConverter<>( tvs, vconverter );
+//		final SourceAndConverter< T > soc = new SourceAndConverter<>( ts, converter, vsoc );
+//
+//		sources.add( soc );
+//		converterSetups.add( new RealARGBColorConverterSetup( setupId, converter, vconverter ) );
+//	}
 	
 	public static BigWarpData createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
 	{

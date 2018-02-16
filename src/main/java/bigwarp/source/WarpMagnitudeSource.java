@@ -31,20 +31,15 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	
 	public WarpMagnitudeSource( String name, BigWarpData data, T t  )
 	{
+		this(name, data.sources.get( 1 ).getSpimSource().getSource( 0, 0 ), t );
+	}
+	
+	public WarpMagnitudeSource( String name, RandomAccessibleInterval<?> fixedsrc, T t  )
+	{
 		this.name = name;
 		this.type = t;
-		
-		sourceData = data;
-		
-		RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		
-		// use the interval of the fixed image
-//		if( fixedsrc.dimension( 2 ) == 1 )
-//			interval = new FinalInterval( 
-//					new long[]{ fixedsrc.min( 0 ), fixedsrc.min( 1 ) }, 
-//					new long[]{ fixedsrc.max( 0 ), fixedsrc.max( 1 ) });
-//		else
-		
+		this.sourceData = null;
+
 		interval = fixedsrc;
 		
 		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
@@ -169,7 +164,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public void getSourceTransform( int t, int level, AffineTransform3D transform )
 	{
-		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+//		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
 	}
 
 	@Override
