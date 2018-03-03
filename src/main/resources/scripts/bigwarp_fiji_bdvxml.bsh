@@ -1,0 +1,85 @@
+import java.awt.Color;
+import java.awt.Point;
+import java.io.File;
+
+import net.imglib2.type.numeric.ARGBType;
+import bdv.export.ProgressWriterConsole;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpInit;
+import bigwarp.BigWarp.BigWarpData;
+import bigwarp.loader.ImagePlusLoader;
+import bigwarp.loader.XMLLoader;
+
+import ij.IJ;
+import ij.ImageJ;
+
+import mpicbg.spim.data.generic.AbstractSpimData;
+import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
+
+int WIDTH  = 600;
+int HEIGHT = 600;
+
+public static BigWarpData createSingleBigWarpDataFromXML( String xmlFilename )
+{
+    spimData = new XMLLoader( xmlFilename ).load()[0];
+
+    AbstractSequenceDescription seqP = spimData.getSequenceDescription();
+	AbstractSequenceDescription seqQ = spimData.getSequenceDescription();
+
+	ArrayList converterSetups = new ArrayList();
+
+	ArrayList sources = new ArrayList();
+	BigWarpInit.initSetups( spimData, converterSetups, sources );
+
+	int numMovingSources = seqP.getViewSetups().size();
+	int numTargetSources = seqQ.getViewSetups().size();
+
+	int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+	int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+
+	/* Load the second source */
+	BigWarpInit.initSetups( spimData, converterSetups, sources );
+
+	return new BigWarpData( sources, seqP, seqQ, converterSetups, movingSourceIndices, targetSourceIndices );
+}
+
+bdvXml = "/home/john/tmp/mitosis/mitosis.xml"; // your xml
+fnLandmarks = ""; // can optionally point to a file with landmark points
+
+try
+{
+
+    data = createSingleBigWarpDataFromXML( bdvXml );
+
+    bw = new BigWarp( data, "bigwarp", new ProgressWriterConsole() );
+    //bw.setImageJInstance( IJ.getInstance() );
+
+	/* load the landmark points if there are any */
+	if ( !fnLandmarks.isEmpty() )
+		bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
+
+
+	/* Set window sizes */
+	bw.getViewerFrameP().setSize( WIDTH, HEIGHT );
+	bw.getViewerFrameQ().setSize( WIDTH, HEIGHT );
+
+	/* Set window positions */
+	bw.getViewerFrameP().setLocation( 0, 0 );
+	Point location = bw.getViewerFrameP().getLocation();
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getViewerFrameQ().setLocation( location );
+
+	location.setLocation( location.x + WIDTH, location.y );
+	bw.getLandmarkPanel().setLocation( location );
+			
+	/* Repaint */
+	bw.getViewerFrameP().getViewerPanel().requestRepaint();
+	bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+
+}
+catch ( Exception e )
+{
+	e.printStackTrace();
+}
+
