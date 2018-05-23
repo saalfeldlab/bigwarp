@@ -11,7 +11,7 @@
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>3.1.1-SNAPSHOT</version>
+	<version>3.1.1</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -82,7 +82,7 @@
 	<scm>
 		<connection>scm:git:git://github.com/saalfeldlab/bigwarp</connection>
 		<developerConnection>scm:git:git@github.com:saalfeldlab/bigwarp</developerConnection>
-		<tag>HEAD</tag>
+		<tag>bigwarp_fiji-3.1.1</tag>
 		<url>https://github.com/saalfeldlab/bigwarp</url>
 	</scm>
 	<issueManagement>
