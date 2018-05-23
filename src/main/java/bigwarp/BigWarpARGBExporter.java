@@ -128,7 +128,7 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 		else
 		{
 			System.out.println( "copy with " + nThreads );
-			final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >();
+			final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >( new ARGBType() );
 
 			if ( destinterval.numDimensions() == 3 )
 			{
@@ -181,8 +181,8 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 		}
 
 		// create the image plus image
-		final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >();
-		final ImagePlusImg< ARGBType, ? > target = factory.create( dimensions, new ARGBType() );
+		final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >( new ARGBType() );
+		final ImagePlusImg< ARGBType, ? > target = factory.create( dimensions );
 
 		long[] dims = new long[ target.numDimensions() ];
 		target.dimensions( dims );
@@ -228,8 +228,8 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 
 		// create the image plus image
 		final T t = rai.realRandomAccess().get();
-		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
-		final ImagePlusImg< T, ? > target = factory.create( itvl, t );
+		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( t );
+		final ImagePlusImg< T, ? > target = factory.create( itvl );
 
 		double k = 0;
 		final long N = dimensions[ 0 ] * dimensions[ 1 ] * dimensions[ 2 ];

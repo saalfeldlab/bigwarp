@@ -144,6 +144,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		// TODO - 	require for now that all moving image types are the same.  
 		// 		  	this is not too unreasonable, I think.		int numChannels = movingSourceIndexList.length;
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
+		T t = null;
+		
+//		if ( t == null )
+//			t = Views.flatIterable( sources.get( movingSourceIndex ).getSpimSource().getSource( 0, 0 ) ).firstElement();
+			
+		
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			int movingSourceIndex = movingSourceIndexList[ i ];
@@ -162,6 +168,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 			
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 			
+			
 			// go from moving to physical space
 			final AffineTransform3D movingImgXfm = new AffineTransform3D();
 			sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0, movingImgXfm );
@@ -173,6 +180,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		}
 		
 		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
+		
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
@@ -185,7 +193,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		else
 		{
 			System.out.println( "render with " + nThreads + " threads.");
-			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
+			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( baseType );
 
 			if ( destinterval.numDimensions() == 3 )
 			{
@@ -249,8 +257,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 
 		// create the image plus image
 		final T t = rai.randomAccess().get();
-		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
-		final ImagePlusImg< T, ? > target = factory.create( dimensions, t );
+		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( t );
+		final ImagePlusImg< T, ? > target = factory.create( dimensions );
 
 		long[] dims = new long[ target.numDimensions() ];
 		target.dimensions( dims );
@@ -295,8 +303,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 
 		// create the image plus image
 		final T t = rai.realRandomAccess().get();
-		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >();
-		final ImagePlusImg< T, ? > target = factory.create( itvl, t );
+		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( t );
+		final ImagePlusImg< T, ? > target = factory.create( itvl );
 
 		double k = 0;
 		final long N = dimensions[ 0 ] * dimensions[ 1 ] * dimensions[ 2 ];

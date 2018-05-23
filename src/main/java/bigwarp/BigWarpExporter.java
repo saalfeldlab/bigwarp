@@ -10,7 +10,6 @@ import java.util.concurrent.Future;
 import bdv.viewer.Interpolation;
 import ij.IJ;
 import ij.ImagePlus;
-import jitk.spline.XfmUtils;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -20,8 +19,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.type.numeric.NumericType;
-import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
@@ -63,8 +60,7 @@ public interface BigWarpExporter <T>
 			final int nThreads )
 	{
 		// create the image plus image
-		final T t = raible.randomAccess().get().copy();
-		Img< T > target = factory.create( itvl, t );
+		Img< T > target = factory.create( itvl );
 		return copyToImageStack( raible, itvl, target, nThreads );
 	}
 
