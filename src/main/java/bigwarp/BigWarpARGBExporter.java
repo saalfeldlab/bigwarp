@@ -144,13 +144,15 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 
 				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raiStack,
 						destIntervalPerm, factory, nThreads );
-				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+//				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
 			}
 			else
 			{
 				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( raiStack,
 						destinterval, factory, nThreads );
-				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+//				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
 			}
 		}
 

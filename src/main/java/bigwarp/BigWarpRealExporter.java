@@ -208,7 +208,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
 						raiStack,
 						destIntervalPerm, factory, nThreads );
-				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
 			}
 			else if ( destinterval.numDimensions() == 2 )
 			{
@@ -221,7 +221,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
-				ip = ImageJFunctions.wrap( img, "bigwarped_image" );
+				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
 			}
 		}
 
