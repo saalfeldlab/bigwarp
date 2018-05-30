@@ -27,6 +27,7 @@ public class BigWarpActions
 
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
+	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
 
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
@@ -191,27 +192,27 @@ public class BigWarpActions
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
 		map.put( SHOW_WARPTYPE_DIALOG, "U" );
-		//map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
+		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 
-		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
-		// the few lines below are super ugly, but are necessary for robustness
-		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
-		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
-
-		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
-		// the few lines below are super ugly, but are necessary for robustness
-		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
-		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
+//		// the few lines below are super ugly, but are necessary for robustness
+//		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
+//
+//		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
+//		// the few lines below are super ugly, but are necessary for robustness
+//		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
 
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
@@ -243,8 +244,16 @@ public class BigWarpActions
 	{
 		final ActionMap actionMap = new ActionMap();
 
-		new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ).put( actionMap );
-		new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ).put( actionMap );
+		/*
+		 * The below two lines with ui-behavior-1.6.- or so
+		 */
+//		new LandmarkModeAction( LANDMARK_MODE_ON, bw, true ).put( actionMap );
+//		new LandmarkModeAction( LANDMARK_MODE_OFF, bw, false ).put( actionMap );
+
+//		new ToggleLandmarkModeAction( LANDMARK_MODE_ON, bw ).put( actionMap );
+//		new ToggleLandmarkModeAction( LANDMARK_MODE_OFF, bw ).put( actionMap );
+
+		new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ).put( actionMap );
 
 		new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ).put( actionMap );
 
@@ -377,7 +386,28 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+//			System.out.println( "LM MODE : " + isOn );
 			bw.setInLandmarkMode( isOn );
+		}
+	}
+
+	public static class ToggleLandmarkModeAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 234323425930019L;
+
+		private BigWarp bw;
+
+		public ToggleLandmarkModeAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+//			System.out.println( "TOGGLE LM MODE" );
+			bw.setInLandmarkMode( !bw.inLandmarkMode );
 		}
 	}
 
