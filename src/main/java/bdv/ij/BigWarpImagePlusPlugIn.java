@@ -47,9 +47,9 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		if ( IJ.versionLessThan( "1.40" ) ) return;
 
         final int[] ids = WindowManager.getIDList();
-        if ( ids == null || ids.length < 2 )
+        if ( ids == null || ids.length < 1 )
         {
-            IJ.showMessage( "You should have at least two images open." );
+            IJ.showMessage( "You should have at least one image open." );
             return;
         }
 
@@ -65,7 +65,10 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         gd.addMessage( "Image Selection:" );
         final String current = WindowManager.getCurrentImage().getTitle();
         gd.addChoice( "moving_image", titles, current );
-        gd.addChoice( "target_image", titles, current.equals( titles[ 0 ] ) ? titles[ 1 ] : titles[ 0 ] );
+        if( titles.length > 1 )
+        	gd.addChoice( "target_image", titles, current.equals( titles[ 0 ] ) ? titles[ 1 ] : titles[ 0 ] );
+        else 
+        	gd.addChoice( "target_image", titles, titles[ 0 ] );
         gd.showDialog();
 
         if (gd.wasCanceled()) return;
