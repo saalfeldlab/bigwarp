@@ -59,6 +59,7 @@ import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
@@ -109,14 +110,19 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.histogram.DiscreteFrequencyDistribution;
 import net.imglib2.histogram.Histogram1d;
 import net.imglib2.histogram.Real1dBinMapper;
+import net.imglib2.img.imageplus.FloatImagePlus;
+import net.imglib2.img.imageplus.ImagePlusImgs;
+import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -727,6 +733,10 @@ public class BigWarp
 			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
 			exportToImagePlus.setText( "Export as ImagePlus" );
 			fileMenu.add( exportToImagePlus );
+			
+			final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
+			exportWarpField.setText( "Export warp field" );
+			fileMenu.add( exportWarpField );
 		}
 
 		final JMenu settingsMenu = new JMenu( "Settings" );
@@ -777,6 +787,10 @@ public class BigWarp
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
 		exportToImagePlus.setText( "Export as ImagePlus" );
 		landmarkMenu.add( exportToImagePlus );
+		
+		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
+		exportWarpField.setText( "Export warp field" );
+		landmarkMenu.add( exportWarpField );
 
 	}
 
@@ -825,6 +839,63 @@ public class BigWarp
 			ip.show();
 	}
 
+	public void exportWarpField( )
+	{
+		if( ij == null )
+			return;
+		
+		final ArrayList<SourceAndConverter<?>> sources = this.sources;
+		new Thread()
+		{
+			public void run()
+			{
+				RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		
+				int ndims = landmarkModel.getNumdims();
+				long[] dims;
+				if( ndims <= 2 )
+				{
+					dims = new long[ 3 ];
+					dims[ 0 ] = tgtInterval.dimension( 0 );
+					dims[ 1 ] = tgtInterval.dimension( 1 );
+					dims[ 2 ] = 2;
+				} 
+				else
+				{
+					dims = new long[ 4 ];
+					dims[ 0 ] = tgtInterval.dimension( 0 );
+					dims[ 1 ] = tgtInterval.dimension( 1 );
+					dims[ 2 ] = 3;
+					dims[ 3 ] = tgtInterval.dimension( 2 );
+				}
+		
+				double[] resolutions = new double[ 3 ];
+				VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
+				voxelDim.dimensions( resolutions );
+				
+				AffineTransform pixToPhysical = new AffineTransform( ndims );
+				pixToPhysical.set( resolutions[ 0 ], 0, 0 );
+				pixToPhysical.set( resolutions[ 1 ], 1, 1 );
+				if( ndims > 2 )
+					pixToPhysical.set( resolutions[ 2 ], 2, 2 );
+				
+				FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
+				ImagePlus dfieldIp = deformationField.getImagePlus();
+				dfieldIp.getCalibration().pixelWidth  = 1.0;
+				dfieldIp.getCalibration().pixelHeight = 1.0;
+				dfieldIp.getCalibration().pixelDepth  = 1.0;
+				
+				ThinplateSplineTransform tps = new ThinplateSplineTransform( landmarkModel.getTransform() );
+				BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ) );
+		
+				if ( dfieldIp != null )
+					dfieldIp.show();
+				
+			}
+		}.run();
+	}
+
+	
 	protected void setUpLandmarkMenus()
 	{
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
