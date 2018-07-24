@@ -2,7 +2,14 @@ package bdv.ij;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
 
 import ij.IJ;
@@ -12,7 +19,9 @@ import ij.WindowManager;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.img.imageplus.FloatImagePlus;
@@ -25,6 +34,8 @@ import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Util;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
 import net.imglib2.view.composite.GenericComposite;
@@ -42,6 +53,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
     private ImagePlus ref_imp;
     private ThinplateSplineTransform tps;
     private AffineTransform pixToPhysical;
+    private int nThreads;
 
 	public static void main( final String[] args )
 	{
@@ -78,14 +90,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		gd.addStringField( "landmarks_image_file", "" );
 		final String current = WindowManager.getCurrentImage().getTitle();
 		gd.addChoice( "reference_image", titles, current );
-		//gd.addNumericField( "threads", 1, 0 );
+		gd.addNumericField( "threads", 1, 0 );
 		gd.showDialog();
 
         if (gd.wasCanceled()) return;
 
         String landmarksPath = gd.getNextString();
         ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
+        nThreads = (int)gd.getNextNumber();
 
+        
         int nd = 2;
 		if ( ref_imp.getNSlices() > 1 )
 			nd = 3;
@@ -153,7 +167,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 		FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
-		fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ) );
+		if( nThreads <= 1 )
+			fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ));
+		else
+			fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ), 8 );
+		
 
 		return deformationField;
 	}
@@ -226,5 +244,123 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				displacementVector.get( i ).setReal( q.getDoublePosition( i ) - p.getDoublePosition( i ) ); 
 		}
 	}
+	
+	/**
+	 * Converts a {@link RealTransform} into a deformation field.
+	 * 
+	 * Writes the result into the passed {@link RandomAccessibleInterval}. If
+	 * the transform has N source dimensions, then the deformation field must
+	 * have at least N+1 dimensions where the last dimensions of of length at
+	 * least N.  
+	 * 
+	 * A DeformationField creating with the resulting {@link RandomAccessibleInterval}
+	 * will give the same results as the transform inside its Interval.
+	 * 
+	 * @param transform
+	 *            the {@link RealTransform} to convert
+	 * @param pixelToPhysical
+	 * 			  the transform from coordinates in the {@link RandomAccessibleInterval} to
+	 * 		      physical units
+	 * @param deformationField
+	 *            the {@link RandomAccessibleInterval} into which the
+	 *            displacement field will be written
+	 * @param nThreads
+	 *            the number of threads
+	 */
+	public static < T extends RealType< T > > void fromRealTransform( final RealTransform transform, 
+			final AffineTransform pixelToPhysical,
+			final RandomAccessibleInterval< T > deformationField,
+			int nThreads)
+	{
+		assert deformationField.numDimensions() == ( transform.numSourceDimensions() + 1 );
+		assert deformationField.dimension( deformationField.numDimensions() - 1 ) >= transform.numSourceDimensions();
+
+		System.out.println( "NTHREADS: " + nThreads );
+		System.out.println( "dfield size: " + Util.printInterval( deformationField ));
+		
+		final int ndims = transform.numSourceDimensions();
+
+		final long[] splitPoints = new long[ nThreads + 1 ];
+		long N;
+		final int dim2split;
+		if( ndims == 2 ) 
+		{
+			N = deformationField.dimension( 1 );
+			dim2split = 1;
+		}
+		else
+		{
+			N = deformationField.dimension( 2 );
+			dim2split = 2;
+		}
+
+		long del = ( long )( N / nThreads ); 
+		splitPoints[ 0 ] = 0;
+		splitPoints[ nThreads ] = deformationField.dimension( dim2split );
+		for( int i = 1; i < nThreads; i++ )
+		{
+			splitPoints[ i ] = splitPoints[ i - 1 ] + del;
+		}
+
+		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
+		LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
+		
+		for( int i = 0; i < nThreads; i++ )
+		{
+			final long start = splitPoints[ i ];
+			final long end   = splitPoints[ i+1 ];
+
+			final RealTransform transformCopy = transform.copy();
+			final RealTransform toPhysicalCopy = pixelToPhysical.copy();
+			
+			jobs.add( new Callable<Boolean>()
+			{
+				public Boolean call()
+				{
+					try
+					{
+						RealPoint p = new RealPoint( transform.numTargetDimensions() );
+						RealPoint q = new RealPoint( transform.numTargetDimensions() );
+
+						final FinalInterval subItvl = BigWarpExporter.getSubInterval( deformationField, dim2split, start, end );
+						CompositeIntervalView< T, ? extends GenericComposite< T > > col = Views.collapse( deformationField );
+						final IntervalView< ? extends GenericComposite< T > > subTgt = Views.interval( col, subItvl );
+
+//						System.out.println( "subTgt size: " + Util.printInterval( subTgt ));
+						
+						Cursor< ? extends GenericComposite< T > > c = Views.flatIterable( subTgt ).cursor();
+						while ( c.hasNext() )
+						{
+							GenericComposite< T > displacementVector = c.next();
+
+							// transform the location of the cursor
+							// and store the displacement
+							toPhysicalCopy.apply( c, p );
+							transformCopy.apply( p, q );
+
+							for ( int i = 0; i < ndims; i++ )
+								displacementVector.get( i ).setReal( q.getDoublePosition( i ) - p.getDoublePosition( i ) ); 
+						}
+						return true;
+					}
+					catch( Exception e )
+					{
+						e.printStackTrace();
+					}
+					return false;
+				}
+			});
+		}
+		try
+		{
+			List< Future< Boolean > > futures = threadPool.invokeAll( jobs );
+			threadPool.shutdown(); // wait for all jobs to finish
+		}
+		catch ( InterruptedException e1 )
+		{
+			e1.printStackTrace();
+		}
+	}
 
 }
+

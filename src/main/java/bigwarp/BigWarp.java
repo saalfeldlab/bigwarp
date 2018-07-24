@@ -11,7 +11,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,7 +22,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 
-import javax.imageio.ImageIO;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
@@ -53,7 +51,6 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
-import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
@@ -89,7 +86,6 @@ import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
-import bdv.viewer.render.MultiResolutionRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
@@ -131,8 +127,6 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
-import net.imglib2.ui.PainterThread;
-import net.imglib2.ui.RenderTarget;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformEventHandlerFactory;
 import net.imglib2.ui.TransformListener;
@@ -843,56 +837,49 @@ public class BigWarp
 	{
 		if( ij == null )
 			return;
-		
-		final ArrayList<SourceAndConverter<?>> sources = this.sources;
-		new Thread()
+
+		RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
+
+		int ndims = landmarkModel.getNumdims();
+		long[] dims;
+		if( ndims <= 2 )
 		{
-			public void run()
-			{
-				RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
+			dims = new long[ 3 ];
+			dims[ 0 ] = tgtInterval.dimension( 0 );
+			dims[ 1 ] = tgtInterval.dimension( 1 );
+			dims[ 2 ] = 2;
+		} 
+		else
+		{
+			dims = new long[ 4 ];
+			dims[ 0 ] = tgtInterval.dimension( 0 );
+			dims[ 1 ] = tgtInterval.dimension( 1 );
+			dims[ 2 ] = 3;
+			dims[ 3 ] = tgtInterval.dimension( 2 );
+		}
+
+		double[] resolutions = new double[ 3 ];
+		VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
+		voxelDim.dimensions( resolutions );
 		
-				int ndims = landmarkModel.getNumdims();
-				long[] dims;
-				if( ndims <= 2 )
-				{
-					dims = new long[ 3 ];
-					dims[ 0 ] = tgtInterval.dimension( 0 );
-					dims[ 1 ] = tgtInterval.dimension( 1 );
-					dims[ 2 ] = 2;
-				} 
-				else
-				{
-					dims = new long[ 4 ];
-					dims[ 0 ] = tgtInterval.dimension( 0 );
-					dims[ 1 ] = tgtInterval.dimension( 1 );
-					dims[ 2 ] = 3;
-					dims[ 3 ] = tgtInterval.dimension( 2 );
-				}
+		AffineTransform pixToPhysical = new AffineTransform( ndims );
+		pixToPhysical.set( resolutions[ 0 ], 0, 0 );
+		pixToPhysical.set( resolutions[ 1 ], 1, 1 );
+		if( ndims > 2 )
+			pixToPhysical.set( resolutions[ 2 ], 2, 2 );
 		
-				double[] resolutions = new double[ 3 ];
-				VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
-				voxelDim.dimensions( resolutions );
-				
-				AffineTransform pixToPhysical = new AffineTransform( ndims );
-				pixToPhysical.set( resolutions[ 0 ], 0, 0 );
-				pixToPhysical.set( resolutions[ 1 ], 1, 1 );
-				if( ndims > 2 )
-					pixToPhysical.set( resolutions[ 2 ], 2, 2 );
-				
-				FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
-				ImagePlus dfieldIp = deformationField.getImagePlus();
-				dfieldIp.getCalibration().pixelWidth  = 1.0;
-				dfieldIp.getCalibration().pixelHeight = 1.0;
-				dfieldIp.getCalibration().pixelDepth  = 1.0;
-				
-				ThinplateSplineTransform tps = new ThinplateSplineTransform( landmarkModel.getTransform() );
-				BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ) );
-		
-				if ( dfieldIp != null )
-					dfieldIp.show();
-				
-			}
-		}.run();
+		FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
+		ImagePlus dfieldIp = deformationField.getImagePlus();
+		dfieldIp.getCalibration().pixelWidth  = resolutions[ 0 ];
+		dfieldIp.getCalibration().pixelHeight = resolutions[ 1 ];
+		dfieldIp.getCalibration().pixelDepth  = resolutions[ 2 ];
+
+		ThinplateSplineTransform tps = new ThinplateSplineTransform( landmarkModel.getTransform() );
+		BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ), 1 );
+
+		if ( dfieldIp != null )
+			dfieldIp.show();
+
 	}
 
 	
@@ -977,6 +964,7 @@ public class BigWarp
 
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
+
 		if( inLandmarkMode == inLmMode )
 			return;
 
@@ -1949,6 +1937,8 @@ public class BigWarp
 
 	public static void main( final String[] args )
 	{
+		ImageJ ij = new ImageJ();
+		
 		// TODO main
 		String fnP = "";
 		String fnQ = "";
@@ -2009,6 +1999,7 @@ public class BigWarp
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
+			
 
 		}
 		catch ( final Exception e )
@@ -2073,6 +2064,7 @@ public class BigWarp
 			this.movingSourceIndices = movingSourceIndices;
 			this.targetSourceIndices = targetSourceIndices;
 		}
+
 	}
 
 	protected class LandmarkModeListener implements KeyEventPostProcessor
