@@ -18,6 +18,7 @@ import ij.ImagePlus;
 import ij.WindowManager;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -59,6 +60,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		new ImageJ();
 		IJ.run("Boats (356K)");
+//		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
+//		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
+//		imp.show();
 		
 		WindowManager.getActiveWindow();
 		new BigWarpToDeformationFieldPlugIn().run( null );
@@ -84,66 +88,68 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			titles[ i ] = ( WindowManager.getImage( ids[ i ] ) ).getTitle();
 		}
 
-		// Build a dialog to choose the moving and fixed images
-		final GenericDialog gd = new GenericDialog( "Big Warp Setup" );
+		// Build a dialog to choose how to export the deformation field
+		final GenericDialog gd = new GenericDialog( "BigWarp to Deformation" );
 		gd.addMessage( "Landmarks and Image Selection:" );
 		gd.addStringField( "landmarks_image_file", "" );
 		final String current = WindowManager.getCurrentImage().getTitle();
 		gd.addChoice( "reference_image", titles, current );
+		gd.addCheckbox( "Ignore affine part", false );
 		gd.addNumericField( "threads", 1, 0 );
 		gd.showDialog();
 
-        if (gd.wasCanceled()) return;
+		if ( gd.wasCanceled() )
+			return;
 
-        String landmarksPath = gd.getNextString();
-        ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
-        nThreads = (int)gd.getNextNumber();
+		String landmarksPath = gd.getNextString();
+		ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
+		boolean ignoreAffine = gd.getNextBoolean();
+		nThreads = ( int ) gd.getNextNumber();
 
-        
-        int nd = 2;
+		int nd = 2;
 		if ( ref_imp.getNSlices() > 1 )
 			nd = 3;
-		
-		
+
 		// account for physical units of reference image
 		pixToPhysical = new AffineTransform( nd );
 		pixToPhysical.set( ref_imp.getCalibration().pixelWidth, 0, 0 );
 		pixToPhysical.set( ref_imp.getCalibration().pixelHeight, 1, 1 );
-		if( nd > 2 )
+		if ( nd > 2 )
 			pixToPhysical.set( ref_imp.getCalibration().pixelDepth, 2, 2 );
 
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		try
 		{
 			ltm.load( new File( landmarksPath ) );
-		} catch ( IOException e )
+		}
+		catch ( IOException e )
 		{
 			e.printStackTrace();
 			return;
 		}
-		tps = new ThinplateSplineTransform( ltm.getTransform() );
+
+		ThinPlateR2LogRSplineKernelTransform tpsRaw = ltm.getTransform();
+		ThinPlateR2LogRSplineKernelTransform tpsUseMe = tpsRaw;
+		if ( ignoreAffine )
+			tpsUseMe = new ThinPlateR2LogRSplineKernelTransform( 
+					tpsRaw.getSourceLandmarks(), null, null, tpsRaw.getKnotWeights() );
+
+		tps = new ThinplateSplineTransform( tpsUseMe );
 
 		FloatImagePlus< FloatType > dfield = convertToDeformationField();
-		DeformationFieldTransform< FloatType > dfieldXfm = new DeformationFieldTransform<>( 
-				Views.permute( dfield, 2, 3 ));
-		
-		RealTransformSequence totalXfmDfield = new RealTransformSequence();
-		totalXfmDfield.add( pixToPhysical );
-		totalXfmDfield.add( dfieldXfm );
-		
-		RealTransformSequence totalXfmTps = new RealTransformSequence();
-		totalXfmTps.add( pixToPhysical );
-		totalXfmTps.add( tps );
 
-//		boolean theSame = areTransformsTheSame( totalXfmTps, totalXfmDfield, Views.collapse( dfield ), 0.1 );
-//		System.out.println( "are they the same? " + theSame );
-		
+		String title = "bigwarp dfield";
+		if ( ignoreAffine )
+			title += " (no affine)";
+
 		ImagePlus dfieldIp = dfield.getImagePlus();
+		dfieldIp.setTitle( title );
+
 		dfieldIp.getCalibration().pixelWidth = ref_imp.getCalibration().pixelWidth;
 		dfieldIp.getCalibration().pixelHeight = ref_imp.getCalibration().pixelHeight;
 		dfieldIp.getCalibration().pixelDepth = ref_imp.getCalibration().pixelDepth;
 		dfieldIp.show();
-		
+
 	}
 
 	public FloatImagePlus< FloatType > convertToDeformationField()

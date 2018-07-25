@@ -93,6 +93,8 @@ import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import ij.WindowManager;
+import ij.gui.GenericDialog;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
@@ -833,22 +835,34 @@ public class BigWarp
 			ip.show();
 	}
 
-	public void exportWarpField( )
+	public void exportWarpField()
 	{
-		if( ij == null )
+		if ( ij == null )
 			return;
+
+		final GenericDialog gd = new GenericDialog( "BigWarp to Deformation" );
+		gd.addMessage( "Deformation field export:" );
+		gd.addCheckbox( "Ignore affine part", false );
+		gd.addNumericField( "threads", 1, 0 );
+		gd.showDialog();
+
+		if ( gd.wasCanceled() )
+			return;
+
+		boolean ignoreAffine = gd.getNextBoolean();
+		int nThreads = ( int ) gd.getNextNumber();
 
 		RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
 		long[] dims;
-		if( ndims <= 2 )
+		if ( ndims <= 2 )
 		{
 			dims = new long[ 3 ];
 			dims[ 0 ] = tgtInterval.dimension( 0 );
 			dims[ 1 ] = tgtInterval.dimension( 1 );
 			dims[ 2 ] = 2;
-		} 
+		}
 		else
 		{
 			dims = new long[ 4 ];
@@ -861,28 +875,35 @@ public class BigWarp
 		double[] resolutions = new double[ 3 ];
 		VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
 		voxelDim.dimensions( resolutions );
-		
+
 		AffineTransform pixToPhysical = new AffineTransform( ndims );
 		pixToPhysical.set( resolutions[ 0 ], 0, 0 );
 		pixToPhysical.set( resolutions[ 1 ], 1, 1 );
-		if( ndims > 2 )
+		if ( ndims > 2 )
 			pixToPhysical.set( resolutions[ 2 ], 2, 2 );
-		
+
 		FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
 		ImagePlus dfieldIp = deformationField.getImagePlus();
-		dfieldIp.getCalibration().pixelWidth  = resolutions[ 0 ];
+		dfieldIp.getCalibration().pixelWidth = resolutions[ 0 ];
 		dfieldIp.getCalibration().pixelHeight = resolutions[ 1 ];
-		dfieldIp.getCalibration().pixelDepth  = resolutions[ 2 ];
+		dfieldIp.getCalibration().pixelDepth = resolutions[ 2 ];
 
-		ThinplateSplineTransform tps = new ThinplateSplineTransform( landmarkModel.getTransform() );
-		BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ), 1 );
+		ThinPlateR2LogRSplineKernelTransform tpsRaw = landmarkModel.getTransform();
+		ThinPlateR2LogRSplineKernelTransform tpsUseMe = tpsRaw;
+		if ( ignoreAffine )
+			tpsUseMe = new ThinPlateR2LogRSplineKernelTransform( tpsRaw.getSourceLandmarks(), null, null, tpsRaw.getKnotWeights() );
 
-		if ( dfieldIp != null )
-			dfieldIp.show();
+		ThinplateSplineTransform tps = new ThinplateSplineTransform( tpsUseMe );
+		BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ), nThreads );
 
+		String title = "bigwarp dfield";
+		if ( ignoreAffine )
+			title += " (no affine)";
+
+		dfieldIp.setTitle( title );
+		dfieldIp.show();
 	}
 
-	
 	protected void setUpLandmarkMenus()
 	{
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
