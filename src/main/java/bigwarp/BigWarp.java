@@ -524,7 +524,7 @@ public class BigWarp
 			else if ( DoubleType.class.isInstance( baseType ) )
 				exporter = new BigWarpRealExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
 			else if ( ARGBType.class.isInstance( baseType ) )
-				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList );
+				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation() );
 			else
 			{
 				System.err.println( "Can't export type " + baseType.getClass() );

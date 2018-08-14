@@ -29,7 +29,7 @@ import net.imglib2.view.Views;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
-public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
+public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 {
 	final private ArrayList< SourceAndConverter< ? >> sources;
 
@@ -42,8 +42,11 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 	public BigWarpARGBExporter(
 			final ArrayList< SourceAndConverter< ? >> sources,
 			final int[] movingSourceIndexList,
-			final int[] targetSourceIndexList )
+			final int[] targetSourceIndexList,
+			final Interpolation interp )
 	{
+		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
+		
 		this.sources = sources;
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
@@ -78,9 +81,19 @@ public class BigWarpARGBExporter implements BigWarpExporter<ARGBType>
 	{
 		return exportMovingImagePlus( isVirtual, 1 );
 	}
+	
+	public ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads )
+	{
+		return exportMovingImagePlus( isVirtual, nThreads, false );
+	}
+	
+	public ImagePlus export()
+	{
+		return exportMovingImagePlus( isVirtual, nThreads );
+	}
 
 	@SuppressWarnings( { "unchecked" } )
-	public ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads )
+	public ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads, final boolean infer )
 	{
 		int numChannels = movingSourceIndexList.length;
 
