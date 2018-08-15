@@ -34,6 +34,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Util;
 
 /**
  * 
@@ -179,7 +180,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			FinalInterval interval = new FinalInterval( (long)movingIp.getWidth(), 
 					(long)movingIp.getHeight(), (long)movingIp.getNSlices() );
 
-			return BigWarpExporter.transformIntervalMinMax( seq, interval );
+			return BigWarpExporter.estimateBounds( seq, interval );
 		}
 		else if( fieldOfViewOption.equals( SPECIFIED ) )
 		{
@@ -205,6 +206,26 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 
+	public static double[] getOffset( 
+			final String fieldOfViewOption,
+			final double[] offsetSpec, 
+			final Interval outputInterval ) 
+	{
+		double[] offset = new double[ 3 ];
+		if( fieldOfViewOption.equals( SPECIFIED ) )
+		{
+			System.arraycopy( offsetSpec, 0, offset, 0, offset.length );
+			return offset;
+		}
+
+		for( int d = 0; d < outputInterval.numDimensions(); d++ )
+		{
+			offset[ d ] = outputInterval.realMin( d );
+		}
+
+		return offset;
+	}
+	
 	public static ImagePlus apply(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
@@ -274,10 +295,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 		double[] res = getResolution( movingIp, targetIp, resolutionOption, resolutionSpec );
 		Interval outputInterval = getPixelInterval( movingIp, targetIp, landmarks, fieldOfViewOption, 
 				fovSpec, offsetSpec, res );
+		double[] offset = getOffset(fieldOfViewOption, offsetSpec, outputInterval );
 
+		System.out.println( "output interval : " + Util.printInterval( outputInterval ));
 
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
+		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
 		

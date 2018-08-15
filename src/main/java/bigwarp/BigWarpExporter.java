@@ -105,7 +105,7 @@ public abstract class BigWarpExporter <T>
 	public void setOffset( double... offset )
 	{
 		for( int i = 0; i < offset.length; i++ )
-			offsetTransform.set( offset[ i ], i, i );
+			offsetTransform.set( offset[ i ], i, 3 );
 	}
 
 	public void buildTotalRenderTransform()
@@ -113,8 +113,13 @@ public abstract class BigWarpExporter <T>
 		pixelRenderToPhysical.identity();
 		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
+		
+//		System.out.println( " " );
+//		System.out.println( "resolutionTransform   : " + resolutionTransform );
+//		System.out.println( "offsetTransform       : " + offsetTransform );
+//		System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
 	}
-	
+
 	public void setInterval( final Interval outputInterval )
 	{
 		this.outputInterval = outputInterval;
