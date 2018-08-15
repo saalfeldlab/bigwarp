@@ -113,10 +113,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-//		if( isTransformed )
-//			transform.identity();
-//		else
-		source.getSourceTransform( t, level, transform );
+		if( isTransformed )
+			transform.identity();
+		else
+			source.getSourceTransform( t, level, transform );
 	}
 
 	public InverseRealTransform getTransform()
