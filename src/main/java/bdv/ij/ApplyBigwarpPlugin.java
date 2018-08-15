@@ -47,7 +47,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static final String MOVING = "Moving";
 	public static final String MOVING_WARPED = "Moving (warped)";
 	public static final String SPECIFIED = "Specified";
-	
+	public static final String SPECIFIED_PHYSICAL = "Specified (physical units)";
+	public static final String SPECIFIED_PIXEL = "Specified (pixel units)";
+
 	public static void main( String[] args ) throws IOException
 	{
 		new ImageJ();
@@ -86,13 +88,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return true;
 	}
 	
+	/**
+	 * Returns the resolution of the output given input options
+	 * 
+	 * @param movingIp the moving ImagePlus
+	 * @param targetIp the target ImagePlus
+	 * @param resolutionOption the resolution option
+	 * @param resolutionSpec the resolution (if applicable)
+	 * @return the output image resolution
+	 */
 	public static double[] getResolution(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final String resolutionOption,
 			final double[] resolutionSpec )
 	{
-		
 		if( resolutionOption.equals( TARGET ))
 		{
 			if( ( targetIp == null ) )
@@ -137,6 +147,18 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 	
+	/**
+	 * Returns the interval in pixels of the output given input options
+	 * 
+	 * @param movingIp the moving ImagePlus
+	 * @param targetIp the target ImagePlus
+	 * @param landmarks the landmarks
+	 * @param fieldOfViewOption the field of view option
+	 * @param fovSpec the field of view specification
+	 * @param offsetSpec the offset specification 
+	 * @param outputResolution the resolution of the output image
+	 * @return the output interval 
+	 */
 	public static Interval getPixelInterval(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
@@ -182,7 +204,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			return BigWarpExporter.estimateBounds( seq, interval );
 		}
-		else if( fieldOfViewOption.equals( SPECIFIED ) )
+		else if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
 		{
 			if( fovSpec.length == 2 )
 			{
@@ -200,21 +222,62 @@ public class ApplyBigwarpPlugin implements PlugIn
 			else
 			{
 				System.out.println("Invalid fov spec, length : " + fovSpec.length );
+				return null;
 			}
 		}
+		else if( fieldOfViewOption.equals( SPECIFIED_PHYSICAL ) )
+		{
+			if( fovSpec.length == 2 )
+			{
+				return new FinalInterval( 
+						(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]));
+			}
+			else if( fovSpec.length == 3 )
+			{
+				return new FinalInterval( 
+						(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]),
+						(long)Math.ceil( fovSpec[ 2 ] / outputResolution[ 2 ]));
+			}
+			else
+			{
+				System.out.println("Invalid fov spec, length : " + fovSpec.length );
+				return null;
+			}
+		}
+
 		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )" );
 		return null;
 	}
 
-	public static double[] getOffset( 
+	/**
+	 * Get the offset in pixels given the output resolution and interval
+	 * 
+	 * @param fieldOfViewOption the field of view option
+	 * @param offsetSpec the offset specification 
+	 * @param outputResolution the resolution of the output image
+	 * @param outputInterval the output interval
+	 * @return the offset 
+	 */
+	public static double[] getPixelOffset( 
 			final String fieldOfViewOption,
 			final double[] offsetSpec, 
+			final double[] outputResolution,
 			final Interval outputInterval ) 
 	{
 		double[] offset = new double[ 3 ];
-		if( fieldOfViewOption.equals( SPECIFIED ) )
+		if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
 		{
 			System.arraycopy( offsetSpec, 0, offset, 0, offset.length );
+			return offset;
+		}
+		else if( fieldOfViewOption.equals( SPECIFIED_PHYSICAL ) )
+		{
+			for( int d = 0; d < outputInterval.numDimensions(); d++ )
+			{
+				offset[ d ] = offsetSpec[ d ] / outputResolution[ d ];
+			}
 			return offset;
 		}
 
@@ -225,7 +288,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		return offset;
 	}
-	
+
 	public static ImagePlus apply(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
@@ -238,11 +301,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final Interpolation interp,
 			final boolean isVirtual,
 			final int nThreads )
-	{		
-		if( !validateInput( movingIp, targetIp, landmarks,
-				fieldOfViewOption, resolutionOption, resolutionSpec,
-				fovSpec, offsetSpec, interp, isVirtual, nThreads ) )
-			return null;
+	{
+//		if( !validateInput( movingIp, targetIp, landmarks,
+//				fieldOfViewOption, resolutionOption, resolutionSpec,
+//				fovSpec, offsetSpec, interp, isVirtual, nThreads ) )
+//			return null;
 
 		int numChannels = movingIp.getNChannels();
 		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
@@ -292,19 +355,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 		}
 		
+		// Generate the properties needed to generate the transform from output pixel space
+		// to physical space
 		double[] res = getResolution( movingIp, targetIp, resolutionOption, resolutionSpec );
 		Interval outputInterval = getPixelInterval( movingIp, targetIp, landmarks, fieldOfViewOption, 
 				fovSpec, offsetSpec, res );
-		double[] offset = getOffset(fieldOfViewOption, offsetSpec, outputInterval );
+		double[] offset = getPixelOffset(fieldOfViewOption, offsetSpec, res, outputInterval );
 
-		System.out.println( "output interval : " + Util.printInterval( outputInterval ));
+		// System.out.println( "output interval : " + Util.printInterval( outputInterval ));
 
+		// Do the export
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
-		
 		ImagePlus warpedIp = exporter.export();
 
 		// Note: need to get number of channels and frames from moving image
@@ -312,8 +377,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
 				movingIp.getNFrames() );
 
-		warpedIp.getCalibration().pixelWidth = 1.0 / voxdim.dimension( 0 );
-		warpedIp.getCalibration().pixelHeight = 1.0 / voxdim.dimension( 1 );
+		warpedIp.getCalibration().pixelWidth = voxdim.dimension( 0 );
+		warpedIp.getCalibration().pixelHeight = voxdim.dimension( 1 );
 		warpedIp.getCalibration().pixelDepth = voxdim.dimension( 2 );
 		warpedIp.getCalibration().setUnit( voxdim.unit() );
 		warpedIp.setTitle( movingIp.getTitle() + "_bigwarped" );
@@ -329,38 +394,60 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		final GenericDialog gd = new GenericDialog( "Apply Big Warp transform" );
 		gd.addMessage( "File Selection:" );
-		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
-		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
+//		
+//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
+//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_identity.csv" );
+		
+		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks.csv" );
+		
+		//gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
+		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series-RGB.tif" );
+		
 		gd.addStringField( "target_space_file", "" );
 		
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Field of view", 
-				new String[]{ TARGET, MOVING_WARPED, "Points", SPECIFIED },
-				MOVING_WARPED );
+				new String[]{ TARGET, MOVING_WARPED, "Points", SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
+				SPECIFIED_PHYSICAL );
 
 		gd.addChoice( "Resolution", 
 				new String[]{ TARGET, MOVING, SPECIFIED },
-				MOVING );
+				SPECIFIED );
 		
-		gd.addMessage( "Resolution in physical units");
-		gd.addNumericField( "x", 1.0, 4 );
-		gd.addNumericField( "y", 1.0, 4 );
-		gd.addNumericField( "z", 1.0, 4 );
+//		gd.addMessage( "Resolution");
+//		gd.addNumericField( "x", 1.0, 4 );
+//		gd.addNumericField( "y", 1.0, 4 );
+//		gd.addNumericField( "z", 1.0, 4 );
+//		
+//		gd.addMessage( "Offset");
+//		gd.addNumericField( "x", 0.0, 4 );
+//		gd.addNumericField( "y", 0.0, 4 );
+//		gd.addNumericField( "z", 0.0, 4 );
+//		
+//		gd.addMessage( "Field of view");
+//		gd.addNumericField( "x", -1, 0 );
+//		gd.addNumericField( "y", -1, 0 );
+//		gd.addNumericField( "z", -1, 0 );
 		
-		gd.addMessage( "Offset in physical units");
-		gd.addNumericField( "x", 0.0, 4 );
-		gd.addNumericField( "y", 0.0, 4 );
-		gd.addNumericField( "z", 0.0, 4 );
+		gd.addMessage( "Resolution");
+		gd.addNumericField( "x", 0.1, 4 );
+		gd.addNumericField( "y", 0.1, 4 );
+		gd.addNumericField( "z", 0.1, 4 );
 		
-		gd.addMessage( "Field of view (pixels)");
-		gd.addNumericField( "x", -1, 0 );
-		gd.addNumericField( "y", -1, 0 );
-		gd.addNumericField( "z", -1, 0 );
+		gd.addMessage( "Offset");
+		gd.addNumericField( "x", 18.0, 4 );
+		gd.addNumericField( "y", 23.0, 4 );
+		gd.addNumericField( "z",  5.0, 4 );
+		
+		gd.addMessage( "Field of view");
+		gd.addNumericField( "x", 20, 0 );
+		gd.addNumericField( "y", 31, 0 );
+		gd.addNumericField( "z",  7, 0 );
 		
 		gd.addMessage( "Output options");
 		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
 		gd.addCheckbox( "virtual?", false );
-		gd.addNumericField( "threads", 1, 0 );
+		gd.addNumericField( "threads", 4, 0 );
 
 		gd.showDialog();
 
@@ -399,6 +486,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if ( !targetPath.isEmpty() )
 			targetIp = IJ.openImage( targetPath );
 
+		System.out.println( "movingIp : " + movingIp );
+		System.out.println( "targetIp : " + targetIp );
+		
 		int nd = 2;
 		if ( movingIp.getNSlices() > 1 )
 			nd = 3;

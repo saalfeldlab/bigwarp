@@ -102,12 +102,22 @@ public abstract class BigWarpExporter <T>
 			resolutionTransform.set( res[ i ], i, i );
 	}
 	
+	/**
+	 * Set the offset of the output field of view in pixels.
+	 * 
+	 * @param offset the offset in pixel units.
+	 */
 	public void setOffset( double... offset )
 	{
 		for( int i = 0; i < offset.length; i++ )
 			offsetTransform.set( offset[ i ], i, 3 );
 	}
 
+	/**
+	 * Generate the transform from output pixel space to physical space.
+	 * 
+	 * Call this after setRenderResolution and setOffset.  
+	 */
 	public void buildTotalRenderTransform()
 	{
 		pixelRenderToPhysical.identity();
