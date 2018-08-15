@@ -249,7 +249,7 @@ public class BigWarpBatchTransformFOV
 					(DoubleType) baseType );
 		else if ( ARGBType.class.isInstance( baseType ) )
 			exporter = new BigWarpARGBExporter( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList );
+					movingSourceIndexList, targetSourceIndexList, interpolation );
 		else
 		{
 			System.err.println( "Can't export type " + baseType.getClass() );

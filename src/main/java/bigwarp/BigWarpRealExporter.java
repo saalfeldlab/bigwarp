@@ -297,8 +297,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			RandomAccessibleInterval< ? > mvgInterval = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
 			destInterval = BigWarpExporter.estimateBounds( ixfm, mvgInterval );
-			System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
-			System.out.println( "destination interval : " + Util.printInterval( destInterval ));
+//			System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
+//			System.out.println( "destination interval : " + Util.printInterval( destInterval ));
 			
 //			destInterval = new FinalInterval( 
 //					new long[]{ (312-1050), (269-1589), (226-2420) }, 

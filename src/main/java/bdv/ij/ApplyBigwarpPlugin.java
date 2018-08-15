@@ -3,6 +3,8 @@ package bdv.ij;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.regex.Pattern;
 
 import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
@@ -49,6 +51,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static final String SPECIFIED = "Specified";
 	public static final String SPECIFIED_PHYSICAL = "Specified (physical units)";
 	public static final String SPECIFIED_PIXEL = "Specified (pixel units)";
+	public static final String LANDMARK_POINTS = "Landmark points";
 
 	public static void main( String[] args ) throws IOException
 	{
@@ -164,6 +167,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
 			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
 			final double[] fovSpec,
 			final double[] offsetSpec,
 			final double[] outputResolution )
@@ -246,6 +250,68 @@ public class ApplyBigwarpPlugin implements PlugIn
 				return null;
 			}
 		}
+		else if( fieldOfViewOption.equals( LANDMARK_POINTS ) )
+		{
+			
+			Pattern r = null;
+			if ( !fieldOfViewPointFilter.isEmpty() )
+				r = Pattern.compile( fieldOfViewPointFilter );
+
+			long[] min = new long[ landmarks.getNumdims() ];
+			long[] max = new long[ landmarks.getNumdims() ];
+
+			Arrays.fill( min, Long.MAX_VALUE );
+			Arrays.fill( max, Long.MIN_VALUE );
+
+			int numPoints = 0;
+			for ( int i = 0; i < landmarks.getRowCount(); i++ )
+			{
+				if ( r != null && !r.matcher( landmarks.getNames().get( i ) ).matches() )
+				{
+					System.out.println( "rejected point with name : "
+							+ landmarks.getNames().get( i ) );
+					continue;
+				}
+
+				Double[] pt = landmarks.getFixedPoint( i );
+				for ( int d = 0; d < pt.length; d++ )
+				{
+					long lo = (long) (Math.floor( pt[ d ] / outputResolution[ d ] ));
+					long hi = (long) (Math.ceil( pt[ d ] / outputResolution[ d ] ));
+
+					if ( lo < min[ d ] )
+						min[ d ] = lo;
+
+					if ( hi > max[ d ] )
+						max[ d ] = hi;
+
+				}
+				numPoints++;
+			}
+
+			System.out.println(
+					"Estimated field of view using " + numPoints + " landmarks." );
+
+			// Make sure something naughty didn't happen
+			for ( int d = 0; d < min.length; d++ )
+			{
+				if ( min[ d ] == Long.MAX_VALUE )
+				{
+					System.err
+							.println( "Problem generating field of view from landmarks" );
+					return null;
+				}
+
+				if ( max[ d ] == Long.MIN_VALUE )
+				{
+					System.err
+							.println( "Problem generating field of view from landmarks" );
+					return null;
+				}
+			}
+
+			return new FinalInterval( min, max );
+		}
 
 		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )" );
 		return null;
@@ -294,6 +360,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
 			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
 			final String resolutionOption,
 			final double[] resolutionSpec,
 			final double[] fovSpec,
@@ -359,11 +426,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// to physical space
 		double[] res = getResolution( movingIp, targetIp, resolutionOption, resolutionSpec );
 		Interval outputInterval = getPixelInterval( movingIp, targetIp, landmarks, fieldOfViewOption, 
-				fovSpec, offsetSpec, res );
+				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
 		double[] offset = getPixelOffset(fieldOfViewOption, offsetSpec, res, outputInterval );
 
-		// System.out.println( "output interval : " + Util.printInterval( outputInterval ));
-
+//		System.out.println( "res : " + Arrays.toString( res ));
+//		System.out.println( "output interval : " + Util.printInterval( outputInterval ));
+//		System.out.println( "offset : " + Arrays.toString( offset ));
+		
 		// Do the export
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
@@ -374,8 +443,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// Note: need to get number of channels and frames from moving image
 		// but get the number of slices form the target
-		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
-				movingIp.getNFrames() );
+//		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
+//				movingIp.getNFrames() );
 
 		warpedIp.getCalibration().pixelWidth = voxdim.dimension( 0 );
 		warpedIp.getCalibration().pixelHeight = voxdim.dimension( 1 );
@@ -397,8 +466,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 //		
 //		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
 //		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_identity.csv" );
-		
-		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks.csv" );
+//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks.csv" );
+		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks_wBnds.csv" );
+
 		
 		//gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
 		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series-RGB.tif" );
@@ -406,13 +476,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addStringField( "target_space_file", "" );
 		
 		gd.addMessage( "Field of view and resolution:" );
-		gd.addChoice( "Field of view", 
-				new String[]{ TARGET, MOVING_WARPED, "Points", SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
-				SPECIFIED_PHYSICAL );
-
 		gd.addChoice( "Resolution", 
 				new String[]{ TARGET, MOVING, SPECIFIED },
 				SPECIFIED );
+
+		gd.addChoice( "Field of view", 
+				new String[]{ TARGET, MOVING_WARPED, LANDMARK_POINTS, SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
+				LANDMARK_POINTS );
+
+		gd.addStringField( "point filter", "" );
 		
 //		gd.addMessage( "Resolution");
 //		gd.addNumericField( "x", 1.0, 4 );
@@ -458,8 +530,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		String movingPath = gd.getNextString();
 		String targetPath = gd.getNextString();
 		
-		String fovOption = gd.getNextChoice();
 		String resOption = gd.getNextChoice();
+		String fovOption = gd.getNextChoice();
+		String fovPointFilter = gd.getNextString();
 		
 		double[] resolutions = new double[ 3 ];
 		resolutions[ 0 ] = gd.getNextNumber();
@@ -510,7 +583,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		System.out.println( nThreads );
 
 		ImagePlus warpedIp = apply( movingIp, targetIp, ltm,
-				fovOption, resOption,
+				fovOption, fovPointFilter, resOption,
 				resolutions, fov, offset,
 				interp, isVirtual, nThreads );
 
