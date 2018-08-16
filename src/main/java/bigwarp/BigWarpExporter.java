@@ -56,12 +56,6 @@ public abstract class BigWarpExporter <T>
 	protected boolean isVirtual = false;
 	
 	protected int nThreads = 1;
-
-	public abstract ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads, final boolean inferOutputSize );
-
-	public abstract ImagePlus exportMovingImagePlus( final boolean isVirtual, int nThreads );
-
-	public abstract ImagePlus exportMovingImagePlus( final boolean isVirtual );
 	
 	public abstract ImagePlus export();
 
@@ -175,16 +169,14 @@ public abstract class BigWarpExporter <T>
 		RandomAccessibleInterval< ? > mvgInterval = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
 		FinalInterval destInterval = BigWarpExporter.estimateBounds( ixfm, mvgInterval );
-		System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
-		System.out.println( "destination interval : " + Util.printInterval( destInterval ));
-		
+//		System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
+//		System.out.println( "destination interval : " + Util.printInterval( destInterval ));
 
 		double[] translation = new double[ xfm.numSourceDimensions() ];
 		pixelRenderToPhysical.apply( Intervals.minAsDoubleArray( destInterval ), translation );
 
 		pixelRenderToPhysical.translate( translation );
-		System.out.println( pixelRenderToPhysical );
-
+//		System.out.println( pixelRenderToPhysical );
 
 		return destInterval;
 	}

@@ -182,7 +182,9 @@ public class BigWarpBatchTransformFOV
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData() };
 
 		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
-		final ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
+		exporter.setNumThreads( nThreads );
+		exporter.setVirtual( false );
+		final ImagePlus ipout = exporter.export();
 
 		System.out.println( "saving" );
 		IJ.save( ipout, outputFilePath );

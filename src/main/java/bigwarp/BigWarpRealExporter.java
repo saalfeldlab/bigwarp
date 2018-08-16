@@ -2,7 +2,6 @@ package bigwarp;
 
 import java.util.ArrayList;
 
-import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -26,11 +25,6 @@ import net.imglib2.img.imageplus.ImagePlusImg;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
-import net.imglib2.realtransform.AffineTransform;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
-import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
@@ -64,10 +58,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final boolean needConversion )
 	{
 		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
-//		this.sources = sources;
-//		this.movingSourceIndexList = movingSourceIndexList;
-//		this.targetSourceIndexList = targetSourceIndexList;
-//		this.setInterp( interp );
 
 		this.needConversion = needConversion;
 		this.baseType = baseType;
@@ -111,39 +101,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 		return true;
 	}
-
-	@Override
-	public ImagePlus exportMovingImagePlus( final boolean isVirtual )
-	{
-		return exportMovingImagePlus( isVirtual, 1, false );
-	}
-
-	@Override
-	public ImagePlus exportMovingImagePlus( final boolean isVirtual, final int nThreads )
-	{
-		return exportMovingImagePlus( isVirtual, nThreads, false );
-	}
 	
-//	public ArrayList< RandomAccessibleInterval< T > > export( 
-//			ArrayList< RandomAccessibleInterval< T > > raiList,
-//			AffineTransform source2physical,
-//			RealTransform warp,
-//			AffineTransform target2physical,
-//			ArrayList< Interval > destinationPixelInterval )
-//	{
-//		int N = raiList.size();
-//		ArrayList< RandomAccessibleInterval< T > > outList = new ArrayList<>( N );
-//		for ( int i = 0; i < N; i++ )
-//		{
-//			
-//		}
-//		return outList;
-//	}
-	
-	public ImagePlus export()
+	public RandomAccessibleInterval< T > exportRai()
 	{
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
-		T t = null;
 		
 		buildTotalRenderTransform();
 		
@@ -169,21 +130,37 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			}
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
-
 			// apply the transformations
-//			AffineTransform3D tmpAffine = new AffineTransform3D();
 			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
 					raiRaw, pixelRenderToPhysical.inverse() );
 			
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
-		
 		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
+
+		return raiStack;
+	}
+	
+	public ImagePlus export()
+	{
+		int numChannels = movingSourceIndexList.length;
+		RandomAccessibleInterval< T > raiStack = exportRai();
 		
+		VoxelDimensions voxdim = new FinalVoxelDimensions( "um",
+				resolutionTransform.get( 0, 0 ),
+				resolutionTransform.get( 1, 1 ),
+				resolutionTransform.get( 2, 2 ));
+
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
-			ip = ImageJFunctions.wrap( raiStack, "warped_moving_image" );
+			System.out.println( raiStack );
+//			Views.offset( raiStack, Intervals.minAsLongArray( raiStack ));
+//			ip = ImageJFunctions.wrap( raiStack, "warped_moving_image" );
+			ip = ImageJFunctions.wrap(
+					Views.interval( Views.offset( raiStack, Intervals.minAsLongArray( raiStack )),
+						new FinalInterval( Intervals.dimensionsAsLongArray( raiStack ))),
+					"warped_moving_image" );
 		}
 		else if( nThreads == 1 )
 		{
@@ -234,189 +211,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			ip.getCalibration().xOrigin = offsetTransform.get( 0, 0 );
 			ip.getCalibration().yOrigin = offsetTransform.get( 1, 1 );
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 2 );
-		}
-		
-		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );
-
-		return ip;
-	}
-
-	@Override
-	@SuppressWarnings( { "unchecked" } )
-	public ImagePlus exportMovingImagePlus( final boolean isVirtual, final int nThreads, final boolean infer )
-	{
-		int numChannels = movingSourceIndexList.length;
-
-		// TODO - 	this is questionable if the fixed source images are ever in different intervals
-		// 			but outputting results to the space of the first one seems reasonable.
-		Interval destInterval= sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
-
-		// go from physical space to render image space
-		
-		AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
-		AffineTransform3D physicalToPixelRender = pixelRenderToPhysical.inverse();
-		VoxelDimensions voxdim;
-		double[] translation = null;
-		if( !infer )
-		{
-			sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, pixelRenderToPhysical );
-			voxdim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
-			physicalToPixelRender = pixelRenderToPhysical.inverse();
-		}
-		else
-		{
-//			sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, pixelRenderToPhysical );
-//			voxdim = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
-//			physicalToPixelRender = pixelRenderToPhysical.inverse();
-			
-			// TMP
-			pixelRenderToPhysical.set( 0.4, 0, 0 );
-			pixelRenderToPhysical.set( 0.4, 1, 1 );
-			pixelRenderToPhysical.set( 0.4, 2, 2 );
-			physicalToPixelRender = pixelRenderToPhysical.inverse();
-			voxdim = new FinalVoxelDimensions( "um", 0.4, 0.4, 0.4 );
-			
-//			pixelRenderToPhysical.set( 2.4, 0, 0 );
-//			pixelRenderToPhysical.set( 2.4, 1, 1 );
-//			pixelRenderToPhysical.set( 2.4, 2, 2 );
-//			physicalToPixelRender = pixelRenderToPhysical.inverse();
-//			voxdim = new FinalVoxelDimensions( "um", 2.4, 2.4, 2.4 );
-			
-			System.out.println( "Inferring output interval" );
-			
-			final AffineTransform3D thisMovingXfm = new AffineTransform3D();
-			sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, thisMovingXfm );
-			
-			InverseRealTransform xfm = ((WarpedSource< ? >) (sources.get( movingSourceIndexList[ 0 ] ).getSpimSource())).getTransform();
-
-			RealTransformSequence ixfm = new RealTransformSequence();
-			ixfm.add( thisMovingXfm );
-			ixfm.add( xfm.inverse() );
-			ixfm.add( physicalToPixelRender );
-
-			RandomAccessibleInterval< ? > mvgInterval = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
-
-			destInterval = BigWarpExporter.estimateBounds( ixfm, mvgInterval );
-//			System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
-//			System.out.println( "destination interval : " + Util.printInterval( destInterval ));
-			
-//			destInterval = new FinalInterval( 
-//					new long[]{ (312-1050), (269-1589), (226-2420) }, 
-//					new long[]{ (1539+1050), (2249+1589), (1994+2420) });
-			
-
-//			destInterval = new FinalInterval( 
-//					new long[]{ (130-175), (112-265), (95-404) }, 
-//					new long[]{ (640+175), (934+265), (831+404) });
-			
-			translation = new double[ 3 ];
-			pixelRenderToPhysical.apply( Intervals.minAsDoubleArray( destInterval ), translation );
-//			for( int d = 0; d < 3; d++ )
-//			{
-//				translation[ d ] *= -1;
-//			}
-			pixelRenderToPhysical.translate( translation );
-			System.out.println( pixelRenderToPhysical );
-		}
-
-		// TODO - 	require for now that all moving image types are the same.  
-		// 		  	this is not too unreasonable, I think.		int numChannels = movingSourceIndexList.length;
-		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
-		T t = null;
-
-		
-		for ( int i = 0; i < numChannels; i++ )
-		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
-
-			RealRandomAccessible< T > convertedSource;
-			if( needConversion )
-			{
-				Object srcType = sources.get( movingSourceIndex ).getSpimSource().getType();
-				RealRandomAccessible< ? > rraiRaw = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-			}
-			else
-			{
-				convertedSource = ( RealRandomAccessible< T > ) sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-			}
-			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-
-			// I removed the below because the moving part is already part of the call to 
-			//  getInterpolatedSource
-			// above
-
-//			// go from moving to physical space
-//			final AffineTransform3D movingImgXfm = new AffineTransform3D();
-//			sources.get( movingSourceIndex ).getSpimSource().getSourceTransform( 0, 0, movingImgXfm );
-//
-//			// apply the transformations
-//			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
-//					RealViews.affine( raiRaw, movingImgXfm ), fixedXfmInv );
-			
-			// apply the transformations
-//			AffineTransform3D tmpAffine = new AffineTransform3D();
-			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
-					raiRaw, physicalToPixelRender );
-			
-			raiList.add( Views.interval( Views.raster( rai ), destInterval ) );
-		}
-		
-		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
-		
-		ImagePlus ip = null;
-		if ( isVirtual )
-		{
-			ip = ImageJFunctions.wrap( raiStack, "warped_moving_image" );
-		}
-		else if( nThreads == 1 )
-		{
-			ip = copyToImageStack( raiStack, raiStack );
-		}
-		else
-		{
-			System.out.println( "render with " + nThreads + " threads.");
-			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( baseType );
-
-			if ( destInterval.numDimensions() == 3 )
-			{
-				// A bit of hacking to make slices the 4th dimension and
-				// channels the 3rd since that's how ImagePlusImgFactory does it
-				final long[] dimensions = new long[ 4 ];
-				dimensions[ 0 ] = destInterval.dimension( 0 );	// x
-				dimensions[ 1 ] = destInterval.dimension( 1 );	// y
-				dimensions[ 2 ] = numChannels; 					// c
-				dimensions[ 3 ] = destInterval.dimension( 2 ); 	// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
-						raiStack,
-						destIntervalPerm, factory, nThreads );
-				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
-			}
-			else if ( destInterval.numDimensions() == 2 )
-			{
-				final long[] dimensions = new long[ 4 ];
-				dimensions[ 0 ] = destInterval.dimension( 0 );	// x
-				dimensions[ 1 ] = destInterval.dimension( 1 );	// y
-				dimensions[ 2 ] = numChannels; 					// c
-				dimensions[ 3 ] = 1; 							// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
-						Views.addDimension( Views.extendMirrorDouble( raiStack )),
-						destIntervalPerm, factory, nThreads );
-				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
-			}
-		}
-
-		ip.getCalibration().pixelWidth = 1.0/voxdim.dimension( 0 );
-		ip.getCalibration().pixelHeight = 1.0/voxdim.dimension( 1 );
-		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
-		ip.getCalibration().setUnit( voxdim.unit() );
-		
-		if( translation != null )
-		{
-			ip.getCalibration().xOrigin = translation[ 0 ];
-			ip.getCalibration().yOrigin = translation[ 1 ];
-			ip.getCalibration().zOrigin = translation[ 2 ];
 		}
 		
 		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );

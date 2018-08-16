@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.BigWarp;
@@ -26,6 +27,7 @@ import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
@@ -36,6 +38,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
 
 /**
@@ -58,8 +61,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		new ImageJ();
 		new ApplyBigwarpPlugin().run( "" );
 	}
-	
-	
+
 	public static boolean validateInput(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
@@ -89,6 +91,64 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 		}
 		return true;
+	}
+	
+	public static double[] getResolution(
+			final Source< ? > source,
+			final String resolutionOption,
+			final double[] resolutionSpec )
+	{
+		if( ( source == null ) )
+		{
+			System.err.println("Requested target resolution but target image is missing.");
+			return null;
+		}
+
+		double[] res = new double[ 3 ];
+		source.getVoxelDimensions().dimensions( res );
+		return res;
+	}
+	
+	public static double[] getResolution(
+			final BigWarpData bwData,
+			final String resolutionOption,
+			final double[] resolutionSpec )
+	{
+		// TODO it may be necessary to generalize this to an arbitrary
+		// moving or target index rather than grabbing the first
+		
+		if( resolutionOption.equals( TARGET ))
+		{
+			if( bwData.targetSourceIndices.length <= 0 )
+				return null;
+			
+			Source< ? > spimSource = bwData.sources.get( 
+					bwData.targetSourceIndices[ 0 ]).getSpimSource();
+			
+			return getResolution( spimSource, resolutionOption, resolutionSpec );
+		}
+		else if( resolutionOption.equals( MOVING ))
+		{
+			if( bwData.targetSourceIndices.length <= 0 )
+				return null;
+			
+			Source< ? > spimSource = bwData.sources.get( 
+					bwData.movingSourceIndices[ 0 ]).getSpimSource();
+			return getResolution( spimSource, resolutionOption, resolutionSpec );
+		}
+		else if( resolutionOption.equals( SPECIFIED ))
+		{
+			if( ( resolutionSpec == null ) )
+			{
+				System.err.println("Requested moving resolution but moving image is missing.");
+				return null;
+			}
+			
+			double[] res = new double[ 3 ];
+			System.arraycopy( resolutionSpec, 0, res, 0, resolutionSpec.length );
+			return res;
+		}
+		return null;
 	}
 	
 	/**
@@ -150,6 +210,68 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 	
+	public static Interval getPixelInterval(
+			final ImagePlus movingIp,
+			final ImagePlus targetIp,
+			final LandmarkTableModel landmarks,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final double[] outputResolution )
+	{
+		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		return getPixelInterval( bwData, landmarks, fieldOfViewOption,
+				fieldOfViewPointFilter, fovSpec, offsetSpec, outputResolution );
+	}
+	
+	public static Interval getPixelInterval(
+			final Source< ? > source,
+			final LandmarkTableModel landmarks,
+			final String fieldOfViewOption,
+			final double[] outputResolution )
+	{
+		RandomAccessibleInterval< ? > rai = source.getSource( 0, 0 );
+
+		if( fieldOfViewOption.equals( TARGET ))
+		{
+			return new FinalInterval(
+					Intervals.minAsLongArray( rai ),
+					Intervals.maxAsLongArray( rai ));
+		}
+		else if( fieldOfViewOption.equals( MOVING_WARPED ))
+		{
+			ThinPlateR2LogRSplineKernelTransform tps = landmarks.getTransform();
+			double[] movingRes = new double[ 3 ];
+			source.getVoxelDimensions().dimensions( movingRes );
+
+			AffineTransform movingPixelToPhysical = new AffineTransform( tps.getNumDims() );
+			movingPixelToPhysical.set( movingRes[ 0 ], 0, 0 );
+			movingPixelToPhysical.set( movingRes[ 1 ], 1, 1 );
+			if( tps.getNumDims() > 2 )
+				movingPixelToPhysical.set( movingRes[ 2 ], 2, 2 );
+
+			AffineTransform outputResolution2Pixel = new AffineTransform( tps.getNumDims() );
+			outputResolution2Pixel.set( outputResolution[ 0 ], 0, 0 );
+			outputResolution2Pixel.set( outputResolution[ 1 ], 1, 1  );
+			if( tps.getNumDims() > 2 )
+				outputResolution2Pixel.set( outputResolution[ 2 ], 2, 2  );
+			
+			RealTransformSequence seq = new RealTransformSequence();
+			seq.add( movingPixelToPhysical );
+			seq.add( new TpsTransformWrapper( tps.getNumDims(), tps ) );
+			seq.add( outputResolution2Pixel.inverse() );
+			
+			FinalInterval interval = new FinalInterval(
+					Intervals.minAsLongArray( rai ),
+					Intervals.maxAsLongArray( rai ));
+
+			return BigWarpExporter.estimateBounds( seq, interval );
+		}
+
+		return null;
+	}
+
 	/**
 	 * Returns the interval in pixels of the output given input options
 	 * 
@@ -163,8 +285,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 * @return the output interval 
 	 */
 	public static Interval getPixelInterval(
-			final ImagePlus movingIp,
-			final ImagePlus targetIp,
+			final BigWarpData bwData,
 			final LandmarkTableModel landmarks,
 			final String fieldOfViewOption,
 			final String fieldOfViewPointFilter,
@@ -174,39 +295,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 	{
 		if( fieldOfViewOption.equals( TARGET ))
 		{
-			if ( (targetIp == null) )
+			if ( bwData.targetSourceIndices.length <= 0 )
 			{
 				System.err.println("Requested target fov but target image is missing.");
 				return null;
 			}
 
-			return new FinalInterval( (long)targetIp.getWidth(), (long)targetIp.getHeight(), (long) targetIp.getNSlices() );
+			return getPixelInterval(
+					bwData.sources.get( bwData.targetSourceIndices[ 0 ]).getSpimSource(),
+					landmarks, fieldOfViewOption, outputResolution );
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
 		{
-			ThinPlateR2LogRSplineKernelTransform tps = landmarks.getTransform();
-
-			AffineTransform movingPixelToPhysical = new AffineTransform( tps.getNumDims() );
-			movingPixelToPhysical.set( movingIp.getCalibration().pixelWidth, 0, 0 );
-			movingPixelToPhysical.set( movingIp.getCalibration().pixelHeight, 1, 1 );
-			if( tps.getNumDims() > 2 )
-				movingPixelToPhysical.set( movingIp.getCalibration().pixelDepth, 2, 2 );
-
-			AffineTransform outputResolution2Pixel = new AffineTransform( tps.getNumDims() );
-			outputResolution2Pixel.set( outputResolution[ 0 ], 0, 0 );
-			outputResolution2Pixel.set( outputResolution[ 1 ], 1, 1  );
-			if( tps.getNumDims() > 2 )
-				outputResolution2Pixel.set( outputResolution[ 2 ], 2, 2  );
-			
-			RealTransformSequence seq = new RealTransformSequence();
-			seq.add( movingPixelToPhysical );
-			seq.add( new TpsTransformWrapper( tps.getNumDims(), tps ) );
-			seq.add( outputResolution2Pixel.inverse() );
-			
-			FinalInterval interval = new FinalInterval( (long)movingIp.getWidth(), 
-					(long)movingIp.getHeight(), (long)movingIp.getNSlices() );
-
-			return BigWarpExporter.estimateBounds( seq, interval );
+			return getPixelInterval(
+					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
+					landmarks, fieldOfViewOption, outputResolution );
 		}
 		else if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
 		{
@@ -369,13 +472,31 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads )
 	{
+		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		return apply( bwData, landmarks, fieldOfViewOption, fieldOfViewPointFilter,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
+				interp, isVirtual, nThreads );
+	}
+			
+	public static ImagePlus apply(
+			final BigWarpData bwData,
+			final LandmarkTableModel landmarks,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final String resolutionOption,
+			final double[] resolutionSpec,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final Interpolation interp,
+			final boolean isVirtual,
+			final int nThreads )
+	{
 //		if( !validateInput( movingIp, targetIp, landmarks,
 //				fieldOfViewOption, resolutionOption, resolutionSpec,
 //				fovSpec, offsetSpec, interp, isVirtual, nThreads ) )
 //			return null;
 
-		int numChannels = movingIp.getNChannels();
-		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		int numChannels = bwData.movingSourceIndices.length;
 
 		BigWarpExporter< ? > exporter = null;
 		ArrayList< SourceAndConverter< ? > > sources = bwData.sources;
@@ -424,16 +545,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 		
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
-		double[] res = getResolution( movingIp, targetIp, resolutionOption, resolutionSpec );
-		Interval outputInterval = getPixelInterval( movingIp, targetIp, landmarks, fieldOfViewOption, 
+		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
+		Interval outputInterval = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
-		double[] offset = getPixelOffset(fieldOfViewOption, offsetSpec, res, outputInterval );
+		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
 
 //		System.out.println( "res : " + Arrays.toString( res ));
 //		System.out.println( "output interval : " + Util.printInterval( outputInterval ));
 //		System.out.println( "offset : " + Arrays.toString( offset ));
 		
 		// Do the export
+		exporter.setInterp( interp );
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
 		exporter.setOffset( offset );
@@ -446,11 +568,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 //		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
 //				movingIp.getNFrames() );
 
+		String movingName = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName();
 		warpedIp.getCalibration().pixelWidth = voxdim.dimension( 0 );
 		warpedIp.getCalibration().pixelHeight = voxdim.dimension( 1 );
 		warpedIp.getCalibration().pixelDepth = voxdim.dimension( 2 );
 		warpedIp.getCalibration().setUnit( voxdim.unit() );
-		warpedIp.setTitle( movingIp.getTitle() + "_bigwarped" );
+		warpedIp.setTitle( movingName + "_bigwarped" );
 
 		return warpedIp;
 	}
@@ -464,14 +587,14 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final GenericDialog gd = new GenericDialog( "Apply Big Warp transform" );
 		gd.addMessage( "File Selection:" );
 //		
-//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
+		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
 //		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_identity.csv" );
 //		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks.csv" );
-		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks_wBnds.csv" );
+//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks_wBnds.csv" );
 
-		
-		//gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
-		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series-RGB.tif" );
+
+		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
+//		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series-RGB.tif" );
 		
 		gd.addStringField( "target_space_file", "" );
 		
@@ -484,6 +607,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				new String[]{ TARGET, MOVING_WARPED, LANDMARK_POINTS, SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
 				LANDMARK_POINTS );
 
+//		gd.addStringField( "point filter", "BND.*" );
 		gd.addStringField( "point filter", "" );
 		
 //		gd.addMessage( "Resolution");
@@ -518,7 +642,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		
 		gd.addMessage( "Output options");
 		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
-		gd.addCheckbox( "virtual?", false );
+		gd.addCheckbox( "virtual?", true );
 		gd.addNumericField( "threads", 4, 0 );
 
 		gd.showDialog();
