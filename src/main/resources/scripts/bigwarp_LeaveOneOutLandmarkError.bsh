@@ -1,0 +1,83 @@
+import java.io.File;
+import java.io.IOException;
+
+import bigwarp.landmarks.LandmarkTableModel;
+import ij.IJ;
+
+String landmarkFile = "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv";
+
+public void toPrimitive( Double[] src, double[] dst )
+{
+	for( int i = 0; i < src.length; i++ )
+		dst[ i ] = src[ i ];
+}
+		
+public double distance( double[] x, double[] y )
+{
+	double diff = 0;
+	for( int i = 0; i < x.length; i++ )
+	{
+		diff += ( x[i] - y[i] );
+	}
+	return Math.sqrt( diff * diff );
+}
+
+
+LandmarkTableModel ltm = new LandmarkTableModel( 3 );
+try
+{
+	ltm.load( new File( landmarkFile ) );
+} catch ( IOException e )
+{
+	e.printStackTrace();
+	return;
+}
+
+// init arrays
+double[] x = new double[ ltm.getTransform().getNumDims() ];
+double[] yTransformed = new double[ ltm.getTransform().getNumDims() ];
+double[] y = new double[ ltm.getTransform().getNumDims() ];	
+
+for( int i = 0; i < ltm.getRowCount(); i++ )
+{
+
+	// Some gross conversion because the ltm holds Object arrays, not primitives
+	Double[] movingPt = ltm.getMovingPoint( i );
+	Double[] targetPt = ltm.getFixedPoint( i );
+	toPrimitive( movingPt, x );
+	toPrimitive( targetPt, y );
+
+
+	// make sure both moving and target points exist
+	if( Double.isInfinite( movingPt[0] ))
+	{
+		System.out.println( "Skipping point " + i + " : moving point empty" );
+		continue;
+	}
+	if( Double.isInfinite( targetPt[0] ))
+	{
+		System.out.println( "Skipping point " + i + " : target point missing" );
+		continue;
+	}
+
+	// deactivate this point
+	ltm.setIsActive( i, false );
+
+	// create a fresh transformation model and transform the moving point
+	ltm.initTransformation();
+	ltm.getTransform().apply( y, yTransformed );
+
+	/* Debug print out landmark locations */
+	/* 
+	IJ.log( "moving " + i + " : " + Arrays.toString( x ) );
+	IJ.log( "target " + i + " : " + Arrays.toString( y ) );
+	IJ.log( " xfmed " + i + " : " + Arrays.toString( yTransformed ) );
+	*/
+	
+	// how far is the transformed moving point to the target point
+	IJ.log( "error for landmark point " 
+			+ i + " : " + distance( x, yTransformed ));
+
+	// reactivate this point
+	ltm.setIsActive( i, true );
+}
