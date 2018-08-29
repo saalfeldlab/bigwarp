@@ -215,6 +215,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * A DeformationField creating with the resulting {@link RandomAccessibleInterval}
 	 * will give the same results as the transform inside its Interval.
 	 * 
+     * @param <T> the type of the deformation field
 	 * @param transform
 	 *            the {@link RealTransform} to convert
 	 * @param pixelToPhysical
@@ -262,6 +263,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * A DeformationField creating with the resulting {@link RandomAccessibleInterval}
 	 * will give the same results as the transform inside its Interval.
 	 * 
+     * @param <T> the type of the deformation field
 	 * @param transform
 	 *            the {@link RealTransform} to convert
 	 * @param pixelToPhysical

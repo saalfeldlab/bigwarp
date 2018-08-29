@@ -85,7 +85,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 * @param movingSourceIndexList list of indexes for moving sources
 	 * @return true if all moving sources are of the same type
 	 */
-	public static < T > boolean isTypeListFullyConsistent( ArrayList< SourceAndConverter< ? >> sources, int[] movingSourceIndexList )
+	public static boolean isTypeListFullyConsistent( ArrayList< SourceAndConverter< ? >> sources, int[] movingSourceIndexList )
 	{
 		Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 
