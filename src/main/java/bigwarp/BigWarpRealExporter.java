@@ -208,9 +208,9 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		
 		if( offsetTransform != null )
 		{
-			ip.getCalibration().xOrigin = offsetTransform.get( 0, 0 );
-			ip.getCalibration().yOrigin = offsetTransform.get( 1, 1 );
-			ip.getCalibration().zOrigin = offsetTransform.get( 2, 2 );
+			ip.getCalibration().xOrigin = offsetTransform.get( 0, 3 );
+			ip.getCalibration().yOrigin = offsetTransform.get( 1, 3 );
+			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
 		
 		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );
