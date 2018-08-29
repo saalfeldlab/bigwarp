@@ -33,6 +33,8 @@ public static BigWarpData createSingleBigWarpDataFromXML( String xmlFilename )
 
 	int numMovingSources = seqP.getViewSetups().size();
 	int numTargetSources = seqQ.getViewSetups().size();
+	System.out.println( "numMovingSources : " +  numMovingSources );
+	System.out.println( "numTargetSources : " +  numTargetSources );
 
 	int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
 	int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
@@ -43,13 +45,14 @@ public static BigWarpData createSingleBigWarpDataFromXML( String xmlFilename )
 	return new BigWarpData( sources, seqP, seqQ, converterSetups, movingSourceIndices, targetSourceIndices );
 }
 
-bdvXml = "/home/john/tmp/mitosis/mitosis.xml"; // your xml
+bdvXml = "/nrs/saalfeld/john/for/aubrey/stitch_bdvH5s/smallTest/dataset.xml"; // your xml
 fnLandmarks = ""; // can optionally point to a file with landmark points
 
 try
 {
 
-    data = createSingleBigWarpDataFromXML( bdvXml );
+    //data = createSingleBigWarpDataFromXML( bdvXml );
+    data = BigWarpInit.createBigWarpDataFromImagePlusXML( IJ.getImage(), bdvXml );
 
     bw = new BigWarp( data, "bigwarp", new ProgressWriterConsole() );
     //bw.setImageJInstance( IJ.getInstance() );

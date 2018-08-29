@@ -1,8 +1,8 @@
 // @File(label="Landmark file") landmarksPath
 // @File(label="Moving image file") movingPath
-// @File(label="Target image file (optional)", required=false) targetPath
 // @String(label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
 // @Integer(label="Number of threads", min=1, max=64, value=1) nThreads
+// @Boolean(label="Virtual stack?") isVirtual
 
 import java.io.File;
 import java.io.IOException;
@@ -39,13 +39,10 @@ import net.imglib2.type.numeric.real.FloatType;
 
 println landmarksPath
 println movingPath
-println targetPath
+println isVirtual
 
 movingIp = IJ.openImage( movingPath.getAbsolutePath() );
 targetIp = movingIp;
-
-if ( targetPath != null )
-	targetIp = IJ.openImage( targetPath.getAbsolutePath() );
 
 int nd = 2;
 if ( movingIp.getNSlices() > 1 )

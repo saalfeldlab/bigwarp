@@ -184,7 +184,15 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > i
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
+
+			System.out.println( raiStack );
+//			Views.offset( raiStack, Intervals.minAsLongArray( raiStack ));
 			ip = ImageJFunctions.wrap( raiStack, "warped_moving_image" );
+//			ip = ImageJFunctions.wrap(
+//					Views.interval( Views.offset( raiStack, Intervals.minAsLongArray( raiStack )),
+//						new FinalInterval( Intervals.dimensionsAsLongArray( raiStack ))),
+//					"warped_moving_image" );
+
 		}
 		else if( nThreads == 1 )
 		{

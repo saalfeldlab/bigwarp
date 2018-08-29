@@ -57,6 +57,7 @@ import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
+import bdv.img.RenamableSource;
 import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
@@ -68,6 +69,7 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -2007,7 +2009,11 @@ public class BigWarp
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
 				if ( !( impP == null || impQ == null ) )
-					bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( impP, impQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				{
+					BigWarpData bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
+					
+					bw = new BigWarp( bwdata, new File( fnP ).getName(), new ProgressWriterConsole() );
+				}
 				else
 				{
 					System.err.println( "Error reading images" );
