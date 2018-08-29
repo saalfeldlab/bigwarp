@@ -182,7 +182,9 @@ public class BigWarpBatchTransformFOV
 		final AbstractSpimData< ? >[] spimDataQ = new AbstractSpimData[]{ createSpimData() };
 
 		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
-		final ImagePlus ipout = exporter.exportMovingImagePlus( false, nThreads );
+		exporter.setNumThreads( nThreads );
+		exporter.setVirtual( false );
+		final ImagePlus ipout = exporter.export();
 
 		System.out.println( "saving" );
 		IJ.save( ipout, outputFilePath );
@@ -249,7 +251,7 @@ public class BigWarpBatchTransformFOV
 					(DoubleType) baseType );
 		else if ( ARGBType.class.isInstance( baseType ) )
 			exporter = new BigWarpARGBExporter( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList );
+					movingSourceIndexList, targetSourceIndexList, interpolation );
 		else
 		{
 			System.err.println( "Can't export type " + baseType.getClass() );

@@ -56,6 +56,7 @@ import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.img.RenamableSource;
 import bdv.img.TpsTransformWrapper;
@@ -76,6 +77,7 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
@@ -111,6 +113,7 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.sequence.VoxelDimensions;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
@@ -146,6 +149,8 @@ public class BigWarp
 	public static final int GRID_SOURCE_ID = 1696993146;
 
 	public static final int WARPMAG_SOURCE_ID = 956736363;
+
+	protected BigWarpData data;
 
 	// descriptive names for indexing sources
 	protected int[] movingSourceIndexList;
@@ -283,6 +288,7 @@ public class BigWarp
 		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 
+		this.data = data;
 		this.movingSourceIndexList = data.movingSourceIndices;
 		this.targetSourceIndexList = data.targetSourceIndices;
 
@@ -526,7 +532,7 @@ public class BigWarp
 			else if ( DoubleType.class.isInstance( baseType ) )
 				exporter = new BigWarpRealExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
 			else if ( ARGBType.class.isInstance( baseType ) )
-				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList );
+				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation() );
 			else
 			{
 				System.err.println( "Can't export type " + baseType.getClass() );
@@ -824,8 +830,102 @@ public class BigWarp
 		if( ij == null )
 			return;
 
-		BigWarp.this.exporter.setInterp( viewerP.getState().getInterpolation() );
-		ImagePlus ip = BigWarp.this.exporter.exportMovingImagePlus( virtual );
+		final GenericDialog gd = new GenericDialog( "Apply Big Warp transform" );
+
+		gd.addMessage( "Field of view and resolution:" );
+		gd.addChoice( "Resolution", 
+				new String[]{ ApplyBigwarpPlugin.TARGET, ApplyBigwarpPlugin.MOVING, ApplyBigwarpPlugin.SPECIFIED },
+				ApplyBigwarpPlugin.TARGET );
+
+		gd.addChoice( "Field of view", 
+				new String[]{ ApplyBigwarpPlugin.TARGET, ApplyBigwarpPlugin.MOVING_WARPED,
+						ApplyBigwarpPlugin.LANDMARK_POINTS, ApplyBigwarpPlugin.SPECIFIED_PIXEL,
+						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL },
+				ApplyBigwarpPlugin.TARGET );
+
+		gd.addStringField( "point filter", "BND.*" );
+		
+		gd.addMessage( "Resolution");
+		gd.addNumericField( "x", 1.0, 4 );
+		gd.addNumericField( "y", 1.0, 4 );
+		gd.addNumericField( "z", 1.0, 4 );
+		
+		gd.addMessage( "Offset");
+		gd.addNumericField( "x", 0.0, 4 );
+		gd.addNumericField( "y", 0.0, 4 );
+		gd.addNumericField( "z", 0.0, 4 );
+		
+		gd.addMessage( "Field of view");
+		gd.addNumericField( "x", -1, 0 );
+		gd.addNumericField( "y", -1, 0 );
+		gd.addNumericField( "z", -1, 0 );
+		
+		gd.addMessage( "Output options");
+		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
+		gd.addCheckbox( "virtual?", false );
+		gd.addNumericField( "threads", 4, 0 );
+
+		gd.showDialog();
+
+		if ( gd.wasCanceled() )
+			return;
+		
+		String resolutionOption = gd.getNextChoice();
+		String fieldOfViewOption = gd.getNextChoice();
+		String fieldOfViewPointFilter = gd.getNextString();
+		
+		double[] resolutionSpec = new double[ 3 ];
+		resolutionSpec[ 0 ] = gd.getNextNumber();
+		resolutionSpec[ 1 ] = gd.getNextNumber();
+		resolutionSpec[ 2 ] = gd.getNextNumber();
+		
+		double[] offsetSpec = new double[ 3 ];
+		offsetSpec[ 0 ] = gd.getNextNumber();
+		offsetSpec[ 1 ] = gd.getNextNumber();
+		offsetSpec[ 2 ] = gd.getNextNumber();
+		
+		double[] fovSpec = new double[ 3 ];
+		fovSpec[ 0 ] = gd.getNextNumber();
+		fovSpec[ 1 ] = gd.getNextNumber();
+		fovSpec[ 2 ] = gd.getNextNumber();
+
+		String interpType = gd.getNextChoice();
+		boolean isVirtual = gd.getNextBoolean();
+		int nThreads = (int)gd.getNextNumber();
+		
+		Interpolation interp = Interpolation.NLINEAR;
+		if( interpType.equals( "Nearest Neighbor" ))
+			interp = Interpolation.NEARESTNEIGHBOR;
+		
+		System.out.println( nThreads );
+		
+		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
+		Interval outputInterval = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
+				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+		double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
+
+		double[] offsetPhysical = new double[ offset.length ];
+		for( int d = 0; d < offset.length; d++ )
+			offsetPhysical[ d ] = offset[ d ] * res[ d ];
+		
+		System.out.println( "pixel offset: " + Arrays.toString( offset ));
+		System.out.println( "physical offset: " + Arrays.toString( offsetPhysical ));
+		
+		boolean currentlyWarped = isMovingDisplayTransformed();
+
+		if( !currentlyWarped )
+			toggleMovingImageDisplay();
+
+		exporter.setInterp( interp );
+		exporter.setRenderResolution( res );
+		exporter.setInterval( outputInterval );
+		exporter.setOffset( offset );
+		exporter.setVirtual( isVirtual );
+		exporter.setNumThreads( nThreads );
+		ImagePlus ip = BigWarp.this.exporter.export();
+
+		if( !currentlyWarped )
+			toggleMovingImageDisplay();
 
 		if( !path.isEmpty())
 		{
@@ -1960,7 +2060,7 @@ public class BigWarp
 
 	public static void main( final String[] args )
 	{
-		ImageJ ij = new ImageJ();
+		new ImageJ();
 		
 		// TODO main
 		String fnP = "";
@@ -2021,6 +2121,7 @@ public class BigWarp
 				}
 			}
 
+			
 			if ( !fnLandmarks.isEmpty() )
 				bw.landmarkModel.load( new File( fnLandmarks ) );
 

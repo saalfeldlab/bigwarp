@@ -29,6 +29,11 @@ public class RenamableSource< T > implements Source< T >
 	{
 		return src.isPresent( t );
 	}
+	
+	public Source<T> getWrappedSource()
+	{
+		return src;
+	}
 
 	@Override
 	public RandomAccessibleInterval< T > getSource( int t, int level )

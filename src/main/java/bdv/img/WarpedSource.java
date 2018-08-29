@@ -119,6 +119,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			source.getSourceTransform( t, level, transform );
 	}
 
+	public InverseRealTransform getTransform()
+	{
+		return xfm;
+	}
+
 	@Override
 	public T getType()
 	{
