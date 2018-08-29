@@ -17,9 +17,9 @@ public double distance( double[] x, double[] y )
 	double diff = 0;
 	for( int i = 0; i < x.length; i++ )
 	{
-		diff += ( x[i] - y[i] );
+		diff += ( x[i] - y[i] )^2;
 	}
-	return Math.sqrt( diff * diff );
+	return Math.sqrt( diff );
 }
 
 
