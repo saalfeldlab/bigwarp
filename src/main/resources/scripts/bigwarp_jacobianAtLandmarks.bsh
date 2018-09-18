@@ -1,0 +1,63 @@
+import java.io.File;
+import java.io.IOException;
+
+import bigwarp.landmarks.LandmarkTableModel;
+import ij.IJ;
+
+//String landmarkFile = "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv";
+String landmarkFile = "/mnt/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv";
+
+public void toPrimitive( Double[] src, double[] dst )
+{
+	for( int i = 0; i < src.length; i++ )
+		dst[ i ] = src[ i ];
+}
+
+public String arrayToStringRowMajor( double[][] mtx )
+{
+	StringBuilder out = new StringBuilder();
+	for( int i = 0; i < mtx.length; i++ )
+		for( int j = 0; j < mtx[0].length; j++ )
+			out.append( mtx[i][j] + " " );
+
+	return out.toString();
+}
+
+LandmarkTableModel ltm = new LandmarkTableModel( 3 );
+try
+{
+	ltm.load( new File( landmarkFile ) );
+} catch ( IOException e )
+{
+	e.printStackTrace();
+	return;
+}
+
+// init arrays
+double[] y = new double[ ltm.getTransform().getNumDims() ];	
+
+ltm.initTransformation();
+xfm = ltm.getTransform();
+
+for( int i = 0; i < ltm.getRowCount(); i++ )
+{
+
+	// Some gross conversion because the ltm holds Object arrays, not primitives
+	Double[] targetPt = ltm.getFixedPoint( i );
+	toPrimitive( targetPt, y );
+
+	if( Double.isInfinite( targetPt[0] ))
+	{
+		System.out.println( "Skipping point " + i + " : target point missing" );
+		continue;
+	}
+
+
+	// build the jacobian matrix at the target point
+	jac = xfm.jacobian( y );
+	
+	// how far is the transformed moving point to the target point
+	IJ.log( "jacobian at landmark point " 
+			+ i + " : " + arrayToStringRowMajor( jac ));
+
+}

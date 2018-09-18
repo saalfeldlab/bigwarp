@@ -275,10 +275,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 	/**
 	 * Returns the interval in pixels of the output given input options
 	 * 
-	 * @param movingIp the moving ImagePlus
-	 * @param targetIp the target ImagePlus
+	 * @param bwData the BigWarpData
 	 * @param landmarks the landmarks
 	 * @param fieldOfViewOption the field of view option
+     * @param fieldOfViewPointFilter the regexp for filtering landmarks points by name
 	 * @param fovSpec the field of view specification
 	 * @param offsetSpec the offset specification 
 	 * @param outputResolution the resolution of the output image
