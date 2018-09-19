@@ -23,9 +23,14 @@ public class LandmarkPointMenu extends JPopupMenu
 	
 	protected DeleteOneSelectedHandler oneHandler;
 	protected DeleteAllSelectedHandler allHandler;
+	protected ActivateAllSelectedHandler activateAllHandler;
+	protected DeactivateAllSelectedHandler deactivateAllHandler;
+	
 	protected MouseListener popupListener;
 	protected JMenuItem deleteSingleItem;
 	protected JMenuItem deleteAllItem;
+	protected JMenuItem activateAllItem;
+	protected JMenuItem deactivateAllItem;
 
 	private Point clickPt;
 	
@@ -41,6 +46,8 @@ public class LandmarkPointMenu extends JPopupMenu
 		
 		oneHandler = new DeleteOneSelectedHandler();
 		allHandler = new DeleteAllSelectedHandler();
+		activateAllHandler = new ActivateAllSelectedHandler();
+		deactivateAllHandler = new DeactivateAllSelectedHandler();
 		popupListener = new PopupListener();
 
 		deleteSingleItem = new JMenuItem("Delete");
@@ -49,8 +56,16 @@ public class LandmarkPointMenu extends JPopupMenu
 		deleteAllItem = new JMenuItem("Delete all selected");
 		deleteAllItem.addActionListener( allHandler );
 
+		activateAllItem = new JMenuItem("Activate all selected");
+		activateAllItem.addActionListener( activateAllHandler );
+
+		deactivateAllItem = new JMenuItem("Deactivate all selected");
+		deactivateAllItem.addActionListener( deactivateAllHandler );
+		
 		this.add( deleteSingleItem );
 		this.add( deleteAllItem );
+		this.add( activateAllItem );
+		this.add( deactivateAllItem );
 	}
 	
 	public void setupListeners( )
@@ -87,6 +102,8 @@ public class LandmarkPointMenu extends JPopupMenu
 
 			if( bw != null )
 				bw.restimateTransformation();
+			
+			landmarkPanel.repaint();
 		}
 	}
 	
@@ -106,6 +123,50 @@ public class LandmarkPointMenu extends JPopupMenu
 
 			if( bw != null )
 				bw.restimateTransformation();
+			
+			landmarkPanel.repaint();
+		}
+	}
+	
+	private class ActivateAllSelectedHandler implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent e) 
+		{
+			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+
+			// do in reverse order so that the index
+			for( int i = selectedRows.length - 1; i >= 0; i-- )
+			{
+				int j = selectedRows[ i ];
+				landmarkPanel.getTableModel().setIsActive( j, true );
+			}
+
+			if( bw != null )
+				bw.restimateTransformation();
+			
+			landmarkPanel.repaint();
+		}
+	}
+	
+	private class DeactivateAllSelectedHandler implements ActionListener
+	{
+		@Override
+		public void actionPerformed(ActionEvent e) 
+		{
+			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+
+			// do in reverse order so that the index
+			for( int i = selectedRows.length - 1; i >= 0; i-- )
+			{
+				int j = selectedRows[ i ];
+				landmarkPanel.getTableModel().setIsActive( j, false );
+			}
+
+			if( bw != null )
+				bw.restimateTransformation();
+			
+			landmarkPanel.repaint();
 		}
 	}
 }
