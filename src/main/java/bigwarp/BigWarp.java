@@ -843,7 +843,7 @@ public class BigWarp
 						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL },
 				ApplyBigwarpPlugin.TARGET );
 
-		gd.addStringField( "point filter", "BND.*" );
+		gd.addStringField( "point filter", "" );
 		
 		gd.addMessage( "Resolution");
 		gd.addNumericField( "x", 1.0, 4 );
