@@ -235,9 +235,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		if( fieldOfViewOption.equals( TARGET ))
 		{
-			return new FinalInterval(
-					Intervals.minAsLongArray( rai ),
-					Intervals.maxAsLongArray( rai ));
+			long[] max = new long[ rai.numDimensions() ];
+			for( int d = 0; d < rai.numDimensions(); d++ )
+			{
+				max[ d ] = (long)Math.ceil( ( source.getVoxelDimensions().dimension( d ) * rai.dimension( d )) / outputResolution[ d ]);
+			}
+
+			return new FinalInterval( max );
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
 		{
@@ -546,8 +550,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
 		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
+
 		Interval outputInterval = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+
 		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
 
 //		System.out.println( "res : " + Arrays.toString( res ));
