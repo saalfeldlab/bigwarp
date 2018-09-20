@@ -730,10 +730,6 @@ public class BigWarp
 		if( ij != null )
 		{
 			fileMenu.addSeparator();
-			final JMenuItem exportToVImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_VIRTUAL_IP ) );
-			exportToVImagePlus.setText( "Export as Virtual ImagePlus" );
-			fileMenu.add( exportToVImagePlus );
-
 			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
 			exportToImagePlus.setText( "Export as ImagePlus" );
 			fileMenu.add( exportToImagePlus );
@@ -783,10 +779,6 @@ public class BigWarp
 	protected void setupImageJExportOption()
 	{
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
-
-		final JMenuItem exportToVImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_VIRTUAL_IP ) );
-		exportToVImagePlus.setText( "Export as Virtual ImagePlus" );
-		landmarkMenu.add( exportToVImagePlus );
 
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
 		exportToImagePlus.setText( "Export as ImagePlus" );
@@ -862,8 +854,12 @@ public class BigWarp
 		
 		gd.addMessage( "Output options");
 		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
+		
+		gd.addMessage( "Virtual: fast to display,\n"
+				+ "low memory requirements,\nbut slow to navigate" );
 		gd.addCheckbox( "virtual?", false );
-		gd.addNumericField( "threads", 4, 0 );
+		int defaultCores = (int)Math.ceil( Runtime.getRuntime().availableProcessors()/4);
+		gd.addNumericField( "threads", defaultCores, 0 );
 
 		gd.showDialog();
 
