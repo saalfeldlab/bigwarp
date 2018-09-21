@@ -339,6 +339,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 	}
 
+	public void clear()
+	{
+		for( int i = getRowCount() - 1; i >= 0; i-- )
+			deleteRow( i );
+	}
+
 	public void deleteRow( int i )
 	{
 		if( getRowCount() > 0 && i >= 0)
@@ -939,18 +945,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 */
 	public void load( File f, boolean invert ) throws IOException
 	{
+		clear();
+
 		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
 		List<String[]> rows = reader.readAll();
 		reader.close();
-		
-		names.clear();
-		activeList.clear();
-		movingPts.clear();
-		targetPts.clear();
-		
-		doesPointHaveAndNeedWarp.clear();
-		warpedPoints.clear();
-		
+
 		int ndims = 3;
 		int expectedRowLength = 8;
 		int numRowsTmp = 0;
