@@ -11,6 +11,9 @@ See the main [bigwarp page](http://fiji.sc/BigWarp) for details.
 
 Also available on conda as standalone version outside of Fiji:
 ```
-conda install -c hanslovsky
-bigwarp [ARGS...]
+# Installation
+conda install -c hanslovsky bigwarp
+
+# Run
+bigwarp <moving-image> <target-image> <optional-landmarks>
 ```
