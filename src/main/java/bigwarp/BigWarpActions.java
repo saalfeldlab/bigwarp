@@ -132,6 +132,7 @@ public class BigWarpActions
 		
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F6" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F7" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "transform type" ), "F8" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
@@ -155,8 +156,8 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
-		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
+		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "transform type" ), bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -232,9 +233,9 @@ public class BigWarpActions
 
 		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
 
-		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
-		map.put( GARBAGE_COLLECTION, "F9" );
-		map.put( DEBUG, "F10" );
+		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
+		map.put( GARBAGE_COLLECTION, "F10" );
+		//map.put( DEBUG, "F10" );
 		
 		return inputMap;
 	}
