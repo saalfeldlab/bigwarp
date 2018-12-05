@@ -72,6 +72,8 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
+import bdv.util.RandomAccessibleIntervalSource;
+import bdv.util.RandomAccessibleSource;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -94,6 +96,8 @@ import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
+import bigwarp.source.JacobianRandomAccess;
+import bigwarp.source.JacobianRandomAccess.JacobianRandomAccessible;
 import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
 import ij.ImageJ;
@@ -137,6 +141,7 @@ import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -1687,6 +1692,19 @@ public class BigWarp
 		sources.add( soc );
 
 		return sources.size() - 1;
+	}
+
+	public static SourceAndConverter<FloatType> createJacobianSource( final DifferentiableRealTransform xfm, final Interval interval, final String name )
+	{
+		FloatType value = new FloatType();
+		RandomAccessibleInterval<FloatType> rai = JacobianRandomAccess.create( interval, value, xfm );
+		RandomAccessibleIntervalSource<FloatType> source = new RandomAccessibleIntervalSource<FloatType>( rai, value.copy(), name );
+
+		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( source, converter, null );
+		return soc;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
