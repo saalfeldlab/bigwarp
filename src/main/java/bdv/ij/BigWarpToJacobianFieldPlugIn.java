@@ -13,7 +13,7 @@ import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
-
+import bigwarp.source.JacobianRandomAccess;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -160,10 +160,12 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 		//FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
 		FinalInterval spatialinterval = new FinalInterval( dims );
 
-		SourceAndConverter<FloatType> jsource = BigWarp.createJacobianSource( tps, spatialinterval, "jacobian field");
-		RandomAccessibleInterval<FloatType> jimg = jsource.getSpimSource().getSource( 0, 0 );
-		
-		ImagePlus jip = ImageJFunctions.wrap( Views.permute( jimg, 2, 3 ), "jacobian field" );
+//		SourceAndConverter<FloatType> jsource = BigWarp.createJacobianSource( tps, spatialinterval, "jacobian field");
+//		RandomAccessibleInterval<FloatType> jimg = jsource.getSpimSource().getSource( 0, 0 );
+//		ImagePlus jip = ImageJFunctions.wrap( Views.permute( jimg, 2, 3 ), "jacobian field" );
+
+		RandomAccessibleInterval<FloatType> jdimg = JacobianRandomAccess.createJacobianDeterminant( spatialinterval, new FloatType(), tps);
+		ImagePlus jip = ImageJFunctions.wrap( jdimg, "jacobian field" );
 
 
 //		String title = "bigwarp dfield";
