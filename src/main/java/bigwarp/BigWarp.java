@@ -1697,7 +1697,8 @@ public class BigWarp
 	public static SourceAndConverter<FloatType> createJacobianSource( final DifferentiableRealTransform xfm, final Interval interval, final String name )
 	{
 		FloatType value = new FloatType();
-		RandomAccessibleInterval<FloatType> rai = JacobianRandomAccess.create( interval, value, xfm );
+		RandomAccessibleInterval<FloatType> rai = Views.interval( Views.raster(
+				JacobianRandomAccess.create( xfm.numTargetDimensions(), value, xfm )), interval );
 		RandomAccessibleIntervalSource<FloatType> source = new RandomAccessibleIntervalSource<FloatType>( rai, value.copy(), name );
 
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );

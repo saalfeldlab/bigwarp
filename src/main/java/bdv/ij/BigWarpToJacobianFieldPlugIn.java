@@ -2,18 +2,10 @@ package bdv.ij;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.source.JacobianRandomAccess;
+import bigwarp.source.JacobianDeterminantRandomAccess;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -21,31 +13,19 @@ import ij.WindowManager;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccess;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
+import net.imglib2.RandomAccessible;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
-import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineTransform;
-import net.imglib2.realtransform.DeformationFieldTransform;
-import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-import net.imglib2.view.composite.CompositeIntervalView;
-import net.imglib2.view.composite.GenericComposite;
 
 /**
- * ImageJ plugin to convert the thin plate spline to a deformation field.
+ * ImageJ plugin to convert the thin plate spline to a jacobian (determinant) field
  *
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
@@ -62,7 +42,8 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 	public static void main( final String[] args )
 	{
 		new ImageJ();
-		ImagePlus imp = IJ.openImage("/home/john/tmp/mri-stack.tif");
+		//ImagePlus imp = IJ.openImage("/home/john/tmp/mri-stack.tif");
+		ImagePlus imp = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif");
 
 		//IJ.run("Boats (356K)");
 //		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
@@ -95,12 +76,13 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 		}
 
 		// Build a dialog to choose how to export the deformation field
-		final GenericDialog gd = new GenericDialog( "BigWarp to Deformation" );
+		final GenericDialog gd = new GenericDialog( "BigWarp to Jacobian field" );
 		gd.addMessage( "Landmarks and Image Selection:" );
 		gd.addStringField( "landmarks_image_file", "" );
+
 		final String current = WindowManager.getCurrentImage().getTitle();
 		gd.addChoice( "reference_image", titles, current );
-		gd.addCheckbox( "Ignore affine part", false );
+		gd.addCheckbox( "Is virtual?", false );
 		gd.addNumericField( "threads", 1, 0 );
 		gd.showDialog();
 
@@ -109,7 +91,7 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 
 		String landmarksPath = gd.getNextString();
 		ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
-		boolean ignoreAffine = gd.getNextBoolean();
+		boolean isVirtual = gd.getNextBoolean();
 		nThreads = ( int ) gd.getNextNumber();
 
 		int nd = 2;
@@ -136,25 +118,24 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 
 		ThinPlateR2LogRSplineKernelTransform tpsRaw = ltm.getTransform();
 		ThinPlateR2LogRSplineKernelTransform tpsUseMe = tpsRaw;
-		if ( ignoreAffine )
-			tpsUseMe = new ThinPlateR2LogRSplineKernelTransform( 
-					tpsRaw.getSourceLandmarks(), null, null, tpsRaw.getKnotWeights() );
 
 		tps = new ThinplateSplineTransform( tpsUseMe );
 
 		long[] dims;
 		if( ref_imp.getNSlices() < 2 )
 		{
-			dims = new long[ 2 ];
-			dims[ 0 ] = ref_imp.getWidth();
-			dims[ 1 ] = ref_imp.getHeight();
-		} 
-		else
-		{
 			dims = new long[ 3 ];
 			dims[ 0 ] = ref_imp.getWidth();
 			dims[ 1 ] = ref_imp.getHeight();
-			dims[ 2 ] = ref_imp.getNSlices();
+			dims[ 2 ] = 1;
+		} 
+		else
+		{
+			dims = new long[ 4 ];
+			dims[ 0 ] = ref_imp.getWidth();
+			dims[ 1 ] = ref_imp.getHeight();
+			dims[ 2 ] = 1;
+			dims[ 3 ] = ref_imp.getNSlices();
 		}
 
 		//FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
@@ -164,8 +145,19 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 //		RandomAccessibleInterval<FloatType> jimg = jsource.getSpimSource().getSource( 0, 0 );
 //		ImagePlus jip = ImageJFunctions.wrap( Views.permute( jimg, 2, 3 ), "jacobian field" );
 
-		RandomAccessibleInterval<FloatType> jdimg = JacobianRandomAccess.createJacobianDeterminant( spatialinterval, new FloatType(), tps);
-		ImagePlus jip = ImageJFunctions.wrap( jdimg, "jacobian field" );
+		RandomAccessible< FloatType > jdimg = Views.raster( JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps ));
+		IntervalView< FloatType > jrai = Views.interval( jdimg, spatialinterval );
+
+		ImagePlus jip = null;
+		if( isVirtual )
+			jip = ImageJFunctions.wrap( jrai, "jacobian field" );
+		else
+		{
+			FloatImagePlus< FloatType > ipi = ImagePlusImgs.floats( dims );
+			BigWarpExporter.copyToImageStack( Views.addDimension(jdimg), ipi, ipi, nThreads );
+			jip = ipi.getImagePlus();
+		}
+		
 
 
 //		String title = "bigwarp dfield";

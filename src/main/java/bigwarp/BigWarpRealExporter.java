@@ -37,16 +37,25 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > extends BigWarpExporter<T>
 {
 
-	final private boolean needConversion;
+	final protected boolean needConversion;
 
-	final private T baseType;
+	final protected T baseType;
 
-	final private Converter<?,FloatType> converter;
+	final protected Converter<?,FloatType> converter;
+	
+	public BigWarpRealExporter( T baseType )
+	{
+		super();
+		this.baseType = baseType;
+		this.needConversion = false;
+		converter = null;
+	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public BigWarpRealExporter(
@@ -130,10 +139,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			}
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
+			// Lets try typing
 			// apply the transformations
 			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
 					raiRaw, pixelRenderToPhysical.inverse() );
-			
+
+			System.out.println( "outputInterval: " + Util.printInterval( outputInterval ));
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
 		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );

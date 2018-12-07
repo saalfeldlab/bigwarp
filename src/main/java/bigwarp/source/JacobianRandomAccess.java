@@ -3,26 +3,18 @@ package bigwarp.source;
 
 import java.util.Arrays;
 
-import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
-
-import net.imglib2.AbstractLocalizable;
-import net.imglib2.FinalInterval;
+import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Interval;
 import net.imglib2.Localizable;
-import net.imglib2.RandomAccess;
-import net.imglib2.RandomAccessible;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.Converters;
+import net.imglib2.RealInterval;
+import net.imglib2.RealLocalizable;
+import net.imglib2.RealRandomAccess;
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.view.Views;
-import net.imglib2.view.composite.CompositeIntervalView;
-import net.imglib2.view.composite.GenericComposite;
 
-public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocalizable implements RandomAccess< T >
+public class JacobianRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 
 	final DifferentiableRealTransform xfm;
@@ -31,9 +23,10 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 	final int numSpatialDimensions;
 	final int tensorDimension;
 	final AffineTransform currentJacobian;
-	boolean positionChanged = true;
 
 	final double[] realPos;
+	
+	boolean recompute = true;
 	
 	public JacobianRandomAccess( long[] dimensions )
 	{
@@ -58,6 +51,7 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 		this.xfm = xfm;
 		currentJacobian = new AffineTransform( nsd );
 		realPos = new double[ nsd ];
+
 	}
 	
 	public static <T extends RealType<T>> JacobianRandomAccessible<T> create( 
@@ -67,7 +61,7 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 				new JacobianRandomAccess<T>( nsd, type, transform ));
 	}
 
-	public static <T extends RealType<T>> RandomAccessibleInterval<T> create( 
+	public static <T extends RealType<T>> RealRandomAccessible<T> create( 
 			Interval spatialInterval, T type, DifferentiableRealTransform transform )
 	{
 		int nsd = spatialInterval.numDimensions();
@@ -90,64 +84,31 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 			}
 		}
 
-		Interval interval = new FinalInterval( min, max );
-		
 		System.out.println( "total jac interval min: " + Arrays.toString( min ));
 		System.out.println( "total jac interval max: " + Arrays.toString( max ));
 
 		JacobianRandomAccessible<T> raj = new JacobianRandomAccessible<T>( 
 				new JacobianRandomAccess<T>( nsd, type, transform ));
-	
-		return Views.interval( raj, interval );
-	}
-	
-	public static <T extends RealType<T>> RandomAccessibleInterval<T> createJacobianDeterminant(
-			Interval spatialInterval, T type, DifferentiableRealTransform transform )
-	{
-		int n = spatialInterval.numDimensions();
-		DenseMatrix64F mtx = new DenseMatrix64F( n, n );
-
-		RandomAccessibleInterval<T> jacimg = create( spatialInterval, type, transform );
-		RandomAccessibleInterval<? extends GenericComposite<T>> collapsed = Views.collapse( jacimg );
-
-		return Converters.convert( collapsed, 
-				new Converter< GenericComposite< T >, T >()
-				{
-					@Override
-					public void convert(GenericComposite<T> input, T output)
-					{
-						int k = 0;
-						for( int j = 0; j < n; j++ )
-							for( int i = 0; i < n; i++ )
-								mtx.set( i, j, input.get( k ).getRealDouble());
-	
-						output.setReal( CommonOps.det( mtx ));
-					}
-				},
-				type.copy());
+		
+		return raj;
 	}
 
-	/**
-	 * 
-	 * @return true if the position changed
-	 */
-	public boolean changedPosition()
-	{
-		return positionChanged;
-	}
+
 
 	@Override
 	public T get() 
 	{
-		if( positionChanged  && xfm != null ) 
+		if( recompute  && xfm != null ) 
 		{
 			// recompute jacobian
 			localizeSpatial( realPos );
 			AffineTransform newJacobian = xfm.jacobian( realPos );
 			currentJacobian.set( newJacobian );
 		}
-		
-		int tensorP = getIntPosition( tensorDimension );
+
+		// Force integer position for the tensor dimension
+		int tensorP = (int)Math.round( position[ numSpatialDimensions ]);
+
 		int column = tensorP % numSpatialDimensions;
 		int row = ( tensorP - column ) / numSpatialDimensions;
 
@@ -161,12 +122,12 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 			p[ d ] = getDoublePosition( d );
 	}
 	
-	public RandomAccess<T> copy() 
+	public JacobianRandomAccess<T> copy() 
 	{
 		return new JacobianRandomAccess< T >( new long[ position.length ], value.copy(), xfm );
 	}
 
-	public RandomAccess<T> copyRandomAccess() 
+	public JacobianRandomAccess<T> copyRandomAccess() 
 	{
 		return copy();
 	}
@@ -175,28 +136,28 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 	public void fwd( final int d )
 	{
 		++position[ d ];
-		positionChanged = ( d != tensorDimension );
+		updateRecomputeDistance( 1, d );
 	}
 
 	@Override
 	public void bck( final int d )
 	{
 		--position[ d ];
-		positionChanged = ( d != tensorDimension );
+		updateRecomputeDistance( -1, d );
 	}
 
 	@Override
 	public void move( final int distance, final int d )
 	{
 		position[ d ] += distance;
-		positionChanged = ( d != tensorDimension );
+		updateRecomputeDistance( distance, d );
 	}
 
 	@Override
 	public void move( final long distance, final int d )
 	{
 		position[ d ] += distance;
-		positionChanged = ( d != tensorDimension );
+		updateRecomputeDistance( distance, d );
 	}
 
 	@Override
@@ -206,9 +167,7 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 		{
 			final int distance = localizable.getIntPosition( d );
 			position[ d ] += distance;
-			
-			if( d != tensorDimension && distance != 0 )
-				positionChanged = true;
+			updateRecomputeDistance( localizable.getDoublePosition( d ), d );
 		}
 	}
 
@@ -218,9 +177,7 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 		for ( int d = 0; d < n; ++d )
 		{
 			position[ d ] += distance[ d ];
-
-			if( d != tensorDimension && distance[ d ] != 0 )
-				positionChanged = true;
+			updateRecomputeDistance( distance[ d ], d );
 		}
 	}
 
@@ -230,9 +187,8 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 		for ( int d = 0; d < n; ++d )
 		{
 			position[ d ] += distance[ d ];
+			updateRecomputeDistance( distance[ d ], d );
 
-			if( d != tensorDimension && distance[ d ] != 0 )
-				positionChanged = true;
 		}
 	}
 
@@ -241,10 +197,8 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 	{
 		for ( int d = 0; d < n; ++d )
 		{
-			if( d != tensorDimension && localizable.getIntPosition( d ) != position[ d ] )
-				positionChanged = true;
-
 			position[ d ] = localizable.getIntPosition( d );
+			updateRecompute( localizable.getIntPosition( d ), d );
 		}
 	}
 
@@ -253,10 +207,8 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 	{
 		for ( int d = 0; d < n; ++d )
 		{
-			if( d != tensorDimension && pos[ d ] != position[ d ] )
-				positionChanged = true;
-
 			position[ d ] = pos[ d ];
+			updateRecompute( pos[d ], d );
 		}
 	}
 
@@ -265,28 +217,143 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 	{
 		for ( int d = 0; d < n; ++d )
 		{
-			if( d != tensorDimension && pos[ d ] != position[ d ] )
-				positionChanged = true;
+			position[ d ] = pos[ d ];
+			updateRecompute( pos[d ], d );
+		}
+	}
 
+	@Override
+	public void move( float distance, int d )
+	{
+		position[ d ] += distance;
+		recompute = recompute || ( d != tensorDimension );
+	}
+
+	@Override
+	public void move( double distance, int d )
+	{
+		position[ d ] += distance;
+		recompute = recompute || ( d != tensorDimension );
+	}
+
+	@Override
+	public void move( RealLocalizable distance )
+	{
+		for ( int d = 0; d < n; ++d )
+		{
+			final double dist_dim = distance.getDoublePosition( d );
+			position[ d ] += dist_dim;
+			
+			updateRecomputeDistance( distance.getDoublePosition( d ), d );
+
+		}
+	}
+
+	@Override
+	public void move( float[] distance )
+	{
+		for ( int d = 0; d < n; ++d )
+		{
+			float dist_dim = distance[ d ];
+			position[ d ] += dist_dim;
+			
+		}
+	}
+
+	@Override
+	public void move( double[] distance )
+	{
+		for ( int d = 0; d < n; ++d )
+		{
+			double dist_dim = distance[ d ];
+			position[ d ] += dist_dim;
+			
+			updateRecomputeDistance( distance[ d ], d );
+		}
+	}
+
+	@Override
+	public void setPosition( RealLocalizable pos )
+	{
+		for ( int d = 0; d < pos.numDimensions(); ++d )
+		{
+			updateRecompute( pos.getDoublePosition( d ), d );
+			position[ d ] = pos.getDoublePosition( d );
+		}
+		
+	}
+
+	@Override
+	public void setPosition( float[] pos )
+	{
+		for ( int d = 0; d < pos.length; ++d )
+		{
+			updateRecompute( pos[d ], d );
 			position[ d ] = pos[ d ];
 		}
+	}
+
+	@Override
+	public void setPosition( double[] pos )
+	{
+		for ( int d = 0; d < pos.length; ++d )
+		{
+			updateRecompute( pos[ d ], d );
+			position[ d ] = pos[ d ];
+		}
+		
+	}
+
+	@Override
+	public void setPosition( float pos, int d )
+	{
+		updateRecompute( pos, d );
+		position[ d ] = pos;
+		
+	}
+
+	@Override
+	public void setPosition( double pos, int d )
+	{
+		updateRecompute( pos, d );
+		position[ d ] = pos;
+		
 	}
 
 	@Override
 	public void setPosition( final int pos, final int d )
 	{
 		position[ d ] = pos;
-		positionChanged = ( d != tensorDimension );
+		updateRecompute( pos, d );
 	}
 
 	@Override
 	public void setPosition( final long pos, final int d )
 	{
 		position[ d ] = ( int ) pos;
-		positionChanged = ( d != tensorDimension );
+		updateRecompute( pos, d );
 	}
 	
-	public static class JacobianRandomAccessible<T extends RealType<T>> implements RandomAccessible<T>
+	public void updateRecompute( double pos, int d )
+	{
+		if( !recompute && d != tensorDimension && pos != position[ d ] )
+			recompute = true;
+	}
+
+	public void updateRecomputeDistance( double distance, int d )
+	{
+		if( !recompute && d != tensorDimension && distance != 0.0 )
+			recompute = true;
+	}
+
+	@Override
+	public JacobianRandomAccess< T > copyRealRandomAccess()
+	{
+		return new JacobianRandomAccess< T >( this.numSpatialDimensions, value.copy(), xfm );
+	}
+
+	
+	public static class JacobianRandomAccessible<T extends RealType<T>> implements RealRandomAccessible<T>
 	{
 		final private JacobianRandomAccess<T> access;
 
@@ -302,17 +369,16 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractLocali
 		}
 
 		@Override
-		public RandomAccess<T> randomAccess() {
+		public JacobianRandomAccess< T > realRandomAccess()
+		{
 			return access;
 		}
 
 		@Override
-		public RandomAccess<T> randomAccess(Interval interval)
+		public JacobianRandomAccess< T > realRandomAccess( RealInterval interval )
 		{
 			return access;
 		}
-		
 	}
-		
 
 }

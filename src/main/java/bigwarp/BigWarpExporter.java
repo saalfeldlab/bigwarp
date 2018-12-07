@@ -59,6 +59,13 @@ public abstract class BigWarpExporter <T>
 	
 	public abstract ImagePlus export();
 
+	public BigWarpExporter()
+	{
+		sources = null;
+		movingSourceIndexList = null;
+		targetSourceIndexList = null;
+	}
+	
 	public BigWarpExporter(
 			final ArrayList< SourceAndConverter< ? >> sources,
 			final int[] movingSourceIndexList,
