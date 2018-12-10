@@ -28,15 +28,10 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	
 	boolean recompute = true;
 	
-	public JacobianRandomAccess( long[] dimensions )
+	public JacobianRandomAccess( int nsd )
 	{
 		// should assume identity transformation
-		this( dimensions, null, null );
-	}
-	
-	public JacobianRandomAccess( long[] dimensions, T value, DifferentiableRealTransform xfm )
-	{
-		this( dimensions.length, value, xfm );
+		this( nsd, null, null );
 	}
 
 	public JacobianRandomAccess( int nsd, T value, DifferentiableRealTransform xfm )
@@ -84,16 +79,14 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractRealLo
 			}
 		}
 
-		System.out.println( "total jac interval min: " + Arrays.toString( min ));
-		System.out.println( "total jac interval max: " + Arrays.toString( max ));
+		//System.out.println( "total jac interval min: " + Arrays.toString( min ));
+		//System.out.println( "total jac interval max: " + Arrays.toString( max ));
 
 		JacobianRandomAccessible<T> raj = new JacobianRandomAccessible<T>( 
 				new JacobianRandomAccess<T>( nsd, type, transform ));
 		
 		return raj;
 	}
-
-
 
 	@Override
 	public T get() 
@@ -124,7 +117,7 @@ public class JacobianRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	
 	public JacobianRandomAccess<T> copy() 
 	{
-		return new JacobianRandomAccess< T >( new long[ position.length ], value.copy(), xfm );
+		return new JacobianRandomAccess< T >( this.numSpatialDimensions, value.copy(), (DifferentiableRealTransform)xfm.copy() );
 	}
 
 	public JacobianRandomAccess<T> copyRandomAccess() 

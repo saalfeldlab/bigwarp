@@ -217,17 +217,23 @@ public abstract class BigWarpExporter <T>
 	{
 		// create the image plus image
 		Img< T > target = factory.create( itvl );
-		return copyToImageStack( raible, itvl, target, nThreads );
+		return copyToImageStack( raible, target, nThreads );
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
 			final RandomAccessible< T > ra,
-			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
 			final int nThreads )
 	{
 		// TODO I wish I didn't have to do this inside this method
-		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
+		RandomAccessible<T> raible = ra;
+//		if( ra.numDimensions() + 1 == target.numDimensions()) 
+//			raible = Views.permute( Views.addDimension( ra ), 2, 3 );
+//		else
+//			raible = Views.permute( ra, 2, 3 );
+
+		System.out.println( "ra nd: " + ra.numDimensions());
+		System.out.println( "tgt nd: " + target.numDimensions());
 
 		// what dimension should we split across?
 		int nd = raible.numDimensions();
@@ -267,10 +273,12 @@ public abstract class BigWarpExporter <T>
 				{
 					try
 					{
+						//System.out.println("adding copied ra 2");
+
 						final FinalInterval subItvl = getSubInterval( target, dim2split, start, end );
 						final IntervalView< T > subTgt = Views.interval( target, subItvl );
 						final Cursor< T > c = subTgt.cursor();
-						final RandomAccess< T > ra = raible.randomAccess();
+						final RandomAccess< T > ra = raible.randomAccess().copyRandomAccess();
 						while ( c.hasNext() )
 						{
 							c.fwd();
@@ -291,7 +299,6 @@ public abstract class BigWarpExporter <T>
 		{
 			List< Future< Boolean > > futures = threadPool.invokeAll( jobs );
 			threadPool.shutdown(); // wait for all jobs to finish
-
 		}
 		catch ( InterruptedException e1 )
 		{

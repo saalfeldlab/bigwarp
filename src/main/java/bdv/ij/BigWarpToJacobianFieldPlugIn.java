@@ -15,13 +15,26 @@ import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessible;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealRandomAccessible;
+import net.imglib2.converter.Converter;
+import net.imglib2.converter.Converters;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.realtransform.AffineTransform;
+import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.RealTransformDimension;
+import net.imglib2.realtransform.RealTransformRandomAccessible;
+import net.imglib2.realtransform.RealTransformRealRandomAccessible;
+import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
+import net.imglib2.view.MixedTransformView;
+import net.imglib2.view.RandomAccessibleOnRealRandomAccessible;
 import net.imglib2.view.Views;
 
 /**
@@ -82,6 +95,7 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 
 		final String current = WindowManager.getCurrentImage().getTitle();
 		gd.addChoice( "reference_image", titles, current );
+		gd.addCheckbox( "Display inverse jacobian?", false );
 		gd.addCheckbox( "Is virtual?", false );
 		gd.addNumericField( "threads", 1, 0 );
 		gd.showDialog();
@@ -91,6 +105,7 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 
 		String landmarksPath = gd.getNextString();
 		ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
+		boolean isInverse = gd.getNextBoolean();
 		boolean isVirtual = gd.getNextBoolean();
 		nThreads = ( int ) gd.getNextNumber();
 
@@ -124,18 +139,16 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 		long[] dims;
 		if( ref_imp.getNSlices() < 2 )
 		{
-			dims = new long[ 3 ];
+			dims = new long[ 2 ];
 			dims[ 0 ] = ref_imp.getWidth();
 			dims[ 1 ] = ref_imp.getHeight();
-			dims[ 2 ] = 1;
 		} 
 		else
 		{
-			dims = new long[ 4 ];
+			dims = new long[ 3 ];
 			dims[ 0 ] = ref_imp.getWidth();
 			dims[ 1 ] = ref_imp.getHeight();
-			dims[ 2 ] = 1;
-			dims[ 3 ] = ref_imp.getNSlices();
+			dims[ 2 ] = ref_imp.getNSlices();
 		}
 
 		//FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
@@ -145,35 +158,86 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 //		RandomAccessibleInterval<FloatType> jimg = jsource.getSpimSource().getSource( 0, 0 );
 //		ImagePlus jip = ImageJFunctions.wrap( Views.permute( jimg, 2, 3 ), "jacobian field" );
 
-		RandomAccessible< FloatType > jdimg = Views.raster( JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps ));
-		IntervalView< FloatType > jrai = Views.interval( jdimg, spatialinterval );
+//		RandomAccessible< FloatType > jdimg = Views.raster( JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps ));
+//		//IntervalView< FloatType > jrai = Views.interval( jdimg, spatialinterval );
+		
+		RealRandomAccessible< FloatType > jdimg = JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps );
+		if( !isInverse )
+			jdimg = jacobianDetToMovingSpace( jdimg, tps );
 
 		ImagePlus jip = null;
 		if( isVirtual )
-			jip = ImageJFunctions.wrap( jrai, "jacobian field" );
+			jip = ImageJFunctions.wrap( Views.interval( Views.raster( jdimg ), spatialinterval ), "jacobian field" );
 		else
 		{
 			FloatImagePlus< FloatType > ipi = ImagePlusImgs.floats( dims );
-			BigWarpExporter.copyToImageStack( Views.addDimension(jdimg), ipi, ipi, nThreads );
+			RandomAccessibleOnRealRandomAccessible< FloatType > jra = Views.raster( jdimg );
+
+			BigWarpExporter.copyToImageStack( jra, ipi, nThreads );
 			jip = ipi.getImagePlus();
 		}
 		
-
-
-//		String title = "bigwarp dfield";
-//		if ( ignoreAffine )
-//			title += " (no affine)";
-//
-//		ImagePlus dfieldIp = dfield.getImagePlus();
-//		dfieldIp.setTitle( title );
-//
+		jip.setTitle( "bigwarp jacobian" );
 		jip.getCalibration().pixelWidth = ref_imp.getCalibration().pixelWidth;
 		jip.getCalibration().pixelHeight = ref_imp.getCalibration().pixelHeight;
 		jip.getCalibration().pixelDepth = ref_imp.getCalibration().pixelDepth;
 		jip.show();
-
 	}
 	
+	/**
+	 * 
+	 * @param jacobian the jacobian tensor field
+	 * @param invXfm the transform from target space to moving space 
+	 * @return the transformed jacobian field
+	 */
+	public static <T extends RealType<T>> RealRandomAccessible< T > jacobianDetToMovingSpace(
+			RealRandomAccessible<T> jacobian, final RealTransform invXfm )
+	{
+		System.out.println( "to moving space" );
+		RealTransformRealRandomAccessible< T, RealTransform > jacXfm = 
+				new RealTransformRealRandomAccessible<>( jacobian, invXfm );
+		
+		T t = jacobian.realRandomAccess().get().copy();
+		RealRandomAccessible< T > out = Converters.convert( jacXfm, 
+				new Converter<T,T>()
+				{
+					@Override
+					public void convert( T input, T output )
+					{
+						output.setReal( 1 / input.getRealDouble() );
+					}
+				}, t );
+		
+		return out;
+	}
+
+	/**
+	 * 
+	 * @param jacobian the jacobian tensor field
+	 * @param invXfm the transform from target space to moving space 
+	 * @return the transformed jacobian field
+	 */
+	public static <T extends RealType<T>> RealRandomAccessible< T > jacobianToMovingSpace(
+			RealRandomAccessible<T> jacobian, final RealTransform invXfm )
+	{
+		System.out.println( "to moving space" );
+		RealTransformDimension invXfmUp = new RealTransformDimension( invXfm );
+		RealTransformRealRandomAccessible< T, RealTransform > jacXfm = 
+				new RealTransformRealRandomAccessible<>( jacobian, invXfmUp );
+		
+		T t = jacobian.realRandomAccess().get().copy();
+		RealRandomAccessible< T > out = Converters.convert( jacXfm, 
+				new Converter<T,T>()
+				{
+					@Override
+					public void convert( T input, T output )
+					{
+						output.setReal( 1 / input.getRealDouble() );
+					}
+				}, t );
+		
+		return out;
+	}
 	
 }
 

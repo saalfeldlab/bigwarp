@@ -1,6 +1,5 @@
 package bigwarp.source;
 
-
 import org.ejml.data.DenseMatrix64F;
 import org.ejml.ops.CommonOps;
 
@@ -21,8 +20,6 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Rea
 	
 	final T value;
 	
-	//final double[] tensorPosition;
-
 	public JacobianDeterminantRandomAccess( final JacobianRandomAccess<T> jacobian )
 	{
 		super( jacobian.numSpatialDimensions );
@@ -79,7 +76,7 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Rea
 
 		public JacobianDeterminantRandomAccessible( final JacobianDeterminantRandomAccess<T> access )
 		{
-			this.access = access;
+			this.access = access.copy();
 		}
 
 		@Override
