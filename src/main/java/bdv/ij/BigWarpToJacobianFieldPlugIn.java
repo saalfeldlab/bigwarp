@@ -25,7 +25,6 @@ import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformDimension;
 import net.imglib2.realtransform.RealTransformRandomAccessible;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
@@ -211,33 +210,33 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 		return out;
 	}
 
-	/**
-	 * 
-	 * @param jacobian the jacobian tensor field
-	 * @param invXfm the transform from target space to moving space 
-	 * @return the transformed jacobian field
-	 */
-	public static <T extends RealType<T>> RealRandomAccessible< T > jacobianToMovingSpace(
-			RealRandomAccessible<T> jacobian, final RealTransform invXfm )
-	{
-		System.out.println( "to moving space" );
-		RealTransformDimension invXfmUp = new RealTransformDimension( invXfm );
-		RealTransformRealRandomAccessible< T, RealTransform > jacXfm = 
-				new RealTransformRealRandomAccessible<>( jacobian, invXfmUp );
-		
-		T t = jacobian.realRandomAccess().get().copy();
-		RealRandomAccessible< T > out = Converters.convert( jacXfm, 
-				new Converter<T,T>()
-				{
-					@Override
-					public void convert( T input, T output )
-					{
-						output.setReal( 1 / input.getRealDouble() );
-					}
-				}, t );
-		
-		return out;
-	}
+//	/**
+//	 * 
+//	 * @param jacobian the jacobian tensor field
+//	 * @param invXfm the transform from target space to moving space 
+//	 * @return the transformed jacobian field
+//	 */
+//	public static <T extends RealType<T>> RealRandomAccessible< T > jacobianToMovingSpace(
+//			RealRandomAccessible<T> jacobian, final RealTransform invXfm )
+//	{
+//		System.out.println( "to moving space" );
+//		RealTransformDimension invXfmUp = new RealTransformDimension( invXfm );
+//		RealTransformRealRandomAccessible< T, RealTransform > jacXfm = 
+//				new RealTransformRealRandomAccessible<>( jacobian, invXfmUp );
+//		
+//		T t = jacobian.realRandomAccess().get().copy();
+//		RealRandomAccessible< T > out = Converters.convert( jacXfm, 
+//				new Converter<T,T>()
+//				{
+//					@Override
+//					public void convert( T input, T output )
+//					{
+//						output.setReal( 1 / input.getRealDouble() );
+//					}
+//				}, t );
+//		
+//		return out;
+//	}
 	
 }
 
