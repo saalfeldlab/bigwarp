@@ -549,7 +549,7 @@ public class BigWarp
 		fileFrame.setVisible( false );
 
 		// add focus listener
-		new BigwarpFocusListener( this );
+		//new BigwarpFocusListener( this );
 
 		bookmarks = new Bookmarks();
 		bookmarkEditorP = new BookmarksEditor( viewerP, viewerFrameP.getKeybindings(), bookmarks );
