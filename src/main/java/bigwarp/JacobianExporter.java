@@ -1,9 +1,6 @@
 package bigwarp;
 
-import java.util.ArrayList;
 
-import bdv.viewer.Interpolation;
-import bdv.viewer.SourceAndConverter;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.JacobianRandomAccess;
 import ij.ImagePlus;
@@ -14,14 +11,9 @@ import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
-import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineRandomAccessible;
-import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.util.Util;
-import net.imglib2.view.Views;
 
 public class JacobianExporter < T extends RealType< T > & NativeType< T > > extends BigWarpRealExporter< T >
 {
@@ -92,12 +84,7 @@ public class JacobianExporter < T extends RealType< T > & NativeType< T > > exte
 			final double[] offsetSpec,
 			final boolean isVirtual)
 	{
-		
-		
-
 		return null;
 	}
-	
-	
 
 }

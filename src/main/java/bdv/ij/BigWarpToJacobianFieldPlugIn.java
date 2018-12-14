@@ -14,8 +14,6 @@ import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.FinalInterval;
-import net.imglib2.RandomAccessible;
-import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
@@ -23,17 +21,12 @@ import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.realtransform.AffineTransform;
-import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformDimension;
-import net.imglib2.realtransform.RealTransformRandomAccessible;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
-import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.RandomAccessibleOnRealRandomAccessible;
 import net.imglib2.view.Views;
 
@@ -63,7 +56,7 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 //		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
 
 		imp.show();
-		
+
 		WindowManager.getActiveWindow();
 		new BigWarpToJacobianFieldPlugIn().run( null );
 	}
@@ -176,12 +169,11 @@ public class BigWarpToJacobianFieldPlugIn implements PlugIn
 			BigWarpExporter.copyToImageStack( jra, ipi, nThreads );
 			jip = ipi.getImagePlus();
 		}
-		
+
 		jip.setTitle( "bigwarp jacobian" );
 		jip.getCalibration().pixelWidth = ref_imp.getCalibration().pixelWidth;
 		jip.getCalibration().pixelHeight = ref_imp.getCalibration().pixelHeight;
 		jip.getCalibration().pixelDepth = ref_imp.getCalibration().pixelDepth;
-		jip.show();
 	}
 	
 	/**
