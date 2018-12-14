@@ -424,6 +424,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 
+	public static <T> RealRandomAccessible< T > transfomResolution(
+			RealRandomAccessible< T > img,
+			double[] res )
+	{
+		AffineTransform resXfm = new AffineTransform( img.numDimensions() );
+		for( int i = 0; i < img.numDimensions(); i++ )
+			resXfm.set( res[ i ], i, i );
+
+		return RealViews.affine( img, resXfm.inverse() );
+	}
+
 	/**
 	 * Get the offset in pixels given the output resolution and interval
 	 * 

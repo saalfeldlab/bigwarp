@@ -59,15 +59,8 @@ fovIn = [fovx, fovy, fovz] as double[]
 
 outputInterval = ApplyBigwarpPlugin.getPixelInterval( null, ltm, fovspec, null, fovIn, offIn, res );
 offset = ApplyBigwarpPlugin.getPixelOffset( fovspec, offIn, res, outputInterval );
-
 println( 'res: ' + res )
 
-/*
-if( doJacDeterminant )
-	img = JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps );
-else
-	img = null;
-*/
 
 img = JacobianDeterminantRandomAccess.createJacobianDeterminant( new FloatType(), tps );
 
