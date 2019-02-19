@@ -82,7 +82,7 @@ public class LandmarkPointMenu extends JPopupMenu
 		
 		private void maybeShowPopup( MouseEvent e ) 
 		{
-	        if (e.isPopupTrigger())
+	        if ( isRightClick( e ))
 	        {
 	        	clickPt = e.getPoint();
 	        	LandmarkPointMenu.this.show(
@@ -90,6 +90,13 @@ public class LandmarkPointMenu extends JPopupMenu
 	        			e.getX(), e.getY());
 	        }
 	    }
+
+		private boolean isRightClick( MouseEvent e )
+		{
+			if ( e.getButton() == MouseEvent.BUTTON3 )
+				return true;
+			else return false;
+		}
 	}
 
 	private class DeleteOneSelectedHandler implements ActionListener
