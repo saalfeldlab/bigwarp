@@ -121,6 +121,11 @@ public class BigWarpDragOverlay
 			if( thisViewer.isMoving && !bw.isMovingDisplayTransformed())
 				return;
 
+			if( bw.isInLandmarkMode() && bw.isRowIncomplete() )
+			{
+				return;
+			}
+
 			if( bw.isInLandmarkMode() && e.isShiftDown() )
 			{
 				thisViewer.getGlobalMouseCoordinates( BigWarpDragOverlay.this.movingPoint );
@@ -144,6 +149,11 @@ public class BigWarpDragOverlay
 		@Override
 		public void mouseReleased( MouseEvent e )
 		{
+			if( bw.isInLandmarkMode() && bw.isRowIncomplete() )
+			{
+				return;
+			}
+
 			if ( bw.isInLandmarkMode() && e.isShiftDown() )
 			{
 				completedOK = true;

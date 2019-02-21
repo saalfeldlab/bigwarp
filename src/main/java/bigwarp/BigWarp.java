@@ -2004,6 +2004,16 @@ public class BigWarp
 		overlayP.setIsTransformed( isTransformed );
 	}
 
+	/**
+	 * Returns true if the currently selected row in the landmark table is missing on the the landmarks
+	 * @return
+	 */
+	public boolean isRowIncomplete()
+	{
+		LandmarkTableModel ltm = landmarkPanel.getTableModel();
+		return ltm.isPointUpdatePending() || ltm.isPointUpdatePendingMoving();
+	}
+
 	public boolean isMovingDisplayTransformed()
 	{
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
@@ -2298,15 +2308,24 @@ public class BigWarp
 			if( clickLength < keyClickMaxLength && selectedPointIndex != -1 )
 				return;
 
-			// shift down is reserved for drag overlay
-			if ( e.isShiftDown() ) { return; }
-
-			if ( e.isControlDown() )
+			// shift when
+			boolean isMovingLocal = isMoving;
+			if ( e.isShiftDown() && e.isControlDown() )
+			{ 
+				System.out.println( "shift-control release");
+				isMovingLocal = !isMoving;
+			}
+			else if( e.isShiftDown())
+			{
+				// shift is reserved for click-drag
+				return;
+			}
+			else if ( e.isControlDown() )
 			{
 				if ( BigWarp.this.isInLandmarkMode() && selectedPointIndex < 0 )
 				{
 					thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-					addFixedPoint( BigWarp.this.currentLandmark, isMoving );
+					addFixedPoint( BigWarp.this.currentLandmark, isMovingLocal );
 				}
 				return;
 			}
@@ -2320,11 +2339,11 @@ public class BigWarp
 				currentLandmark.localize( ptarrayLoc );
 
 				if ( selectedPointIndex == -1 )
-					wasNewRowAdded = addPoint( ptarrayLoc, isMoving );
+					wasNewRowAdded = addPoint( ptarrayLoc, isMovingLocal );
 				else
 				{
-					final boolean isWarped = isMoving && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
-					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, isWarped, true );
+					final boolean isWarped = isMovingLocal && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
+					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true );
 				}
 
 				if ( updateWarpOnPtChange && !wasNewRowAdded )
@@ -2337,9 +2356,9 @@ public class BigWarp
 				}
 
 				if( wasNewRowAdded )
-					updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
+					updateRowSelection( isMovingLocal, landmarkModel.getRowCount() - 1 );
 				else
-					updateRowSelection( isMoving, selectedPointIndex );
+					updateRowSelection( isMovingLocal, selectedPointIndex );
 			}
 
 			BigWarp.this.landmarkModel.resetLastPoint();
