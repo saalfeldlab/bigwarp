@@ -504,7 +504,7 @@ public class BigWarpInit
 		String[] names = new String[impP.getNChannels() + impQ.getNChannels()];
 
 		String[] impPnames = namesFromImagePlus(impP);
-		String[] impQnames = namesFromImagePlus(impP);
+		String[] impQnames = namesFromImagePlus(impQ);
 
 		int i = 0;
 		for(String name : impPnames)
