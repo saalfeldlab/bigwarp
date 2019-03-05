@@ -2432,7 +2432,10 @@ public class BigWarp
 			// re-estimate if a a point was set to or from active
 			// note - this covers "resetting" points as well
 			if( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
+			{
 				BigWarp.this.restimateTransformation();
+				BigWarp.this.landmarkPanel.repaint();
+			}
 		}
 	}
 
@@ -2449,19 +2452,20 @@ public class BigWarp
 		public void mouseClicked( final MouseEvent e )
 		{
 			final int ndims = landmarkModel.getNumdims();
-			if ( BigWarp.this.isInLandmarkMode() )
-			{
-				final JTable target = ( JTable ) e.getSource();
-
-				final int row = target.getSelectedRow();
-				final int column = target.getSelectedColumn();
-
-				final boolean isMoving = ( column > 1 && column < ( 2 + ndims ) );
-
-				BigWarp.this.landmarkModel.clearPt( row, isMoving );
-
-			}
-			else if ( e.getClickCount() == 2 )
+//			if ( BigWarp.this.isInLandmarkMode() )
+//			{
+//				final JTable target = ( JTable ) e.getSource();
+//
+//				final int row = target.getSelectedRow();
+//				final int column = target.getSelectedColumn();
+//
+//				final boolean isMoving = ( column > 1 && column < ( 2 + ndims ) );
+//
+//				BigWarp.this.landmarkModel.clearPt( row, isMoving );
+//
+//			}
+//			else if ( e.getClickCount() == 2 )
+			if ( e.getClickCount() == 2 )
 			{
 				final JTable target = ( JTable ) e.getSource();
 				final int row = target.getSelectedRow();

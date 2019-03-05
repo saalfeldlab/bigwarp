@@ -2,7 +2,6 @@ package bigwarp;
 
 import java.awt.Component;
 import java.awt.event.ActionEvent;
-import java.awt.event.KeyEvent;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -223,6 +222,7 @@ public class BigWarpActions
 
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
+		map.put( REDO, "control shift Z" );
 
 		map.put( SAVE_LANDMARKS, "control S" );
 		map.put( LOAD_LANDMARKS, "control O" );
@@ -230,7 +230,12 @@ public class BigWarpActions
 		map.put( EXPORT_IP, "control E" );
 		map.put( SAVE_WARPED, "control alt shift E" );
 
-		map.put( String.format( SELECT_TABLE_ROWS, -1 ), KeyStroke.getKeyStroke( KeyEvent.VK_ESCAPE, 0 ) );
+		// TODO if I decide to make clearing / delete hotkeys
+//		map.put( LandmarkPointMenu.CLEAR_SELECTED_MOVING, "BACK_SPACE" );
+//		map.put( LandmarkPointMenu.CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
+//		map.put( LandmarkPointMenu.DELETE_SELECTED, "DELETE" );
+
+		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "ESCAPE" );
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
 		map.put( GARBAGE_COLLECTION, "F9" );
@@ -251,6 +256,15 @@ public class BigWarpActions
 
 //		new ToggleLandmarkModeAction( LANDMARK_MODE_ON, bw ).put( actionMap );
 //		new ToggleLandmarkModeAction( LANDMARK_MODE_OFF, bw ).put( actionMap );
+
+
+		// TODO if I decide to make clearing / delete hotkeys
+//		bw.landmarkPopupMenu.deleteSelectedHandler.put( actionMap );
+//		bw.landmarkPopupMenu.activateAllHandler.put( actionMap );
+//		bw.landmarkPopupMenu.deactivateAllHandler.put( actionMap );
+//
+//		bw.landmarkPopupMenu.clearAllMoving.put( actionMap );
+//		bw.landmarkPopupMenu.clearAllFixed.put( actionMap );
 
 		new ToggleLandmarkModeAction( TOGGLE_LANDMARK_MODE, bw ).put( actionMap );
 
