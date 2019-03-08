@@ -328,8 +328,7 @@ public class BigWarpActions
 		{
 			if( bw.isInLandmarkMode() )
 			{
-				bw.getViewerFrameP().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
-				bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo/Redo not allowed in landmark mode" );
+				bw.message.showMessage( "Undo/Redo not allowed in landmark mode" );
 				return;
 			}
 
@@ -341,16 +340,14 @@ public class BigWarpActions
 				if( isRedo )
 				{
 					bw.getLandmarkPanel().getTableModel().getUndoManager().redo();
-					bw.getViewerFrameP().getViewerPanel().showMessage( "Redo" );
-					bw.getViewerFrameQ().getViewerPanel().showMessage( "Redo" );
+					bw.message.showMessage( "Redo" );
 				}
 				else
 				{
 					//			} else if( manager.canUndo() ) {
 //					bw.getLandmarkPanel().getTableModel().getUndoManager().
 					bw.getLandmarkPanel().getTableModel().getUndoManager().undo();
-					bw.getViewerFrameP().getViewerPanel().showMessage( "Undo" );
-					bw.getViewerFrameQ().getViewerPanel().showMessage( "Undo" );
+					bw.message.showMessage( "Undo" );
 				}
 
 				/*
@@ -367,13 +364,11 @@ public class BigWarpActions
 			{
 				if( isRedo )
 				{
-					bw.getViewerFrameP().getViewerPanel().showMessage("Can't redo");
-					bw.getViewerFrameQ().getViewerPanel().showMessage("Can't redo");
+					bw.message.showMessage("Can't redo");
 				}
 				else
 				{
-					bw.getViewerFrameP().getViewerPanel().showMessage("Can't undo");
-					bw.getViewerFrameQ().getViewerPanel().showMessage("Can't undo");
+					bw.message.showMessage("Can't undo");
 				}
 				//System.err.println( " Undo / redo error, or nothing to do " );
 				//ex.printStackTrace();

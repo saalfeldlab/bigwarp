@@ -54,7 +54,9 @@ import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
+import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
+import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
@@ -86,6 +88,7 @@ import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
+import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
@@ -227,6 +230,8 @@ public class BigWarp
 
 	protected MouseLandmarkTableListener landmarkTableListener;
 
+	protected BigWarpMessageAnimator message;
+
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
 
 	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
@@ -276,7 +281,7 @@ public class BigWarp
 
 	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		this( data, windowTitle,  BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
+		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
 	}
 
 	public BigWarp( final BigWarpData data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
@@ -294,7 +299,6 @@ public class BigWarp
 
 		Arrays.sort( movingSourceIndexList );
 		Arrays.sort( targetSourceIndexList );
-
 
 		ptBack = new double[ 3 ];
 
@@ -342,6 +346,10 @@ public class BigWarp
 				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
+
+		// setup messaging
+		message = options.getMessageAnimator();
+		message.setViewers( viewerP, viewerQ );
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
@@ -645,16 +653,14 @@ public class BigWarp
 
 		if ( updateWarpOnPtChange )
 		{
-			viewerP.showMessage( "Always estimate transform on change" );
-			viewerQ.showMessage( "Always estimate transform on change" );
+			message.showMessage( "Always estimate transform on change" );
 
 			// toggleAlwaysWarpMenuP.setText( "Toggle always warp off" );
 			// toggleAlwaysWarpMenuQ.setText( "Toggle always warp off" );
 		}
 		else
 		{
-			viewerP.showMessage( "Estimate transform on request only" );
-			viewerQ.showMessage( "Estimate transform on request only" );
+			message.showMessage( "Estimate transform on request only" );
 
 			// toggleAlwaysWarpMenuP.setText( "Warp on every point change" );
 			// toggleAlwaysWarpMenuQ.setText( "Toggle always warp on" );
@@ -1090,16 +1096,14 @@ public class BigWarp
 		if ( inLmMode )
 		{
 			disableTransformHandlers();
-			viewerP.showMessage( "Landmark mode on ( Moving image )" );
-			viewerQ.showMessage( "Landmark mode on ( Fixed image )" );
+			message.showMessage( "Landmark mode on" );
 			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
 			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.CROSSHAIR_CURSOR ) );
 		}
 		else
 		{
 			enableTransformHandlers();
-			viewerP.showMessage( "Landmark mode off ( Moving image )" );
-			viewerQ.showMessage( "Landmark mode off ( Fixed image )" );
+			message.showMessage( "Landmark mode off" );
 			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
 			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
 		}
@@ -1387,6 +1391,12 @@ public class BigWarp
 
 	public void matchOtherViewerPanelToActive()
 	{
+		if ( inLandmarkMode )
+		{
+			message.showMessage( "Can't move viewer in landmark mode." );
+			return;
+		}
+
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 
@@ -1411,6 +1421,12 @@ public class BigWarp
 
 	public void matchActiveViewerPanelToOther()
 	{
+		if ( inLandmarkMode )
+		{
+			message.showMessage( "Can't move viewer in landmark mode." );
+			return;
+		}
+
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 
@@ -1435,6 +1451,13 @@ public class BigWarp
 
 	public void warpToNearest( BigWarpViewerPanel viewer )
 	{
+		if ( inLandmarkMode )
+		{
+			message.showMessage( "Can't move viewer in landmark mode." );
+			message.showMessage( "Can't move viewer in landmark mode." );
+			return;
+		}
+
 		RealPoint mousePt = new RealPoint( 3 ); // need 3d point even for 2d images
 		viewer.getGlobalMouseCoordinates( mousePt );
 		warpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
@@ -1442,6 +1465,13 @@ public class BigWarp
 
 	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
 	{
+		if( inLandmarkMode )
+		{
+			getViewerFrameP().getViewerPanel().showMessage( "Can't move viewer in landmark mode." );
+			getViewerFrameQ().getViewerPanel().showMessage( "Can't move viewer in landmark mode." );
+			return;
+		}
+
 		int offset = 0;
 		int ndims = landmarkModel.getNumdims();
 		double[] pt = null;
@@ -1567,9 +1597,9 @@ public class BigWarp
 		final boolean newState = !getOverlayP().getIsTransformed();
 
 		if ( newState )
-			viewerP.showMessage( "Displaying warped" );
+			message.showMessage( "Displaying warped" );
 		else
-			viewerP.showMessage( "Displaying raw" );
+			message.showMessage( "Displaying raw" );
 
 		// Toggle whether moving image is displayed as transformed or not
 		setIsMovingDisplayTransformed( newState );
@@ -1814,7 +1844,7 @@ public class BigWarp
 
 		if ( landmarkModel.getTransform() == null )
 		{
-			viewerFrame.getViewerPanel().showMessage( "No warp - estimate warp first." );
+			message.showMessage( "No warp - estimate warp first." );
 			return;
 		}
 		final VisibilityAndGrouping vg = viewerFrame.getViewerPanel().getVisibilityAndGrouping();
@@ -1837,7 +1867,7 @@ public class BigWarp
 
 			vg.setFusedEnabled( true );
 			vg.setGroupingEnabled( false );
-			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
+			message.showMessage( "Displaying Warp Magnitude" );
 			break;
 		}
 		case GRID:
@@ -1850,7 +1880,7 @@ public class BigWarp
 
 			vg.setFusedEnabled( true );
 			vg.setGroupingEnabled( false );
-			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Grid" );
+			message.showMessage( "Displaying Warp Grid" );
 			break;
 		}
 		default:
@@ -1860,7 +1890,7 @@ public class BigWarp
 //			vg.setSourceActive( offImgIndex, true );
 
 //			vg.setFusedEnabled( false );
-			viewerFrame.getViewerPanel().showMessage( "Turning off warp vis" );
+			message.showMessage( "Turning off warp vis" );
 			break;
 		}
 		}
@@ -1892,7 +1922,7 @@ public class BigWarp
 
 		if ( landmarkModel.getTransform() == null )
 		{
-			viewerFrame.getViewerPanel().showMessage( "No warp - estimate warp first." );
+			message.showMessage( "No warp - estimate warp first." );
 			return;
 		}
 
@@ -1909,7 +1939,7 @@ public class BigWarp
 //			vg.setSourceActive( offImgIndex, true );
 
 			vg.setFusedEnabled( false );
-			viewerFrame.getViewerPanel().showMessage( "Removing Warp Magnitude" );
+			message.showMessage( "Removing Warp Magnitude" );
 		}
 		else // warp mag is invisible, turn it on
 		{
@@ -1924,7 +1954,7 @@ public class BigWarp
 			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
 			vg.setFusedEnabled( true );
-			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
+			message.showMessage( "Displaying Warp Magnitude" );
 		}
 
 		viewerFrame.getViewerPanel().requestRepaint();
@@ -2610,36 +2640,6 @@ public class BigWarp
 		public AffineTransform3D getTransform()
 		{
 			return null;
-		}
-	}
-
-	protected static class BigWarpViewerOptions extends ViewerOptions
-	{
-		public final boolean is2d;
-
-		private TransformEventHandlerFactory< AffineTransform3D > factory;
-
-		public TransformEventHandlerFactory< AffineTransform3D > getTransformEventHandlerFactory()
-		{
-			return factory;
-		}
-
-		public BigWarpViewerOptions( final boolean is2d )
-		{
-			this.is2d = is2d;
-		}
-
-		public static BigWarpViewerOptions options( final boolean is2d )
-		{
-			BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
-			if ( is2d )
-			{
-				out.factory = BehaviourTransformEventHandler2D.factory();
-			} else
-			{
-				out.factory = BehaviourTransformEventHandler3D.factory();
-			}
-			return out;
 		}
 	}
 

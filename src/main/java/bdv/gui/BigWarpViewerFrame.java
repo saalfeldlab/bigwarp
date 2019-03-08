@@ -50,7 +50,7 @@ public class BigWarpViewerFrame extends JFrame
 			final int[] movingIndexList,
 			final int[] targetIndexList )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, ViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
+		this( bw, width, height, sources, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
 	
 	public BigWarpViewerFrame(
@@ -59,7 +59,7 @@ public class BigWarpViewerFrame extends JFrame
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
-			final ViewerOptions optional,
+			final BigWarpViewerOptions optional,
 			final String title,
 			final boolean isMoving,
 			final int[] movingIndexList,
@@ -67,7 +67,7 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.width( width / 2 ).height( height ), isMoving, movingIndexList, targetIndexList );
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
 
 		// TODO this needs to change for multi-channel!
 		if( !isMoving )

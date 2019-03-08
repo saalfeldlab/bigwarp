@@ -9,9 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import bdv.cache.CacheControl;
+import bdv.gui.BigWarpViewerOptions;
 import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
+import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator2D;
@@ -36,6 +38,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpOverlay overlay;
 
 	protected BigWarpDragOverlay dragOverlay;
+	
+	protected final MessageOverlayAnimator message;
 
 	protected boolean isMoving;
 
@@ -63,10 +67,10 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
 			int[] movingSourceIndexList, int[] targetSourceIndexList )
 	{
-		this( sources, viewerSettings, cache, ViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
+		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
 	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final ViewerOptions optional, boolean isMoving, 
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving, 
 			int[] movingSourceIndexList, int[] targetSourceIndexList  )
 	{
 		super( sources, 1, cache, optional );
@@ -79,7 +83,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
 		destXfm = new AffineTransform3D();
+		
+		if( isMoving )
+			message = optional.getValues().getMsgOverlayMoving();
+		else
+			message = optional.getValues().getMsgOverlay();
 
+		overlayAnimators.add( message );
 		updateGrouping();
 	}
 
@@ -91,6 +101,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public void toggleBoxOverlayVisible()
 	{
 		boxOverlayVisible = !boxOverlayVisible;
+	}
+	
+	@Override
+	public void showMessage( final String msg )
+	{
+		message.add( msg );
+		display.repaint();
 	}
 
 	public void setHoveredIndex( int index )
