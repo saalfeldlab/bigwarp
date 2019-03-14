@@ -43,6 +43,10 @@ public class BigWarpViewerOptions extends ViewerOptions
 	
 	/**
 	 * Set width of {@link ViewerPanel} canvas.
+	 * 
+	 * @param width of the viewer canvas
+	 * @param height of the viewer canvas
+	 * @return the new options
 	 */
 	public BigWarpViewerOptions size( final int width, final int height )
 	{

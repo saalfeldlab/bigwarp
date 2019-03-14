@@ -1,6 +1,5 @@
 package bigwarp.loader;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 import bdv.AbstractViewerSetupImgLoader;
@@ -40,26 +39,13 @@ import net.imglib2.type.volatiles.VolatileUnsignedByteType;
 import net.imglib2.type.volatiles.VolatileUnsignedShortType;
 
 /**
- * ImageLoader backed by a ImagePlus. The ImagePlus may be virtual and in
+ * ImageLoader backed by a virtual ImagePlus. The ImagePlus may be virtual and in
  * contrast to the imglib2 wrappers, we do not try to load all slices into
  * memory. Instead slices are stored in {@link VolatileGlobalCellCache}.
  *
- * Use {@link #createFloatInstance(ImagePlus)},
- * {@link #createUnsignedByteInstance(ImagePlus)} or
- * {@link #createUnsignedShortInstance(ImagePlus)} depending on the ImagePlus
- * pixel type.
- *
- * When loading images ({@link #getSetupImgLoader(int)},
- * {@link BasicSetupImgLoader#getImage(int, ImgLoaderHint...)}) the provided
- * setup id is used as the channel index of the {@link ImagePlus}, the provided
- * timepoint id is used as the frame index of the {@link ImagePlus}.
- *
- * @param <T>
- *            (non-volatile) pixel type
- * @param <V>
- *            volatile pixel type
- * @param <A>
- *            volatile array access type
+ * @param <T> (non-volatile) pixel type
+ * @param <V> volatile pixel type
+ * @param <A> volatile array access type
  *
  * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
@@ -203,11 +189,19 @@ public abstract class BigWarpVirtualStackImageLoader< T extends NativeType< T >,
 		}
 
 		/**
+		 * 
 		 * (Almost) create a {@link CachedCellImg} backed by the cache. The
 		 * created image needs a
 		 * {@link NativeImg#setLinkedType(net.imglib2.type.Type) linked type}
 		 * before it can be used. The type should be either {@link ARGBType} and
 		 * {@link VolatileARGBType}.
+		 * 
+		 * @param <T> the type
+		 * @param timepointId the timepoint
+		 * @param level the level
+		 * @param loadingStrategy the strategy 
+		 * @param type the type
+		 * @return the cell image
 		 */
 		protected < T extends NativeType< T > > AbstractCellImg< T, A, ?, ? > prepareCachedImage( final int timepointId, final int level, final LoadingStrategy loadingStrategy, final T type )
 		{
