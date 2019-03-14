@@ -132,17 +132,17 @@ public class ImagePlusLoader implements Loader
 			switch ( imp.getType() )
 			{
 			case ImagePlus.GRAY8:
-				imgLoader = VirtualStackImageLoader.createUnsignedByteInstance( imp );
+				imgLoader = BigWarpVirtualStackImageLoader.createUnsignedByteInstance( imp, ids );
 				break;
 			case ImagePlus.GRAY16:
-				imgLoader = VirtualStackImageLoader.createUnsignedShortInstance( imp );
+				imgLoader = BigWarpVirtualStackImageLoader.createUnsignedShortInstance( imp, ids );
 				break;
 			case ImagePlus.GRAY32:
-				imgLoader = VirtualStackImageLoader.createFloatInstance( imp );
+				imgLoader = BigWarpVirtualStackImageLoader.createFloatInstance( imp, ids );
 				break;
 			case ImagePlus.COLOR_RGB:
 			default:
-				imgLoader = VirtualStackImageLoader.createARGBInstance( imp );
+				imgLoader = BigWarpVirtualStackImageLoader.createARGBInstance( imp, ids );
 				break;
 			}
 		}
