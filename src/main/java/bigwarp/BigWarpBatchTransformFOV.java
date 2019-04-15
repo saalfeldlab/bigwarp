@@ -11,7 +11,6 @@ import org.janelia.utility.parse.ParseUtils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
-import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -40,6 +39,8 @@ import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -219,7 +220,7 @@ public class BigWarpBatchTransformFOV
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
+			InverseRealTransform irXfm = new InverseRealTransform( new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm )));
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm );
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
 		}

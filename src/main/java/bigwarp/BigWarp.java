@@ -52,7 +52,6 @@ import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
 import bdv.export.ProgressWriter;
-import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
@@ -60,8 +59,6 @@ import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.util.ProgressWriterIJ;
-import bdv.img.RenamableSource;
-import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
@@ -72,7 +69,6 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -136,6 +132,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -1102,9 +1099,9 @@ public class BigWarp
 	public String transformToString()
 	{
 		String s = "";
-		if ( currentTransform instanceof TpsTransformWrapper )
+		if ( currentTransform instanceof InverseRealTransform )
 		{
-			s = ( ( TpsTransformWrapper ) currentTransform ).getTps().toString();
+			s = ( ( InverseRealTransform ) currentTransform ).toString();
 		}
 		else
 		{
@@ -1975,12 +1972,10 @@ public class BigWarp
 			// when bigwarp has 2d images though, the z- component will be left unchanged
 			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
-			InverseRealTransform xfm = new InverseRealTransform( transform );
-
 			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( xfm );
+			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
 			if ( sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( xfm );
+				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( transform );
 		}
 	}
 
@@ -2749,16 +2744,14 @@ public class BigWarp
 								ndims =bw.landmarkModel.getNumdims();
 								xfm = bw.getLandmarkPanel().getTableModel().getTransform();
 							}
-							//invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
-							invXfm = new TpsTransformWrapper( ndims, xfm );
-
+							invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
 						}
 						else
 						{
 							Model<?> model = getModel();
 							fitModel(model);
 							int nd = this.bw.landmarkModel.getNumdims();
-							invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd );
+							invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
 						}
 
 						if ( index < 0 )

@@ -11,6 +11,8 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
@@ -39,7 +41,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	 */
 	private final MipmapOrdering sourceMipmapOrdering;
 
-	private InverseRealTransform xfm;
+	private RealTransform xfm;
 
 	private boolean isTransformed;
 	
@@ -61,7 +63,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		return source.isPresent( t );
 	}
 	
-	public void updateTransform( InverseRealTransform xfm )
+	public void updateTransform( RealTransform xfm )
 	{
 		this.xfm = xfm;
 	}
@@ -102,7 +104,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			if( xfm == null )
 				return sourceRealAccessible;
 			else
-				return new RealTransformRealRandomAccessible< T, InverseRealTransform >( sourceRealAccessible, xfm );
+				return new RealTransformRealRandomAccessible< T, RealTransform >( sourceRealAccessible, xfm );
 		}
 		else
 		{
@@ -119,7 +121,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			source.getSourceTransform( t, level, transform );
 	}
 
-	public InverseRealTransform getTransform()
+	public RealTransform getTransform()
 	{
 		return xfm;
 	}
