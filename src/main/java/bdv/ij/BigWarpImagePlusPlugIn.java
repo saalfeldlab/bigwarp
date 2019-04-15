@@ -2,6 +2,7 @@ package bdv.ij;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
+import bdv.ij.util.ProgressWriterIJ;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.DisplayMode;
@@ -79,7 +80,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try
         {
         	new RepeatingReleasedEventsFixer().install();
-			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  null );
+			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();

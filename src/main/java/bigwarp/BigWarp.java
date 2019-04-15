@@ -59,6 +59,7 @@ import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
+import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.RenamableSource;
 import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
@@ -98,7 +99,6 @@ import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.WindowManager;
 import ij.gui.GenericDialog;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
@@ -135,9 +135,7 @@ import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
-import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -228,6 +226,8 @@ public class BigWarp
 	protected RealPoint currentLandmark;
 
 	protected LandmarkTableModel landmarkModel;
+
+	protected InvertibleRealTransform currentTransform;
 
 	protected JTable landmarkTable;
 
@@ -1099,6 +1099,21 @@ public class BigWarp
 		return landmarkPanel.getTableModel().getTransform();
 	}
 
+	public String transformToString()
+	{
+		String s = "";
+		if ( currentTransform instanceof TpsTransformWrapper )
+		{
+			s = ( ( TpsTransformWrapper ) currentTransform ).getTps().toString();
+		}
+		else
+		{
+			s = ( ( WrappedCoordinateTransform ) currentTransform ).getTransform().toString();
+		}
+		progressWriter.out().println( s );
+		return s;
+	}
+
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
 
@@ -1950,6 +1965,8 @@ public class BigWarp
 
 	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
 	{
+		this.currentTransform = transform;
+
 		for ( int i = 0; i < movingSourceIndexList.length; i++ )
 		{
 			int idx = movingSourceIndexList [ i ];
@@ -2011,7 +2028,7 @@ public class BigWarp
 	public void setTransformType( final String type )
 	{
 		this.transformType = type;
-		System.out.println("transform type now: " + transformType );
+		this.restimateTransformation();
 	}
 	
 	public String getTransformType()
@@ -2127,9 +2144,11 @@ public class BigWarp
 		{
 			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
 
+
+			ProgressWriterIJ progress = new ProgressWriterIJ();
 			BigWarp bw;
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
-				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), progress );
 			else
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
@@ -2138,7 +2157,7 @@ public class BigWarp
 				{
 					BigWarpData bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
 					
-					bw = new BigWarp( bwdata, new File( fnP ).getName(), new ProgressWriterConsole() );
+					bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
 				}
 				else
 				{

@@ -34,6 +34,7 @@ public class BigWarpActions
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE  = "toggle box and text overlay visible";
 	public static final String ESTIMATE_WARP = "estimate warp";
+	public static final String PRINT_TRANSFORM = "print transform";
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
@@ -235,6 +236,7 @@ public class BigWarpActions
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
 		map.put( GARBAGE_COLLECTION, "F10" );
+		map.put( PRINT_TRANSFORM, "P" );
 		//map.put( DEBUG, "F10" );
 		
 		return inputMap;
@@ -284,6 +286,7 @@ public class BigWarpActions
 
 		new GarbageCollectionAction( GARBAGE_COLLECTION ).put( actionMap );
 		new DebugAction( DEBUG, bw ).put( actionMap );
+		new PrintTransformAction( PRINT_TRANSFORM, bw ).put( actionMap );
 
 			
 		return actionMap;
@@ -447,6 +450,24 @@ public class BigWarpActions
 		}
 	}
 	
+	public static class PrintTransformAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 6065343788485350279L;
+
+		private BigWarp bw;
+
+		public PrintTransformAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.transformToString();
+		}
+	}
 	public static class DebugAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7408679512565343805L;
