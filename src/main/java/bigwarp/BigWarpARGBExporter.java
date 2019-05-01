@@ -121,7 +121,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
@@ -134,7 +134,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = 1; 							// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();

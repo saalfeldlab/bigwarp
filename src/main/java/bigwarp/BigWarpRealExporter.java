@@ -178,7 +178,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< T > img = copyToImageStack( 
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
@@ -191,7 +191,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = 1; 							// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< T > img = copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();

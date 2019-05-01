@@ -8,8 +8,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 
-import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -17,6 +17,7 @@ import ij.ImagePlus;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
@@ -25,13 +26,8 @@ import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
-import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.type.numeric.NumericType;
-import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
@@ -55,10 +51,20 @@ public abstract class BigWarpExporter <T>
 	protected Interpolation interp;
 	
 	protected boolean isVirtual = false;
-	
+
 	protected int nThreads = 1;
-	
+
+	protected ExportThread exportThread;
+
 	public abstract ImagePlus export();
+
+	public enum ParallelizationPolicy {
+		SLICE, ITER
+	};
+
+	public ParallelizationPolicy policy = ParallelizationPolicy.ITER;
+
+	private ImagePlus result;
 
 	public BigWarpExporter(
 			final ArrayList< SourceAndConverter< ? >> sources,
@@ -85,7 +91,12 @@ public abstract class BigWarpExporter <T>
 	{
 		this.isVirtual = isVirtual;
 	}
-	
+
+	public void setParallelizationPolicy( ParallelizationPolicy policy )
+	{
+		this.policy = policy;
+	}
+
 	public void setNumThreads( final int nThreads )
 	{
 		this.nThreads = nThreads;
@@ -118,11 +129,6 @@ public abstract class BigWarpExporter <T>
 		pixelRenderToPhysical.identity();
 		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
-		
-//		System.out.println( " " );
-//		System.out.println( "resolutionTransform   : " + resolutionTransform );
-//		System.out.println( "offsetTransform       : " + offsetTransform );
-//		System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
 	}
 
 	public void setInterval( final Interval outputInterval )
@@ -174,7 +180,20 @@ public abstract class BigWarpExporter <T>
 		return new FinalInterval( min, max );
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
+	public < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
+			final RandomAccessible< T > raible,
+			final Interval itvl,
+			final ImgFactory<T> factory,
+			final int nThreads )
+	{
+		Img< T > target = factory.create( itvl );
+		if( policy == ParallelizationPolicy.ITER )
+			return copyToImageStackIterOrder( raible, itvl, target, nThreads );
+		else
+			return copyToImageStackBySlice( raible, itvl, target, nThreads );
+	}
+
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
@@ -182,10 +201,10 @@ public abstract class BigWarpExporter <T>
 	{
 		// create the image plus image
 		Img< T > target = factory.create( itvl );
-		return copyToImageStack( raible, itvl, target, nThreads );
+		return copyToImageStackBySlice( raible, itvl, target, nThreads );
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
 			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
@@ -215,8 +234,6 @@ public abstract class BigWarpExporter <T>
 		{
 			splitPoints[ i ] = splitPoints[ i - 1 ] + del;
 		}
-//		System.out.println( "dim2split: " + dim2split );
-//		System.out.println( "split points: " + XfmUtils.printArray( splitPoints ));
 
 		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
 
@@ -242,6 +259,78 @@ public abstract class BigWarpExporter <T>
 							ra.setPosition( c );
 							c.get().set( ra.get() );
 						}
+						return true;
+					}
+					catch( Exception e )
+					{
+						e.printStackTrace();
+					}
+					return false;
+				}
+			});
+		}
+		try
+		{
+			threadPool.invokeAll( jobs );
+			threadPool.shutdown(); // wait for all jobs to finish
+
+		}
+		catch ( InterruptedException e1 )
+		{
+			e1.printStackTrace();
+		}
+
+		IJ.showProgress( 1.1 );
+		return target;
+	}
+
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder( 
+			final RandomAccessible< T > raible,
+			final Interval itvl,
+			final ImgFactory<T> factory,
+			final int nThreads )
+	{
+		// create the image plus image
+		Img< T > target = factory.create( itvl );
+		return copyToImageStackIterOrder( raible, itvl, target, nThreads );
+	}
+
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder( 
+			final RandomAccessible< T > ra,
+			final Interval itvl,
+			final RandomAccessibleInterval<T> target,
+			final int nThreads )
+	{
+		// TODO I wish I didn't have to do this inside this method..
+		// 	Maybe I don't have to, and should do it where I call this instead?
+		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
+
+		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
+
+		LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
+		for( int i = 0; i < nThreads; i++ )
+		{
+
+			final int offset = i;
+			jobs.add( new Callable<Boolean>()
+			{
+				public Boolean call()
+				{
+					try
+					{
+						IterableInterval<T> it = Views.flatIterable( target );
+						final RandomAccess< T > access = raible.randomAccess();
+
+						long N = it.size();
+						final Cursor< T > c = it.cursor();
+						c.jumpFwd( 1 + offset );
+						for( long j = offset; j < N; j += nThreads )
+						{
+							access.setPosition( c );
+							c.get().set( access.get() );
+							c.jumpFwd( nThreads );
+						}
+
 						return true;
 					}
 					catch( Exception e )
@@ -329,7 +418,6 @@ public abstract class BigWarpExporter <T>
 	
 	public static FinalInterval estimateBounds( RealTransform xfm, Interval interval )
 	{
-		System.out.println( "estimateBounds" );
 		int nd = interval.numDimensions();
 		double[] pt = new double[ nd ];
 		double[] ptxfm = new double[ nd ];
@@ -353,7 +441,6 @@ public abstract class BigWarpExporter <T>
 				else
 					pt[ d ] = interval.max( d );
 			}
-			System.out.println( "pt " + Arrays.toString( pt ));
 
 			xfm.apply( pt, ptxfm );
 
@@ -382,6 +469,47 @@ public abstract class BigWarpExporter <T>
 	{
 		for( int d = 0; d < src.length; d++ )
 			dst[ d ] = (long)Math.floor( src[d] );
+	}
+
+	public ImagePlus exportAsynch()
+	{
+		exportThread = new ExportThread( this );
+		exportThread.start();
+		return result;
+	}
+
+	public static class ExportThread extends Thread
+	{
+		BigWarpExporter<?> exporter;
+
+		boolean pleaseResolve;
+
+		public ExportThread(BigWarpExporter<?> exporter)
+		{
+			this.exporter = exporter;
+			pleaseResolve = false;
+		}
+
+		@Override
+		public void run()
+		{
+			try {
+				long startTime = System.currentTimeMillis();
+				exporter.result = exporter.export();
+				long endTime = System.currentTimeMillis();
+
+				System.out.println("export took " + (endTime - startTime) + "ms");
+
+				if (exporter.result != null)
+					exporter.result.show();
+
+			}
+			catch (final RejectedExecutionException e)
+			{
+				// this happens when the rendering threadpool
+				// is killed before the painter thread.
+			}
+		}
 	}
 
 }

@@ -82,11 +82,9 @@ import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
-import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
@@ -913,9 +911,7 @@ public class BigWarp
 		Interpolation interp = Interpolation.NLINEAR;
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
-		
-		System.out.println( nThreads );
-		
+
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
 		Interval outputInterval = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
@@ -924,10 +920,7 @@ public class BigWarp
 		double[] offsetPhysical = new double[ offset.length ];
 		for( int d = 0; d < offset.length; d++ )
 			offsetPhysical[ d ] = offset[ d ] * res[ d ];
-		
-		System.out.println( "pixel offset: " + Arrays.toString( offset ));
-		System.out.println( "physical offset: " + Arrays.toString( offsetPhysical ));
-		
+
 		boolean currentlyWarped = isMovingDisplayTransformed();
 
 		if( !currentlyWarped )
@@ -939,19 +932,12 @@ public class BigWarp
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
-		ImagePlus ip = BigWarp.this.exporter.export();
+
+		ImagePlus ip = exporter.exportAsynch();
 
 		if( !currentlyWarped )
 			toggleMovingImageDisplay();
 
-		if( !path.isEmpty())
-		{
-			IJ.save( ip, path );
-			return;
-		}
-
-		if ( ip != null )
-			ip.show();
 	}
 
 	public void exportWarpField()
