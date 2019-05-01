@@ -1109,9 +1109,13 @@ public class BigWarp
 		{
 			s = ( ( InverseRealTransform ) currentTransform ).toString();
 		}
+		else if( currentTransform instanceof WrappedCoordinateTransform )
+		{
+			s = (( WrappedCoordinateTransform ) currentTransform).ct.toString();
+		}
 		else
 		{
-			s = ( ( WrappedCoordinateTransform ) currentTransform ).getTransform().toString();
+			s = ( ( WrappedIterativeInvertibleRealTransform<?> ) currentTransform ).getTransform().toString();
 		}
 		progressWriter.out().println( s );
 		return s;
