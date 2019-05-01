@@ -26,6 +26,7 @@ import net.imglib2.img.ImgFactory;
 import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.type.numeric.NumericType;
@@ -150,35 +151,6 @@ public abstract class BigWarpExporter <T>
 			}
 		}
 		return new FinalInterval( min, max );
-	}
-	
-	public FinalInterval destinationIntervalFromMovingBounds()
-	{
-		System.out.println( "Inferring output interval" );
-		
-		final AffineTransform3D thisMovingXfm = new AffineTransform3D();
-		sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, thisMovingXfm );
-		
-		InverseRealTransform xfm = ((WarpedSource< ? >) (sources.get( movingSourceIndexList[ 0 ] ).getSpimSource())).getTransform();
-
-		RealTransformSequence ixfm = new RealTransformSequence();
-		ixfm.add( thisMovingXfm );
-		ixfm.add( xfm.inverse() );
-		ixfm.add( resolutionTransform );
-		
-		RandomAccessibleInterval< ? > mvgInterval = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
-
-		FinalInterval destInterval = BigWarpExporter.estimateBounds( ixfm, mvgInterval );
-//		System.out.println( "moving interval      : " + Util.printInterval( mvgInterval ));
-//		System.out.println( "destination interval : " + Util.printInterval( destInterval ));
-
-		double[] translation = new double[ xfm.numSourceDimensions() ];
-		pixelRenderToPhysical.apply( Intervals.minAsDoubleArray( destInterval ), translation );
-
-		pixelRenderToPhysical.translate( translation );
-//		System.out.println( pixelRenderToPhysical );
-
-		return destInterval;
 	}
 	
 	public static FinalInterval getSubInterval( Interval interval, int d, long start, long end )

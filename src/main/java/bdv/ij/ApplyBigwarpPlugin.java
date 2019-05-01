@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.regex.Pattern;
 
-import bdv.img.TpsTransformWrapper;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
@@ -31,6 +30,8 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
+import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -263,7 +264,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			
 			RealTransformSequence seq = new RealTransformSequence();
 			seq.add( movingPixelToPhysical );
-			seq.add( new TpsTransformWrapper( tps.getNumDims(), tps ) );
+			seq.add( new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( tps )).inverse() );
 			seq.add( outputResolution2Pixel.inverse() );
 			
 			FinalInterval interval = new FinalInterval(
@@ -517,8 +518,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
-			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm );
+			WrappedIterativeInvertibleRealTransform< ThinplateSplineTransform > transform = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
+			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( transform );
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
 		}
 
@@ -592,18 +593,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		final GenericDialog gd = new GenericDialog( "Apply Big Warp transform" );
 		gd.addMessage( "File Selection:" );
-//		
-		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_2.csv" );
-//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4_landmarks_identity.csv" );
-//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks.csv" );
-//		gd.addStringField( "landmarks_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series_rot_landmarks_wBnds.csv" );
+		gd.addStringField( "landmarks_image_file", "" );
 
-
-		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
-//		gd.addStringField( "moving_image_file", "/groups/saalfeld/home/bogovicj/tmp/confocal-series-RGB.tif" );
-		
+		gd.addStringField( "moving_image_file", "" );
 		gd.addStringField( "target_space_file", "" );
-		
+
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution", 
 				new String[]{ TARGET, MOVING, SPECIFIED },
@@ -616,39 +610,24 @@ public class ApplyBigwarpPlugin implements PlugIn
 //		gd.addStringField( "point filter", "BND.*" );
 		gd.addStringField( "point filter", "" );
 		
-//		gd.addMessage( "Resolution");
-//		gd.addNumericField( "x", 1.0, 4 );
-//		gd.addNumericField( "y", 1.0, 4 );
-//		gd.addNumericField( "z", 1.0, 4 );
-//		
-//		gd.addMessage( "Offset");
-//		gd.addNumericField( "x", 0.0, 4 );
-//		gd.addNumericField( "y", 0.0, 4 );
-//		gd.addNumericField( "z", 0.0, 4 );
-//		
-//		gd.addMessage( "Field of view");
-//		gd.addNumericField( "x", -1, 0 );
-//		gd.addNumericField( "y", -1, 0 );
-//		gd.addNumericField( "z", -1, 0 );
-		
 		gd.addMessage( "Resolution");
-		gd.addNumericField( "x", 0.1, 4 );
-		gd.addNumericField( "y", 0.1, 4 );
-		gd.addNumericField( "z", 0.1, 4 );
+		gd.addNumericField( "x", 1.0, 4 );
+		gd.addNumericField( "y", 1.0, 4 );
+		gd.addNumericField( "z", 1.0, 4 );
 		
 		gd.addMessage( "Offset");
-		gd.addNumericField( "x", 18.0, 4 );
-		gd.addNumericField( "y", 23.0, 4 );
-		gd.addNumericField( "z",  5.0, 4 );
+		gd.addNumericField( "x", 0.0, 4 );
+		gd.addNumericField( "y", 0.0, 4 );
+		gd.addNumericField( "z", 0.0, 4 );
 		
 		gd.addMessage( "Field of view");
-		gd.addNumericField( "x", 20, 0 );
-		gd.addNumericField( "y", 31, 0 );
-		gd.addNumericField( "z",  7, 0 );
-		
+		gd.addNumericField( "x", -1, 0 );
+		gd.addNumericField( "y", -1, 0 );
+		gd.addNumericField( "z", -1, 0 );
+
 		gd.addMessage( "Output options");
 		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
-		gd.addCheckbox( "virtual?", true );
+		gd.addCheckbox( "virtual?", false );
 		gd.addNumericField( "threads", 4, 0 );
 
 		gd.showDialog();

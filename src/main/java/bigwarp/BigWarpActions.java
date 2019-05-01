@@ -33,6 +33,7 @@ public class BigWarpActions
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
 	public static final String TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE  = "toggle box and text overlay visible";
 	public static final String ESTIMATE_WARP = "estimate warp";
+	public static final String PRINT_TRANSFORM = "print transform";
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	
 //	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
@@ -131,6 +132,7 @@ public class BigWarpActions
 		
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F6" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F7" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "transform type" ), "F8" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
@@ -154,8 +156,8 @@ public class BigWarpActions
 		final ActionMap actionMap = new ActionMap();
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
-		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
+		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "transform type" ), bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -237,9 +239,10 @@ public class BigWarpActions
 
 		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "ESCAPE" );
 
-		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
-		map.put( GARBAGE_COLLECTION, "F9" );
-		map.put( DEBUG, "F10" );
+		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
+		map.put( GARBAGE_COLLECTION, "F10" );
+		map.put( PRINT_TRANSFORM, "P" );
+		//map.put( DEBUG, "F10" );
 		
 		return inputMap;
 	}
@@ -297,6 +300,7 @@ public class BigWarpActions
 
 		new GarbageCollectionAction( GARBAGE_COLLECTION ).put( actionMap );
 		new DebugAction( DEBUG, bw ).put( actionMap );
+		new PrintTransformAction( PRINT_TRANSFORM, bw ).put( actionMap );
 
 			
 		return actionMap;
@@ -455,6 +459,24 @@ public class BigWarpActions
 		}
 	}
 	
+	public static class PrintTransformAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 6065343788485350279L;
+
+		private BigWarp bw;
+
+		public PrintTransformAction( final String name, final BigWarp bw )
+		{
+			super( name );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			bw.transformToString();
+		}
+	}
 	public static class DebugAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7408679512565343805L;
