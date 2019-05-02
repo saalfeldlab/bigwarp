@@ -27,6 +27,7 @@ import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
+import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
@@ -39,9 +40,10 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 			final ArrayList< SourceAndConverter< ? >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
-			final Interpolation interp )
+			final Interpolation interp,
+			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
+		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
 	}
 
 	/**

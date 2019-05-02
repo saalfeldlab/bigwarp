@@ -2,6 +2,7 @@ package bigwarp;
 
 import java.util.ArrayList;
 
+import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -55,9 +56,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
-			final boolean needConversion )
+			final boolean needConversion,
+			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
+		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
 
 		this.needConversion = needConversion;
 		this.baseType = baseType;
@@ -73,9 +75,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
-			final T baseType )
+			final T baseType,
+			final ProgressWriter progress )
 	{
-		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false );
+		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
 	}
 
 	/**
@@ -161,7 +164,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		}
 		else if( nThreads == 1 )
 		{
-			ip = copyToImageStack( raiStack, raiStack );
+			ip = copyToImageStack( raiStack, raiStack, progress );
 		}
 		else
 		{
@@ -215,7 +218,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return ip;
 	}
 
-	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl )
+	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl,
+			ProgressWriter progress )
 	{
 		// A bit of hacking to make slices the 4th dimension and channels the 3rd
 		// since that's how ImagePlusImgFactory does it
@@ -258,13 +262,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			c.get().set( ra.get() );
 
 			if ( k % 10000 == 0 )
-			{
-				IJ.showProgress( k / N );
-			}
+				progress.setProgress( k / N );
+
 			k++;
 		}
 
-		IJ.showProgress( 1.1 );
+		progress.setProgress( 1.0 );
 		try
 		{
 			return target.getImagePlus();

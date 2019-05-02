@@ -11,6 +11,8 @@ import org.janelia.utility.parse.ParseUtils;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
+import bdv.export.ProgressWriter;
+import bdv.export.ProgressWriterConsole;
 import bdv.img.WarpedSource;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -225,34 +227,36 @@ public class BigWarpBatchTransformFOV
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
 		}
 		
+		ProgressWriter progressWriter = new ProgressWriterConsole();
+
 		BigWarpExporter< ? > exporter;
 		Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 		if ( ByteType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< ByteType >( sourcesxfm,
 					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(ByteType) baseType );
+					(ByteType) baseType, progressWriter );
 		else if ( UnsignedByteType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< UnsignedByteType >( sourcesxfm,
 					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedByteType) baseType );
+					(UnsignedByteType) baseType, progressWriter );
 		else if ( IntType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< IntType >( sourcesxfm, movingSourceIndexList,
-					targetSourceIndexList, interpolation, (IntType) baseType );
+					targetSourceIndexList, interpolation, (IntType) baseType, progressWriter );
 		else if ( UnsignedShortType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< UnsignedShortType >( sourcesxfm,
 					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedShortType) baseType );
+					(UnsignedShortType) baseType, progressWriter );
 		else if ( FloatType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< FloatType >( sourcesxfm,
 					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(FloatType) baseType );
+					(FloatType) baseType, progressWriter );
 		else if ( DoubleType.class.isInstance( baseType ) )
 			exporter = new BigWarpRealExporter< DoubleType >( sourcesxfm,
 					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(DoubleType) baseType );
+					(DoubleType) baseType, progressWriter );
 		else if ( ARGBType.class.isInstance( baseType ) )
 			exporter = new BigWarpARGBExporter( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation );
+					movingSourceIndexList, targetSourceIndexList, interpolation, progressWriter );
 		else
 		{
 			System.err.println( "Can't export type " + baseType.getClass() );

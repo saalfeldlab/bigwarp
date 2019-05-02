@@ -3,16 +3,14 @@ package bigwarp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 
+import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import ij.IJ;
 import ij.ImagePlus;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -28,6 +26,7 @@ import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
@@ -58,6 +57,8 @@ public abstract class BigWarpExporter <T>
 
 	public abstract ImagePlus export();
 
+	protected ProgressWriter progress;
+
 	public enum ParallelizationPolicy {
 		SLICE, ITER
 	};
@@ -70,11 +71,14 @@ public abstract class BigWarpExporter <T>
 			final ArrayList< SourceAndConverter< ? >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
-			final Interpolation interp )
+			final Interpolation interp,
+			final ProgressWriter progress )
 	{
 		this.sources = sources;
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
+
+		this.progress = progress;
 		this.setInterp( interp );
 		
 		pixelRenderToPhysical = new AffineTransform3D();
@@ -188,27 +192,30 @@ public abstract class BigWarpExporter <T>
 	{
 		Img< T > target = factory.create( itvl );
 		if( policy == ParallelizationPolicy.ITER )
-			return copyToImageStackIterOrder( raible, itvl, target, nThreads );
+			return copyToImageStackIterOrder( raible, itvl, target, nThreads, progress );
 		else
-			return copyToImageStackBySlice( raible, itvl, target, nThreads );
+			return copyToImageStackBySlice( raible, itvl, target, nThreads, progress );
+		
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
-			final int nThreads )
+			final int nThreads,
+			final ProgressWriter progress )
 	{
 		// create the image plus image
 		Img< T > target = factory.create( itvl );
-		return copyToImageStackBySlice( raible, itvl, target, nThreads );
+		return copyToImageStackBySlice( raible, itvl, target, nThreads, progress );
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
 			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
-			final int nThreads )
+			final int nThreads,
+			final ProgressWriter progress )
 	{
 		// TODO I wish I didn't have to do this inside this method
 		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
@@ -251,13 +258,22 @@ public abstract class BigWarpExporter <T>
 					{
 						final FinalInterval subItvl = getSubInterval( target, dim2split, start, end );
 						final IntervalView< T > subTgt = Views.interval( target, subItvl );
+						long N = Intervals.numElements(subTgt);
 						final Cursor< T > c = subTgt.cursor();
 						final RandomAccess< T > ra = raible.randomAccess();
+						long j = 0;
 						while ( c.hasNext() )
 						{
 							c.fwd();
 							ra.setPosition( c );
 							c.get().set( ra.get() );
+
+							if( start == 0  && j % 100000 == 0 )
+							{
+								double ratio = 1.0 * j / N;
+								progress.setProgress( ratio ); 
+							}
+							j++;
 						}
 						return true;
 					}
@@ -280,7 +296,7 @@ public abstract class BigWarpExporter <T>
 			e1.printStackTrace();
 		}
 
-		IJ.showProgress( 1.1 );
+		progress.setProgress(1.0);
 		return target;
 	}
 
@@ -288,19 +304,23 @@ public abstract class BigWarpExporter <T>
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
-			final int nThreads )
+			final int nThreads,
+			final ProgressWriter progress )
 	{
 		// create the image plus image
 		Img< T > target = factory.create( itvl );
-		return copyToImageStackIterOrder( raible, itvl, target, nThreads );
+		return copyToImageStackIterOrder( raible, itvl, target, nThreads, progress );
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder( 
 			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
-			final int nThreads )
+			final int nThreads,
+			final ProgressWriter progress )
 	{
+		
+		progress.setProgress(0.0);
 		// TODO I wish I didn't have to do this inside this method..
 		// 	Maybe I don't have to, and should do it where I call this instead?
 		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
@@ -329,6 +349,12 @@ public abstract class BigWarpExporter <T>
 							access.setPosition( c );
 							c.get().set( access.get() );
 							c.jumpFwd( nThreads );
+							
+							if( offset == 0  && j % (nThreads * 100000) == 0 )
+							{
+								double ratio = 1.0 * j / N;
+								progress.setProgress( ratio ); 
+							}
 						}
 
 						return true;
@@ -343,7 +369,7 @@ public abstract class BigWarpExporter <T>
 		}
 		try
 		{
-			List< Future< Boolean > > futures = threadPool.invokeAll( jobs );
+			threadPool.invokeAll( jobs );
 			threadPool.shutdown(); // wait for all jobs to finish
 
 		}
@@ -352,7 +378,7 @@ public abstract class BigWarpExporter <T>
 			e1.printStackTrace();
 		}
 
-		IJ.showProgress( 1.1 );
+		progress.setProgress(1.0);
 		return target;
 	}
 	
@@ -482,12 +508,9 @@ public abstract class BigWarpExporter <T>
 	{
 		BigWarpExporter<?> exporter;
 
-		boolean pleaseResolve;
-
 		public ExportThread(BigWarpExporter<?> exporter)
 		{
 			this.exporter = exporter;
-			pleaseResolve = false;
 		}
 
 		@Override
