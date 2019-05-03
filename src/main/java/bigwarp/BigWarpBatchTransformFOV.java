@@ -20,6 +20,7 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpExporter.ExportThread;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader;
 import ij.IJ;
@@ -65,7 +66,7 @@ public class BigWarpBatchTransformFOV
 	@Parameter(names = {"--output", "-o"}, description = "Output image file" )
 	private String outputFilePath;
 
-	@Parameter(names = {"--dimension", "-d"}, description = "Output dimension", 
+	@Parameter(names = {"--dimension", "-d"}, description = "Dimension of output image", 
 			converter = ParseUtils.LongArrayConverter.class )
 	private long[] dims;
 
@@ -187,7 +188,14 @@ public class BigWarpBatchTransformFOV
 		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
 		exporter.setNumThreads( nThreads );
 		exporter.setVirtual( false );
-		final ImagePlus ipout = exporter.export();
+		exporter.setInterval( new FinalInterval( dimsFull ));
+		exporter.setRenderResolution( spacingFull );
+		exporter.setOffset( offsetFull );
+		exporter.setInterp( Interpolation.valueOf( interpType ));
+
+		exporter.exportThread = new ExportThread( exporter );
+		exporter.exportThread.run();
+		final ImagePlus ipout = exporter.getResult();
 
 		System.out.println( "saving" );
 		IJ.save( ipout, outputFilePath );
@@ -204,7 +212,6 @@ public class BigWarpBatchTransformFOV
 		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
 
 		int numChannels = impP.getNChannels();
-		System.out.println( numChannels + " channels" );
 		int[] movingSourceIndexList = new int[ numChannels ];
 		for ( int i = 0; i < numChannels; i++ )
 		{
@@ -222,8 +229,8 @@ public class BigWarpBatchTransformFOV
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			InverseRealTransform irXfm = new InverseRealTransform( new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm )));
-			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm );
+			WrappedIterativeInvertibleRealTransform irXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
+			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm.copy() );
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
 		}
 		

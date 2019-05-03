@@ -504,6 +504,11 @@ public abstract class BigWarpExporter <T>
 		return result;
 	}
 
+	public ImagePlus getResult()
+	{
+		return result;
+	}
+
 	public static class ExportThread extends Thread
 	{
 		BigWarpExporter<?> exporter;
