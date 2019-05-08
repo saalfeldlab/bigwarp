@@ -67,6 +67,8 @@ public abstract class BigWarpExporter <T>
 
 	private ImagePlus result;
 
+	private boolean showResult = true;
+
 	public BigWarpExporter(
 			final ArrayList< SourceAndConverter< ? >> sources,
 			final int[] movingSourceIndexList,
@@ -84,6 +86,11 @@ public abstract class BigWarpExporter <T>
 		pixelRenderToPhysical = new AffineTransform3D();
 		resolutionTransform = new AffineTransform3D();
 		offsetTransform = new AffineTransform3D();
+	}
+
+	public void showResult( final boolean showResult )
+	{
+		this.showResult = showResult;
 	}
 
 	public void setInterp( Interpolation interp )
@@ -528,7 +535,7 @@ public abstract class BigWarpExporter <T>
 
 				System.out.println("export took " + (endTime - startTime) + "ms");
 
-				if (exporter.result != null)
+				if (exporter.result != null && exporter.showResult )
 					exporter.result.show();
 
 			}

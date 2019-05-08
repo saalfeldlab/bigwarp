@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Hashtable;
 
 import org.janelia.utility.parse.ParseUtils;
 
@@ -26,6 +27,9 @@ import bigwarp.loader.ImagePlusLoader;
 import ij.IJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import loci.formats.FormatException;
+import loci.formats.in.TiffReader;
+import loci.plugins.BF;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
@@ -41,7 +45,6 @@ import net.imglib2.FinalDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
@@ -66,20 +69,27 @@ public class BigWarpBatchTransformFOV
 	@Parameter(names = {"--output", "-o"}, description = "Output image file" )
 	private String outputFilePath;
 
-	@Parameter(names = {"--dimension", "-d"}, description = "Dimension of output image", 
+	@Parameter(names = {"--dimension", "-d"}, description = "Dimension of output image (overrides target image)", 
 			converter = ParseUtils.LongArrayConverter.class )
 	private long[] dims;
+
+	@Parameter(names = {"--target", "-t"}, description = "Path to reference (target) image" )
+	private String referenceImagePath;
 
 	@Parameter(names = {"--threads", "-j"}, description = "Number of threads" )
 	private int nThreads = 1;
 
-	@Parameter(names = {"--spacing", "-s"}, description = "Voxel spacing, e.g. \"0.5,0.5,2.0\"", 
+	@Parameter(names = {"--out-spacing", "-s"}, description = "Output voxel spacing, e.g. \"0.5,0.5,2.0\" (overrides target image)", 
 			converter = ParseUtils.DoubleArrayConverter.class )
-	private double[] spacing = new double[]{ 1.0 };
+	private double[] spacing;
 
-	@Parameter(names = {"--offset", "-f"}, description = "Offset, e.g. \"5.0,5.0,-1.0\"", 
+	@Parameter(names = { "--in-spacing" }, description = "Input voxel spacing (overrides image metadata)", 
 			converter = ParseUtils.DoubleArrayConverter.class )
-	private double[] offset = new double[]{ 0.0 };
+	private double[] input_spacing;
+
+	@Parameter(names = {"--offset", "-f"}, description = "Offset, e.g. \"5.0,5.0,-1.0\" (overrides target image)", 
+			converter = ParseUtils.DoubleArrayConverter.class )
+	private double[] offset;
 
 	@Parameter(names = {"--help", "-h"}, help = true)
 	private boolean help;
@@ -122,39 +132,92 @@ public class BigWarpBatchTransformFOV
 			return alg;
 		}
 
-		int nd = alg.dims.length;
-		if( alg.offset.length < 3 )
+		if ( alg.referenceImagePath != null && !alg.referenceImagePath.isEmpty() )
 		{
-			alg.offsetFull = fill( alg.offset, nd );
-		}
-		else
-		{
-			alg.offsetFull = alg.offset;
+
+			if ( alg.referenceImagePath.endsWith( "tif" ) || alg.referenceImagePath.endsWith( "tiff" ) || alg.referenceImagePath.endsWith( "TIF" ) || alg.referenceImagePath.endsWith( "TIFF" ) )
+			{
+				TiffReader reader = new TiffReader();
+				try
+				{
+					reader.setId( alg.referenceImagePath );
+					Hashtable< String, Object > meta = reader.getGlobalMetadata();
+					alg.dimsFull = new long[ 3 ];
+					alg.dimsFull[ 0 ] = reader.getSizeX();
+					alg.dimsFull[ 1 ] = reader.getSizeY();
+					alg.dimsFull[ 2 ] = reader.getSizeZ();
+
+					alg.spacingFull = new double[ 3 ];
+					alg.spacingFull[ 0 ] = 1 / ( double ) meta.get( "XResolution" );
+					alg.spacingFull[ 1 ] = 1 / ( double ) meta.get( "YResolution" );
+					alg.spacingFull[ 2 ] = ( double ) meta.get( "Spacing" );
+
+					alg.offsetFull = new double[ 3 ];
+
+				}
+				catch ( FormatException | IOException e )
+				{
+					alg.dimsFull = null;
+					e.printStackTrace();
+				}
+
+			}
 		}
 
-		if( alg.spacing.length < 3 )
+		int nd = 3;
+		if( alg.offset != null )
 		{
-			alg.spacingFull = fill( alg.spacing, nd );
-		}
-		else
-		{
-			alg.spacingFull  = alg.spacing;
+			nd = alg.offset.length;
+			if( alg.offset.length < 3 )
+			{
+				alg.offsetFull = fill( alg.offset, nd );
+			}
+			else
+			{
+				alg.offsetFull = alg.offset;
+			}
 		}
 
-		if( alg.dims.length == 1 )
+		if( alg.offsetFull == null )
 		{
-			alg.dimsFull = new long[ 3 ];
-			Arrays.fill( alg.dimsFull, alg.dims[ 0 ] );
+			alg.offsetFull = new double[ 3 ];
 		}
-		else if( alg.dims.length == 2 )
+
+		if( alg.spacing != null )
 		{
-			alg.dimsFull = new long[ 3 ];
-			System.arraycopy( alg.dims, 0, alg.dimsFull, 0, 2 );
-			alg.dimsFull[ 2 ] = 1;
+			if( alg.spacing.length < 3 )
+			{
+				alg.spacingFull = fill( alg.spacing, nd );
+			}
+			else
+			{
+				alg.spacingFull  = alg.spacing;
+			}
 		}
-		else if( alg.dims.length == 3 )
+
+		if( alg.spacingFull == null )
 		{
-			alg.dimsFull = alg.dims;
+			alg.spacingFull = new double[ 3 ];
+			Arrays.fill( alg.spacingFull, 1.0 );
+		}
+
+		if( alg.dims != null )
+		{
+			if( alg.dims.length == 1 )
+			{
+				alg.dimsFull = new long[ 3 ];
+				Arrays.fill( alg.dimsFull, alg.dims[ 0 ] );
+			}
+			else if( alg.dims.length == 2 )
+			{
+				alg.dimsFull = new long[ 3 ];
+				System.arraycopy( alg.dims, 0, alg.dimsFull, 0, 2 );
+				alg.dimsFull[ 2 ] = 1;
+			}
+			else if( alg.dims.length == 3 )
+			{
+				alg.dimsFull = alg.dims;
+			}
 		}
 
 		return alg;
@@ -166,7 +229,7 @@ public class BigWarpBatchTransformFOV
 			return;
 
 		long startTime = System.currentTimeMillis();
-		int nd = dims.length;
+		int nd = dimsFull.length;
 		if( nd != 3 && nd != 2 )
 		{
 			System.err.println( "For 2D or 3D use only" );
@@ -176,7 +239,40 @@ public class BigWarpBatchTransformFOV
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		ltm.load( new File( landmarkFilePath ));
 
-		ImagePlus impP = IJ.openImage( imageFilePath );
+		ImagePlus impP = null;
+		try
+		{
+			impP = IJ.openImage( imageFilePath );
+		}
+		catch ( Exception e )
+		{
+			e.printStackTrace();
+		}
+
+		if ( impP == null )
+		{
+			try
+			{
+				impP = BF.openImagePlus( imageFilePath )[ 0 ];
+			}
+			catch ( Exception e )
+			{
+				e.printStackTrace();
+			}
+		}
+
+		if ( impP == null )
+		{
+			System.err.println( "FAILED TO READ IMAGE FROM: " + imageFilePath );
+		}
+
+		if( input_spacing != null )
+		{
+			System.out.println( "overriding input resolution: " + Arrays.toString( input_spacing ));
+			impP.getCalibration().pixelWidth = input_spacing[ 0 ];
+			impP.getCalibration().pixelHeight = input_spacing[ 1 ];
+			impP.getCalibration().pixelDepth = input_spacing[ 2 ];
+		}
 
 		/* Load the first source */
 		final ImagePlusLoader loaderP = new ImagePlusLoader( impP );
@@ -192,6 +288,7 @@ public class BigWarpBatchTransformFOV
 		exporter.setRenderResolution( spacingFull );
 		exporter.setOffset( offsetFull );
 		exporter.setInterp( Interpolation.valueOf( interpType ));
+		exporter.showResult( false );
 
 		exporter.exportThread = new ExportThread( exporter );
 		exporter.exportThread.run();
