@@ -171,7 +171,7 @@ public class ImagePlusLoader implements Loader
 		final HashMap< Integer, BasicViewSetup > setups = new HashMap< Integer, BasicViewSetup >( numSetups );
 		for ( int s = 0; s < numSetups; ++s )
 		{
-			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "channel %d", ids[ s ] + 1 ), size, voxelSize );
+			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "%s channel %d", imp.getTitle(), ids[ s ] + 1 ), size, voxelSize );
 			setup.setAttribute( new Channel( ids[ s ] + 1 ) );
 			setups.put( ids[ s ], setup );
 		}
