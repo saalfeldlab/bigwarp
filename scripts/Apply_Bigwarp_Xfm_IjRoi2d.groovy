@@ -1,7 +1,9 @@
-// @ImagePlus( label = "Target image" ) tgtImg
-// @ImagePlus( label = "Moving image" ) mvgImg
 // @File(label="Landmark file") landmarksPath
-// @String( choices={"Moving to target", "Target to moving"}, style="radioButtonHorizontal") inverseOrForward
+// @ImagePlus( label = "Moving image" ) mvgImg
+// @ImagePlus( label = "Fixed image" ) tgtImg
+// @String( label="Direction", choices={"Moving to target", "Target to moving"}, style="radioButtonHorizontal") inverseOrForward
+// @Double(label="Inverse tolerance", value=0.1 ) invTolerance
+// @Integer(label="Inverse maximum iterations", value=200) invMaxIters
 
 import ij.*;
 import ij.gui.*;
