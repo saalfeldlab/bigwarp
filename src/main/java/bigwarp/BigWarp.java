@@ -133,6 +133,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
@@ -143,7 +144,6 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformEventHandlerFactory;
 import net.imglib2.ui.TransformListener;
 import net.imglib2.view.Views;
 
@@ -157,6 +157,8 @@ public class BigWarp
 	public static final int GRID_SOURCE_ID = 1696993146;
 
 	public static final int WARPMAG_SOURCE_ID = 956736363;
+
+	protected BigWarpViewerOptions options;
 
 	protected BigWarpData data;
 
@@ -305,6 +307,7 @@ public class BigWarp
 		this.progressWriter = progressWriter;
 
 		this.data = data;
+		this.options = options;
 		this.movingSourceIndexList = data.movingSourceIndices;
 		this.targetSourceIndexList = data.targetSourceIndices;
 
@@ -366,6 +369,10 @@ public class BigWarp
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
 		if ( options.is2d )
 		{
+			System.out.println("IS 2D");
+			System.out.println("IS 2D");
+			System.out.println("IS 2D");
+
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
 			try
@@ -1176,8 +1183,7 @@ public class BigWarp
 		final int selectedPointIndex = selectedLandmark( ptarray, isMoving );
 
 		// if a fixed point is changing its location,
-		// we need to update the warped position for the corresponding moving
-		// point
+		// we need to update the warped position for the corresponding moving point
 		// so that it can be rendered correctly
 		if ( selectedPointIndex >= 0 && !isMoving && landmarkModel.getTransform() != null )
 		{
@@ -2178,6 +2184,7 @@ public class BigWarp
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
+
 				if ( !( impP == null || impQ == null ) )
 				{
 					BigWarpData bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
@@ -2197,7 +2204,6 @@ public class BigWarp
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
-			
 
 		}
 		catch ( final Exception e )
@@ -2765,6 +2771,11 @@ public class BigWarp
 							fitModel(model);
 							int nd = this.bw.landmarkModel.getNumdims();
 							invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
+						}
+
+						if( bw.options.is2d )
+						{
+							invXfm = new Wrapped2DTransformAs3D( invXfm );
 						}
 
 						if ( index < 0 )
