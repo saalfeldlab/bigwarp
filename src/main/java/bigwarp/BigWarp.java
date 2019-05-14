@@ -51,6 +51,8 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
 import bdv.ViewerImgLoader;
+import bdv.cache.CacheControl;
+import bdv.cache.CacheControl.CacheControls;
 import bdv.export.ProgressWriter;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
@@ -351,13 +353,13 @@ public class BigWarp
 
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCacheControl(), options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
 		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -2240,33 +2242,45 @@ public class BigWarp
 //		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 	}
 
-	public static class BigWarpData
+	public static class BigWarpData< T >
 	{
-		public final ArrayList< SourceAndConverter< ? > > sources;
+		public final ArrayList< SourceAndConverter< T > > sources;
 
-		public final AbstractSequenceDescription< ?, ?, ? > seqP;
-
-		public final AbstractSequenceDescription< ?, ?, ? > seqQ;
+		public final CacheControl cache;
 
 		public final ArrayList< ConverterSetup > converterSetups;
 
-		public final int[] movingSourceIndices;
+		public int[] movingSourceIndices;
 
-		public final int[] targetSourceIndices;
+		public int[] targetSourceIndices;
 
-		public BigWarpData(
-				final ArrayList< SourceAndConverter< ? > > sources,
-				final AbstractSequenceDescription< ?, ?, ? > seqP,
-				final AbstractSequenceDescription< ?, ?, ? > seqQ,
-				final ArrayList< ConverterSetup > converterSetups,
-				int[] movingSourceIndices, int[] targetSourceIndices )
+		public final ArrayList< Integer > movingSourceIndexList;
+
+		public final ArrayList< Integer > targetSourceIndexList;
+
+		public BigWarpData( final ArrayList< SourceAndConverter< T > > sources, final ArrayList< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
-			this.seqP = seqP;
-			this.seqQ = seqQ;
 			this.converterSetups = converterSetups;
 			this.movingSourceIndices = movingSourceIndices;
 			this.targetSourceIndices = targetSourceIndices;
+
+			this.movingSourceIndexList = new ArrayList<>();
+			this.targetSourceIndexList = new ArrayList<>();
+
+			if ( cache == null )
+				this.cache = new CacheControl.Dummy();
+			else
+				this.cache = cache;
+		}
+
+		public void wrapUp()
+		{
+			movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
+			targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
+
+			Arrays.sort( movingSourceIndices );
+			Arrays.sort( targetSourceIndices );
 		}
 
 	}
