@@ -91,7 +91,7 @@ public abstract class BigWarpExporter <T>
 			if( src instanceof WarpedSource )
 			{
 				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
-				WarpedSource<T> wsCopy = new WarpedSource<>( src, ws.getName() ) ;
+				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
 				wsCopy.updateTransform( ws.getTransform().copy() );
 				wsCopy.setIsTransformed( true );
 				srcCopy = wsCopy;
@@ -352,7 +352,6 @@ public abstract class BigWarpExporter <T>
 			final int nThreads,
 			final ProgressWriter progress )
 	{
-		
 		progress.setProgress(0.0);
 		// TODO I wish I didn't have to do this inside this method..
 		// 	Maybe I don't have to, and should do it where I call this instead?

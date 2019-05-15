@@ -47,9 +47,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	final private T baseType;
 
-//	final private Converter<?,FloatType> converter;
+	final private Converter<T,FloatType> converter;
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
 			final int[] movingSourceIndexList,
@@ -64,10 +63,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		this.needConversion = needConversion;
 		this.baseType = baseType;
 
-//		if( needConversion )
-//			converter = new RealFloatConverter();
-//		else
-//			converter = null;
+		if( needConversion )
+			converter = new RealFloatConverter<T>();
+		else
+			converter = null;
 	}
 
 	public BigWarpRealExporter(

@@ -10,8 +10,6 @@ import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
-import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
@@ -76,6 +74,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	public boolean isTransformed( )
 	{
 		return isTransformed;
+	}
+
+	public Source< T > getWrappedSource()
+	{
+		return source;
 	}
 
 	@Override

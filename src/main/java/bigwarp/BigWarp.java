@@ -897,11 +897,6 @@ public class BigWarp< T >
 		for( int d = 0; d < offset.length; d++ )
 			offsetPhysical[ d ] = offset[ d ] * res[ d ];
 
-		boolean currentlyWarped = isMovingDisplayTransformed();
-
-//		if( !currentlyWarped )
-//			toggleMovingImageDisplay();
-
 		BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
@@ -909,11 +904,7 @@ public class BigWarp< T >
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
 
-		System.out.println( "exporting ");
 		ImagePlus ip = exporter.exportAsynch();
-
-//		if( !currentlyWarped )
-//			toggleMovingImageDisplay();
 	}
 
 	public void exportWarpField()
