@@ -6,6 +6,7 @@ import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -37,7 +38,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	private Interpolation interp;
 
 	public BigWarpARGBExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< ARGBType >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,

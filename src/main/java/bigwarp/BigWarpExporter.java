@@ -3,15 +3,20 @@ package bigwarp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import bdv.export.ProgressWriter;
+import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp.BigWarpData;
 import ij.ImagePlus;
+import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -25,7 +30,9 @@ import net.imglib2.img.ImgFactory;
 import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.MixedTransformView;
@@ -33,7 +40,7 @@ import net.imglib2.view.Views;
 
 public abstract class BigWarpExporter <T>
 {
-	final protected ArrayList< SourceAndConverter< ? >> sources;
+	final protected List< SourceAndConverter< T >> sources;
 
 	final protected int[] movingSourceIndexList;
 
@@ -70,13 +77,32 @@ public abstract class BigWarpExporter <T>
 	private boolean showResult = true;
 
 	public BigWarpExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< T >> sourcesIn,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
-		this.sources = sources;
+		this.sources = new ArrayList<SourceAndConverter<T>>();
+		for( SourceAndConverter<T> sac : sourcesIn )
+		{
+			Source<T> srcCopy = null;
+			Source<T> src = sac.getSpimSource();
+			if( src instanceof WarpedSource )
+			{
+				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
+				WarpedSource<T> wsCopy = new WarpedSource<>( src, ws.getName() ) ;
+				wsCopy.updateTransform( ws.getTransform().copy() );
+				wsCopy.setIsTransformed( true );
+				srcCopy = wsCopy;
+			}
+			else
+				srcCopy = src;
+				
+			SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
+			sources.add( copy );
+		}
+
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
 
@@ -545,6 +571,31 @@ public abstract class BigWarpExporter <T>
 				// is killed before the painter thread.
 			}
 		}
+	}
+
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	public static <T> BigWarpExporter<?> getExporter(
+			final BigWarpData<T> bwData,
+			final List< SourceAndConverter< T >> transformedSources,
+			final Interpolation interp,
+			final ProgressWriter progressWriter )
+	{
+		int[] movingSourceIndexList = bwData.movingSourceIndices;
+		int[] targetSourceIndexList = bwData.targetSourceIndices;
+
+		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )
+		{
+			Object baseType = transformedSources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
+			if( baseType instanceof RealType )
+				return new BigWarpRealExporter( transformedSources, movingSourceIndexList, targetSourceIndexList, interp, (RealType)baseType, progressWriter);
+			else if ( ARGBType.class.isInstance( baseType ) )
+				return new BigWarpARGBExporter( (List)transformedSources, movingSourceIndexList, targetSourceIndexList, interp, progressWriter );
+			else
+			{
+				System.err.println( "Can't export type " + baseType.getClass() );
+			}
+		}
+		return null;
 	}
 
 }

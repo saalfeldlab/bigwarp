@@ -17,8 +17,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -50,9 +50,7 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
-import bdv.ViewerImgLoader;
 import bdv.cache.CacheControl;
-import bdv.cache.CacheControl.CacheControls;
 import bdv.export.ProgressWriter;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
@@ -149,7 +147,7 @@ import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
 import net.imglib2.view.Views;
 
-public class BigWarp
+public class BigWarp< T >
 {
 
 	protected static final int DEFAULT_WIDTH = 600;
@@ -162,17 +160,15 @@ public class BigWarp
 
 	protected BigWarpViewerOptions options;
 
-	protected BigWarpData data;
+	protected BigWarpData< T > data;
 
 	// descriptive names for indexing sources
 	protected int[] movingSourceIndexList;
 
 	protected int[] targetSourceIndexList;
 
-	protected ArrayList< SourceAndConverter< ? > > sources;
+	protected List< SourceAndConverter< T > > sources;
 	
-	protected BigWarpExporter< ? > exporter;
-
 	protected final SetupAssignments setupAssignments;
 
 	protected final BrightnessDialog brightnessDialog;
@@ -294,27 +290,20 @@ public class BigWarp
 
 	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
 
-	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
+	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
 	}
 
-	public BigWarp( final BigWarpData data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
+	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
-		sources = data.sources;
-		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 
 		this.data = data;
 		this.options = options;
-		this.movingSourceIndexList = data.movingSourceIndices;
-		this.targetSourceIndexList = data.targetSourceIndices;
-
-		Arrays.sort( movingSourceIndexList );
-		Arrays.sort( targetSourceIndexList );
 
 		ptBack = new double[ 3 ];
 
@@ -338,27 +327,37 @@ public class BigWarp
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
-		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndexList );
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
 		fixedViewXfm = new AffineTransform3D();
-		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+		//sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
-		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
-		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
+		warpMagSourceIndex = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
+		gridSourceIndex = addGridSource( data, "GridSource" );
+
+		this.sources = this.data.sources;
+		final List< ConverterSetup > converterSetups = data.converterSetups;
+		this.movingSourceIndexList = data.movingSourceIndices;
+		this.targetSourceIndexList = data.targetSourceIndices;
+		Arrays.sort( movingSourceIndexList );
+		Arrays.sort( targetSourceIndexList );
+
+		sources = wrapSourcesAsTransformed( data.sources, ndims, data.movingSourceIndices );
+
 		setGridType( GridSource.GRID_TYPE.LINE );
 
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
 				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
 				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
@@ -371,9 +370,6 @@ public class BigWarp
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
 		if ( options.is2d )
 		{
-			System.out.println("IS 2D");
-			System.out.println("IS 2D");
-			System.out.println("IS 2D");
 
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
@@ -546,36 +542,7 @@ public class BigWarp
 		fileDialog = new FileDialog( fileFrame );
 		lastDirectory = null;
 
-		if ( BigWarpRealExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
-		{
-			Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
-			if ( ByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< ByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( ByteType ) baseType, progressWriter );
-			else if ( UnsignedByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType, progressWriter );
-			else if ( IntType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType, progressWriter );
-			else if ( UnsignedShortType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< UnsignedShortType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedShortType ) baseType, progressWriter );
-			else if ( FloatType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType, progressWriter );
-			else if ( DoubleType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType, progressWriter );
-			else if ( ARGBType.class.isInstance( baseType ) )
-				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), progressWriter );
-			else
-			{
-				System.err.println( "Can't export type " + baseType.getClass() );
-				exporter = null;
-			}
-		}
-		else
-		{
-			exporter = new BigWarpRealExporter< FloatType >(
-					sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(),
-					new FloatType(), true, progressWriter );
-		}
-
+		// default to linear interpolation
 		fileFrame.setVisible( false );
 
 		// add focus listener
@@ -932,21 +899,21 @@ public class BigWarp
 
 		boolean currentlyWarped = isMovingDisplayTransformed();
 
-		if( !currentlyWarped )
-			toggleMovingImageDisplay();
+//		if( !currentlyWarped )
+//			toggleMovingImageDisplay();
 
-		exporter.setInterp( interp );
+		BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
 
+		System.out.println( "exporting ");
 		ImagePlus ip = exporter.exportAsynch();
 
-		if( !currentlyWarped )
-			toggleMovingImageDisplay();
-
+//		if( !currentlyWarped )
+//			toggleMovingImageDisplay();
 	}
 
 	public void exportWarpField()
@@ -1077,7 +1044,7 @@ public class BigWarp
 		return setupAssignments;
 	}
 
-	public ArrayList< SourceAndConverter< ? > > getSources()
+	public List< SourceAndConverter< T > > getSources()
 	{
 		return sources;
 	}
@@ -1651,12 +1618,11 @@ public class BigWarp
 		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setMethod( method );
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsTransformed( final ArrayList< SourceAndConverter< ? > > sources, final int ndims, final int[] warpUsIndices )
+	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources, final int ndims, final int[] warpUsIndices )
 	{
-		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
-
+		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 		int i = 0;
-		for ( final SourceAndConverter< ? > sac : sources )
+		for ( final SourceAndConverter<T>sac : sources )
 		{
 			int idx = Arrays.binarySearch( warpUsIndices, i );
 			if ( idx >= 0 )
@@ -1681,24 +1647,25 @@ public class BigWarp
 	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
-	private static int addWarpMagnitudeSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	private static < T > int addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Doubles?
 
-		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
+		final WarpMagnitudeSource< ? > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
 
 		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
 		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		final RealARGBColorConverter< ? > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
+		data.converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
 
-		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
-		sources.add( soc );
+		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
+		data.sources.add( soc );
 
-		return sources.size() - 1;
+		return data.sources.size() - 1;
 	}
 
 	/**
@@ -1709,7 +1676,8 @@ public class BigWarp
 	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
-	private static int addGridSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	private static < T > int addGridSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Floats?
@@ -1721,12 +1689,12 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
+		data.converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
 
-		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
-		sources.add( soc );
+		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
+		data.sources.add( soc );
 
-		return sources.size() - 1;
+		return data.sources.size() - 1;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -2104,10 +2072,10 @@ public class BigWarp
 	 * @param sources the sources
 	 * @return dimension of the input sources
 	 */
-	protected static int detectNumDims( Collection< SourceAndConverter< ? > > sources )
+	protected static <T> int detectNumDims( List< SourceAndConverter< T > > sources )
 	{
 		boolean isAnySource3d = false;
-		for ( SourceAndConverter< ? > sac : sources )
+		for ( SourceAndConverter< T > sac : sources )
 		{
 			long[] dims = new long[ sac.getSpimSource().getSource( 0, 0 ).numDimensions() ];
 			sac.getSpimSource().getSource( 0, 0 ).dimensions( dims );
@@ -2244,11 +2212,11 @@ public class BigWarp
 
 	public static class BigWarpData< T >
 	{
-		public final ArrayList< SourceAndConverter< T > > sources;
+		public final List< SourceAndConverter< T > > sources;
+
+		public final List< ConverterSetup > converterSetups;
 
 		public final CacheControl cache;
-
-		public final ArrayList< ConverterSetup > converterSetups;
 
 		public int[] movingSourceIndices;
 
@@ -2258,7 +2226,7 @@ public class BigWarp
 
 		public final ArrayList< Integer > targetSourceIndexList;
 
-		public BigWarpData( final ArrayList< SourceAndConverter< T > > sources, final ArrayList< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
+		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
 			this.converterSetups = converterSetups;

@@ -1,6 +1,7 @@
 package bigwarp;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
@@ -46,11 +47,11 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	final private T baseType;
 
-	final private Converter<?,FloatType> converter;
+//	final private Converter<?,FloatType> converter;
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public BigWarpRealExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< T >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
@@ -63,14 +64,14 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		this.needConversion = needConversion;
 		this.baseType = baseType;
 
-		if( needConversion )
-			converter = new RealFloatConverter();
-		else
-			converter = null;
+//		if( needConversion )
+//			converter = new RealFloatConverter();
+//		else
+//			converter = null;
 	}
 
 	public BigWarpRealExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< T >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
@@ -87,7 +88,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 * @param movingSourceIndexList list of indexes for moving sources
 	 * @return true if all moving sources are of the same type
 	 */
-	public static boolean isTypeListFullyConsistent( ArrayList< SourceAndConverter< ? >> sources, int[] movingSourceIndexList )
+	public static <T> boolean isTypeListFullyConsistent( List< SourceAndConverter< T >> sources, int[] movingSourceIndexList )
 	{
 		Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 

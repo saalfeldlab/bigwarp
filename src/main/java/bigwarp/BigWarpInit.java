@@ -482,7 +482,7 @@ public class BigWarpInit
 		}
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final ArrayList< SourceAndConverter< ? > > sources, String[] names )
+	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final List< SourceAndConverter< ? > > sources, String[] names )
 	{
 		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
 

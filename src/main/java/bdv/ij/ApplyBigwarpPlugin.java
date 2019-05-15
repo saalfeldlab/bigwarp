@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import bdv.export.ProgressWriter;
@@ -35,6 +36,7 @@ import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
@@ -108,9 +110,29 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 
 		double[] res = new double[ 3 ];
-		source.getVoxelDimensions().dimensions( res );
+		VoxelDimensions voxdims = source.getVoxelDimensions();
+		if( voxdims == null )
+			Arrays.fill( res, 1.0 );
+		else
+			voxdims.dimensions( res );
+
 		return res;
 	}
+
+	public static String getUnit( final BigWarpData<?> bwData, 
+			final String resolutionOption )
+	{
+		if( resolutionOption.equals( MOVING ))
+		{
+			return bwData.sources.get( bwData.movingSourceIndices[0] ).getSpimSource().getVoxelDimensions().unit();
+		}
+		else 
+		{
+			// use target units even if 
+			return bwData.sources.get( bwData.targetSourceIndices[0] ).getSpimSource().getVoxelDimensions().unit();
+		}
+	}
+
 	
 	public static double[] getResolution(
 			final BigWarpData<?> bwData,
@@ -235,13 +257,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] outputResolution )
 	{
 		RandomAccessibleInterval< ? > rai = source.getSource( 0, 0 );
+		
 
 		if( fieldOfViewOption.equals( TARGET ))
 		{
+			double[] inputres = new double[ 3 ];
+			VoxelDimensions voxdims = source.getVoxelDimensions();
+			if( voxdims == null )
+				Arrays.fill( inputres, 1.0 );
+			else
+				voxdims.dimensions( inputres );
+
 			long[] max = new long[ rai.numDimensions() ];
 			for( int d = 0; d < rai.numDimensions(); d++ )
 			{
-				max[ d ] = (long)Math.ceil( ( source.getVoxelDimensions().dimension( d ) * rai.dimension( d )) / outputResolution[ d ]);
+				max[ d ] = (long)Math.ceil( ( inputres[ d ] * rai.dimension( d )) / outputResolution[ d ]);
 			}
 
 			return new FinalInterval( max );
@@ -465,7 +495,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return offset;
 	}
 
-	public static ImagePlus apply(
+	public static <T> ImagePlus apply(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
@@ -479,12 +509,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads )
 	{
-		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		BigWarpData<T> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
 		return apply( bwData, landmarks, fieldOfViewOption, fieldOfViewPointFilter,
 				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
 				interp, isVirtual, nThreads );
 	}
-			
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static <T> ImagePlus apply(
 			final BigWarpData<T> bwData,
 			final LandmarkTableModel landmarks,
@@ -498,97 +529,59 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads )
 	{
-//		if( !validateInput( movingIp, targetIp, landmarks,
-//				fieldOfViewOption, resolutionOption, resolutionSpec,
-//				fovSpec, offsetSpec, interp, isVirtual, nThreads ) )
-//			return null;
+		int numChannels = bwData.movingSourceIndices.length;
+		List< SourceAndConverter<T> > sources = bwData.sources;
+		int[] movingSourceIndexList = bwData.movingSourceIndices;
+		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
+				sources, 
+				landmarks.getNumdims(),
+				movingSourceIndexList );
 
+		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
 
-//		int numChannels = bwData.movingSourceIndices.length;
-//
-//		BigWarpExporter< T > exporter = null;
-//		ArrayList< SourceAndConverter<T> > sources = bwData.sources;
-//		int[] movingSourceIndexList = bwData.movingSourceIndices;
-//		int[] targetSourceIndexList = bwData.targetSourceIndices;
-//		VoxelDimensions voxdim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
-//
-//		ArrayList< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-//				sources, 
-//				landmarks.getNumdims(),
-//				movingSourceIndexList );
-//
-//		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
-//
-//		for ( int i = 0; i < numChannels; i++ )
-//		{
-//			WrappedIterativeInvertibleRealTransform< ThinplateSplineTransform > transform = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
-//			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( transform );
-//			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
-//		}
-//
-//		ProgressWriter progressWriter = new ProgressWriterIJ();
-//
-//		if ( BigWarpRealExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
-//		{
-//			Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
-//			if ( ByteType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< ByteType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( ByteType ) baseType , progressWriter);
-//			else if ( UnsignedByteType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< UnsignedByteType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( UnsignedByteType ) baseType, progressWriter );
-//			else if ( IntType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< IntType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( IntType ) baseType, progressWriter );
-//			else if ( UnsignedShortType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< UnsignedShortType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( UnsignedShortType ) baseType, progressWriter );
-//			else if ( FloatType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< FloatType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( FloatType ) baseType , progressWriter);
-//			else if ( DoubleType.class.isInstance( baseType ) )
-//				exporter = new BigWarpRealExporter< DoubleType >( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, ( DoubleType ) baseType , progressWriter);
-//			else if ( ARGBType.class.isInstance( baseType ) )
-//				exporter = new BigWarpARGBExporter( sourcesxfm, movingSourceIndexList, targetSourceIndexList, interp, progressWriter );
-//			else
-//			{
-//				System.err.println( "Can't export type " + baseType.getClass() );
-//				exporter = null;
-//				return null;
-//			}
-//		}
-//		
-//		// Generate the properties needed to generate the transform from output pixel space
-//		// to physical space
-//		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
-//
-//		Interval outputInterval = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
-//				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
-//
-//		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
-//
-////		System.out.println( "res : " + Arrays.toString( res ));
-////		System.out.println( "output interval : " + Util.printInterval( outputInterval ));
-////		System.out.println( "offset : " + Arrays.toString( offset ));
-//		
-//		// Do the export
-//		exporter.setInterp( interp );
-//		exporter.setRenderResolution( res );
-//		exporter.setInterval( outputInterval );
-//		exporter.setOffset( offset );
-//		exporter.setVirtual( isVirtual );
-//		exporter.setNumThreads( nThreads );
-//		ImagePlus warpedIp = exporter.export();
-//
-//		// Note: need to get number of channels and frames from moving image
-//		// but get the number of slices form the target
-////		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
-////				movingIp.getNFrames() );
-//
-//		String movingName = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName();
-//		warpedIp.getCalibration().pixelWidth = voxdim.dimension( 0 );
-//		warpedIp.getCalibration().pixelHeight = voxdim.dimension( 1 );
-//		warpedIp.getCalibration().pixelDepth = voxdim.dimension( 2 );
-//		warpedIp.getCalibration().setUnit( voxdim.unit() );
-//		warpedIp.setTitle( movingName + "_bigwarped" );
-//
-//		return warpedIp;
-		return null;
+		for ( int i = 0; i < numChannels; i++ )
+		{
+			WrappedIterativeInvertibleRealTransform< ThinplateSplineTransform > transform = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
+			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( transform );
+			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
+		}
+
+		ProgressWriter progressWriter = new ProgressWriterIJ();
+		BigWarpExporter exporter = BigWarpExporter.getExporter( bwData, sourcesxfm, interp, progressWriter );
+
+		
+		// Generate the properties needed to generate the transform from output pixel space
+		// to physical space
+		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
+		String unit = getUnit( bwData, resolutionOption );
+
+		Interval outputInterval = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
+				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+
+		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
+		
+		// Do the export
+		exporter.setInterp( interp );
+		exporter.setRenderResolution( res );
+		exporter.setInterval( outputInterval );
+		exporter.setOffset( offset );
+		exporter.setVirtual( isVirtual );
+		exporter.setNumThreads( nThreads );
+		ImagePlus warpedIp = exporter.export();
+
+		// Note: need to get number of channels and frames from moving image
+		// but get the number of slices form the target
+//		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
+//				movingIp.getNFrames() );
+
+		String movingName = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName();
+		warpedIp.getCalibration().pixelWidth = res[ 0 ];
+		warpedIp.getCalibration().pixelHeight = res[ 1 ];
+		warpedIp.getCalibration().pixelDepth = res[ 2 ];
+		warpedIp.getCalibration().setUnit( unit );
+		warpedIp.setTitle( movingName + "_bigwarped" );
+
+		return warpedIp;
 	}
 
 	@Override
