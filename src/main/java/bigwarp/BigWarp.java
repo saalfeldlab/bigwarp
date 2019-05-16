@@ -136,11 +136,7 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
@@ -247,8 +243,6 @@ public class BigWarp< T >
 
 	protected TransformEventHandler< AffineTransform3D > handlerP;
 
-	final static DummyTransformEventHandler DUMMY_TRANSFORM_HANDLER = new DummyTransformEventHandler();
-
 	protected final int gridSourceIndex;
 
 	protected final int warpMagSourceIndex;
@@ -264,6 +258,8 @@ public class BigWarp< T >
 	protected final TransformTypeSelectDialog transformSelector;
 
 	protected String transformType = TransformTypeSelectDialog.TPS;
+
+	protected AffineTransform3D tmpTransform = new AffineTransform3D();
 
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode during the
@@ -1328,28 +1324,26 @@ public class BigWarp< T >
 
 	protected void disableTransformHandlers()
 	{
-		// disable navigation listeners
 		handlerP = viewerP.getDisplay().getTransformEventHandler();
-		viewerP.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
+		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
 
+		// disable navigation listeners
 		viewerP.setTransformEnabled( false );
 		viewerQ.setTransformEnabled( false );
-
-		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
-		viewerQ.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
 	}
 
 	protected void enableTransformHandlers()
 	{
+		// reset the viewer transform
+		viewerP.getState().getViewerTransform( tmpTransform );
+		handlerP.setTransform( tmpTransform );
+
+		viewerQ.getState().getViewerTransform( tmpTransform );
+		handlerQ.setTransform( tmpTransform );
+
 		// enable navigation listeners
 		viewerP.setTransformEnabled( true );
 		viewerQ.setTransformEnabled( true );
-
-		if ( handlerP != null )
-			viewerP.getDisplay().setTransformEventHandler( handlerP );
-
-		if ( handlerQ != null )
-			viewerQ.getDisplay().setTransformEventHandler( handlerQ );
 	}
 
 	/**
@@ -2622,40 +2616,6 @@ public class BigWarp< T >
 		public void mouseReleased( final MouseEvent e )
 		{}
 
-	}
-
-	protected static class DummyTransformEventHandler implements TransformEventHandler< AffineTransform3D >
-	{
-
-		@Override
-		public AffineTransform3D getTransform()
-		{
-			return null;
-		}
-
-		@Override
-		public void setTransform( final AffineTransform3D transform )
-		{}
-
-		@Override
-		public void setCanvasSize( final int width, final int height, final boolean updateTransform )
-		{}
-
-		@Override
-		public void setTransformListener( final TransformListener< AffineTransform3D > transformListener )
-		{}
-
-		@Override
-		public String getHelpString()
-		{
-			return null;
-		}
-
-		@Override
-		public String toString()
-		{
-			return "Dummy Transform Handler";
-		}
 	}
 
 	protected static class DummyBehaviourTransformEventHandler extends
