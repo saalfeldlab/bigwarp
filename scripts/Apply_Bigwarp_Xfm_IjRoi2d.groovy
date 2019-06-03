@@ -36,14 +36,25 @@ else {
 	dstImg = mvgImg;
 }
 
-// convert the roi to a densely spaced polygon
-floatPolygon = srcImg.getRoi().getInterpolatedPolygon()
+// convert the roi to a densely spaced polygon if necessary
+roi = srcImg.getRoi()
+if( roi.getType() == Roi.POINT ) {
+	println('point roi')
+	floatPolygon = roi.getFloatPolygon()
+}
+else{
+	println('other roi')
+	floatPolygon = roi.getInterpolatedPolygon()
+}
+
+N = floatPolygon.npoints
+xpts = floatPolygon.xpoints
+ypts = floatPolygon.ypoints
 
 // transform all points of the polygon
 transform = ltm.getTransform();
 result = new double[ 2 ];
 
-N = floatPolygon.npoints;
 xpointsWarped = new float[ N ]
 ypointsWarped = new float[ N ]
 
@@ -64,7 +75,7 @@ if( tgt_ry < tgt_rx )
 for( int i = 0; i < N; i++ )
 {
 	// pixel to physical space
-	pt = [ src_rx * floatPolygon.xpoints[ i ], src_ry * floatPolygon.ypoints[ i ]] as double[]
+	pt = [ src_rx * xpts[ i ], src_ry * ypts[ i ]] as double[]
 
 	if( needInverseTransform )
 	{
@@ -80,5 +91,13 @@ for( int i = 0; i < N; i++ )
 	ypointsWarped[ i ] = result[ 1 ] / tgt_ry
 }
 
-polygonWarped =  new PolygonRoi( new FloatPolygon( xpointsWarped, ypointsWarped ), Roi.POLYGON );
-dstImg.setRoi( polygonWarped )
+if( roi.getType() == Roi.POINT ) {
+	roiWarped = new PointRoi(  xpointsWarped, ypointsWarped );
+	roiWarped.setSize( roi.getSize() )
+	roiWarped.setPointType( roi.getPointType() )
+	roiWarped.setPointType( roi.getPointType() )
+}
+else{
+	roiWarped =  new PolygonRoi( new FloatPolygon( xpointsWarped, ypointsWarped ), Roi.POLYGON );
+}
+dstImg.setRoi( roiWarped )
