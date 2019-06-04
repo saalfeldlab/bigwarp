@@ -195,5 +195,10 @@
 			<artifactId>formats-gpl</artifactId>
 			<version>5.8.2</version>
 		</dependency>
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-vistools</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 </project>
