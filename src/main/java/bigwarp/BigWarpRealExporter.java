@@ -119,17 +119,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			int movingSourceIndex = movingSourceIndexList[ i ];
-
-			RealRandomAccessible< T > convertedSource;
-			if( needConversion )
-			{
-				Object srcType = sources.get( movingSourceIndex ).getSpimSource().getType();
-				RealRandomAccessible< ? > rraiRaw = sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-			}
-			else
-			{
-				convertedSource = ( RealRandomAccessible< T > ) sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-			}
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations

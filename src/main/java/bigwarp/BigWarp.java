@@ -903,7 +903,7 @@ public class BigWarp< T >
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
 
-		ImagePlus ip = exporter.exportAsynch();
+		ImagePlus ip = exporter.exportAsynch( false );
 	}
 
 	public void exportWarpField()

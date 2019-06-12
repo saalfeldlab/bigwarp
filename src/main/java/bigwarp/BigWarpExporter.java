@@ -529,10 +529,20 @@ public abstract class BigWarpExporter <T>
 			dst[ d ] = (long)Math.floor( src[d] );
 	}
 
-	public ImagePlus exportAsynch()
+	public ImagePlus exportAsynch( final boolean wait )
 	{
 		exportThread = new ExportThread( this );
 		exportThread.start();
+		if( wait )
+			try
+			{
+				exportThread.join();
+			}
+			catch ( InterruptedException e )
+			{
+				e.printStackTrace();
+			}
+
 		return result;
 	}
 

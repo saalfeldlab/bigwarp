@@ -32,8 +32,10 @@ import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
@@ -538,18 +540,23 @@ public class ApplyBigwarpPlugin implements PlugIn
 				movingSourceIndexList );
 
 		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
+		InvertibleRealTransform invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ) );
+
+		boolean is2d = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) < 2;
+		if( is2d )
+		{
+			invXfm = new Wrapped2DTransformAs3D( invXfm );
+		}
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			WrappedIterativeInvertibleRealTransform< ThinplateSplineTransform > transform = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
-			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( transform );
-			((WarpedSource< T >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
+			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
+			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
 		}
 
 		ProgressWriter progressWriter = new ProgressWriterIJ();
 		BigWarpExporter exporter = BigWarpExporter.getExporter( bwData, sourcesxfm, interp, progressWriter );
 
-		
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
 		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
@@ -567,7 +574,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
-		ImagePlus warpedIp = exporter.export();
+		exporter.showResult( false );
+
+		System.out.println("exp asynch");
+		ImagePlus warpedIp = exporter.exportAsynch( true );
 
 		// Note: need to get number of channels and frames from moving image
 		// but get the number of slices form the target
@@ -600,11 +610,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution", 
 				new String[]{ TARGET, MOVING, SPECIFIED },
-				SPECIFIED );
+				TARGET );
 
 		gd.addChoice( "Field of view", 
 				new String[]{ TARGET, MOVING_WARPED, LANDMARK_POINTS, SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
-				LANDMARK_POINTS );
+				TARGET );
 
 //		gd.addStringField( "point filter", "BND.*" );
 		gd.addStringField( "point filter", "" );
@@ -667,9 +677,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if ( !targetPath.isEmpty() )
 			targetIp = IJ.openImage( targetPath );
 
-		System.out.println( "movingIp : " + movingIp );
-		System.out.println( "targetIp : " + targetIp );
-		
 		int nd = 2;
 		if ( movingIp.getNSlices() > 1 )
 			nd = 3;
@@ -688,8 +695,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
 		
-		System.out.println( nThreads );
-
 		ImagePlus warpedIp = apply( movingIp, targetIp, ltm,
 				fovOption, fovPointFilter, resOption,
 				resolutions, fov, offset,
