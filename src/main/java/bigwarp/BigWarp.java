@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -91,6 +92,7 @@ import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.loader.ImagePlusLoader.SetupSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
@@ -522,6 +524,7 @@ public class BigWarp< T >
 		viewerQ.getState().getViewerTransform( initialViewQ );
 
 		// set brightness contrast to appropriate values
+		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
 		initBrightness( 0.001, 0.999, viewerP.getState(), setupAssignments );
 		initBrightness( 0.001, 0.999, viewerQ.getState(), setupAssignments );
 
@@ -2211,6 +2214,8 @@ public class BigWarp< T >
 
 		public final ArrayList< Integer > targetSourceIndexList;
 
+		public final HashMap< Integer, SetupSettings > setupSettings;
+
 		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
@@ -2225,6 +2230,8 @@ public class BigWarp< T >
 				this.cache = new CacheControl.Dummy();
 			else
 				this.cache = cache;
+
+			setupSettings = new HashMap<>();
 		}
 
 		public void wrapUp()
@@ -2236,6 +2243,11 @@ public class BigWarp< T >
 			Arrays.sort( targetSourceIndices );
 		}
 
+		public void transferChannelSettings( final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
+		{
+			for( Integer key : setupSettings.keySet() )
+				setupSettings.get( key ).updateSetup( setupAssignments );
+		}
 	}
 
 	protected class LandmarkModeListener implements KeyEventPostProcessor

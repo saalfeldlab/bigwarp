@@ -2,14 +2,12 @@ package bigwarp;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 import bdv.BigDataViewer;
 import bdv.SpimSource;
 import bdv.VolatileSpimSource;
 import bdv.img.RenamableSource;
-import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
@@ -27,20 +25,15 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.Angle;
 import mpicbg.spim.data.sequence.Channel;
-import net.imglib2.Interval;
-import net.imglib2.RandomAccessible;
 import net.imglib2.Volatile;
 import net.imglib2.converter.Converter;
 import net.imglib2.display.ARGBARGBColorConverter;
 import net.imglib2.display.ARGBtoRandomARGBColorConverter;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
-import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.volatiles.VolatileARGBType;
-import net.imglib2.util.Pair;
 import net.imglib2.util.Util;
 
 public class BigWarpInit
@@ -202,7 +195,7 @@ public class BigWarpInit
 		BigDataViewer.initSetups( spimData, converterSetups, sources );
 	}
 
-	@SuppressWarnings( "unchecked" )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static void initSetup( final Source< ? > src, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
 	{
 		Object type = src.getType();
@@ -243,7 +236,7 @@ public class BigWarpInit
 		converterSetups.add( new RealARGBColorConverterSetup( setupId, converter ) );
 	}
 
-	public static BigWarpData createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
+	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
 	{
 		return createBigWarpData( spimDataPList, spimDataQList, null );
 	}
@@ -259,19 +252,18 @@ public class BigWarpInit
 	 *            array of source names
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )
 	{
 
 		BigWarpData data = initData();
 
 		int setupId = 0;
-		int numMovingSources = 0;
 		for ( Source< ? > mvgSource : movingSourceList )
 		{
 			add( data, mvgSource, setupId++, 1, true );
 		}
 
-		int numTargetSources = 0;
 		for ( Source< ? > fxdSource : fixedSourceList )
 		{
 			add( data, fxdSource, setupId, 1, false );
@@ -284,7 +276,8 @@ public class BigWarpInit
 		return data;
 	}
 
-	public static < T > BigWarpData add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
 		addSourceToListsGenericType( src, setupId, numTimepoints, src.getType(), bwdata.converterSetups, bwdata.sources );
 
@@ -297,6 +290,7 @@ public class BigWarpInit
 		return bwdata;
 	}
 
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static < T > BigWarpData< T > initData()
 	{
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
@@ -446,7 +440,8 @@ public class BigWarpInit
 	 *            array of source names
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList, String[] names )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList, String[] names )
 	{
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
@@ -521,7 +516,8 @@ public class BigWarpInit
 	 *            array of fixed SpimData
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpData( final AbstractSpimData< ? > spimDataP, final AbstractSpimData< ? > spimDataQ )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? > spimDataP, final AbstractSpimData< ? > spimDataQ )
 	{
 		final AbstractSequenceDescription< ?, ?, ? > seqP = spimDataP.getSequenceDescription();
 		final AbstractSequenceDescription< ?, ?, ? > seqQ = spimDataQ.getSequenceDescription();
@@ -543,23 +539,27 @@ public class BigWarpInit
 		return new BigWarpData( sources, converterSetups, null, movingSourceIndices, targetSourceIndices );
 	}
 
-	public static BigWarpData createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ )
+	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ )
 	{
 		return createBigWarpData( loaderP, loaderQ, null );
 	}
 
-	public static BigWarpData createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, final String[] names )
+	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, final String[] names )
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
 		int numMovingChannels = loaderP.numChannels();
 
-		/*
-		 * Load the second source, giving each channel a different setupId
-		 */
+		/* Load the second source, giving each channel a different setupId */
 		final AbstractSpimData< ? >[] spimDataQ = loaderQ.loadAll( numMovingChannels );
 
-		return createBigWarpData( spimDataP, spimDataQ, names );
+		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
+
+		// update channel settings
+		loaderP.update( data );
+		loaderQ.update( data );
+
+		return data;
 	}
 
 	/**
@@ -572,7 +572,7 @@ public class BigWarpInit
 	 *            fixed image source loader
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpData( final Loader loaderP, final Loader loaderQ )
+	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ )
 	{
 		return createBigWarpData( loaderP, loaderQ, null );
 	}
@@ -589,13 +589,25 @@ public class BigWarpInit
 	 *            list of names
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] names )
+	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] names )
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.load();
 		final AbstractSpimData< ? >[] spimDataQ = loaderQ.load();
 
-		return createBigWarpData( spimDataP, spimDataQ, names );
+		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
+
+		if( loaderP instanceof ImagePlusLoader  )
+		{
+			((ImagePlusLoader)loaderP).update( data );
+		}
+
+		if( loaderQ instanceof ImagePlusLoader  )
+		{
+			((ImagePlusLoader)loaderQ).update( data );
+		}
+
+		return data;
 	}
 
 	/**
@@ -607,7 +619,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
+	public static BigWarpData< ? > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
 		File fP = new File( xmlFilenameP );
 		File fQ = new File( xmlFilenameQ );
@@ -624,7 +636,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
+	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
 		String[] names = namesFromImagePluses( impP, impQ );
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), names );
@@ -639,7 +651,7 @@ public class BigWarpInit
 	 *            array of fixed sources ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus[] impQ )
+	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus[] impQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
 	}
@@ -654,7 +666,7 @@ public class BigWarpInit
 	 *            array of fixed sources ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus[] impQ )
+	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus[] impQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
 	}
@@ -669,7 +681,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus impQ )
+	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus[] impP, final ImagePlus impQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ) );
 	}
@@ -683,7 +695,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
+	public static BigWarpData< ? > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
 		return createBigWarpData( new XMLLoader( xmlFilenameP ), new ImagePlusLoader( impQ ) );
 	}
@@ -698,7 +710,7 @@ public class BigWarpInit
 	 *            array of fixed sources ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus[] impQ )
+	public static BigWarpData< ? > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus[] impQ )
 	{
 		return createBigWarpData( new XMLLoader( xmlFilenameP ), new ImagePlusLoader( impQ ) );
 	}
@@ -712,7 +724,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	public static BigWarpData< ? > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 	}
@@ -727,7 +739,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static BigWarpData createBigWarpDataFromImagePlusXML( final ImagePlus[] impP, final String xmlFilenameQ )
+	public static BigWarpData< ? > createBigWarpDataFromImagePlusXML( final ImagePlus[] impP, final String xmlFilenameQ )
 	{
 		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 	}
@@ -777,4 +789,5 @@ public class BigWarpInit
 			names[ i ] = imp.getTitle() + "-" + i;
 		return names;
 	}
+
 }

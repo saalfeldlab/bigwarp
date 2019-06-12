@@ -245,7 +245,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] offsetSpec,
 			final double[] outputResolution )
 	{
-		BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
 		return getPixelInterval( bwData, landmarks, fieldOfViewOption,
 				fieldOfViewPointFilter, fovSpec, offsetSpec, outputResolution );
 	}
@@ -509,13 +509,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads )
 	{
-		BigWarpData<T> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
+		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
 		return apply( bwData, landmarks, fieldOfViewOption, fieldOfViewPointFilter,
 				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
 				interp, isVirtual, nThreads );
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "rawtypes" } )
 	public static <T> ImagePlus apply(
 			final BigWarpData<T> bwData,
 			final LandmarkTableModel landmarks,
