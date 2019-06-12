@@ -1,4 +1,4 @@
-package bigwarp;
+package bdv;
 
 import org.scijava.ui.behaviour.Behaviour;
 import org.scijava.ui.behaviour.BehaviourMap;

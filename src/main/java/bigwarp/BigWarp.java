@@ -17,8 +17,9 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.RejectedExecutionException;
 
@@ -50,18 +51,17 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
-import bdv.ViewerImgLoader;
+import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
-import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
-import bdv.img.RenamableSource;
-import bdv.img.TpsTransformWrapper;
+import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
@@ -72,7 +72,6 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -84,41 +83,47 @@ import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
-import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.loader.ImagePlusLoader.SetupSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.WindowManager;
 import ij.gui.GenericDialog;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
+import mpicbg.models.AbstractAffineModel2D;
+import mpicbg.models.AbstractAffineModel3D;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
 import mpicbg.models.CoordinateTransform;
 import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.InvertibleCoordinateTransform;
+import mpicbg.models.Model;
 import mpicbg.models.NotEnoughDataPointsException;
 import mpicbg.models.RigidModel2D;
 import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
+import mpicbg.models.TranslationModel2D;
+import mpicbg.models.TranslationModel3D;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
+import net.imglib2.RealPositionable;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.histogram.DiscreteFrequencyDistribution;
 import net.imglib2.histogram.Histogram1d;
@@ -128,21 +133,19 @@ import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformEventHandlerFactory;
 import net.imglib2.ui.TransformListener;
 import net.imglib2.view.Views;
 
-public class BigWarp
+public class BigWarp< T >
 {
 
 	protected static final int DEFAULT_WIDTH = 600;
@@ -153,17 +156,17 @@ public class BigWarp
 
 	public static final int WARPMAG_SOURCE_ID = 956736363;
 
-	protected BigWarpData data;
+	protected BigWarpViewerOptions options;
+
+	protected BigWarpData< T > data;
 
 	// descriptive names for indexing sources
 	protected int[] movingSourceIndexList;
 
 	protected int[] targetSourceIndexList;
 
-	protected ArrayList< SourceAndConverter< ? > > sources;
+	protected List< SourceAndConverter< T > > sources;
 	
-	protected BigWarpExporter< ? > exporter;
-
 	protected final SetupAssignments setupAssignments;
 
 	protected final BrightnessDialog brightnessDialog;
@@ -220,6 +223,8 @@ public class BigWarp
 
 	protected LandmarkTableModel landmarkModel;
 
+	protected InvertibleRealTransform currentTransform;
+
 	protected JTable landmarkTable;
 
 	protected LandmarkTableListener landmarkModellistener;
@@ -240,8 +245,6 @@ public class BigWarp
 
 	protected TransformEventHandler< AffineTransform3D > handlerP;
 
-	final static DummyTransformEventHandler DUMMY_TRANSFORM_HANDLER = new DummyTransformEventHandler();
-
 	protected final int gridSourceIndex;
 
 	protected final int warpMagSourceIndex;
@@ -253,6 +256,12 @@ public class BigWarp
 	private SolveThread solverThread;
 
 	private long keyClickMaxLength = 250;
+	
+	protected final TransformTypeSelectDialog transformSelector;
+
+	protected String transformType = TransformTypeSelectDialog.TPS;
+
+	protected AffineTransform3D tmpTransform = new AffineTransform3D();
 
 	/*
 	 * landmarks are placed on clicks only if we are inLandmarkMode during the
@@ -279,26 +288,20 @@ public class BigWarp
 
 	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
 
-	public BigWarp( final BigWarpData data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
+	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
 	}
 
-	public BigWarp( final BigWarpData data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
+	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
-		sources = data.sources;
-		final ArrayList< ConverterSetup > converterSetups = data.converterSetups;
 		this.progressWriter = progressWriter;
 
 		this.data = data;
-		this.movingSourceIndexList = data.movingSourceIndices;
-		this.targetSourceIndexList = data.targetSourceIndices;
-
-		Arrays.sort( movingSourceIndexList );
-		Arrays.sort( targetSourceIndexList );
+		this.options = options;
 
 		ptBack = new double[ 3 ];
 
@@ -322,28 +325,38 @@ public class BigWarp
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
 
-		sources = wrapSourcesAsTransformed( sources, ndims, movingSourceIndexList );
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
 		fixedViewXfm = new AffineTransform3D();
-		sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+		//sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
-		warpMagSourceIndex = addWarpMagnitudeSource( sources, converterSetups, "WarpMagnitudeSource", data );
-		gridSourceIndex = addGridSource( sources, converterSetups, "GridSource", data );
+		warpMagSourceIndex = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
+		gridSourceIndex = addGridSource( data, "GridSource" );
+
+		this.sources = this.data.sources;
+		final List< ConverterSetup > converterSetups = data.converterSetups;
+		this.movingSourceIndexList = data.movingSourceIndices;
+		this.targetSourceIndexList = data.targetSourceIndices;
+		Arrays.sort( movingSourceIndexList );
+		Arrays.sort( targetSourceIndexList );
+
+		sources = wrapSourcesAsTransformed( data.sources, ndims, data.movingSourceIndices );
+
 		setGridType( GridSource.GRID_TYPE.LINE );
 
 		viewerSettings = new BigWarpViewerSettings();
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqP.getImgLoader() ).getCacheControl(), options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, sources, viewerSettings,
-				( ( ViewerImgLoader ) data.seqQ.getImgLoader() ).getCacheControl(), options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -355,6 +368,7 @@ public class BigWarp
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
 		if ( options.is2d )
 		{
+
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
 			try
@@ -461,6 +475,8 @@ public class BigWarp
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
 		
+		transformSelector = new TransformTypeSelectDialog( landmarkFrame, this, TransformTypeSelectDialog.TPS );
+		
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
 																// constructed
@@ -508,6 +524,7 @@ public class BigWarp
 		viewerQ.getState().getViewerTransform( initialViewQ );
 
 		// set brightness contrast to appropriate values
+		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
 		initBrightness( 0.001, 0.999, viewerP.getState(), setupAssignments );
 		initBrightness( 0.001, 0.999, viewerQ.getState(), setupAssignments );
 
@@ -524,36 +541,7 @@ public class BigWarp
 		fileDialog = new FileDialog( fileFrame );
 		lastDirectory = null;
 
-		if ( BigWarpRealExporter.isTypeListFullyConsistent( sources, movingSourceIndexList ) )
-		{
-			Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
-			if ( ByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< ByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( ByteType ) baseType );
-			else if ( UnsignedByteType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< UnsignedByteType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedByteType ) baseType );
-			else if ( IntType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< IntType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( IntType ) baseType );
-			else if ( UnsignedShortType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< UnsignedShortType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( UnsignedShortType ) baseType );
-			else if ( FloatType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< FloatType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( FloatType ) baseType );
-			else if ( DoubleType.class.isInstance( baseType ) )
-				exporter = new BigWarpRealExporter< DoubleType >( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(), ( DoubleType ) baseType );
-			else if ( ARGBType.class.isInstance( baseType ) )
-				exporter = new BigWarpARGBExporter( sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation() );
-			else
-			{
-				System.err.println( "Can't export type " + baseType.getClass() );
-				exporter = null;
-			}
-		}
-		else
-		{
-			exporter = new BigWarpRealExporter< FloatType >(
-					sources, movingSourceIndexList, targetSourceIndexList, viewerP.getState().getInterpolation(),
-					new FloatType(), true );
-		}
-
+		// default to linear interpolation
 		fileFrame.setVisible( false );
 
 		// add focus listener
@@ -898,9 +886,7 @@ public class BigWarp
 		Interpolation interp = Interpolation.NLINEAR;
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
-		
-		System.out.println( nThreads );
-		
+
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
 		Interval outputInterval = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
@@ -909,34 +895,15 @@ public class BigWarp
 		double[] offsetPhysical = new double[ offset.length ];
 		for( int d = 0; d < offset.length; d++ )
 			offsetPhysical[ d ] = offset[ d ] * res[ d ];
-		
-		System.out.println( "pixel offset: " + Arrays.toString( offset ));
-		System.out.println( "physical offset: " + Arrays.toString( offsetPhysical ));
-		
-		boolean currentlyWarped = isMovingDisplayTransformed();
 
-		if( !currentlyWarped )
-			toggleMovingImageDisplay();
-
-		exporter.setInterp( interp );
+		BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 		exporter.setRenderResolution( res );
 		exporter.setInterval( outputInterval );
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
-		ImagePlus ip = BigWarp.this.exporter.export();
 
-		if( !currentlyWarped )
-			toggleMovingImageDisplay();
-
-		if( !path.isEmpty())
-		{
-			IJ.save( ip, path );
-			return;
-		}
-
-		if ( ip != null )
-			ip.show();
+		ImagePlus ip = exporter.exportAsynch();
 	}
 
 	public void exportWarpField()
@@ -1067,7 +1034,7 @@ public class BigWarp
 		return setupAssignments;
 	}
 
-	public ArrayList< SourceAndConverter< ? > > getSources()
+	public List< SourceAndConverter< T > > getSources()
 	{
 		return sources;
 	}
@@ -1085,6 +1052,25 @@ public class BigWarp
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
 	{
 		return landmarkPanel.getTableModel().getTransform();
+	}
+
+	public String transformToString()
+	{
+		String s = "";
+		if ( currentTransform instanceof InverseRealTransform )
+		{
+			s = ( ( InverseRealTransform ) currentTransform ).toString();
+		}
+		else if( currentTransform instanceof WrappedCoordinateTransform )
+		{
+			s = (( WrappedCoordinateTransform ) currentTransform).ct.toString();
+		}
+		else
+		{
+			s = ( ( WrappedIterativeInvertibleRealTransform<?> ) currentTransform ).getTransform().toString();
+		}
+		progressWriter.out().println( s );
+		return s;
 	}
 
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
@@ -1156,8 +1142,7 @@ public class BigWarp
 		final int selectedPointIndex = selectedLandmark( ptarray, isMoving );
 
 		// if a fixed point is changing its location,
-		// we need to update the warped position for the corresponding moving
-		// point
+		// we need to update the warped position for the corresponding moving point
 		// so that it can be rendered correctly
 		if ( selectedPointIndex >= 0 && !isMoving && landmarkModel.getTransform() != null )
 		{
@@ -1342,28 +1327,26 @@ public class BigWarp
 
 	protected void disableTransformHandlers()
 	{
-		// disable navigation listeners
 		handlerP = viewerP.getDisplay().getTransformEventHandler();
-		viewerP.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
+		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
 
+		// disable navigation listeners
 		viewerP.setTransformEnabled( false );
 		viewerQ.setTransformEnabled( false );
-
-		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
-		viewerQ.getDisplay().setTransformEventHandler( DUMMY_TRANSFORM_HANDLER );
 	}
 
 	protected void enableTransformHandlers()
 	{
+		// reset the viewer transform
+		viewerP.getState().getViewerTransform( tmpTransform );
+		handlerP.setTransform( tmpTransform );
+
+		viewerQ.getState().getViewerTransform( tmpTransform );
+		handlerQ.setTransform( tmpTransform );
+
 		// enable navigation listeners
 		viewerP.setTransformEnabled( true );
 		viewerQ.setTransformEnabled( true );
-
-		if ( handlerP != null )
-			viewerP.getDisplay().setTransformEventHandler( handlerP );
-
-		if ( handlerQ != null )
-			viewerQ.getDisplay().setTransformEventHandler( handlerQ );
 	}
 
 	/**
@@ -1623,12 +1606,11 @@ public class BigWarp
 		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setMethod( method );
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsTransformed( final ArrayList< SourceAndConverter< ? > > sources, final int ndims, final int[] warpUsIndices )
+	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources, final int ndims, final int[] warpUsIndices )
 	{
-		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
-
+		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 		int i = 0;
-		for ( final SourceAndConverter< ? > sac : sources )
+		for ( final SourceAndConverter<T>sac : sources )
 		{
 			int idx = Arrays.binarySearch( warpUsIndices, i );
 			if ( idx >= 0 )
@@ -1653,24 +1635,25 @@ public class BigWarp
 	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
-	private static int addWarpMagnitudeSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	private static < T > int addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Doubles?
 
-		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
+		final WarpMagnitudeSource< ? > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
 
 		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
 		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		final RealARGBColorConverter< ? > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
+		data.converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
 
-		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
-		sources.add( soc );
+		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
+		data.sources.add( soc );
 
-		return sources.size() - 1;
+		return data.sources.size() - 1;
 	}
 
 	/**
@@ -1681,7 +1664,8 @@ public class BigWarp
 	 * @param data the BigWarpData
 	 * @return the index into sources where this source was added
 	 */
-	private static int addGridSource( final ArrayList< SourceAndConverter< ? > > sources, final ArrayList< ConverterSetup > converterSetups, final String name, final BigWarpData data )
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	private static < T > int addGridSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Floats?
@@ -1693,12 +1677,12 @@ public class BigWarp
 		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
-		converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
+		data.converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
 
-		final SourceAndConverter< FloatType > soc = new SourceAndConverter< FloatType >( magSource, converter, null );
-		sources.add( soc );
+		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
+		data.sources.add( soc );
 
-		return sources.size() - 1;
+		return data.sources.size() - 1;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -1960,33 +1944,34 @@ public class BigWarp
 		viewerFrame.getViewerPanel().requestRepaint();
 	}
 
-	private void setTransformationMovingSourceOnly( final ThinPlateR2LogRSplineKernelTransform transform )
+	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
 	{
+		this.currentTransform = transform;
+
 		for ( int i = 0; i < movingSourceIndexList.length; i++ )
 		{
 			int idx = movingSourceIndexList [ i ];
 
 			// the xfm must always be 3d for bdv to be happy.
 			// when bigwarp has 2d images though, the z- component will be left unchanged
-			InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
+			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
 			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( xfm );
+			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
 			if ( sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( xfm );
+				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( transform );
 		}
 	}
 
-	private void setTransformationAll( final ThinPlateR2LogRSplineKernelTransform transform )
+	private void setTransformationAll( final InvertibleRealTransform transform )
 	{
 		setTransformationMovingSourceOnly( transform );
 
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
-		TpsTransformWrapper tpsRealXfm = new TpsTransformWrapper( 3, transform );
-		wmSrc.setWarp( tpsRealXfm );
-		gSrc.setWarp( tpsRealXfm );
+		wmSrc.setWarp( transform );
+		gSrc.setWarp( transform );
 	}
 
 	public boolean restimateTransformation()
@@ -2018,6 +2003,17 @@ public class BigWarp
 		viewerQ.requestRepaint();
 		return true;
 	}
+	
+	public void setTransformType( final String type )
+	{
+		this.transformType = type;
+		this.restimateTransformation();
+	}
+	
+	public String getTransformType()
+	{
+		return transformType;
+	}
 
 	public void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
@@ -2032,6 +2028,16 @@ public class BigWarp
 		}
 
 		overlayP.setIsTransformed( isTransformed );
+	}
+
+	/**
+	 * Returns true if the currently selected row in the landmark table is missing on the the landmarks
+	 * @return
+	 */
+	public boolean isRowIncomplete()
+	{
+		LandmarkTableModel ltm = landmarkPanel.getTableModel();
+		return ltm.isPointUpdatePending() || ltm.isPointUpdatePendingMoving();
 	}
 
 	public boolean isMovingDisplayTransformed()
@@ -2054,10 +2060,10 @@ public class BigWarp
 	 * @param sources the sources
 	 * @return dimension of the input sources
 	 */
-	protected static int detectNumDims( Collection< SourceAndConverter< ? > > sources )
+	protected static <T> int detectNumDims( List< SourceAndConverter< T > > sources )
 	{
 		boolean isAnySource3d = false;
-		for ( SourceAndConverter< ? > sac : sources )
+		for ( SourceAndConverter< T > sac : sources )
 		{
 			long[] dims = new long[ sac.getSpimSource().getSource( 0, 0 ).numDimensions() ];
 			sac.getSpimSource().getSource( 0, 0 ).dimensions( dims );
@@ -2127,18 +2133,21 @@ public class BigWarp
 		{
 			System.setProperty( "apple.laf.useScreenMenuBar", "false" );
 
+
+			ProgressWriterIJ progress = new ProgressWriterIJ();
 			BigWarp bw;
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
-				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), new ProgressWriterConsole() );
+				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), progress );
 			else
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
+
 				if ( !( impP == null || impQ == null ) )
 				{
 					BigWarpData bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
 					
-					bw = new BigWarp( bwdata, new File( fnP ).getName(), new ProgressWriterConsole() );
+					bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
 				}
 				else
 				{
@@ -2153,7 +2162,6 @@ public class BigWarp
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
-			
 
 		}
 		catch ( final Exception e )
@@ -2190,35 +2198,56 @@ public class BigWarp
 //		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 	}
 
-	public static class BigWarpData
+	public static class BigWarpData< T >
 	{
-		public final ArrayList< SourceAndConverter< ? > > sources;
+		public final List< SourceAndConverter< T > > sources;
 
-		public final AbstractSequenceDescription< ?, ?, ? > seqP;
+		public final List< ConverterSetup > converterSetups;
 
-		public final AbstractSequenceDescription< ?, ?, ? > seqQ;
+		public final CacheControl cache;
 
-		public final ArrayList< ConverterSetup > converterSetups;
+		public int[] movingSourceIndices;
 
-		public final int[] movingSourceIndices;
+		public int[] targetSourceIndices;
 
-		public final int[] targetSourceIndices;
+		public final ArrayList< Integer > movingSourceIndexList;
 
-		public BigWarpData(
-				final ArrayList< SourceAndConverter< ? > > sources,
-				final AbstractSequenceDescription< ?, ?, ? > seqP,
-				final AbstractSequenceDescription< ?, ?, ? > seqQ,
-				final ArrayList< ConverterSetup > converterSetups,
-				int[] movingSourceIndices, int[] targetSourceIndices )
+		public final ArrayList< Integer > targetSourceIndexList;
+
+		public final HashMap< Integer, SetupSettings > setupSettings;
+
+		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
-			this.seqP = seqP;
-			this.seqQ = seqQ;
 			this.converterSetups = converterSetups;
 			this.movingSourceIndices = movingSourceIndices;
 			this.targetSourceIndices = targetSourceIndices;
+
+			this.movingSourceIndexList = new ArrayList<>();
+			this.targetSourceIndexList = new ArrayList<>();
+
+			if ( cache == null )
+				this.cache = new CacheControl.Dummy();
+			else
+				this.cache = cache;
+
+			setupSettings = new HashMap<>();
 		}
 
+		public void wrapUp()
+		{
+			movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
+			targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
+
+			Arrays.sort( movingSourceIndices );
+			Arrays.sort( targetSourceIndices );
+		}
+
+		public void transferChannelSettings( final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
+		{
+			for( Integer key : setupSettings.keySet() )
+				setupSettings.get( key ).updateSetup( setupAssignments );
+		}
 	}
 
 	protected class LandmarkModeListener implements KeyEventPostProcessor
@@ -2328,15 +2357,24 @@ public class BigWarp
 			if( clickLength < keyClickMaxLength && selectedPointIndex != -1 )
 				return;
 
-			// shift down is reserved for drag overlay
-			if ( e.isShiftDown() ) { return; }
-
-			if ( e.isControlDown() )
+			// shift when
+			boolean isMovingLocal = isMoving;
+			if ( e.isShiftDown() && e.isControlDown() )
+			{ 
+				System.out.println( "shift-control release");
+				isMovingLocal = !isMoving;
+			}
+			else if( e.isShiftDown())
+			{
+				// shift is reserved for click-drag
+				return;
+			}
+			else if ( e.isControlDown() )
 			{
 				if ( BigWarp.this.isInLandmarkMode() && selectedPointIndex < 0 )
 				{
 					thisViewer.getGlobalMouseCoordinates( BigWarp.this.currentLandmark );
-					addFixedPoint( BigWarp.this.currentLandmark, isMoving );
+					addFixedPoint( BigWarp.this.currentLandmark, isMovingLocal );
 				}
 				return;
 			}
@@ -2350,11 +2388,11 @@ public class BigWarp
 				currentLandmark.localize( ptarrayLoc );
 
 				if ( selectedPointIndex == -1 )
-					wasNewRowAdded = addPoint( ptarrayLoc, isMoving );
+					wasNewRowAdded = addPoint( ptarrayLoc, isMovingLocal );
 				else
 				{
-					final boolean isWarped = isMoving && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
-					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, isWarped, true );
+					final boolean isWarped = isMovingLocal && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
+					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true );
 				}
 
 				if ( updateWarpOnPtChange && !wasNewRowAdded )
@@ -2367,9 +2405,9 @@ public class BigWarp
 				}
 
 				if( wasNewRowAdded )
-					updateRowSelection( isMoving, landmarkModel.getRowCount() - 1 );
+					updateRowSelection( isMovingLocal, landmarkModel.getRowCount() - 1 );
 				else
-					updateRowSelection( isMoving, selectedPointIndex );
+					updateRowSelection( isMovingLocal, selectedPointIndex );
 			}
 
 			BigWarp.this.landmarkModel.resetLastPoint();
@@ -2592,40 +2630,6 @@ public class BigWarp
 
 	}
 
-	protected static class DummyTransformEventHandler implements TransformEventHandler< AffineTransform3D >
-	{
-
-		@Override
-		public AffineTransform3D getTransform()
-		{
-			return null;
-		}
-
-		@Override
-		public void setTransform( final AffineTransform3D transform )
-		{}
-
-		@Override
-		public void setCanvasSize( final int width, final int height, final boolean updateTransform )
-		{}
-
-		@Override
-		public void setTransformListener( final TransformListener< AffineTransform3D > transformListener )
-		{}
-
-		@Override
-		public String getHelpString()
-		{
-			return null;
-		}
-
-		@Override
-		public String toString()
-		{
-			return "Dummy Transform Handler";
-		}
-	}
-
 	protected static class DummyBehaviourTransformEventHandler extends
 			BehaviourTransformEventHandler3D
 	{
@@ -2675,29 +2679,48 @@ public class BigWarp
 				if ( b )
 					try
 					{
-						final ThinPlateR2LogRSplineKernelTransform xfm;
-						if ( index >= 0 ) // a point position is modified
+					
+						int ndims = 3;
+						InvertibleRealTransform invXfm = null;
+						if( this.bw.transformType.equals( TransformTypeSelectDialog.TPS ))
 						{
-							LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
-							if ( !tableModel.getIsActive( index ) )
-								return;
+							final ThinPlateR2LogRSplineKernelTransform xfm;
+							if ( index >= 0 ) // a point position is modified
+							{
+								LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
+								if ( !tableModel.getIsActive( index ) )
+									return;
 
-							int numActive = tableModel.numActive();
-							int ndims = tableModel.getNumdims();
-							// TODO: better to pass a factory here so the transformation can be any
-							// CoordinateTransform ( not just a TPS )
-							double[][] mvgPts = new double[ ndims ][ numActive ];
-							double[][] tgtPts = new double[ ndims ][ numActive ];
+								int numActive = tableModel.numActive();
+								ndims = tableModel.getNumdims();
 
-							tableModel.copyLandmarks( mvgPts, tgtPts );
+								double[][] mvgPts = new double[ ndims ][ numActive ];
+								double[][] tgtPts = new double[ ndims ][ numActive ];
 
-							// need to find the "inverse TPS" so exchange moving and tgt
-							xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
+								tableModel.copyLandmarks( mvgPts, tgtPts );
+
+								// need to find the "inverse TPS" - the transform from target space to moving space.
+								xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
+							}
+							else // a point is added
+							{
+								bw.landmarkModel.initTransformation();
+								ndims =bw.landmarkModel.getNumdims();
+								xfm = bw.getLandmarkPanel().getTableModel().getTransform();
+							}
+							invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
 						}
-						else // a point is added
+						else
 						{
-							bw.landmarkModel.initTransformation();
-							xfm = bw.getLandmarkPanel().getTableModel().getTransform();
+							Model<?> model = getModel();
+							fitModel(model);
+							int nd = this.bw.landmarkModel.getNumdims();
+							invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
+						}
+
+						if( bw.options.is2d )
+						{
+							invXfm = new Wrapped2DTransformAs3D( invXfm );
 						}
 
 						if ( index < 0 )
@@ -2709,13 +2732,13 @@ public class BigWarp
 							bw.landmarkModel.updateAllWarpedPoints();
 
 							// update sources with the new transformation
-							bw.setTransformationAll( bw.landmarkModel.getTransform() );
+							bw.setTransformationAll( invXfm );
 							bw.fitBaselineWarpMagModel();
 						}
 						else
 						{
 							// update the transform and warped point
-							bw.setTransformationMovingSourceOnly( xfm );
+							bw.setTransformationMovingSourceOnly( invXfm );
 						}
 
 						// update fixed point - but don't allow undo/redo
@@ -2765,6 +2788,145 @@ public class BigWarp
 
 				notify();
 			}
+		}
+		
+		public void fitModel( final Model<?> model )
+		{
+			LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
+
+			int numActive = tableModel.numActive();
+			int ndims = tableModel.getNumdims();
+
+			double[][] mvgPts = new double[ ndims ][ numActive ];
+			double[][] tgtPts = new double[ ndims ][ numActive ];
+
+			tableModel.copyLandmarks( mvgPts, tgtPts );
+
+			double[] w = new double[ numActive ];
+			Arrays.fill( w, 1.0 );
+
+			try {
+				model.fit( mvgPts, tgtPts, w );
+			} catch (NotEnoughDataPointsException e) {
+				e.printStackTrace();
+			} catch (IllDefinedDataPointsException e) {
+				e.printStackTrace();
+			}
+		}
+
+		public Model<?> getModel()
+		{
+			if( this.bw.landmarkModel.getNumdims() == 2 )
+				return getModel2D();
+			else
+				return getModel3D();
+		}
+
+		public AbstractAffineModel3D<?> getModel3D()
+		{
+			switch( this.bw.transformType ){
+			case TransformTypeSelectDialog.AFFINE:
+				return new AffineModel3D();
+			case TransformTypeSelectDialog.SIMILARITY:
+				return new SimilarityModel3D();
+			case TransformTypeSelectDialog.ROTATION:
+				return new RigidModel3D();
+			case TransformTypeSelectDialog.TRANSLATION:
+				return new TranslationModel3D();
+			}
+			return null;
+		}
+
+		public AbstractAffineModel2D<?> getModel2D()
+		{
+			switch( this.bw.transformType ){
+			case TransformTypeSelectDialog.AFFINE:
+				return new AffineModel2D();
+			case TransformTypeSelectDialog.SIMILARITY:
+				return new SimilarityModel2D();
+			case TransformTypeSelectDialog.ROTATION:
+				return new RigidModel2D();
+			case TransformTypeSelectDialog.TRANSLATION:
+				return new TranslationModel2D();
+			}
+			return null;
+		}
+	}
+	
+	public static class WrappedCoordinateTransform implements InvertibleRealTransform
+	{
+		private final InvertibleCoordinateTransform ct;
+		private final InvertibleCoordinateTransform ct_inv;
+		private final int nd;
+
+		public WrappedCoordinateTransform( InvertibleCoordinateTransform ct, int nd )
+		{
+            this.nd = nd;
+			this.ct = ct;
+			this.ct_inv = ct.createInverse();
+		}
+
+		public InvertibleCoordinateTransform getTransform()
+        {
+			return ct;
+		}
+
+		@Override
+		public void apply(double[] src, double[] tgt)
+        {
+			double[] res = ct.apply( src );
+            System.arraycopy( res, 0, tgt, 0, res.length );
+		}
+
+		@Override
+		public void apply( RealLocalizable src, RealPositionable tgt )
+        {
+            double[] srcpt = new double[ src.numDimensions() ];
+            src.localize( srcpt );
+
+            double[] res = ct.apply( srcpt );
+            tgt.setPosition( res );
+		}
+
+		@Override
+		public int numSourceDimensions()
+        {
+			return nd;
+		}
+
+		@Override
+		public int numTargetDimensions()
+        {
+			return nd; 
+		}
+
+		@Override
+		public void applyInverse( double[] src, double[] tgt )
+        {
+		    double[] res = ct_inv.apply( tgt );
+            System.arraycopy( res, 0, src, 0, res.length );    
+		}
+
+		@Override
+		public void applyInverse( RealPositionable src, RealLocalizable tgt )
+        {
+            double[] tgtpt = new double[ tgt.numDimensions() ];
+            tgt.localize( tgtpt );
+            
+            double[] res = ct_inv.apply( tgtpt );
+            src.setPosition( res );
+		}
+
+		@Override
+		public InvertibleRealTransform copy()
+        {
+			return new WrappedCoordinateTransform( ct, nd );
+		}
+
+		@Override
+		public InvertibleRealTransform inverse()
+        {
+			return new WrappedCoordinateTransform( ct_inv, nd );
 		}
 	}
 

@@ -35,12 +35,12 @@ public class BigWarpViewerFrame extends JFrame
 
 	private final TriggerBehaviourBindings triggerbindings;
 
-	private final BigWarp bw;
+	private final BigWarp<?> bw;
 
 	private static final long serialVersionUID = -7630931733043185034L;
 
 	public BigWarpViewerFrame(
-			BigWarp bw,
+			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,
@@ -54,7 +54,7 @@ public class BigWarpViewerFrame extends JFrame
 	}
 	
 	public BigWarpViewerFrame(
-			BigWarp bw,
+			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final BigWarpViewerSettings viewerSettings,

@@ -1,7 +1,9 @@
 package bigwarp;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -36,7 +38,6 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > extends BigWarpExporter<T>
@@ -46,36 +47,37 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	final private T baseType;
 
-	final private Converter<?,FloatType> converter;
+	final private Converter<T,FloatType> converter;
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public BigWarpRealExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< T >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
-			final boolean needConversion )
+			final boolean needConversion,
+			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
+		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
 
 		this.needConversion = needConversion;
 		this.baseType = baseType;
 
 		if( needConversion )
-			converter = new RealFloatConverter();
+			converter = new RealFloatConverter<T>();
 		else
 			converter = null;
 	}
 
 	public BigWarpRealExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< T >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
-			final T baseType )
+			final T baseType,
+			final ProgressWriter progress )
 	{
-		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false );
+		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
 	}
 
 	/**
@@ -85,7 +87,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 * @param movingSourceIndexList list of indexes for moving sources
 	 * @return true if all moving sources are of the same type
 	 */
-	public static boolean isTypeListFullyConsistent( ArrayList< SourceAndConverter< ? >> sources, int[] movingSourceIndexList )
+	public static <T> boolean isTypeListFullyConsistent( List< SourceAndConverter< T >> sources, int[] movingSourceIndexList )
 	{
 		Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 
@@ -161,7 +163,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		}
 		else if( nThreads == 1 )
 		{
-			ip = copyToImageStack( raiStack, raiStack );
+			ip = copyToImageStack( raiStack, raiStack, progress );
 		}
 		else
 		{
@@ -178,7 +180,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< T > img = copyToImageStack( 
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
@@ -191,7 +193,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = 1; 							// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< T > img = copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
@@ -215,7 +217,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return ip;
 	}
 
-	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl )
+	public static < T extends NumericType< T > & NativeType< T > > ImagePlus copyToImageStack( final RandomAccessible< T > rai, final Interval itvl,
+			ProgressWriter progress )
 	{
 		// A bit of hacking to make slices the 4th dimension and channels the 3rd
 		// since that's how ImagePlusImgFactory does it
@@ -258,13 +261,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			c.get().set( ra.get() );
 
 			if ( k % 10000 == 0 )
-			{
-				IJ.showProgress( k / N );
-			}
+				progress.setProgress( k / N );
+
 			k++;
 		}
 
-		IJ.showProgress( 1.1 );
+		progress.setProgress( 1.0 );
 		try
 		{
 			return target.getImagePlus();

@@ -6,6 +6,7 @@ import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -27,6 +28,7 @@ import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
+import bdv.export.ProgressWriter;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
@@ -36,12 +38,13 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	private Interpolation interp;
 
 	public BigWarpARGBExporter(
-			final ArrayList< SourceAndConverter< ? >> sources,
+			final List< SourceAndConverter< ARGBType >> sources,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
-			final Interpolation interp )
+			final Interpolation interp,
+			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp );
+		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
 	}
 
 	/**
@@ -121,7 +124,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
@@ -134,7 +137,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 2 ] = numChannels; 					// c
 				dimensions[ 3 ] = 1; 							// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = BigWarpExporter.copyToImageStack( 
+				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();

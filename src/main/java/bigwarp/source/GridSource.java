@@ -2,6 +2,7 @@ package bigwarp.source;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
+import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
@@ -19,7 +20,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	
 	protected final String name;
 	
-	protected final BigWarpData sourceData;
+	protected final BigWarpData<?> sourceData;
 	
 	protected final Interval interval;
 	
@@ -34,8 +35,10 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 		this.type = t.copy();
 		sourceData = data;
 		
-		RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		interval = fixedsrc;
+		//RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
+	
+		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		//interval = ((SourceAndConverter)data.sources.get( data.targetSourceIndices[ 0 ] )).getSpimSource().getSource( 0, 0 );
 		
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
@@ -125,7 +128,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.seqQ.getViewSetups().get( 0 ).getVoxelSize();
+		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 	}
 
 	@Override

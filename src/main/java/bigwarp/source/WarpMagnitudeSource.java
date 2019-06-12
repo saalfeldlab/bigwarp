@@ -21,7 +21,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 {
 	protected final String name;
 	
-	protected final BigWarpData sourceData;
+	protected final BigWarpData<?> sourceData;
 	
 	protected final Interval interval;
 	
@@ -36,7 +36,8 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		
 		sourceData = data;
 		
-		RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
+		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
+		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
 		
 		// use the interval of the fixed image
 //		if( fixedsrc.dimension( 2 ) == 1 )
@@ -45,7 +46,6 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 //					new long[]{ fixedsrc.max( 0 ), fixedsrc.max( 1 ) });
 //		else
 		
-		interval = fixedsrc;
 		
 		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
 	}
@@ -187,7 +187,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.seqQ.getViewSetups().get( 0 ).getVoxelSize();
+		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 	}
 
 	@Override

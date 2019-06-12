@@ -21,11 +21,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
-import bdv.img.virtualstack.VirtualStackImageLoader;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
+import bdv.tools.brightness.ConverterSetup;
+import bdv.tools.brightness.SetupAssignments;
+import bigwarp.BigWarp.BigWarpData;
 import ij.ImagePlus;
+import ij.process.LUT;
 import mpicbg.spim.data.generic.sequence.BasicImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.registration.ViewRegistration;
@@ -36,6 +39,7 @@ import mpicbg.spim.data.sequence.TimePoint;
 import mpicbg.spim.data.sequence.TimePoints;
 import net.imglib2.FinalDimensions;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.ARGBType;
 
 /**
  *
@@ -51,6 +55,8 @@ public class ImagePlusLoader implements Loader
 	private boolean is3d;
 	private boolean isMultiChannel;
 
+	private HashMap< Integer, SetupSettings > settingsMap;
+
 	public ImagePlusLoader( final ImagePlus imp )
 	{
 		this( new ImagePlus[]{ imp } );
@@ -64,6 +70,7 @@ public class ImagePlusLoader implements Loader
 			nc += ip.getNChannels();
 
 		numChannels = nc;
+		settingsMap = new HashMap<>();
 	}
 
 	public int numChannels()
@@ -79,6 +86,17 @@ public class ImagePlusLoader implements Loader
 	public boolean isMultiChannel()
 	{
 		return isMultiChannel;
+	}
+
+	public HashMap< Integer, SetupSettings > getSetupSettings()
+	{
+		return settingsMap;
+	}
+
+	public void update( final BigWarpData< ? > data )
+	{
+		for( Integer key : settingsMap.keySet() )
+			data.setupSettings.put( key, settingsMap.get( key ) );
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -174,6 +192,8 @@ public class ImagePlusLoader implements Loader
 			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "%s channel %d", imp.getTitle(), ids[ s ] + 1 ), size, voxelSize );
 			setup.setAttribute( new Channel( ids[ s ] + 1 ) );
 			setups.put( ids[ s ], setup );
+
+			settingsMap.put( ids[ s ], SetupSettings.fromImagePlus( imp, ids[ s ], s ));
 		}
 
 		// create timepoints
@@ -212,5 +232,50 @@ public class ImagePlusLoader implements Loader
 		int[] out = new int[ length ];
 		Arrays.fill( out, value );
 		return out;
+	}
+
+	public static class SetupSettings
+	{
+		public final int id;
+		public final double min;
+		public final double max;
+		public final ARGBType color;
+
+		public SetupSettings( int id, double min, double max, ARGBType color)
+		{
+			this.id = id;
+			this.min = min;
+			this.max = max;
+			this.color = color;
+		}
+
+		public void updateSetup( final SetupAssignments setups )
+		{
+			updateSetup( setups.getConverterSetups().get( id ) );
+		}
+
+		public void updateSetup( final ConverterSetup setup )
+		{
+			setup.setDisplayRange( min, max );
+			if( color != null )
+				setup.setColor( color );
+		}
+
+		public static SetupSettings fromImagePlus( final ImagePlus imp, int setupId, int channelOffset )
+		{
+			double min = imp.getDisplayRangeMin();
+			double max = imp.getDisplayRangeMax();
+
+			ARGBType color = null;
+			LUT[] luts = imp.getLuts();
+			if ( luts.length != 0 )
+			{
+				color = new ARGBType( luts[ channelOffset ].getRGB( 255 ) );
+				min = luts[ channelOffset ].min;
+				max = luts[ channelOffset ].max;
+			}
+
+			return new SetupSettings( setupId, min, max, color );
+		}
 	}
 }

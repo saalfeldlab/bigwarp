@@ -98,7 +98,7 @@ public abstract class BigWarpImageStackImageLoader< T extends NumericType< T > &
 		setupImgLoaders = new HashMap< Integer, SetupImgLoader >();
 		this.wrapPixels = wrapPixels;
 		for ( int i = 0; i < numSetups; ++i )
-			setupImgLoaders.put( setupIds[ i ], new SetupImgLoader( setupIds[ i ] ) );
+			setupImgLoaders.put( setupIds[ i ], new SetupImgLoader( i ) );
 	}
 
 	protected abstract void linkType( PlanarImg< T, A > img );

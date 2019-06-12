@@ -1,10 +1,10 @@
 package bdv.gui;
 
+import bdv.BehaviourTransformEventHandler2D;
 import bdv.BehaviourTransformEventHandler3D;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.MessageOverlayAnimator;
-import bigwarp.BehaviourTransformEventHandler2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.ui.TransformEventHandlerFactory;
 

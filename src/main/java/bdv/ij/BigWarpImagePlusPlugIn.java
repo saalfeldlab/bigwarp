@@ -2,6 +2,7 @@ package bdv.ij;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
+import bdv.ij.util.ProgressWriterIJ;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.DisplayMode;
@@ -79,7 +80,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try
         {
         	new RepeatingReleasedEventsFixer().install();
-			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  null );
+			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
@@ -92,34 +93,4 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 	}
 
-	protected void transferChannelSettings( final CompositeImage ci, final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
-	{
-		final int nChannels = ci.getNChannels();
-		final int mode = ci.getCompositeMode();
-		final boolean transferColor = mode == IJ.COMPOSITE || mode == IJ.COLOR;
-		for ( int c = 0; c < nChannels; ++c )
-		{
-			final LUT lut = ci.getChannelLut( c + 1 );
-			final ConverterSetup setup = setupAssignments.getConverterSetups().get( c );
-			if ( transferColor )
-				setup.setColor( new ARGBType( lut.getRGB( 255 ) ) );
-			setup.setDisplayRange( (int)lut.min, (int)lut.max );
-		}
-		if ( mode == IJ.COMPOSITE )
-		{
-			final boolean[] activeChannels = ci.getActiveChannels();
-			visibility.setDisplayMode( DisplayMode.FUSED );
-			for ( int i = 0; i < activeChannels.length; ++i )
-				visibility.setSourceActive( i, activeChannels[ i ] );
-		}
-		else
-			visibility.setDisplayMode( DisplayMode.SINGLE );
-		visibility.setCurrentSource( ci.getChannel() - 1 );
-	}
-
-	protected void transferSettingsRGB( final ImagePlus imp, final SetupAssignments setupAssignments )
-	{
-		final ConverterSetup setup = setupAssignments.getConverterSetups().get( 0 );
-		setup.setDisplayRange( (int)imp.getDisplayRangeMin(), (int)imp.getDisplayRangeMax() );
-	}
 }

@@ -5,13 +5,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
 
 import org.janelia.utility.parse.ParseUtils;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 
-import bdv.img.TpsTransformWrapper;
+import bdv.export.ProgressWriter;
+import bdv.export.ProgressWriterConsole;
 import bdv.img.WarpedSource;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
@@ -19,11 +22,15 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpExporter.ExportThread;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader;
 import ij.IJ;
 import ij.ImagePlus;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import loci.formats.FormatException;
+import loci.formats.in.TiffReader;
+import loci.plugins.BF;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.BasicSetupImgLoader;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
@@ -39,7 +46,8 @@ import net.imglib2.FinalDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.InverseRealTransform;
+import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -62,20 +70,27 @@ public class BigWarpBatchTransformFOV
 	@Parameter(names = {"--output", "-o"}, description = "Output image file" )
 	private String outputFilePath;
 
-	@Parameter(names = {"--dimension", "-d"}, description = "Output dimension", 
+	@Parameter(names = {"--dimension", "-d"}, description = "Dimension of output image (overrides target image)", 
 			converter = ParseUtils.LongArrayConverter.class )
 	private long[] dims;
+
+	@Parameter(names = {"--target", "-t"}, description = "Path to reference (target) image" )
+	private String referenceImagePath;
 
 	@Parameter(names = {"--threads", "-j"}, description = "Number of threads" )
 	private int nThreads = 1;
 
-	@Parameter(names = {"--spacing", "-s"}, description = "Voxel spacing, e.g. \"0.5,0.5,2.0\"", 
+	@Parameter(names = {"--out-spacing", "-s"}, description = "Output voxel spacing, e.g. \"0.5,0.5,2.0\" (overrides target image)", 
 			converter = ParseUtils.DoubleArrayConverter.class )
-	private double[] spacing = new double[]{ 1.0 };
+	private double[] spacing;
 
-	@Parameter(names = {"--offset", "-f"}, description = "Offset, e.g. \"5.0,5.0,-1.0\"", 
+	@Parameter(names = { "--in-spacing" }, description = "Input voxel spacing (overrides image metadata)", 
 			converter = ParseUtils.DoubleArrayConverter.class )
-	private double[] offset = new double[]{ 0.0 };
+	private double[] input_spacing;
+
+	@Parameter(names = {"--offset", "-f"}, description = "Offset, e.g. \"5.0,5.0,-1.0\" (overrides target image)", 
+			converter = ParseUtils.DoubleArrayConverter.class )
+	private double[] offset;
 
 	@Parameter(names = {"--help", "-h"}, help = true)
 	private boolean help;
@@ -101,6 +116,7 @@ public class BigWarpBatchTransformFOV
 
 	public static BigWarpBatchTransformFOV parseCommandLineArgs( final String[] args )
 	{
+		
 		BigWarpBatchTransformFOV alg = new BigWarpBatchTransformFOV();
 		alg.initCommander();
 		try 
@@ -118,39 +134,93 @@ public class BigWarpBatchTransformFOV
 			return alg;
 		}
 
-		int nd = alg.dims.length;
-		if( alg.offset.length < 3 )
+		if ( alg.referenceImagePath != null && !alg.referenceImagePath.isEmpty() )
 		{
-			alg.offsetFull = fill( alg.offset, nd );
-		}
-		else
-		{
-			alg.offsetFull = alg.offset;
+
+			if ( alg.referenceImagePath.endsWith( "tif" ) || alg.referenceImagePath.endsWith( "tiff" ) || alg.referenceImagePath.endsWith( "TIF" ) || alg.referenceImagePath.endsWith( "TIFF" ) )
+			{
+				TiffReader reader = new TiffReader();
+				try
+				{
+					reader.setId( alg.referenceImagePath );
+					Hashtable< String, Object > meta = reader.getGlobalMetadata();
+					alg.dimsFull = new long[ 3 ];
+					alg.dimsFull[ 0 ] = reader.getSizeX();
+					alg.dimsFull[ 1 ] = reader.getSizeY();
+					alg.dimsFull[ 2 ] = reader.getSizeZ();
+
+					alg.spacingFull = new double[ 3 ];
+					alg.spacingFull[ 0 ] = 1 / ( double ) meta.get( "XResolution" );
+					alg.spacingFull[ 1 ] = 1 / ( double ) meta.get( "YResolution" );
+					alg.spacingFull[ 2 ] = ( double ) meta.get( "Spacing" );
+
+					alg.offsetFull = new double[ 3 ];
+					reader.close();
+
+				}
+				catch ( FormatException | IOException e )
+				{
+					alg.dimsFull = null;
+					e.printStackTrace();
+				}
+
+			}
 		}
 
-		if( alg.spacing.length < 3 )
+		int nd = 3;
+		if( alg.offset != null )
 		{
-			alg.spacingFull = fill( alg.spacing, nd );
-		}
-		else
-		{
-			alg.spacingFull  = alg.spacing;
+			nd = alg.offset.length;
+			if( alg.offset.length < 3 )
+			{
+				alg.offsetFull = fill( alg.offset, nd );
+			}
+			else
+			{
+				alg.offsetFull = alg.offset;
+			}
 		}
 
-		if( alg.dims.length == 1 )
+		if( alg.offsetFull == null )
 		{
-			alg.dimsFull = new long[ 3 ];
-			Arrays.fill( alg.dimsFull, alg.dims[ 0 ] );
+			alg.offsetFull = new double[ 3 ];
 		}
-		else if( alg.dims.length == 2 )
+
+		if( alg.spacing != null )
 		{
-			alg.dimsFull = new long[ 3 ];
-			System.arraycopy( alg.dims, 0, alg.dimsFull, 0, 2 );
-			alg.dimsFull[ 2 ] = 1;
+			if( alg.spacing.length < 3 )
+			{
+				alg.spacingFull = fill( alg.spacing, nd );
+			}
+			else
+			{
+				alg.spacingFull  = alg.spacing;
+			}
 		}
-		else if( alg.dims.length == 3 )
+
+		if( alg.spacingFull == null )
 		{
-			alg.dimsFull = alg.dims;
+			alg.spacingFull = new double[ 3 ];
+			Arrays.fill( alg.spacingFull, 1.0 );
+		}
+
+		if( alg.dims != null )
+		{
+			if( alg.dims.length == 1 )
+			{
+				alg.dimsFull = new long[ 3 ];
+				Arrays.fill( alg.dimsFull, alg.dims[ 0 ] );
+			}
+			else if( alg.dims.length == 2 )
+			{
+				alg.dimsFull = new long[ 3 ];
+				System.arraycopy( alg.dims, 0, alg.dimsFull, 0, 2 );
+				alg.dimsFull[ 2 ] = 1;
+			}
+			else if( alg.dims.length == 3 )
+			{
+				alg.dimsFull = alg.dims;
+			}
 		}
 
 		return alg;
@@ -162,7 +232,7 @@ public class BigWarpBatchTransformFOV
 			return;
 
 		long startTime = System.currentTimeMillis();
-		int nd = dims.length;
+		int nd = dimsFull.length;
 		if( nd != 3 && nd != 2 )
 		{
 			System.err.println( "For 2D or 3D use only" );
@@ -172,7 +242,40 @@ public class BigWarpBatchTransformFOV
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		ltm.load( new File( landmarkFilePath ));
 
-		ImagePlus impP = IJ.openImage( imageFilePath );
+		ImagePlus impP = null;
+		try
+		{
+			impP = IJ.openImage( imageFilePath );
+		}
+		catch ( Exception e )
+		{
+			e.printStackTrace();
+		}
+
+		if ( impP == null )
+		{
+			try
+			{
+				impP = BF.openImagePlus( imageFilePath )[ 0 ];
+			}
+			catch ( Exception e )
+			{
+				e.printStackTrace();
+			}
+		}
+
+		if ( impP == null )
+		{
+			System.err.println( "FAILED TO READ IMAGE FROM: " + imageFilePath );
+		}
+
+		if( input_spacing != null )
+		{
+			System.out.println( "overriding input resolution: " + Arrays.toString( input_spacing ));
+			impP.getCalibration().pixelWidth = input_spacing[ 0 ];
+			impP.getCalibration().pixelHeight = input_spacing[ 1 ];
+			impP.getCalibration().pixelDepth = input_spacing[ 2 ];
+		}
 
 		/* Load the first source */
 		final ImagePlusLoader loaderP = new ImagePlusLoader( impP );
@@ -184,7 +287,15 @@ public class BigWarpBatchTransformFOV
 		final BigWarpExporter< ? > exporter = applyBigWarpHelper( spimDataP, spimDataQ, impP, ltm, Interpolation.valueOf( interpType ) );
 		exporter.setNumThreads( nThreads );
 		exporter.setVirtual( false );
-		final ImagePlus ipout = exporter.export();
+		exporter.setInterval( new FinalInterval( dimsFull ));
+		exporter.setRenderResolution( spacingFull );
+		exporter.setOffset( offsetFull );
+		exporter.setInterp( Interpolation.valueOf( interpType ));
+		exporter.showResult( false );
+
+		exporter.exportThread = new ExportThread( exporter );
+		exporter.exportThread.run();
+		final ImagePlus ipout = exporter.getResult();
 
 		System.out.println( "saving" );
 		IJ.save( ipout, outputFilePath );
@@ -194,14 +305,13 @@ public class BigWarpBatchTransformFOV
 		System.exit( 0 );
 	}
 
-	public static BigWarpExporter< ? > applyBigWarpHelper( AbstractSpimData< ? >[] spimDataP, AbstractSpimData< ? >[] spimDataQ,
+	public static < T > BigWarpExporter< T > applyBigWarpHelper( AbstractSpimData< ? >[] spimDataP, AbstractSpimData< ? >[] spimDataQ,
 			ImagePlus impP, LandmarkTableModel ltm, Interpolation interpolation )
 	{
 		String[] names = generateNames( impP );
 		BigWarpData data = BigWarpInit.createBigWarpData( spimDataP, spimDataQ, names );
 
 		int numChannels = impP.getNChannels();
-		System.out.println( numChannels + " channels" );
 		int[] movingSourceIndexList = new int[ numChannels ];
 		for ( int i = 0; i < numChannels; i++ )
 		{
@@ -210,7 +320,7 @@ public class BigWarpBatchTransformFOV
 		
 		int[] targetSourceIndexList = data.targetSourceIndices;
 		
-		ArrayList< SourceAndConverter< ? >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
+		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				data.sources, 
 				ltm.getNumdims(),
 				movingSourceIndexList );
@@ -219,46 +329,49 @@ public class BigWarpBatchTransformFOV
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			InverseRealTransform irXfm = new InverseRealTransform( new TpsTransformWrapper( 3, xfm ) );
-			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm );
+			WrappedIterativeInvertibleRealTransform irXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
+			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).updateTransform( irXfm.copy() );
 			((WarpedSource< ? >) (sourcesxfm.get( i ).getSpimSource())).setIsTransformed( true );
 		}
 		
-		BigWarpExporter< ? > exporter;
-		Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
-		if ( ByteType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< ByteType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(ByteType) baseType );
-		else if ( UnsignedByteType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< UnsignedByteType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedByteType) baseType );
-		else if ( IntType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< IntType >( sourcesxfm, movingSourceIndexList,
-					targetSourceIndexList, interpolation, (IntType) baseType );
-		else if ( UnsignedShortType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< UnsignedShortType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(UnsignedShortType) baseType );
-		else if ( FloatType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< FloatType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(FloatType) baseType );
-		else if ( DoubleType.class.isInstance( baseType ) )
-			exporter = new BigWarpRealExporter< DoubleType >( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation,
-					(DoubleType) baseType );
-		else if ( ARGBType.class.isInstance( baseType ) )
-			exporter = new BigWarpARGBExporter( sourcesxfm,
-					movingSourceIndexList, targetSourceIndexList, interpolation );
-		else
-		{
-			System.err.println( "Can't export type " + baseType.getClass() );
-			exporter = null;
-		}
+		ProgressWriter progressWriter = new ProgressWriterConsole();
 
-		return exporter;
+		
+		BigWarpExporter< ? > exporter = null;
+//		Object baseType = sourcesxfm.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
+//		if ( ByteType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< ByteType >( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation,
+//					(ByteType) baseType, progressWriter );
+//		else if ( UnsignedByteType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< UnsignedByteType >( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation,
+//					(UnsignedByteType) baseType, progressWriter );
+//		else if ( IntType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< IntType >( sourcesxfm, movingSourceIndexList,
+//					targetSourceIndexList, interpolation, (IntType) baseType, progressWriter );
+//		else if ( UnsignedShortType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< UnsignedShortType >( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation,
+//					(UnsignedShortType) baseType, progressWriter );
+//		else if ( FloatType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< FloatType >( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation,
+//					(FloatType) baseType, progressWriter );
+//		else if ( DoubleType.class.isInstance( baseType ) )
+//			exporter = new BigWarpRealExporter< DoubleType >( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation,
+//					(DoubleType) baseType, progressWriter );
+//		else if ( ARGBType.class.isInstance( baseType ) )
+//			exporter = new BigWarpARGBExporter( sourcesxfm,
+//					movingSourceIndexList, targetSourceIndexList, interpolation, progressWriter );
+//		else
+//		{
+//			System.err.println( "Can't export type " + baseType.getClass() );
+//			exporter = null;
+//		}
+//		return exporter;
+		return null;
 	}
 
 
