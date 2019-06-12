@@ -244,13 +244,13 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link AbstractSpimData}.
 	 *
-	 * @param spimDataPList
+	 * @param movingSourceList
 	 *            array of moving SpimData
-	 * @param spimDataQList
+	 * @param fixedSourceList
 	 *            array of fixed SpimData
 	 * @param names
 	 *            array of source names
-	 * @return BigWarpData
+	 * @return BigWarpData the data
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )

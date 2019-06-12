@@ -24,16 +24,17 @@ public class TransformTypeSelectDialog extends JDialog
 	public static final String ROTATION = "Rotation";
 	public static final String TRANSLATION = "Translation";
 	
-	private final BigWarp bw;
+	private final BigWarp< ? > bw;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
 	 * the selection of the transformation type.
 	 * 
-	 * 
 	 * @param owner the parent frame
+	 * @param bw a bigwarp instance
+	 * @param transformType the type of transform
 	 */
-	public TransformTypeSelectDialog( final Frame owner, final BigWarp bw, final String startType )
+	public TransformTypeSelectDialog( final Frame owner, final BigWarp< ? > bw, final String transformType )
 	{
 		super( owner, "Transform Type select", false );
 
@@ -53,7 +54,7 @@ public class TransformTypeSelectDialog extends JDialog
 		group.add( rotationButton );
 		group.add( translationButton );
 
-		switch( startType )
+		switch( transformType )
 		{
 		case TPS:
 			tpsButton.setSelected( true );

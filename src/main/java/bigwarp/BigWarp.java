@@ -2032,7 +2032,7 @@ public class BigWarp< T >
 
 	/**
 	 * Returns true if the currently selected row in the landmark table is missing on the the landmarks
-	 * @return
+	 * @return true if there is a missing value
 	 */
 	public boolean isRowIncomplete()
 	{
@@ -2058,6 +2058,7 @@ public class BigWarp< T >
 	/**
 	 * The display will be in 3d if any of the input sources are 3d.
 	 * @param sources the sources
+	 * @param <T> the type
 	 * @return dimension of the input sources
 	 */
 	protected static <T> int detectNumDims( List< SourceAndConverter< T > > sources )

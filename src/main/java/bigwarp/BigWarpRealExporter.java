@@ -84,6 +84,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 * Returns true if moving image sources are all of the same type.
 	 * 
 	 * @param sources the sources
+	 * @param <T> the type
 	 * @param movingSourceIndexList list of indexes for moving sources
 	 * @return true if all moving sources are of the same type
 	 */
