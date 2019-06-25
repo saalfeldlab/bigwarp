@@ -101,7 +101,9 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
-		<bigdataviewer-core.version>5.0.0</bigdataviewer-core.version>
+		<bigdataviewer-core.version>7.0.0</bigdataviewer-core.version>
+		<bigdataviewer_fiji.version>6.0.0</bigdataviewer_fiji.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-15</bigdataviewer-vistools.version>
         <jitk-tps.version>3.0.1</jitk-tps.version>
         <imglib2-realtransform.version>2.2.1</imglib2-realtransform.version>
 
@@ -125,10 +127,6 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-core</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-ui</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>net.imglib2</groupId>

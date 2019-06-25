@@ -1641,11 +1641,11 @@ public class BigWarp< T >
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Doubles?
 
-		final WarpMagnitudeSource< ? > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
+		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
 
-		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
+		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
 		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< ? > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		final RealARGBColorConverter< ? > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
 		data.converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
@@ -1672,9 +1672,9 @@ public class BigWarp< T >
 
 		final GridSource< FloatType > magSource = new GridSource< FloatType >( name, data, new FloatType(), null );
 
-		final RealARGBColorConverter< VolatileFloatType > vconverter = new RealARGBColorConverter.Imp0< VolatileFloatType >( 0, 512 );
+		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
 		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< FloatType > converter = new RealARGBColorConverter.Imp1< FloatType >( 0, 512 );
+		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 
 		data.converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );

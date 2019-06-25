@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
+import bdv.img.imagestack.ImageStackImageLoader;
+import bdv.img.virtualstack.VirtualStackImageLoader;
 import bdv.spimdata.SequenceDescriptionMinimal;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
@@ -112,13 +114,13 @@ public class ImagePlusLoader implements Loader
 		index = startid;
 		for( int i = 0; i < impList.length; i++ )
 		{
-			out[ i ] = load( range( index, impList[ i ].getNChannels() ), impList[ i ] );
+			out[ i ] = load( startid, impList[ i ] );
 			index += impList[ i ].getNChannels();
 		}
 		return out;
 	}
 
-	public SpimDataMinimal load( int[] ids, ImagePlus imp )
+	public SpimDataMinimal load( final int setupIdOffset, ImagePlus imp )
 	{
 		// get calibration and image size
 		final double pw;
@@ -150,17 +152,17 @@ public class ImagePlusLoader implements Loader
 			switch ( imp.getType() )
 			{
 			case ImagePlus.GRAY8:
-				imgLoader = BigWarpVirtualStackImageLoader.createUnsignedByteInstance( imp, ids );
+				imgLoader = VirtualStackImageLoader.createUnsignedByteInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.GRAY16:
-				imgLoader = BigWarpVirtualStackImageLoader.createUnsignedShortInstance( imp, ids );
+				imgLoader = VirtualStackImageLoader.createUnsignedShortInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.GRAY32:
-				imgLoader = BigWarpVirtualStackImageLoader.createFloatInstance( imp, ids );
+				imgLoader = VirtualStackImageLoader.createFloatInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.COLOR_RGB:
 			default:
-				imgLoader = BigWarpVirtualStackImageLoader.createARGBInstance( imp, ids );
+				imgLoader = VirtualStackImageLoader.createARGBInstance( imp, setupIdOffset );
 				break;
 			}
 		}
@@ -169,17 +171,17 @@ public class ImagePlusLoader implements Loader
 			switch ( imp.getType() )
 			{
 			case ImagePlus.GRAY8:
-				imgLoader = BigWarpImageStackImageLoader.createUnsignedByteInstance( imp, ids );
+				imgLoader = ImageStackImageLoader.createUnsignedByteInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.GRAY16:
-				imgLoader = BigWarpImageStackImageLoader.createUnsignedShortInstance( imp, ids );
+				imgLoader = ImageStackImageLoader.createUnsignedShortInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.GRAY32:
-				imgLoader = BigWarpImageStackImageLoader.createFloatInstance( imp, ids );
+				imgLoader = ImageStackImageLoader.createFloatInstance( imp, setupIdOffset );
 				break;
 			case ImagePlus.COLOR_RGB:
 			default:
-				imgLoader = BigWarpImageStackImageLoader.createARGBInstance( imp, ids );
+				imgLoader = ImageStackImageLoader.createARGBInstance( imp, setupIdOffset );
 				break;
 			}
 		}
@@ -189,11 +191,12 @@ public class ImagePlusLoader implements Loader
 		final HashMap< Integer, BasicViewSetup > setups = new HashMap< Integer, BasicViewSetup >( numSetups );
 		for ( int s = 0; s < numSetups; ++s )
 		{
-			final BasicViewSetup setup = new BasicViewSetup( ids[ s ], String.format( "%s channel %d", imp.getTitle(), ids[ s ] + 1 ), size, voxelSize );
-			setup.setAttribute( new Channel( ids[ s ] + 1 ) );
-			setups.put( ids[ s ], setup );
+			final int id = setupIdOffset + s;
+			final BasicViewSetup setup = new BasicViewSetup( setupIdOffset + s, String.format( "%s channel %d", imp.getTitle(), id + 1 ), size, voxelSize );
+			setup.setAttribute( new Channel( id + 1 ) );
+			setups.put( id, setup );
 
-			settingsMap.put( ids[ s ], SetupSettings.fromImagePlus( imp, ids[ s ], s ));
+			settingsMap.put( id, SetupSettings.fromImagePlus( imp, id, s ));
 		}
 
 		// create timepoints
@@ -207,7 +210,7 @@ public class ImagePlusLoader implements Loader
 		final ArrayList< ViewRegistration > registrations = new ArrayList< ViewRegistration >();
 		for ( int t = 0; t < numTimepoints; ++t )
 			for ( int s = 0; s < numSetups; ++s )
-				registrations.add( new ViewRegistration( t, ids[ s ], sourceTransform ) );
+				registrations.add( new ViewRegistration( t, setupIdOffset + s, sourceTransform ) );
 
 		final SequenceDescriptionMinimal seq = new SequenceDescriptionMinimal( new TimePoints( timepoints ), setups, imgLoader, null );
 
