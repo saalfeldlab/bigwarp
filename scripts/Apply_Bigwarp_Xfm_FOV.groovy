@@ -1,18 +1,18 @@
-// @File(label="Landmark file") landmarksPath
-// @ImagePlus(label="Moving image file") movingIp
-// @String(label="Specification type", choices={"pixel units", "physical units"}) fovType
-// @Float(label="Resolution x") resx
-// @Float(label="Resolution y") resy
-// @Float(label="Resolution z") resz
-// @Float(label="Width x") fovx
-// @Float(label="Height y") fovy
-// @Float(label="Depth z") fovz
-// @Float(label="Offset x") offsetx
-// @Float(label="Offset y") offsety
-// @Float(label="Offset z") offsetz
-// @String(label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
-// @Integer(label="Number of threads", min=1, max=64, value=1) nThreads
-// @Boolean(label="Virtual stack?") isVirtual
+#@ File (label="Landmark file") landmarksPath
+#@ ImagePlus (label="Moving image file") movingIp
+#@ String (label="Specification type", choices={"pixel units", "physical units"}) fovType
+#@ Float (label="Resolution x") resx
+#@ Float (label="Resolution y") resy
+#@ Float (label="Resolution z") resz
+#@ Float (label="Width x") fovx
+#@ Float (label="Height y") fovy
+#@ Float (label="Depth z") fovz
+#@ Float (label="Offset x") offsetx
+#@ Float (label="Offset y") offsety
+#@ Float (label="Offset z") offsetz
+#@ String (label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
+#@ Integer (label="Number of threads", min=1, max=64, value=1) nThreads
+#@ Boolean (label="Virtual stack?") isVirtual
 
 import java.io.File;
 import java.io.IOException;

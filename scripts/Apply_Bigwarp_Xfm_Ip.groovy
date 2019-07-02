@@ -1,9 +1,9 @@
-// @File(label="Landmark file") landmarksPath
-// @ImagePlus(label="Moving image") movingIp
-// @ImagePlus(label="Target image") targetIp
-// @String(label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
-// @Boolean(label="Output as virtual?") isVirtual
-// @Integer(label="Number of threads", min=1, max=64, value=1) nThreads
+#@ File (label="Landmark file") landmarksPath
+#@ ImagePlus (label="Moving image") movingIp
+#@ ImagePlus (label="Target image") targetIp
+#@ String (label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
+#@ Boolean (label="Output as virtual?") isVirtual
+#@ Integer (label="Number of threads", min=1, max=64, value=1) nThreads
 
 
 import java.io.IOException;

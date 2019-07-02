@@ -1,9 +1,9 @@
-// @File(label="Landmark file") landmarksPath
-// @File(label="Input points (csv)") inCsv
-// @File(label="Output points (csv)") outCsv
-// @String( label="Direction", choices={"Moving to target", "Target to moving"}, style="radioButtonHorizontal") inverseOrForward
-// @Double(label="Inverse tolerance", value=0.1 ) invTolerance
-// @Integer(label="Inverse maximum iterations", value=200) invMaxIters
+#@ File (label="Landmark file") landmarksPath
+#@ File (label="Input points (csv)") inCsv
+#@ File (label="Output points (csv)") outCsv
+#@ String ( label="Direction", choices={"Moving to target", "Target to moving"}, style="radioButtonHorizontal") inverseOrForward
+#@ Double (label="Inverse tolerance", value=0.1 ) invTolerance
+#@ Integer (label="Inverse maximum iterations", value=200) invMaxIters
 
 import java.io.*;
 import java.nio.file.*;
