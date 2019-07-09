@@ -143,6 +143,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -954,6 +955,14 @@ public class BigWarp< T >
 			pixToPhysical.set( resolutions[ 2 ], 2, 2 );
 
 		FloatImagePlus< FloatType > deformationField = ImagePlusImgs.floats( dims );
+
+		RandomAccessibleInterval< FloatType > dfieldPerm;
+		if ( ndims > 2 )
+			dfieldPerm = Views.permute( deformationField, 2, 3 );
+		else
+			dfieldPerm = deformationField;
+
+
 		ImagePlus dfieldIp = deformationField.getImagePlus();
 		dfieldIp.getCalibration().pixelWidth = resolutions[ 0 ];
 		dfieldIp.getCalibration().pixelHeight = resolutions[ 1 ];
@@ -965,7 +974,7 @@ public class BigWarp< T >
 			tpsUseMe = new ThinPlateR2LogRSplineKernelTransform( tpsRaw.getSourceLandmarks(), null, null, tpsRaw.getKnotWeights() );
 
 		ThinplateSplineTransform tps = new ThinplateSplineTransform( tpsUseMe );
-		BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, Views.permute( deformationField, 2, 3 ), nThreads );
+		BigWarpToDeformationFieldPlugIn.fromRealTransform( tps, pixToPhysical, dfieldPerm, nThreads );
 
 		String title = "bigwarp dfield";
 		if ( ignoreAffine )
