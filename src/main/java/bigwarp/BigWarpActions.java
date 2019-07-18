@@ -63,6 +63,7 @@ public class BigWarpActions
 	public static final String SAVE_WARPED = "save warped";
 	public static final String EXPORT_IP = "export imageplus";
 	public static final String EXPORT_WARP = "export warp field"; 
+	public static final String EXPORT_AFFINE = "export affine"; 
 
 	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
 	public static final String WARP_TO_NEXT_POINT = "warp to next landmark %s";
@@ -143,6 +144,9 @@ public class BigWarpActions
 		map.put( String.format( WARP_TO_NEXT_POINT, true), "ctrl D" );
 		map.put( String.format( WARP_TO_NEXT_POINT, false), "ctrl shift D" );
 		map.put( WARP_TO_NEAREST_POINT, "E" );
+
+		map.put( EXPORT_WARP, "ctrl W" );
+		map.put( EXPORT_AFFINE, "ctrl A" );
 
 		map.put( GO_TO_BOOKMARK, "B" );
 		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
@@ -279,6 +283,8 @@ public class BigWarpActions
 		new SaveWarpedAction( bw ).put( actionMap );
 		new ExportImagePlusAction( bw ).put( actionMap );
 		new ExportWarpAction( bw ).put( actionMap );
+		new ExportAffineAction( bw ).put( actionMap );
+
 		new LoadLandmarksAction( bw ).put( actionMap );
 		new SaveLandmarksAction( bw ).put( actionMap );
 
@@ -1011,6 +1017,22 @@ public class BigWarpActions
 		public void actionPerformed(ActionEvent e)
 		{
 			bw.exportWarpField();
+		}
+	}
+
+	public static class ExportAffineAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 9190515918045510236L;
+		BigWarp<?> bw;
+		public ExportAffineAction( final BigWarp bw )
+		{
+			super( EXPORT_AFFINE );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.printAffine();
 		}
 	}
 

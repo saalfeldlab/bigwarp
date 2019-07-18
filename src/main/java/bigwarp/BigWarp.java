@@ -1082,6 +1082,84 @@ public class BigWarp< T >
 		return s;
 	}
 
+	public void printAffine()
+	{
+		if( ij != null )
+			IJ.log( affineToString() );
+		else
+			System.out.println( affineToString() );
+	}
+
+	public String affineToString()
+	{
+		String s = "";
+		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		{
+			double[][] affine = affinePartOfTpsHC();
+			for( int r = 0; r < affine.length; r++ )
+			{
+				s += Arrays.toString(affine[r]).replaceAll("\\[|\\]||\\s", "");
+				if( r < affine.length - 1 )
+					s += "\n";
+			}
+		}
+		else
+			s = (( WrappedCoordinateTransform ) currentTransform).ct.toString();
+
+		return s;
+	}
+
+	/**
+	 * Returns the affine part of the thin plate spline model, 
+	 * as a matrix in homogeneous coordinates.
+	 * 
+	 * double[i][:] contains the i^th row of the matrix.
+	 * 
+	 * @return the matrix as a double array
+	 */
+	public double[][] affinePartOfTpsHC()
+	{
+		int nr = 3;
+		int nc = 4;
+		double[][] mtx = null;
+		if( options.is2d )
+		{
+			nr = 2;
+			nc = 3;
+			mtx = new double[2][3];
+		}
+		else
+		{
+			mtx = new double[3][4];
+		}
+
+		double[][] tpsAffine = landmarkModel.getTransform().getAffine();
+		double[] translation = landmarkModel.getTransform().getTranslation();
+		for( int r = 0; r < nr; r++ )
+			for( int c = 0; c < nc; c++ )
+			{
+				if( c == (nc-1))
+				{
+					mtx[r][c] = translation[r];
+				}
+				else if( r == c )
+				{
+					/* the affine doesn't contain the identity "part" of the affine.
+					 *	i.e., the tps builds the affine A such that
+					 *	y = x + Ax 
+					 *  o
+					 *  y = ( A + I )x
+					 */
+					mtx[r][c] = 1 + tpsAffine[ r ][ c ];
+				}
+				else
+				{
+					mtx[r][c] = tpsAffine[ r ][ c ];
+				}
+			}
+		return mtx;
+	}
+
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
 
