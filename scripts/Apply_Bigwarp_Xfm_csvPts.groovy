@@ -15,9 +15,12 @@ import java.nio.file.*;
 import java.util.*;
 import bigwarp.landmarks.*;
 import bigwarp.BigWarp.WrappedCoordinateTransform;
+import net.imglib2.realtransform.*;
+import net.imglib2.realtransform.inverse.*;
 
 import mpicbg.models.*;
 import bdv.gui.TransformTypeSelectDialog;
+
 
 def getModel3D( final String transformType )
 {
@@ -70,10 +73,9 @@ def fitTransform( Model model, LandmarkTableModel tableModel)
 	} catch (IllDefinedDataPointsException e) {
 		e.printStackTrace();
 	}
-		
 }
 
-def buildTransform( File landmarksPath, String transformType, int nd )
+def buildTransform( File landmarksPath, String transformType, int nd, boolean needInverse, double invTolerance, int maxIters )
 {
 
 	// load the transform
@@ -90,7 +92,17 @@ def buildTransform( File landmarksPath, String transformType, int nd )
 		
 	if( transformType.equals( TransformTypeSelectDialog.TPS ))
 	{
-		return ltm.getTransform();
+		xfm = ltm.getTransform();
+		if( needInverse )
+		{
+			invertibleTransform = new WrappedIterativeInvertibleRealTransform( new ThinplateSplineTransform( xfm ));
+			invopt = invertibleTransform.getOptimzer();
+			invopt.setTolerance( invTolerance );
+			invopt.setMaxIters( maxIters );
+			return invertibleTransform.inverse();
+		}
+		else
+			return xfm;
 	}
 	else
 	{
@@ -109,8 +121,17 @@ def buildTransform( File landmarksPath, String transformType, int nd )
 			return null;
 		}
 		fitTransform( model, ltm );
-		invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse()
-		return invXfm;
+		println( 'model' )
+		println( model )
+		
+		
+		if( needInverse )
+			ct = model;
+		else
+			ct = ((InvertibleCoordinateTransform) model).createInverse()
+		
+		xfm = new WrappedCoordinateTransform( ct, nd )
+		return xfm;
 	}
 }
 
@@ -130,7 +151,8 @@ catch ( IOException e )
 
 // get the transformation to apply
 int nd = lines.get( 0 ).split(",").length;
-transform = buildTransform( landmarksPath, transformType, nd )
+transform = buildTransform( landmarksPath, transformType, nd, needInverseTransform, invTolerance, invMaxIters );
+println( transform )
 
 // transform all points
 outputLines = []
@@ -154,15 +176,8 @@ for( l in lines )
 	scaledpt = [pt, scale].transpose().collect{ it[0] * it[1]}
 
 	// transform point
-	if( needInverseTransform )
-	{
-		err = transform.inverseTol( scaledpt as double[], result, invTolerance, invMaxIters )
-	}
-	else
-	{
-		transform.apply( scaledpt as double[], result )
-	}
-	
+	transform.apply( scaledpt as double[], result )
+
 	outputLines.add( result.collect{ x -> Double.toString(x)}.join(","))
 }
 
