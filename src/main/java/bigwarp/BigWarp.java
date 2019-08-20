@@ -117,7 +117,6 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
 import mpicbg.spim.data.SpimDataException;
-import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -143,7 +142,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
-import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -1056,11 +1054,6 @@ public class BigWarp< T >
 	public BigWarpLandmarkPanel getLandmarkPanel()
 	{
 		return landmarkPanel;
-	}
-
-	public ThinPlateR2LogRSplineKernelTransform getTransform()
-	{
-		return landmarkPanel.getTableModel().getTransform();
 	}
 
 	public String transformToString()
@@ -2090,17 +2083,6 @@ public class BigWarp< T >
 		viewerQ.requestRepaint();
 		return true;
 	}
-	
-	public void setTransformType( final String type )
-	{
-		this.transformType = type;
-		this.restimateTransformation();
-	}
-	
-	public String getTransformType()
-	{
-		return transformType;
-	}
 
 	public void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
@@ -2246,7 +2228,7 @@ public class BigWarp< T >
 
 			
 			if ( !fnLandmarks.isEmpty() )
-				bw.landmarkModel.load( new File( fnLandmarks ) );
+				bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
@@ -2735,11 +2717,201 @@ public class BigWarp< T >
 		}
 	}
 
+	public void setTransformType( final String type )
+	{
+		this.transformType = type;
+		this.restimateTransformation();
+	}
+
+	public String getTransformType()
+	{
+		return transformType;
+	}
+
+	/**
+	 * Use getTps, getTpsBase, or getTransformation instead
+	 * @return
+	 */
+	@Deprecated
+	public ThinPlateR2LogRSplineKernelTransform getTransform()
+	{
+		return landmarkPanel.getTableModel().getTransform();
+	}
+
+	public ThinplateSplineTransform getTps()
+	{
+		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		{
+			WrappedIterativeInvertibleRealTransform<?> wiirt = (WrappedIterativeInvertibleRealTransform<?>)( unwrap2d( getTransformation()) );
+			return ((ThinplateSplineTransform)wiirt.getTransform());
+		}
+		return null;
+	}
+
+	public ThinPlateR2LogRSplineKernelTransform getTpsBase()
+	{
+		ThinplateSplineTransform tps = getTps();
+		if( tps == null )
+			return null;
+		else
+		{
+			// TODO add get method in ThinplateSplineTransform to avoid reflection here
+			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
+			try
+			{
+				final Field tpsField = c_tps.getDeclaredField( "tps" );
+				tpsField.setAccessible( true );
+				ThinPlateR2LogRSplineKernelTransform tpsbase = (ThinPlateR2LogRSplineKernelTransform)tpsField.get(  tps );
+				tpsField.setAccessible( false );
+
+				return tpsbase;
+			}
+			catch(Exception e )
+			{
+				e.printStackTrace();
+				return null;
+			}
+		}
+	}
+
+	public InvertibleCoordinateTransform getCoordinateTransform()
+	{
+		if( !transformType.equals( TransformTypeSelectDialog.TPS ))
+		{
+			WrappedCoordinateTransform wct = (WrappedCoordinateTransform)( unwrap2d( getTransformation() ));
+			return wct.ct;
+		}
+		return null;
+	}
+
+	public InvertibleRealTransform getTransformation()
+	{
+		return getTransformation( -1 );
+	}
+
+	public InvertibleRealTransform unwrap2d( InvertibleRealTransform ixfm )
+	{
+		if( ixfm instanceof Wrapped2DTransformAs3D )
+			return ((Wrapped2DTransformAs3D)ixfm).transform;
+		else
+			return ixfm;
+	}
+
+	public InvertibleRealTransform getTransformation( final int index )
+	{
+		int ndims = 3;
+		InvertibleRealTransform invXfm = null;
+		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		{
+			final ThinPlateR2LogRSplineKernelTransform xfm;
+			if ( index >= 0 ) // a point position is modified
+			{
+				LandmarkTableModel tableModel = getLandmarkPanel().getTableModel();
+				if ( !tableModel.getIsActive( index ) )
+					return null;
+
+				int numActive = tableModel.numActive();
+				ndims = tableModel.getNumdims();
+
+				double[][] mvgPts = new double[ ndims ][ numActive ];
+				double[][] tgtPts = new double[ ndims ][ numActive ];
+
+				tableModel.copyLandmarks( mvgPts, tgtPts );
+
+				// need to find the "inverse TPS" - the transform from target space to moving space.
+				xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
+			}
+			else // a point is added
+			{
+				landmarkModel.initTransformation();
+				ndims = landmarkModel.getNumdims();
+				xfm = getLandmarkPanel().getTableModel().getTransform();
+			}
+			invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
+		}
+		else
+		{
+			Model<?> model = getModelType();
+			fitModel(model);
+			int nd = landmarkModel.getNumdims();
+			invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
+		}
+
+		if( options.is2d )
+		{
+			invXfm = new Wrapped2DTransformAs3D( invXfm );
+		}
+
+		return invXfm;
+	}
+
+	public void fitModel( final Model<?> model )
+	{
+		LandmarkTableModel tableModel = getLandmarkPanel().getTableModel();
+
+		int numActive = tableModel.numActive();
+		int ndims = tableModel.getNumdims();
+
+		double[][] mvgPts = new double[ ndims ][ numActive ];
+		double[][] tgtPts = new double[ ndims ][ numActive ];
+
+		tableModel.copyLandmarks( mvgPts, tgtPts );
+
+		double[] w = new double[ numActive ];
+		Arrays.fill( w, 1.0 );
+
+		try {
+			model.fit( mvgPts, tgtPts, w );
+		} catch (NotEnoughDataPointsException e) {
+			e.printStackTrace();
+		} catch (IllDefinedDataPointsException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public Model<?> getModelType()
+	{
+		if( landmarkModel.getNumdims() == 2 )
+			return getModel2D();
+		else
+			return getModel3D();
+	}
+
+	public AbstractAffineModel3D<?> getModel3D()
+	{
+		switch( transformType ){
+		case TransformTypeSelectDialog.AFFINE:
+			return new AffineModel3D();
+		case TransformTypeSelectDialog.SIMILARITY:
+			return new SimilarityModel3D();
+		case TransformTypeSelectDialog.ROTATION:
+			return new RigidModel3D();
+		case TransformTypeSelectDialog.TRANSLATION:
+			return new TranslationModel3D();
+		}
+		return null;
+	}
+
+	public AbstractAffineModel2D<?> getModel2D()
+	{
+		switch( transformType ){
+		case TransformTypeSelectDialog.AFFINE:
+			return new AffineModel2D();
+		case TransformTypeSelectDialog.SIMILARITY:
+			return new SimilarityModel2D();
+		case TransformTypeSelectDialog.ROTATION:
+			return new RigidModel2D();
+		case TransformTypeSelectDialog.TRANSLATION:
+			return new TranslationModel2D();
+		}
+		return null;
+	}
+
 	public static class SolveThread extends Thread
 	{
 		private boolean pleaseResolve;
 
-		private BigWarp bw;
+		private BigWarp<?> bw;
 
 		private boolean isMoving;
 
@@ -2747,7 +2919,7 @@ public class BigWarp< T >
 
 		private double[] pt;
 
-		public SolveThread( final BigWarp bw )
+		public SolveThread( final BigWarp<?> bw )
 		{
 			this.bw = bw;
 			pleaseResolve = false;
@@ -2767,49 +2939,15 @@ public class BigWarp< T >
 				if ( b )
 					try
 					{
-					
-						int ndims = 3;
-						InvertibleRealTransform invXfm = null;
-						if( this.bw.transformType.equals( TransformTypeSelectDialog.TPS ))
-						{
-							final ThinPlateR2LogRSplineKernelTransform xfm;
-							if ( index >= 0 ) // a point position is modified
-							{
-								LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
-								if ( !tableModel.getIsActive( index ) )
-									return;
+						InvertibleRealTransform invXfm = bw.getTransformation( index );
 
-								int numActive = tableModel.numActive();
-								ndims = tableModel.getNumdims();
+//						System.out.println( "ct   : " + bw.getCoordinateTransform());
+//						System.out.println( "tpsb : " + bw.getTpsBase());
+//						System.out.println( "tps  : " + bw.getTps());
+//						System.out.println( "xfm  : " + bw.getTransformation());
 
-								double[][] mvgPts = new double[ ndims ][ numActive ];
-								double[][] tgtPts = new double[ ndims ][ numActive ];
-
-								tableModel.copyLandmarks( mvgPts, tgtPts );
-
-								// need to find the "inverse TPS" - the transform from target space to moving space.
-								xfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
-							}
-							else // a point is added
-							{
-								bw.landmarkModel.initTransformation();
-								ndims =bw.landmarkModel.getNumdims();
-								xfm = bw.getLandmarkPanel().getTableModel().getTransform();
-							}
-							invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
-						}
-						else
-						{
-							Model<?> model = getModel();
-							fitModel(model);
-							int nd = this.bw.landmarkModel.getNumdims();
-							invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
-						}
-
-						if( bw.options.is2d )
-						{
-							invXfm = new Wrapped2DTransformAs3D( invXfm );
-						}
+						if ( invXfm == null )
+							return;
 
 						if ( index < 0 )
 						{
@@ -2878,67 +3016,6 @@ public class BigWarp< T >
 			}
 		}
 		
-		public void fitModel( final Model<?> model )
-		{
-			LandmarkTableModel tableModel = bw.getLandmarkPanel().getTableModel();
-
-			int numActive = tableModel.numActive();
-			int ndims = tableModel.getNumdims();
-
-			double[][] mvgPts = new double[ ndims ][ numActive ];
-			double[][] tgtPts = new double[ ndims ][ numActive ];
-
-			tableModel.copyLandmarks( mvgPts, tgtPts );
-
-			double[] w = new double[ numActive ];
-			Arrays.fill( w, 1.0 );
-
-			try {
-				model.fit( mvgPts, tgtPts, w );
-			} catch (NotEnoughDataPointsException e) {
-				e.printStackTrace();
-			} catch (IllDefinedDataPointsException e) {
-				e.printStackTrace();
-			}
-		}
-
-		public Model<?> getModel()
-		{
-			if( this.bw.landmarkModel.getNumdims() == 2 )
-				return getModel2D();
-			else
-				return getModel3D();
-		}
-
-		public AbstractAffineModel3D<?> getModel3D()
-		{
-			switch( this.bw.transformType ){
-			case TransformTypeSelectDialog.AFFINE:
-				return new AffineModel3D();
-			case TransformTypeSelectDialog.SIMILARITY:
-				return new SimilarityModel3D();
-			case TransformTypeSelectDialog.ROTATION:
-				return new RigidModel3D();
-			case TransformTypeSelectDialog.TRANSLATION:
-				return new TranslationModel3D();
-			}
-			return null;
-		}
-
-		public AbstractAffineModel2D<?> getModel2D()
-		{
-			switch( this.bw.transformType ){
-			case TransformTypeSelectDialog.AFFINE:
-				return new AffineModel2D();
-			case TransformTypeSelectDialog.SIMILARITY:
-				return new SimilarityModel2D();
-			case TransformTypeSelectDialog.ROTATION:
-				return new RigidModel2D();
-			case TransformTypeSelectDialog.TRANSLATION:
-				return new TranslationModel2D();
-			}
-			return null;
-		}
 	}
 	
 	public static class WrappedCoordinateTransform implements InvertibleRealTransform
