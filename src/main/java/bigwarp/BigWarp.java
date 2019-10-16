@@ -2208,6 +2208,18 @@ public class BigWarp< T >
 			BigWarp bw;
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), progress );
+			else if ( fnP.endsWith( "xml" ) && !fnQ.endsWith( "xml" ) )
+			{
+				final ImagePlus impQ = IJ.openImage( fnQ );
+				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ ),
+						 new File( fnP ).getName(), progress );
+			}
+			else if ( !fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
+			{
+				final ImagePlus impP = IJ.openImage( fnP );
+				bw = new BigWarp( BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ ),
+						 new File( fnP ).getName(), progress );
+			}
 			else
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
