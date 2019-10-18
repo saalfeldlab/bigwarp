@@ -62,6 +62,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static final String SPECIFIED_PHYSICAL = "Specified (physical units)";
 	public static final String SPECIFIED_PIXEL = "Specified (pixel units)";
 	public static final String LANDMARK_POINTS = "Landmark points";
+	public static final String LANDMARK_POINT_CUBE_PHYSICAL = "Landmark point cube (physical units)";
+	public static final String LANDMARK_POINT_CUBE_PIXEL = "Landmark point cube (pixel units)";
 
 	public static void main( String[] args ) throws IOException
 	{
@@ -354,16 +356,29 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			if( fovSpec.length == 2 )
 			{
-				return new FinalInterval( 
-						(long)Math.ceil( fovSpec[ 0 ] ),
-						(long)Math.ceil( fovSpec[ 1 ] ));
+				long[] min = new long[]{ 
+						(long)Math.floor( offsetSpec[ 0 ] ),
+						(long)Math.floor( offsetSpec[ 1 ] ) };
+
+				long[] max = new long[]{
+					(long)Math.ceil( fovSpec[ 0 ] ),
+					(long)Math.ceil( fovSpec[ 1 ] ) };
+
+				return new FinalInterval( min, max );
 			}
 			else if( fovSpec.length == 3 )
 			{
-				return new FinalInterval( 
+				long[] min = new long[]{ 
+						(long)Math.floor( offsetSpec[ 0 ] ),
+						(long)Math.floor( offsetSpec[ 1 ] ),
+						(long)Math.floor( offsetSpec[ 2 ] ) };
+
+				long[] max = new long[]{
 						(long)Math.ceil( fovSpec[ 0 ] ),
 						(long)Math.ceil( fovSpec[ 1 ] ),
-						(long)Math.ceil( fovSpec[ 2 ] ));
+						(long)Math.ceil( fovSpec[ 2 ] ) };
+
+				return new FinalInterval( min, max );
 			}
 			else
 			{
@@ -375,16 +390,29 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			if( fovSpec.length == 2 )
 			{
-				return new FinalInterval( 
-						(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]));
+				long[] min = new long[]{ 
+						(long)Math.floor( offsetSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]) };
+
+				long[] max = new long[]{
+					(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
+					(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]) };
+
+				return new FinalInterval( min, max );
 			}
 			else if( fovSpec.length == 3 )
 			{
-				return new FinalInterval( 
+				long[] min = new long[]{ 
+						(long)Math.floor( offsetSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]),
+						(long)Math.floor( offsetSpec[ 2 ] / outputResolution[ 2 ]) };
+
+				long[] max = new long[]{
 						(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
 						(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]),
-						(long)Math.ceil( fovSpec[ 2 ] / outputResolution[ 2 ]));
+						(long)Math.ceil( fovSpec[ 2 ] / outputResolution[ 2 ]) };
+
+				return new FinalInterval( min, max );
 			}
 			else
 			{
@@ -394,10 +422,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( LANDMARK_POINTS ) )
 		{
-			
-			Pattern r = null;
-			if ( !fieldOfViewPointFilter.isEmpty() )
-				r = Pattern.compile( fieldOfViewPointFilter );
+			List< Double[] > matchedLandmarks = getMatchedPoints( landmarks, fieldOfViewPointFilter );
 
 			long[] min = new long[ landmarks.getNumdims() ];
 			long[] max = new long[ landmarks.getNumdims() ];
@@ -406,16 +431,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 			Arrays.fill( max, Long.MIN_VALUE );
 
 			int numPoints = 0;
-			for ( int i = 0; i < landmarks.getRowCount(); i++ )
+			for ( int i = 0; i < matchedLandmarks.size(); i++ )
 			{
-				if ( r != null && !r.matcher( landmarks.getNames().get( i ) ).matches() )
-				{
-					System.out.println( "rejected point with name : "
-							+ landmarks.getNames().get( i ) );
-					continue;
-				}
-
-				Double[] pt = landmarks.getFixedPoint( i );
+				Double[] pt = matchedLandmarks.get( i );
 				for ( int d = 0; d < pt.length; d++ )
 				{
 					long lo = (long) (Math.floor( pt[ d ] / outputResolution[ d ] ));
@@ -439,16 +457,48 @@ public class ApplyBigwarpPlugin implements PlugIn
 			{
 				if ( min[ d ] == Long.MAX_VALUE )
 				{
-					System.err
-							.println( "Problem generating field of view from landmarks" );
+					System.err.println( "Problem generating field of view from landmarks" );
 					return null;
 				}
 
 				if ( max[ d ] == Long.MIN_VALUE )
 				{
-					System.err
-							.println( "Problem generating field of view from landmarks" );
+					System.err.println( "Problem generating field of view from landmarks" );
 					return null;
+				}
+			}
+
+			return new FinalInterval( min, max );
+		}
+		else if( fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PHYSICAL ) 
+		  || fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PIXEL ) )
+		{
+			List< Double[] > matchedLandmarks = getMatchedPoints( landmarks, fieldOfViewPointFilter );
+			if( matchedLandmarks.isEmpty() )
+			{
+				System.err.println( "No matching point found" );
+				return null;
+			}
+
+			final int nd = landmarks.getNumdims();
+
+			final Double[] pt = matchedLandmarks.get( 0 );
+			long[] min = new long[ nd ];
+			long[] max = new long[ nd ];
+			if( fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PHYSICAL ) )
+			{
+				for ( int d = 0; d < nd; d++ )
+				{
+					min[ d ] = ( long ) Math.floor( (pt[ d ] / outputResolution[ d ]) - ( fovSpec[ d ] / outputResolution[ d ] ) );
+					max[ d ] = ( long ) Math.ceil( (pt[ d ] / outputResolution[ d ]) + ( fovSpec[ d ] / outputResolution[ d ] ) );
+				}
+			}
+			else
+			{
+				for ( int d = 0; d < nd; d++ )
+				{
+					min[ d ] = ( long ) Math.floor( (pt[ d ] / outputResolution[ d ]) - ( fovSpec[ d ] ) ) + 1;
+					max[ d ] = ( long ) Math.ceil( (pt[ d ] / outputResolution[ d ]) + ( fovSpec[ d ] ) ) - 1;
 				}
 			}
 
@@ -457,6 +507,38 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )" );
 		return null;
+	}
+	
+	public static List<Double[]> getMatchedPoints(
+			final LandmarkTableModel landmarks,
+			final String fieldOfViewPointFilter )
+	{
+		ArrayList<Double[]> ptList = new ArrayList<>();
+		
+		Pattern r = null;
+		if ( !fieldOfViewPointFilter.isEmpty() )
+			r = Pattern.compile( fieldOfViewPointFilter );
+
+		for ( int i = 0; i < landmarks.getRowCount(); i++ )
+		{
+			if ( r != null && !r.matcher( landmarks.getNames().get( i ) ).matches() )
+			{
+				continue;
+			}
+			
+			Double[] pt = landmarks.getFixedPoint( i );
+			if( Double.isInfinite( pt[ 0 ].doubleValue()) )
+			{
+				continue;
+			}
+
+			ptList.add( pt );
+
+			System.out.println( "Using point with name : "
+					+ landmarks.getNames().get( i ) );
+		}
+
+		return ptList;
 	}
 
 	/**

@@ -825,7 +825,9 @@ public class BigWarp< T >
 		gd.addChoice( "Field of view", 
 				new String[]{ ApplyBigwarpPlugin.TARGET, ApplyBigwarpPlugin.MOVING_WARPED,
 						ApplyBigwarpPlugin.LANDMARK_POINTS, ApplyBigwarpPlugin.SPECIFIED_PIXEL,
-						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL },
+						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL,
+						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PIXEL,
+						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PHYSICAL },
 				ApplyBigwarpPlugin.TARGET );
 
 		gd.addStringField( "point filter", "" );
