@@ -30,6 +30,8 @@ import net.imglib2.RealLocalizable;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 
+import bdv.gui.BigWarpMessageAnimator;
+
 /**
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  *
@@ -83,6 +85,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	// keep track of edits for undo's and redo's
 	protected LandmarkUndoManager undoRedoManager;
 	
+	protected BigWarpMessageAnimator message;
+
 	final static String[] columnNames3d = new String[]
 			{
 			"Name", "Active",
@@ -135,6 +139,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 		undoRedoManager = new LandmarkUndoManager();
 
 		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
+	}
+
+	public void setMessage( final BigWarpMessageAnimator message )
+	{
+		this.message = message;
 	}
 
 	public int getNumdims()
@@ -315,6 +324,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 	public void setIsActive( int row, boolean isActive )
 	{
+		if( isRowUnpaired( row ) && isActive )
+		{
+			if( message != null )
+				message.showMessage( "Can't activate unpaired row ( " + names.get( row ) + " )" );
+			return;
+		}
+
 		activeList.set( row, isActive );
 
 		if( activeList.get( row ) != isActive )
@@ -382,14 +398,34 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 		fireTableRowsDeleted( i, i );
 	}
+
+	/**
+	 * Returns true if the ith row is unpaired - i.e., 
+	 * if either of the moving or target points are unset.
+	 * 
+	 * @param i row index
+	 * @return true of the 
+	 */
+	public boolean isRowUnpaired( final int i )
+	{
+		for( int d = 0; d < ndims; d++ )
+			if( Double.isInfinite( movingPts.get( i )[ d ] ) || 
+				Double.isInfinite( targetPts.get( i )[ d ] ))
+					return true;
+
+		return false;
+	}
 	
+	/**
+	 * Returns true if any row is unpaired.
+	 * 
+	 * @return is update pending
+	 */
 	public boolean isUpdatePending()
 	{
 		for( int i = 0; i < movingPts.size(); i++ )
-			for( int d = 0; d < ndims; d++ )
-				if( Double.isInfinite( movingPts.get( i )[ d ] ) || 
-					Double.isInfinite( targetPts.get( i )[ d ] ))
-						return true;
+			if( isRowUnpaired( i ))
+				return true;
 		
 		return false;
 	}
@@ -1115,7 +1151,7 @@ public class LandmarkTableModel extends AbstractTableModel {
         }
         else if( col == ACTIVECOLUMN )
         {
-        	activeList.set(row, (Boolean)value );
+			setIsActive( row, ( Boolean ) value );
         }
         else if( col < 2 + ndims )
         {

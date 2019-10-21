@@ -362,6 +362,7 @@ public class BigWarp< T >
 		// setup messaging
 		message = options.getMessageAnimator();
 		message.setViewers( viewerP, viewerQ );
+		landmarkModel.setMessage( message );
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
