@@ -58,6 +58,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static final String TARGET = "Target";
 	public static final String MOVING = "Moving";
 	public static final String MOVING_WARPED = "Moving (warped)";
+	public static final String UNION_TARGET_MOVING = "Union of Target and warped moving image";
 	public static final String SPECIFIED = "Specified";
 	public static final String SPECIFIED_PHYSICAL = "Specified (physical units)";
 	public static final String SPECIFIED_PIXEL = "Specified (pixel units)";
@@ -309,6 +310,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			return BigWarpExporter.estimateBounds( seq, interval );
 		}
+		else if( fieldOfViewOption.equals( UNION_TARGET_MOVING ))
+		{
+			Interval movingWarpedInterval = getPixelInterval( source, landmarks, MOVING_WARPED, outputResolution );
+			Interval targetInterval = getPixelInterval( source, landmarks, TARGET, outputResolution );
+			return Intervals.union( movingWarpedInterval, targetInterval );
+		}
 
 		return null;
 	}
@@ -347,6 +354,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 					landmarks, fieldOfViewOption, outputResolution );
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
+		{
+			return getPixelInterval(
+					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
+					landmarks, fieldOfViewOption, outputResolution );
+		}
+		else if( fieldOfViewOption.equals( UNION_TARGET_MOVING ))
 		{
 			return getPixelInterval(
 					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
