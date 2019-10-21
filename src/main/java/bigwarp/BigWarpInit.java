@@ -592,20 +592,28 @@ public class BigWarpInit
 	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] names )
 	{
 		/* Load the first source */
-		final AbstractSpimData< ? >[] spimDataP = loaderP.load();
-		final AbstractSpimData< ? >[] spimDataQ = loaderQ.load();
+
+
+		final AbstractSpimData< ? >[] spimDataP;
+		if( loaderP instanceof ImagePlusLoader  )
+			spimDataP = loaderP.load();
+		else 
+			spimDataP = loaderP.load();
+
+
+		final AbstractSpimData< ? >[] spimDataQ;
+		if( loaderQ instanceof ImagePlusLoader  )
+			spimDataQ = ((ImagePlusLoader)loaderQ).loadAll( spimDataP.length );
+		else
+			spimDataQ = loaderQ.load();
 
 		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
 
 		if( loaderP instanceof ImagePlusLoader  )
-		{
 			((ImagePlusLoader)loaderP).update( data );
-		}
 
 		if( loaderQ instanceof ImagePlusLoader  )
-		{
 			((ImagePlusLoader)loaderQ).update( data );
-		}
 
 		return data;
 	}

@@ -239,14 +239,14 @@ public class ImagePlusLoader implements Loader
 
 	public static class SetupSettings
 	{
-		public final int id;
+		public final int converterSetupIndex; // index into the ConverterSetups list that this corresponds to
 		public final double min;
 		public final double max;
 		public final ARGBType color;
 
-		public SetupSettings( int id, double min, double max, ARGBType color)
+		public SetupSettings( int converterSetupIndex, double min, double max, ARGBType color)
 		{
-			this.id = id;
+			this.converterSetupIndex = converterSetupIndex;
 			this.min = min;
 			this.max = max;
 			this.color = color;
@@ -254,7 +254,7 @@ public class ImagePlusLoader implements Loader
 
 		public void updateSetup( final SetupAssignments setups )
 		{
-			updateSetup( setups.getConverterSetups().get( id ) );
+			updateSetup( setups.getConverterSetups().get( converterSetupIndex ) );
 		}
 
 		public void updateSetup( final ConverterSetup setup )
@@ -264,7 +264,7 @@ public class ImagePlusLoader implements Loader
 				setup.setColor( color );
 		}
 
-		public static SetupSettings fromImagePlus( final ImagePlus imp, int setupId, int channelOffset )
+		public static SetupSettings fromImagePlus( final ImagePlus imp, int converterSetupIndex, int channelOffset )
 		{
 			double min = imp.getDisplayRangeMin();
 			double max = imp.getDisplayRangeMax();
@@ -278,7 +278,7 @@ public class ImagePlusLoader implements Loader
 				max = luts[ channelOffset ].max;
 			}
 
-			return new SetupSettings( setupId, min, max, color );
+			return new SetupSettings( converterSetupIndex, min, max, color );
 		}
 	}
 }
