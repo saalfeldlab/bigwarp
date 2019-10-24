@@ -894,9 +894,9 @@ public class BigWarp< T >
 			interp = Interpolation.NEARESTNEIGHBOR;
 
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
-		Interval outputInterval = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
+		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
-		double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
+		double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
 
 		double[] offsetPhysical = new double[ offset.length ];
 		for( int d = 0; d < offset.length; d++ )
@@ -904,12 +904,15 @@ public class BigWarp< T >
 
 		BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 		exporter.setRenderResolution( res );
-		exporter.setInterval( outputInterval );
 		exporter.setOffset( offset );
 		exporter.setVirtual( isVirtual );
 		exporter.setNumThreads( nThreads );
 
-		ImagePlus ip = exporter.exportAsynch( false );
+		for( Interval outputInterval : outputIntervalList )
+		{
+			exporter.setInterval( outputInterval );
+			ImagePlus ip = exporter.exportAsynch( false );
+		}
 	}
 
 	public void exportWarpField()
