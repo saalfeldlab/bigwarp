@@ -901,6 +901,12 @@ public class BigWarp< T >
 		List<String> matchedPtNames = null;
 		if( outputIntervalList.size() > 1 )
 			matchedPtNames = ApplyBigwarpPlugin.getMatchedPointNames( getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
+		
+		if( matchedPtNames != null )
+		{
+			if( !ApplyBigwarpPlugin.pointMatchWarningDisplay( matchedPtNames ))
+				return;
+		}
 
 		int i = 0;
 		for( Interval outputInterval : outputIntervalList )

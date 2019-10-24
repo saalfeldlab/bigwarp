@@ -1,5 +1,13 @@
 package bdv.ij;
 
+import java.awt.BorderLayout;
+import java.awt.Checkbox;
+import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.Panel;
+import java.awt.Toolkit;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,7 +17,16 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.border.EtchedBorder;
+import javax.swing.border.TitledBorder;
+
 import bdv.export.ProgressWriter;
+import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
@@ -748,6 +765,75 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		return impList;
 	}
+	
+	/**
+	 * Displays a dialog showing point matches
+	 * @param pointMatchNames the names of point matches
+	 * @return true if user decides to continue
+	 */
+	public static boolean pointMatchWarningDisplay( final List<String> pointMatchNames )
+	{
+		System.out.println("show warning dialog");
+		
+		BigwarpLandmarkSelectionPanel selection = new BigwarpLandmarkSelectionPanel( pointMatchNames );
+		
+		// add listener for when this closes,
+		// and return appropriate value
+		selection.getFrame().addWindowListener( new WindowListener()
+		{
+			
+			@Override
+			public void windowOpened( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void windowIconified( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void windowDeiconified( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void windowDeactivated( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void windowClosing( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void windowClosed( WindowEvent e )
+			{
+				selection.doExport();
+			}
+			
+			@Override
+			public void windowActivated( WindowEvent e )
+			{
+				// TODO Auto-generated method stub
+				
+			}
+		} );
+		
+		return false;
+//		return true;
+	}
 
 	@Override
 	public void run( String arg )
@@ -857,6 +943,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		for( ImagePlus warpedIp : warpedIpList )
 			warpedIp.show();
+
 	}
 
 }
