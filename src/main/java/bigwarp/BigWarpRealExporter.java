@@ -110,6 +110,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
 		
 		buildTotalRenderTransform();
+		//System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
 		
 		int numChannels = movingSourceIndexList.length;
 		VoxelDimensions voxdim = new FinalVoxelDimensions( "um",
@@ -202,7 +203,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
 		
-		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );
+		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
 
 		return ip;
 	}

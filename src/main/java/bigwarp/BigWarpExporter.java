@@ -62,6 +62,8 @@ public abstract class BigWarpExporter <T>
 
 	protected ExportThread exportThread;
 
+	protected String nameSuffix = "";
+
 	public abstract ImagePlus export();
 
 	protected ProgressWriter progress;
@@ -138,7 +140,12 @@ public abstract class BigWarpExporter <T>
 	{
 		this.nThreads = nThreads;
 	}
-	
+
+	public void setNameSuffix( final String suffix )
+	{
+		this.nameSuffix = suffix;
+	}
+
 	public void setRenderResolution( double... res )
 	{
 		for( int i = 0; i < res.length; i++ )

@@ -156,7 +156,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 2 );
 		}
 		
-		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() );
+		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
 
 		return ip;
 	}

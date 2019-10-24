@@ -242,7 +242,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 	
-	public static Interval getPixelInterval(
+	public static List<Interval> getPixelInterval(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
@@ -371,7 +371,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			return Stream.of(
 				getPixelInterval(
 					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
-					landmarks, fieldOfViewOption, outputResolution );
+					landmarks, fieldOfViewOption, outputResolution )
 				).collect(Collectors.toList());
 		}
 		else if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
@@ -545,6 +545,35 @@ public class ApplyBigwarpPlugin implements PlugIn
 		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )" );
 		return null;
 	}
+
+	public static List<String> getMatchedPointNames(
+			final LandmarkTableModel landmarks,
+			final String fieldOfViewPointFilter )
+	{
+		ArrayList<String> ptList = new ArrayList<>();
+
+		Pattern r = null;
+		if ( !fieldOfViewPointFilter.isEmpty() )
+			r = Pattern.compile( fieldOfViewPointFilter );
+
+		for ( int i = 0; i < landmarks.getRowCount(); i++ )
+		{
+			if ( r != null && !r.matcher( landmarks.getNames().get( i ) ).matches() )
+			{
+				continue;
+			}
+
+			Double[] pt = landmarks.getFixedPoint( i );
+			if( Double.isInfinite( pt[ 0 ].doubleValue()) )
+			{
+				continue;
+			}
+
+			ptList.add( landmarks.getNames().get( i ) );
+		}
+
+		return ptList;
+	}
 	
 	public static List<Double[]> getMatchedPoints(
 			final LandmarkTableModel landmarks,
@@ -616,7 +645,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return offset;
 	}
 
-	public static <T> ImagePlus apply(
+	public static <T> List<ImagePlus> apply(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
@@ -684,7 +713,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		List<Interval> outputIntervalList = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
 
-		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputInterval );
+		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
 		
 		// Do the export
 		exporter.setInterp( interp );
@@ -821,12 +850,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
 		
-		ImagePlus warpedIp = apply( movingIp, targetIp, ltm,
+		List<ImagePlus> warpedIpList = apply( movingIp, targetIp, ltm,
 				fovOption, fovPointFilter, resOption,
 				resolutions, fov, offset,
 				interp, isVirtual, nThreads );
 
-		warpedIp.show();
+		for( ImagePlus warpedIp : warpedIpList )
+			warpedIp.show();
 	}
 
 }

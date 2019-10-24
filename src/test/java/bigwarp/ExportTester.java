@@ -2,6 +2,7 @@ package bigwarp;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.viewer.Interpolation;
@@ -73,7 +74,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -86,7 +87,8 @@ public class ExportTester
 			interp,
 			isVirtual,
 			nThreads );
-
+	
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "PIX-MOVING" );
 		a.show();
 	}
@@ -103,7 +105,7 @@ public class ExportTester
 		boolean isVirtual = true;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -117,6 +119,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "VIRT-PHYS-MOVING" );
 		a.show();
 	}
@@ -133,7 +136,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -147,6 +150,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "PHYS-MOVING" );
 		a.show();
 	}
@@ -163,7 +167,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -177,6 +181,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "LANDMARK-MOVING" );
 		a.show();
 	}
@@ -193,7 +198,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -207,6 +212,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "LANDMARK-TARGET" );
 		a.show();
 	}
@@ -223,7 +229,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -237,6 +243,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "LANDMARK-SPECD" );
 		a.show();
 	}
@@ -254,7 +261,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -268,6 +275,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "MOVING-MOVING" );
 		a.show();
 	}
@@ -284,7 +292,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -298,6 +306,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "MOVING-SPECD" );
 		a.show();
 	}
@@ -314,7 +323,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -328,6 +337,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "MOVING-TARGET" );
 		a.show();
 	}	
@@ -344,7 +354,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 		
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -358,6 +368,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "TARGET-TARGET" );
 		a.show();
 	}
@@ -374,7 +385,7 @@ public class ExportTester
 		boolean isVirtual = true;
 		int nThreads = 4;
 		
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -388,6 +399,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "VIRT-TARGET-TARGET" );
 		a.show();
 	}
@@ -404,7 +416,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -418,6 +430,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "TARGET-SPECIFIED" );
 		a.show();
 	}
@@ -434,7 +447,7 @@ public class ExportTester
 		boolean isVirtual = false;
 		int nThreads = 4;
 
-		ImagePlus a = ApplyBigwarpPlugin.apply(
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
 			impm,
 			impt,
 			landmarks,
@@ -448,6 +461,7 @@ public class ExportTester
 			isVirtual,
 			nThreads );
 
+		ImagePlus a = alist.get( 0 );
 		a.setTitle( "TARGET-MOVING" );
 		a.show();
 	}

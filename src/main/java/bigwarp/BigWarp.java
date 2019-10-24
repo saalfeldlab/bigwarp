@@ -142,6 +142,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -896,22 +897,37 @@ public class BigWarp< T >
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
 		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
-		double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
 
-		double[] offsetPhysical = new double[ offset.length ];
-		for( int d = 0; d < offset.length; d++ )
-			offsetPhysical[ d ] = offset[ d ] * res[ d ];
+		List<String> matchedPtNames = null;
+		if( outputIntervalList.size() > 1 )
+			matchedPtNames = ApplyBigwarpPlugin.getMatchedPointNames( getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
 
-		BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
-		exporter.setRenderResolution( res );
-		exporter.setOffset( offset );
-		exporter.setVirtual( isVirtual );
-		exporter.setNumThreads( nThreads );
-
+		int i = 0;
 		for( Interval outputInterval : outputIntervalList )
 		{
+			double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( i ) );
+
+			// need to declare the exporter in the loop since the actual work
+			// is done asynchronously, and changing variables in the loop would
+			// mess it up
+			BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
+			exporter.setRenderResolution( res );
+			exporter.setOffset( offset );
+			exporter.setVirtual( isVirtual );
+			exporter.setNumThreads( nThreads );
+
+			//System.out.println( "interval: " + Util.printInterval( outputInterval ) );
 			exporter.setInterval( outputInterval );
+
+			if( matchedPtNames != null )
+				exporter.setNameSuffix( matchedPtNames.get( i ));
+
 			ImagePlus ip = exporter.exportAsynch( false );
+
+			if( ip != null)
+				ip.show();
+
+			i++;
 		}
 	}
 
