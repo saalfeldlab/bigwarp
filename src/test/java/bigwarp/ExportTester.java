@@ -29,9 +29,13 @@ public class ExportTester
 //		ImagePlus impm = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif");
 //		ImagePlus impt = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif");
 		
-		ImagePlus impt = IJ.openImage("http://imagej.nih.gov/ij/images/mri-stack.zip");
-		ImagePlus impm = impt.duplicate();
+		ImagePlus impm = IJ.openImage("http://imagej.nih.gov/ij/images/mri-stack.zip");
+		ImagePlus impt = impm.duplicate();
 		IJ.run(impm, "Properties...", "channels=1 slices=27 frames=1 unit=pixel pixel_width=0.2 pixel_height=0.2 voxel_depth=0.4");
+
+//		ImagePlus impm = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif");
+//		ImagePlus impt = impm.duplicate();
+
 		
 		LandmarkTableModel landmarks = new LandmarkTableModel( 3 );
 		landmarks.load( new File( "src/test/resources/mr_landmarks_p2p2p4-111.csv" ));
@@ -54,10 +58,12 @@ public class ExportTester
 //		lmk_mvg( impm, impt, landmarks );
 //		lmk_spc( impm, impt, landmarks );
 		
-		v_spc_spc( impm, impt, landmarks );
-		spc_spc( impm, impt, landmarks );
+//		v_spc_spc( impm, impt, landmarks );
+//		spc_spc( impm, impt, landmarks );
 //		pix_spc( impm, impt, landmarks );
-		
+	
+//		tgt_lmpix( impm, impt, landmarks );
+//		tgt_lmphy( impm, impt, landmarks );
 	}
 	
 	public static void pix_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
@@ -466,5 +472,66 @@ public class ExportTester
 		a.show();
 	}
 		
+	public static void tgt_lmpix( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
+	{
+		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PIXEL;
+		String fieldOfViewPointFilter = ".*5";
+		String resolutionOption = ApplyBigwarpPlugin.TARGET;
+		double[] resolutionSpec = new double[ 3 ];
+		double[] fovSpec = new double[]{ 24, 24, 24 };
+		double[] offsetSpec = new double[ 3 ];
+		Interpolation interp = Interpolation.NLINEAR;
+		boolean isVirtual = false;
+		int nThreads = 4;
+
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
+			impm,
+			impt,
+			landmarks,
+			fieldOfViewOption,
+			fieldOfViewPointFilter,
+			resolutionOption,
+			resolutionSpec,
+			fovSpec,
+			offsetSpec,
+			interp,
+			isVirtual,
+			nThreads );
+
+		ImagePlus a = alist.get( 0 );
+		a.setTitle( "TARGET-LMPIX" );
+		a.show();
+	}
+
+	public static void tgt_lmphy( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
+	{
+		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PHYSICAL;
+		String fieldOfViewPointFilter = ".*5";
+		String resolutionOption = ApplyBigwarpPlugin.TARGET;
+		double[] resolutionSpec = new double[]{ 0.4, 0.4, 0.8 };
+		double[] fovSpec = new double[]{5, 5, 5 };
+		double[] offsetSpec = new double[ 3 ];
+		Interpolation interp = Interpolation.NLINEAR;
+		boolean isVirtual = false;
+		int nThreads = 4;
+
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
+			impm,
+			impt,
+			landmarks,
+			fieldOfViewOption,
+			fieldOfViewPointFilter,
+			resolutionOption,
+			resolutionSpec,
+			fovSpec,
+			offsetSpec,
+			interp,
+			isVirtual,
+			nThreads );
+
+		ImagePlus a = alist.get( 0 );
+		a.setTitle( "TARGET-LMPHYS" );
+		a.show();
+	}
 	
 }

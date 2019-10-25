@@ -19,30 +19,76 @@ import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.AbstractTableModel;
 
-import bigwarp.landmarks.LandmarkTableModel;
+import bdv.export.ProgressWriter;
+import bdv.ij.ApplyBigwarpPlugin;
+import bdv.viewer.Interpolation;
+import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp.BigWarpData;
+import net.imglib2.Interval;
 
-public class BigwarpLandmarkSelectionPanel extends JPanel
+public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 {
 	
 	private static final long serialVersionUID = -6996547400011766393L;
 
 	JFrame frame;
 	JTable table;
-	private LandmarkTableModel ltm;
-	private PointSelectorTableModel selectionTable;
+	private final PointSelectorTableModel selectionTable;
 	private boolean doExport = false;
 
-	public static void main( String[] args )
-	{
-		ArrayList<String> names = new ArrayList<>();
-		names.add( "cow" );
+	final BigWarpData< T > data;
+	final List< SourceAndConverter< T >> sources;
+	final String fieldOfViewOption;
+	final List<Interval> outputIntervalList;
+	final List<String> matchedPtNames;
+	final Interpolation interp;
+	final double[] offsetIn;
+	final double[] resolution;
+	final boolean isVirtual;
+	final int nThreads;
+	final ProgressWriter progressWriter;
 
-		BigwarpLandmarkSelectionPanel panel = new BigwarpLandmarkSelectionPanel( names );
-	}
 
-	public BigwarpLandmarkSelectionPanel( final List< String > pointMatchNames )
+//	public static void main( String[] args )
+//	{
+//		ArrayList<String> names = new ArrayList<>();
+//		names.add( "cow" );
+//
+//		BigwarpLandmarkSelectionPanel panel = new BigwarpLandmarkSelectionPanel( names );
+//	}
+
+
+	/**
+	 * Displays a dialog showing point matches
+	 */
+	public BigwarpLandmarkSelectionPanel( 
+			final BigWarpData<T> data,
+			final List< SourceAndConverter<T>> sources,
+			final String fieldOfViewOption,
+			final List<Interval> outputIntervalList,
+			final List<String> matchedPtNames,
+			final Interpolation interp,
+			final double[] offsetIn,
+			final double[] resolution,
+			final boolean isVirtual,
+			final int nThreads,
+			final ProgressWriter progressWriter )
 	{
-		selectionTable = new PointSelectorTableModel( pointMatchNames );
+		// set fields used for export
+		this.data = data;
+		this.sources = sources;
+		this.fieldOfViewOption = fieldOfViewOption;
+		this.outputIntervalList = outputIntervalList;
+		this.matchedPtNames = matchedPtNames;
+		this.interp = interp;
+		this.offsetIn = offsetIn;
+		this.resolution = resolution;
+		this.isVirtual = isVirtual;
+		this.nThreads = nThreads;
+		this.progressWriter = progressWriter;
+
+
+		selectionTable = new PointSelectorTableModel( matchedPtNames );
 		genJTable();
 		
 		setLayout( new BorderLayout() );
@@ -81,7 +127,16 @@ public class BigwarpLandmarkSelectionPanel extends JPanel
 			public void actionPerformed( ActionEvent e )
 			{
 				System.out.println("ok");
-				doExport = true;
+				filterPoints( matchedPtNames, outputIntervalList, selectionTable );
+
+				System.out.println( matchedPtNames );
+				System.out.println( outputIntervalList );
+
+				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
+						outputIntervalList, matchedPtNames, interp,
+						offsetIn, resolution, isVirtual, nThreads, 
+						progressWriter, true );
+
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
 		});
@@ -91,8 +146,7 @@ public class BigwarpLandmarkSelectionPanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				System.out.println("cancel");
-				doExport = false;
+				//System.out.println("cancel");
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
 		});
@@ -102,6 +156,22 @@ public class BigwarpLandmarkSelectionPanel extends JPanel
 		frame = buildAndShowFrame();
 	}
 	
+	public static void filterPoints(
+			final List<String> matchedPtNames,
+			final List<Interval> intervals,
+			final PointSelectorTableModel model )
+	{
+		int N = model.getRowCount() - 1;
+		for( int i = N; i >= 0; i-- )
+		{
+			if( !model.selected.get( i ))
+			{
+				matchedPtNames.remove( i );
+				intervals.remove( i );
+			}
+		}
+	}
+
 	public JFrame buildAndShowFrame()
 	{
 		JFrame selectionFrame = new JFrame( "Point selection" );

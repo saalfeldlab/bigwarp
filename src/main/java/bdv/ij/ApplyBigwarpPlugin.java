@@ -1,13 +1,5 @@
 package bdv.ij;
 
-import java.awt.BorderLayout;
-import java.awt.Checkbox;
-import java.awt.Dimension;
-import java.awt.GridBagConstraints;
-import java.awt.Panel;
-import java.awt.Toolkit;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,13 +9,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 
 import bdv.export.ProgressWriter;
 import bdv.gui.BigwarpLandmarkSelectionPanel;
@@ -50,22 +35,12 @@ import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform;
-import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
-import net.imglib2.type.numeric.real.DoubleType;
-import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 
 /**
  * 
@@ -496,8 +471,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				numPoints++;
 			}
 
-			System.out.println(
-					"Estimated field of view using " + numPoints + " landmarks." );
+			System.out.println( "Estimated field of view using " + numPoints + " landmarks." );
 
 			// Make sure something naughty didn't happen
 			for ( int d = 0; d < min.length; d++ )
@@ -563,12 +537,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 
-	public static List<String> getMatchedPointNames(
+	public static void fillMatchedPointNames(
+			final List<String> ptList,
 			final LandmarkTableModel landmarks,
 			final String fieldOfViewPointFilter )
 	{
-		ArrayList<String> ptList = new ArrayList<>();
-
 		Pattern r = null;
 		if ( !fieldOfViewPointFilter.isEmpty() )
 			r = Pattern.compile( fieldOfViewPointFilter );
@@ -588,8 +561,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			ptList.add( landmarks.getNames().get( i ) );
 		}
-
-		return ptList;
 	}
 	
 	public static List<Double[]> getMatchedPoints(
@@ -715,12 +686,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
+			System.out.println( "transforming source " + movingSourceIndexList[ i ] );
 			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
 			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
 		}
 
 		ProgressWriter progressWriter = new ProgressWriterIJ();
-		BigWarpExporter exporter = BigWarpExporter.getExporter( bwData, sourcesxfm, interp, progressWriter );
 
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
@@ -730,109 +701,63 @@ public class ApplyBigwarpPlugin implements PlugIn
 		List<Interval> outputIntervalList = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
 
+		final List<String> matchedPtNames = new ArrayList<>();
+		if( outputIntervalList.size() > 1 )
+			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, landmarks, fieldOfViewPointFilter );
+
 		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
 		
-		// Do the export
-		exporter.setInterp( interp );
-		exporter.setRenderResolution( res );
-		exporter.setOffset( offset );
-		exporter.setVirtual( isVirtual );
-		exporter.setNumThreads( nThreads );
-		exporter.showResult( false );
+		return runExport( bwData, sourcesxfm, fieldOfViewOption,
+				outputIntervalList, matchedPtNames, interp,
+				offset, res, isVirtual, nThreads, 
+				progressWriter, false );
+	}
 
-		ArrayList<ImagePlus> impList = new ArrayList<>();
+	public static <T> List<ImagePlus> runExport(
+			final BigWarpData<T> data,
+			final List< SourceAndConverter< T >> sources,
+			final String fieldOfViewOption,
+			final List<Interval> outputIntervalList,
+			final List<String> matchedPtNames,
+			final Interpolation interp,
+			final double[] offsetIn,
+			final double[] resolution,
+			final boolean isVirtual,
+			final int nThreads,
+			final ProgressWriter progressWriter,
+			final boolean show
+			)
+	{
+		ArrayList<ImagePlus> ipList = new ArrayList<>();
+
+		int i = 0;
 		for( Interval outputInterval : outputIntervalList )
 		{
+			double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetIn, resolution, outputIntervalList.get( i ) );
+
+			// need to declare the exporter in the loop since the actual work
+			// is done asynchronously, and changing variables in the loop would mess it up
+			BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
+			exporter.setRenderResolution( resolution );
+			exporter.setOffset( offset );
+			exporter.setVirtual( isVirtual );
+			exporter.setNumThreads( nThreads );
+
+			//System.out.println( "interval: " + Util.printInterval( outputInterval ) );
 			exporter.setInterval( outputInterval );
 
-			System.out.println("exp asynch");
-			ImagePlus warpedIp = exporter.exportAsynch( true );
+			if( matchedPtNames.size() > 0 )
+				exporter.setNameSuffix( matchedPtNames.get( i ));
 
-			// Note: need to get number of channels and frames from moving image
-			// but get the number of slices form the target
-	//		warpedIp.setDimensions( movingIp.getNChannels(), targetIp.getNSlices(),
-	//				movingIp.getNFrames() );
+			ImagePlus ip = exporter.exportAsynch( true );
+			ipList.add( ip );
 
-			String movingName = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName();
-			warpedIp.getCalibration().pixelWidth = res[ 0 ];
-			warpedIp.getCalibration().pixelHeight = res[ 1 ];
-			warpedIp.getCalibration().pixelDepth = res[ 2 ];
-			warpedIp.getCalibration().setUnit( unit );
-			warpedIp.setTitle( movingName + "_bigwarped" );
-			
-			impList.add( warpedIp );
+			if( ip != null && show )
+				ip.show();
+
+			i++;
 		}
-
-		return impList;
-	}
-	
-	/**
-	 * Displays a dialog showing point matches
-	 * @param pointMatchNames the names of point matches
-	 * @return true if user decides to continue
-	 */
-	public static boolean pointMatchWarningDisplay( final List<String> pointMatchNames )
-	{
-		System.out.println("show warning dialog");
-		
-		BigwarpLandmarkSelectionPanel selection = new BigwarpLandmarkSelectionPanel( pointMatchNames );
-		
-		// add listener for when this closes,
-		// and return appropriate value
-		selection.getFrame().addWindowListener( new WindowListener()
-		{
-			
-			@Override
-			public void windowOpened( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void windowIconified( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void windowDeiconified( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void windowDeactivated( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void windowClosing( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-			
-			@Override
-			public void windowClosed( WindowEvent e )
-			{
-				selection.doExport();
-			}
-			
-			@Override
-			public void windowActivated( WindowEvent e )
-			{
-				// TODO Auto-generated method stub
-				
-			}
-		} );
-		
-		return false;
-//		return true;
+		return ipList;
 	}
 
 	@Override

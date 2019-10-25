@@ -11,6 +11,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -57,6 +59,7 @@ import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
+import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
@@ -890,50 +893,37 @@ public class BigWarp< T >
 		boolean isVirtual = gd.getNextBoolean();
 		int nThreads = (int)gd.getNextNumber();
 		
-		Interpolation interp = Interpolation.NLINEAR;
+		final Interpolation interp;
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
+		else
+			interp = Interpolation.NLINEAR;
 
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
 		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
 
-		List<String> matchedPtNames = null;
+		final List<String> matchedPtNames = new ArrayList<>();
 		if( outputIntervalList.size() > 1 )
-			matchedPtNames = ApplyBigwarpPlugin.getMatchedPointNames( getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
+			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
 		
-		if( matchedPtNames != null )
+		// export has to be treated differently if we're doing fov's around
+		// landmark centers (because multiple images can be exported this way )
+		if( matchedPtNames.size() > 0 )
 		{
-			if( !ApplyBigwarpPlugin.pointMatchWarningDisplay( matchedPtNames ))
-				return;
+			BigwarpLandmarkSelectionPanel<T> selection = new BigwarpLandmarkSelectionPanel<>( 
+					data, sources, fieldOfViewOption,
+					outputIntervalList, matchedPtNames, interp,
+					offsetSpec, res, isVirtual, nThreads, 
+					progressWriter );
 		}
-
-		int i = 0;
-		for( Interval outputInterval : outputIntervalList )
+		else
 		{
-			double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( i ) );
-
-			// need to declare the exporter in the loop since the actual work
-			// is done asynchronously, and changing variables in the loop would
-			// mess it up
-			BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
-			exporter.setRenderResolution( res );
-			exporter.setOffset( offset );
-			exporter.setVirtual( isVirtual );
-			exporter.setNumThreads( nThreads );
-
-			//System.out.println( "interval: " + Util.printInterval( outputInterval ) );
-			exporter.setInterval( outputInterval );
-
-			if( matchedPtNames != null )
-				exporter.setNameSuffix( matchedPtNames.get( i ));
-
-			ImagePlus ip = exporter.exportAsynch( false );
-
-			if( ip != null)
-				ip.show();
-
-			i++;
+			// export
+			ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
+					outputIntervalList, matchedPtNames, interp,
+					offsetSpec, res, isVirtual, nThreads, 
+					progressWriter, true );
 		}
 	}
 
