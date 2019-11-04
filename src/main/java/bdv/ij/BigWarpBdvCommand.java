@@ -36,17 +36,6 @@ public class BigWarpBdvCommand implements Command
 	@Parameter ( label = "Moving image file [ xml/hdf5 ]" )
 	public File movingImageFile;
 
-	private ImagePlus moving_imp;
-    private ImagePlus target_imp;
-
-	public static void main( final String[] args )
-	{
-		final BigWarpBdvCommand command = new BigWarpBdvCommand();
-		command.fixedImageFile = new File( Class.class.getResource( "mri-stack.xml" ).getFile() );
-		command.movingImageFile = new File( Class.class.getResource( "mri-stack.xml" ).getFile() );
-		command.run() ;
-	}
-
 	@Override
 	public void run()
 	{
@@ -65,7 +54,6 @@ public class BigWarpBdvCommand implements Command
 			e.printStackTrace();
 			return;
 		}
-
 	}
 
 }
