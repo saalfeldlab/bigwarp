@@ -8,6 +8,16 @@
 .project
 .settings*
 
+# IntelliJ
+.idea/
+.travis/
+out/
+target/
+*.iml
+
+# General #
+.DS_Store
+
 # Package Files #
 *.jar
 *.war

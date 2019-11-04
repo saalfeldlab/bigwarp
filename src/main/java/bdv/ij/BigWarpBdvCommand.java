@@ -44,7 +44,7 @@ public class BigWarpBdvCommand implements Command
 		final BigWarpBdvCommand command = new BigWarpBdvCommand();
 		command.fixedImageFile = new File( Class.class.getResource( "mri-stack.xml" ).getFile() );
 		command.movingImageFile = new File( Class.class.getResource( "mri-stack.xml" ).getFile() );
-		command.run();
+		command.run() ;
 	}
 
 	@Override
