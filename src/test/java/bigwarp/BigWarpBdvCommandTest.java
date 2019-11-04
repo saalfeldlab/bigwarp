@@ -4,7 +4,7 @@ import bdv.ij.BigWarpBdvCommand;
 
 import java.io.File;
 
-public class BdvUITest
+public class BigWarpBdvCommandTest
 {
 	public static void main( String[] args )
 	{
