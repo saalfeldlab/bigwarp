@@ -10,6 +10,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.util.Enumeration;
 
 import javax.swing.AbstractButton;
@@ -26,10 +28,15 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import bdv.tools.brightness.SliderPanelDouble;
+import bdv.util.BoundedValueDouble;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 
@@ -176,7 +183,7 @@ public class WarpVisFrame extends JDialog
 		gridWidthLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 		bigSpace = Box.createVerticalStrut( 20 );
 		smallSpace = Box.createVerticalStrut( 10 );
-		
+
 		typeOptionPanel.add( warpMagAffineButton );
 		typeOptionPanel.add( warpMagSimilarityButton );
 		typeOptionPanel.add( warpMagRigidButton );
@@ -191,10 +198,58 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( gridWidthSlider );
 		
 		typeOptionPanel.add( noOptionsLabel );
+
+
+		// TODO inverse opts panel
+		JPanel inverseOptionsPanel = new JPanel();
+		inverseOptionsPanel.setLayout(  new BorderLayout( 10, 10 ));
+
+		inverseOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"Inverse options" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
+		final JPanel tolerancePanel = new JPanel();
+		final JSpinner toleranceSpinner = new JSpinner();
+		SpinnerNumberModel tolmodel = new SpinnerNumberModel( 0.5, 0.001, 200.0, 0.1 );
+		toleranceSpinner.setModel( tolmodel );
+		toleranceSpinner.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				bw.getLandmarkPanel().getTableModel().setInverseThreshold( (Double)toleranceSpinner.getValue() );
+			}
+		} );
+		tolerancePanel.add( new JLabel( "Inverse error", SwingConstants.CENTER ), BorderLayout.WEST );
+		tolerancePanel.add( toleranceSpinner, BorderLayout.EAST );
+
+		final JPanel maxIterPanel = new JPanel();
+		final JSpinner maxIterSpinner = new JSpinner();
+		SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
+		maxIterSpinner.setModel( itermodel );
+		maxIterSpinner.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				bw.getLandmarkPanel().getTableModel().setMaxInverseIterations( (Integer)maxIterSpinner.getValue() );
+			}
+		} );
+		maxIterPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
+		maxIterPanel.add( maxIterSpinner, BorderLayout.EAST );
 		
+		inverseOptionsPanel.add( tolerancePanel, BorderLayout.NORTH );
+		inverseOptionsPanel.add( maxIterPanel, BorderLayout.SOUTH );
+
+
 		content.add( landmarkPointOptionsPanel, BorderLayout.NORTH );
 		content.add( visTypePanel, BorderLayout.WEST );
 		content.add( typeOptionPanel, BorderLayout.EAST );
+		content.add( inverseOptionsPanel, BorderLayout.SOUTH );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
 		

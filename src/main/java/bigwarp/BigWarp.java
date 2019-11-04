@@ -38,6 +38,7 @@ import javax.swing.KeyStroke;
 import javax.swing.Timer;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
 import org.apache.log4j.LogManager;
@@ -324,6 +325,7 @@ public class BigWarp< T >
 		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
 		landmarkPanel.setOpaque( true );
 		landmarkTable = landmarkPanel.getJTable();
+		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
 		addDefaultTableMouseListener();
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
@@ -761,7 +763,7 @@ public class BigWarp< T >
 
 		/* Warp Visualization */
 		final JMenuItem warpVisMenu = new JMenuItem( actionMap.get( BigWarpActions.SHOW_WARPTYPE_DIALOG ) );
-		warpVisMenu.setText( "Warp Visualization" );
+		warpVisMenu.setText( "BigWarp Options" );
 		settingsMenu.add( warpVisMenu );
 
 		vframe.setJMenuBar( viewerMenuBar );
@@ -2609,6 +2611,22 @@ public class BigWarp< T >
 				BigWarp.this.landmarkPanel.repaint();
 			}
 		}
+	}
+	
+	public class WarningTableCellRenderer extends DefaultTableCellRenderer
+	{
+		private static final long serialVersionUID = 7836269349663370123L;
+
+		@Override
+	    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			LandmarkTableModel model = (LandmarkTableModel) table.getModel();
+	        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+	        if( model.rowNeedsWarning( row ))
+				c.setBackground( LandmarkTableModel.WARNINGBGCOLOR );
+	        else
+				c.setBackground( LandmarkTableModel.DEFAULTBGCOLOR );
+	        return c;
+	    }
 	}
 
 	public class MouseLandmarkTableListener implements MouseListener

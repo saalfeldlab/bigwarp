@@ -3,6 +3,7 @@
  */
 package bigwarp.landmarks;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -45,6 +46,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	public static final int NAMECOLUMN = 0;
 	public static final int ACTIVECOLUMN = 1;
 
+	public static Color WARNINGBGCOLOR = new Color( 255, 204, 0 );
+	public static Color DEFAULTBGCOLOR = new Color( 255, 255, 255 );
 	
 	private boolean DEBUG = false;
 	
@@ -71,11 +74,22 @@ public class LandmarkTableModel extends AbstractTableModel {
 	protected boolean			 elementDeleted = false;
 	protected ArrayList<Boolean> needsInverse;
 	
+	// true for a row if, after the transform is updated,
+	// the warped point has a higher error than the specified tolerance
+	protected ArrayList<Boolean> movingDisplayPointUnreliable;
+
 	// the transformation 
 	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
 	
 	// keeps track of warped points so we don't always have to do it on the fly
 	protected ArrayList<Double[]> warpedPoints;
+
+
+	// inverse iterations
+	protected int maxInverseIterations = 500;
+
+	// inverse threshold
+	protected double inverseThreshold = 0.5;
 
 	// keep track of the value of the last point that was edited but not-undoable
 	// this lets us both render points correctly, and create desirable undo behavior
@@ -131,6 +145,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		warpedPoints = new ArrayList<Double[]>();
 		doesPointHaveAndNeedWarp = new ArrayList<Boolean>();
+		movingDisplayPointUnreliable = new ArrayList<Boolean>();
 		indicesOfChangedPoints  = new ArrayList<Integer>();
 		needsInverse = new ArrayList<Boolean>();
 		
@@ -387,6 +402,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			indicesOfChangedPoints.remove( indicesOfChangedPoints.indexOf( i ) );
 		
 		doesPointHaveAndNeedWarp.remove( i );
+		movingDisplayPointUnreliable.remove( i );
 		warpedPoints.remove( i );
 		
 		numRows--;
@@ -557,6 +573,11 @@ public class LandmarkTableModel extends AbstractTableModel {
 	{
 		needsInverse.set( i, true );
 	}
+
+	public boolean rowNeedsWarning( int row )
+	{
+		return movingDisplayPointUnreliable.get( row );
+	}
 	
 	protected void firePointUpdated( int row, boolean isMoving )
 	{
@@ -579,6 +600,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 		activeList.add( index, false );
 		warpedPoints.add( index, new Double[ ndims ] );
 		doesPointHaveAndNeedWarp.add( index, false );
+		movingDisplayPointUnreliable.add( index, false );
 		
 		fireTableRowsInserted( index, index );
 		
@@ -777,8 +799,16 @@ public class LandmarkTableModel extends AbstractTableModel {
 			double[] tgt = toPrimitive( movingPts.get( i ) );
 
 			double[] warpedPt = new double[ ndims ];
-			@SuppressWarnings("unused")
-			double error = estimatedXfm.inverse( tgt, warpedPt, 0.5, 500 );
+			double error = estimatedXfm.inverse( tgt, warpedPt, inverseThreshold, maxInverseIterations );
+
+			if( error > inverseThreshold )
+			{
+				movingDisplayPointUnreliable.set( i, true );
+				message.showMessage( String.format(
+					"Warning: location of moving point %s in warped space is innacurate", names.get( i )));
+			}
+			else
+				movingDisplayPointUnreliable.set( i, false );
 
 			// TODO should check for failure or non-convergence here
 			// can use the error returned by the inverse method to do this. 
@@ -787,6 +817,15 @@ public class LandmarkTableModel extends AbstractTableModel {
 		}
 	}
 
+	public void setMaxInverseIterations( final int maxIters )
+	{
+		maxInverseIterations = maxIters;
+	}
+
+	public void setInverseThreshold( final double inverseThreshold )
+	{
+		this.inverseThreshold = inverseThreshold;
+	}
 	public int getIndexNearestTo( double[] pt, boolean isMoving )
 	{
 		Double[] p;
@@ -1031,6 +1070,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 			
 			warpedPoints.add( new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( false );
+			movingDisplayPointUnreliable.add( false );
 			numRowsTmp++;
 			fireTableRowsInserted( numRows, numRows );
 		}
