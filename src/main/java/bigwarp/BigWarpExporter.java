@@ -16,7 +16,6 @@ import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import ij.ImagePlus;
-import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -63,6 +62,8 @@ public abstract class BigWarpExporter <T>
 	protected ExportThread exportThread;
 
 	protected String nameSuffix = "";
+
+	protected String unit = "um";
 
 	public abstract ImagePlus export();
 
@@ -119,6 +120,11 @@ public abstract class BigWarpExporter <T>
 	public void showResult( final boolean showResult )
 	{
 		this.showResult = showResult;
+	}
+
+	public void setUnit( final String unit )
+	{
+		this.unit = unit;
 	}
 
 	public void setInterp( Interpolation interp )

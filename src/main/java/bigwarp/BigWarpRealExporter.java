@@ -113,7 +113,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		//System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
 		
 		int numChannels = movingSourceIndexList.length;
-		VoxelDimensions voxdim = new FinalVoxelDimensions( "um",
+		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
 				resolutionTransform.get( 2, 2 ));
@@ -139,7 +139,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		int numChannels = movingSourceIndexList.length;
 		RandomAccessibleInterval< T > raiStack = exportRai();
 		
-		VoxelDimensions voxdim = new FinalVoxelDimensions( "um",
+		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
 				resolutionTransform.get( 2, 2 ));
