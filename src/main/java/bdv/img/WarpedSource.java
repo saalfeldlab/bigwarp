@@ -99,19 +99,22 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
+		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
+
 		if( isTransformed )
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
-			final RealRandomAccessible< T > sourceRealAccessible = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+
 			if( xfm == null )
-				return sourceRealAccessible;
+				return srcRaTransformed;
 			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( sourceRealAccessible, xfm );
+				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm );
 		}
 		else
 		{
-			return source.getInterpolatedSource( t, level, method );
+			return sourceRealAccessible;
 		}
 	}
 
@@ -122,6 +125,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			transform.identity();
 		else
 			source.getSourceTransform( t, level, transform );
+//		source.getSourceTransform( t, level, transform );
 	}
 
 	public RealTransform getTransform()

@@ -70,6 +70,11 @@
 			<url>https://imagej.net/User:Hinerm</url>
 			<properties><id>hinerm</id></properties>
 		</contributor>
+		<contributor>
+			<name>Philipp Hanslovsky</name>
+			<url>https://imagej.net/User:Hanslovsky</url>
+			<properties><id>hanslovsky</id></properties>
+		</contributor>
 	</contributors>
 
 	<mailingLists>

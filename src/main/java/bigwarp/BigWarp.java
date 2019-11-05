@@ -2176,14 +2176,6 @@ public class BigWarp< T >
 		return ndims;
 	}
 
-	public static String printArray( long[] in )
-	{
-		String s = "";
-		for ( int i = 0; i < in.length; i++ )
-			s += in[ i ] + " ";
-		return s;
-	}
-
 	public static void main( final String[] args )
 	{
 		new ImageJ();

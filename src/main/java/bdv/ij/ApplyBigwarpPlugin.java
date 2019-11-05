@@ -38,6 +38,7 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.util.Intervals;
+import net.imglib2.util.Util;
 
 /**
  * 
@@ -409,9 +410,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 0 ] / outputResolution[ 0 ]),
 						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]) };
 
-				long[] max = new long[]{
-					(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
-					(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]) };
+				long[] max = new long[]{ 
+						(long)Math.floor( fovSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.floor( fovSpec[ 1 ] / outputResolution[ 1 ]) };
 
 				ArrayList<Interval> out = new ArrayList<>();
 				out.add( new FinalInterval( min, max ));
@@ -424,10 +425,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]),
 						(long)Math.floor( offsetSpec[ 2 ] / outputResolution[ 2 ]) };
 
-				long[] max = new long[]{
-						(long)Math.ceil( fovSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.ceil( fovSpec[ 1 ] / outputResolution[ 1 ]),
-						(long)Math.ceil( fovSpec[ 2 ] / outputResolution[ 2 ]) };
+				long[] max = new long[]{ 
+						(long)Math.floor( fovSpec[ 0 ] / outputResolution[ 0 ]),
+						(long)Math.floor( fovSpec[ 1 ] / outputResolution[ 1 ]),
+						(long)Math.floor( fovSpec[ 2 ] / outputResolution[ 2 ]) };
+
 
 				ArrayList<Interval> out = new ArrayList<>();
 				out.add( new FinalInterval( min, max ));
@@ -621,13 +623,14 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 			return offset;
 		}
-
-		for( int d = 0; d < outputInterval.numDimensions(); d++ )
+		else
 		{
-			offset[ d ] = outputInterval.realMin( d );
+			for( int d = 0; d < outputInterval.numDimensions(); d++ )
+			{
+				offset[ d ] = outputInterval.realMin( d );
+			}
+			return offset;
 		}
-
-		return offset;
 	}
 
 	public static <T> List<ImagePlus> apply(
@@ -740,7 +743,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			exporter.setVirtual( isVirtual );
 			exporter.setNumThreads( nThreads );
 
-			//System.out.println( "interval: " + Util.printInterval( outputInterval ) );
+			System.out.println( "interval: " + Util.printInterval( outputInterval ) );
 			exporter.setInterval( outputInterval );
 
 			if( matchedPtNames.size() > 0 )
@@ -756,6 +759,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		return ipList;
 	}
+			  
 
 	@Override
 	public void run( String arg )

@@ -38,6 +38,7 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
+import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > extends BigWarpExporter<T>
@@ -147,10 +148,11 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
-			ip = ImageJFunctions.wrap(
+			ip = ImageJFunctions.wrap( 
 					Views.offset( raiStack, Intervals.minAsLongArray( raiStack )),
 					"warped_moving_image" );
 
+			ip.setDimensions( numChannels, (int)raiStack.dimension( 2 ), 1 );
 		}
 		else if( nThreads == 1 )
 		{
@@ -168,7 +170,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				final long[] dimensions = new long[ 4 ];
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
-				dimensions[ 2 ] = numChannels; 					// c
+				dimensions[ 2 ] = numChannels; 						// c
 				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
 				RandomAccessibleInterval< T > img = copyToImageStack( 
@@ -181,8 +183,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				final long[] dimensions = new long[ 4 ];
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
-				dimensions[ 2 ] = numChannels; 					// c
-				dimensions[ 3 ] = 1; 							// z 
+				dimensions[ 2 ] = numChannels; 						// c
+				dimensions[ 3 ] = 1; 								// z 
 				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
 				RandomAccessibleInterval< T > img = copyToImageStack( 
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
