@@ -40,11 +40,10 @@ public class ExportTester
 		LandmarkTableModel landmarks = new LandmarkTableModel( 3 );
 		landmarks.load( new File( "src/test/resources/mr_landmarks_p2p2p4-111.csv" ));
 		
-
 		/*******************************
 		 * fov_res
 		 *******************************/
-//		v_tgt_tgt( impm, impt, landmarks ); // not interesting
+//		v_tgt_tgt( impm, impt, landmarks ); 
 		
 //		tgt_tgt( impm, impt, landmarks );
 //		tgt_spc( impm, impt, landmarks );
@@ -60,6 +59,7 @@ public class ExportTester
 		
 //		v_spc_spc( impm, impt, landmarks );
 //		spc_spc( impm, impt, landmarks );
+//		pspc_pspc( impm, impt, landmarks );
 //		pix_spc( impm, impt, landmarks );
 	
 //		tgt_lmpix( impm, impt, landmarks );
@@ -137,6 +137,37 @@ public class ExportTester
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
 		double[] resolutionSpec = new double[]{ 0.4, 0.4, 0.8 };
 		double[] fovSpec = new double[]{ 50, 50, 10};
+		double[] offsetSpec = new double[]{ 93 ,103, 7};
+		Interpolation interp = Interpolation.NLINEAR;
+		boolean isVirtual = false;
+		int nThreads = 4;
+
+		List<ImagePlus> alist = ApplyBigwarpPlugin.apply(
+			impm,
+			impt,
+			landmarks,
+			fieldOfViewOption,
+			fieldOfViewPointFilter,
+			resolutionOption,
+			resolutionSpec,
+			fovSpec,
+			offsetSpec,
+			interp,
+			isVirtual,
+			nThreads );
+
+		ImagePlus a = alist.get( 0 );
+		a.setTitle( "PHYS-MOVING" );
+		a.show();
+	}
+
+	public static void pspc_pspc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
+	{
+		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PIXEL;
+		String fieldOfViewPointFilter = "";
+		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
+		double[] resolutionSpec = new double[]{ 0.4, 0.4, 0.8 };
+		double[] fovSpec = new double[]{ 50, 50, 10 };
 		double[] offsetSpec = new double[]{ 93 ,103, 7};
 		Interpolation interp = Interpolation.NLINEAR;
 		boolean isVirtual = false;
