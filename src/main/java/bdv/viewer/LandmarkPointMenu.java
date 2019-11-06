@@ -14,6 +14,7 @@ import org.scijava.ui.behaviour.util.AbstractNamedAction;
 
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
+import bigwarp.landmarks.LandmarkTableModel;
 
 public class LandmarkPointMenu extends JPopupMenu 
 {
@@ -164,11 +165,11 @@ public class LandmarkPointMenu extends JPopupMenu
 		public void actionPerformed(ActionEvent e)
 		{
 			int j = landmarkPanel.getJTable().rowAtPoint( clickPt );
-			landmarkPanel.getTableModel().deleteRow( j );
+			LandmarkTableModel model = landmarkPanel.getTableModel();
+			model .deleteRow( j );
 
-			if( bw != null )
-				bw.restimateTransformation();
-			
+			updateBigwarp( bw, landmarkPanel.getTableModel() );
+
 			landmarkPanel.repaint();
 		}
 	}
@@ -194,13 +195,29 @@ public class LandmarkPointMenu extends JPopupMenu
 				landmarkPanel.getTableModel().deleteRow( j );
 			}
 
-			if( bw != null )
-				bw.restimateTransformation();
-			
+			updateBigwarp( bw, landmarkPanel.getTableModel() );
+
 			landmarkPanel.repaint();
 		}
 	}
-	
+
+	public static void updateBigwarp( final BigWarp< ? > bw, final LandmarkTableModel model )
+	{
+		if( bw != null )
+		{
+			if( model.getActiveRowCount() < 4  && 
+				bw.getOverlayP().getIsTransformed() )
+			{
+				bw.getViewerFrameP().getViewerPanel().showMessage( "Require 4 points for transform" );
+				bw.setIsMovingDisplayTransformed( false );
+			}
+			else
+			{
+				bw.restimateTransformation();
+			}
+		}
+	}
+
 	public class ClearHandler extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -2082631635521009679L;

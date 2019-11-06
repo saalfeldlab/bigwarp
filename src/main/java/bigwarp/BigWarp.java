@@ -1690,12 +1690,6 @@ public class BigWarp< T >
 
 		// Toggle whether moving image is displayed as transformed or not
 		setIsMovingDisplayTransformed( newState );
-		viewerP.requestRepaint();
-
-		if ( viewerQ.getVisibilityAndGrouping().isFusedEnabled() )
-		{
-			viewerQ.requestRepaint();
-		}
 		return success;
 	}
 
@@ -2121,6 +2115,13 @@ public class BigWarp< T >
 		}
 
 		overlayP.setIsTransformed( isTransformed );
+
+		viewerP.requestRepaint();
+
+		if ( viewerQ.getVisibilityAndGrouping().isFusedEnabled() )
+		{
+			viewerQ.requestRepaint();
+		}
 	}
 
 	/**
