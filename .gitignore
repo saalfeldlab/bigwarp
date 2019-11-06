@@ -10,7 +10,6 @@
 
 # IntelliJ
 .idea/
-.travis/
 out/
 target/
 *.iml
