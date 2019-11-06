@@ -11,8 +11,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -146,7 +144,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
-import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -2591,6 +2588,23 @@ public class BigWarp< T >
 		}
 	}
 
+	public class WarningTableCellRenderer extends DefaultTableCellRenderer
+	{
+		private static final long serialVersionUID = 7836269349663370123L;
+
+		@Override
+		public Component getTableCellRendererComponent( JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column )
+		{
+			LandmarkTableModel model = ( LandmarkTableModel ) table.getModel();
+			Component c = super.getTableCellRendererComponent( table, value, isSelected, hasFocus, row, column );
+			if ( model.rowNeedsWarning( row ) )
+				c.setBackground( LandmarkTableModel.WARNINGBGCOLOR );
+			else
+				c.setBackground( LandmarkTableModel.DEFAULTBGCOLOR );
+			return c;
+		}
+	}
+
 	public class LandmarkTableListener implements TableModelListener
 	{
 		@Override
@@ -2604,22 +2618,6 @@ public class BigWarp< T >
 				BigWarp.this.landmarkPanel.repaint();
 			}
 		}
-	}
-	
-	public class WarningTableCellRenderer extends DefaultTableCellRenderer
-	{
-		private static final long serialVersionUID = 7836269349663370123L;
-
-		@Override
-	    public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-			LandmarkTableModel model = (LandmarkTableModel) table.getModel();
-	        Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-	        if( model.rowNeedsWarning( row ))
-				c.setBackground( LandmarkTableModel.WARNINGBGCOLOR );
-	        else
-				c.setBackground( LandmarkTableModel.DEFAULTBGCOLOR );
-	        return c;
-	    }
 	}
 
 	public class MouseLandmarkTableListener implements MouseListener
