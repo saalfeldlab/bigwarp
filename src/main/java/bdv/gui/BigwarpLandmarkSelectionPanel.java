@@ -48,16 +48,6 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 	final int nThreads;
 	final ProgressWriter progressWriter;
 
-
-//	public static void main( String[] args )
-//	{
-//		ArrayList<String> names = new ArrayList<>();
-//		names.add( "cow" );
-//
-//		BigwarpLandmarkSelectionPanel panel = new BigwarpLandmarkSelectionPanel( names );
-//	}
-
-
 	/**
 	 * Displays a dialog showing point matches
 	 */

@@ -1722,14 +1722,6 @@ public class BigWarp< T >
 		return wrappedSource;
 	}
 
-	/**
-	 * 
-	 * @param sources the source list 
-	 * @param converterSetups the converterSetups 
-	 * @param name a name of the new source
-	 * @param data the BigWarpData
-	 * @return the index into sources where this source was added
-	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	private static < T > int addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
 	{
@@ -1751,14 +1743,6 @@ public class BigWarp< T >
 		return data.sources.size() - 1;
 	}
 
-	/**
-	 * 
-	 * @param sources the source list 
-	 * @param converterSetups the converterSetups 
-	 * @param name a name of the new source
-	 * @param data the BigWarpData
-	 * @return the index into sources where this source was added
-	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	private static < T > int addGridSource( final BigWarpData< T > data, final String name )
 	{
