@@ -11,6 +11,7 @@ import java.util.concurrent.RejectedExecutionException;
 
 import bdv.export.ProgressWriter;
 import bdv.img.WarpedSource;
+import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
@@ -65,8 +66,6 @@ public abstract class BigWarpExporter <T>
 
 	protected String unit = "um";
 
-	public abstract ImagePlus export();
-
 	protected ProgressWriter progress;
 
 	public enum ParallelizationPolicy {
@@ -116,6 +115,10 @@ public abstract class BigWarpExporter <T>
 		resolutionTransform = new AffineTransform3D();
 		offsetTransform = new AffineTransform3D();
 	}
+
+	public abstract ImagePlus export();
+
+	public abstract boolean isRGB();
 
 	public void showResult( final boolean showResult )
 	{
@@ -184,6 +187,25 @@ public abstract class BigWarpExporter <T>
 	public void setInterval( final Interval outputInterval )
 	{
 		this.outputInterval = outputInterval;
+	}
+
+	public static void updateBrightnessContrast( 
+			final ImagePlus imp,
+			final BigWarpData<?> bwdata,
+			final int[] indexList )
+	{
+		assert( imp.getNChannels() == indexList.length );
+
+		for( int i = 0; i < indexList.length; i++ )
+		{
+			ConverterSetup setup = bwdata.converterSetups.get( indexList[ i ] );
+			double rngmin = setup.getDisplayRangeMin();
+			double rngmax = setup.getDisplayRangeMax();
+
+			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
+			imp.setDisplayRange( rngmin, rngmax );
+			imp.updateAndDraw();
+		}
 	}
 
 	public FinalInterval destinationIntervalFromLandmarks( ArrayList<Double[]> pts, boolean isMoving )

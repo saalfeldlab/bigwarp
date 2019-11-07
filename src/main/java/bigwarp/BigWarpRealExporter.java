@@ -135,6 +135,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return raiStack;
 	}
 	
+	@Override
+	public boolean isRGB()
+	{
+		return false;
+	}
+
 	public ImagePlus export()
 	{
 		int numChannels = movingSourceIndexList.length;

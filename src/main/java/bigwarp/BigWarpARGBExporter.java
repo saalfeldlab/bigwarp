@@ -67,6 +67,12 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		return true;
 	}
 	
+	@Override
+	public boolean isRGB()
+	{
+		return true;
+	}
+
 	public ImagePlus export()
 	{
 		ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >(); 

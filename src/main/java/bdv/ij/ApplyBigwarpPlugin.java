@@ -750,6 +750,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 				exporter.setNameSuffix( matchedPtNames.get( i ));
 
 			ImagePlus ip = exporter.exportAsynch( true );
+
+			// TODO observed weird behavior in rgb images when doing this 
+			// namely that it changes the values (permanently) instead of the numeric image LUT-like behaviour
+			// dont transfer settings 
+			if( !exporter.isRGB() )
+				BigWarpExporter.updateBrightnessContrast( ip, data, data.movingSourceIndices );
+
 			ipList.add( ip );
 
 			if( ip != null && show )
@@ -759,7 +766,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		return ipList;
 	}
-			  
 
 	@Override
 	public void run( String arg )
