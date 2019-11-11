@@ -271,7 +271,10 @@ public class ImagePlusLoader implements Loader
 
 			ARGBType color = null;
 			LUT[] luts = imp.getLuts();
-			if ( luts.length != 0 )
+
+			// see
+			// https://forum.image.sc/t/issue-using-big-warp-on-tiff-file/31163
+			if ( luts !=null && channelOffset < luts.length )
 			{
 				color = new ARGBType( luts[ channelOffset ].getRGB( 255 ) );
 				min = luts[ channelOffset ].min;
