@@ -9,8 +9,8 @@ public class BigWarpBdvCommandTest
 	public static void main( String[] args )
 	{
 		final BigWarpBdvCommand command = new BigWarpBdvCommand();
-		command.fixedImageFile = new File( Class.class.getResource( "../../mri-stack.xml" ).getFile() );
-		command.movingImageFile = new File( Class.class.getResource( "../../mri-stack.xml" ).getFile() );
+		command.fixedImageXml = new File( Class.class.getResource( "../../mri-stack.xml" ).getFile() );
+		command.movingImageXml = new File( Class.class.getResource( "../../mri-stack-translated.xml" ).getFile() );
 		command.run() ;
 	}
 }

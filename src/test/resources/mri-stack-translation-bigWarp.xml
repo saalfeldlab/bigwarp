@@ -15,14 +15,35 @@
           <size>1.0 1.0 10.0</size>
         </voxelSize>
         <attributes>
+          <illumination>0</illumination>
           <channel>1</channel>
+          <tile>0</tile>
+          <angle>0</angle>
         </attributes>
       </ViewSetup>
+      <Attributes name="illumination">
+        <Illumination>
+          <id>0</id>
+          <name>0</name>
+        </Illumination>
+      </Attributes>
       <Attributes name="channel">
         <Channel>
           <id>1</id>
           <name>1</name>
         </Channel>
+      </Attributes>
+      <Attributes name="tile">
+        <Tile>
+          <id>0</id>
+          <name>0</name>
+        </Tile>
+      </Attributes>
+      <Attributes name="angle">
+        <Angle>
+          <id>0</id>
+          <name>0</name>
+        </Angle>
       </Attributes>
     </ViewSetups>
     <Timepoints type="range">
@@ -34,6 +55,14 @@
     <ViewRegistration timepoint="0" setup="0">
       <ViewTransform type="affine">
         <affine>1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 10.0 0.0</affine>
+      </ViewTransform>
+      <ViewTransform type="affine">
+        <Name>manual translation</Name>
+        <affine>1.0 0.0 0.0 66.0 0.0 1.0 0.0 -1.0 0.0 0.0 1.0 0.0</affine>
+      </ViewTransform>
+      <ViewTransform type="affine">
+        <Name>Big Warp: Similarity</Name>
+        <affine>0.9979110678044082 0.005143359069940655 -0.0055239498555123044 -64.65693029005305 -0.005324175967273027 0.9973741608070222 -0.033164799348410594 3.591161131324995 0.005349889232317574 0.03319332196434221 0.9973730743674787 -6.121935769525251</affine>
       </ViewTransform>
     </ViewRegistration>
   </ViewRegistrations>

@@ -35,6 +35,10 @@
       <ViewTransform type="affine">
         <affine>1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 10.0 0.0</affine>
       </ViewTransform>
+      <ViewTransform type="affine">
+        <Name>manual rotation</Name>
+        <affine>0.0 0.0 1.0 80.81833333333333 0.0 1.0 0.0 -2.142730437526552E-14 -1.0 0.0 0.0 106.81833333333334</affine>
+      </ViewTransform>
     </ViewRegistration>
   </ViewRegistrations>
 </SpimData>

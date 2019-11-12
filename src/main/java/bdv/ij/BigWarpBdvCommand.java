@@ -25,10 +25,10 @@ import java.io.File;
 public class BigWarpBdvCommand implements Command
 {
 	@Parameter ( label = "Fixed image file [ xml/hdf5 ]" )
-	public File fixedImageFile;
+	public File fixedImageXml;
 
 	@Parameter ( label = "Moving image file [ xml/hdf5 ]" )
-	public File movingImageFile;
+	public File movingImageXml;
 
 	public BigWarp bw;
 
@@ -37,15 +37,15 @@ public class BigWarpBdvCommand implements Command
 	{
 		try
         {
-			final SpimData fixedSpimData = new XmlIoSpimData().load( fixedImageFile.getAbsolutePath() );
-			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageFile.getAbsolutePath() );
+			final SpimData fixedSpimData = new XmlIoSpimData().load( fixedImageXml.getAbsolutePath() );
+			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageXml.getAbsolutePath() );
 			new RepeatingReleasedEventsFixer().install();
 			final BigWarp.BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
 			bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
-			bw.setMovingSpimData( movingSpimData );
+			bw.setMovingSpimData( movingSpimData, movingImageXml );
 		}
         catch (final SpimDataException e)
         {
