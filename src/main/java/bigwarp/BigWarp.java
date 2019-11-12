@@ -823,13 +823,7 @@ public class BigWarp< T >
 
 		if ( movingSpimData == null )
 		{
-			IJ.log("Cannot save moving image XML, because the input was not an XML.");
-			return;
-		}
-
-		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
-		{
-			IJ.log("Cannot save moving image XML, because the transform is a thin plate spline transform.");
+			IJ.log("Cannot save warped moving image XML, because the input image was not a BDV/XML.");
 			return;
 		}
 
@@ -839,57 +833,68 @@ public class BigWarp< T >
 
 		final AffineTransform3D concatenate = initialTransform.copy().concatenate( bigWarpTransform );
 
+		System.out.println( "bigWarp transform as affine 3d: " + bigWarpTransform.toString() );
+
 		// TODO: Nico's code...
 
-		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() + ".xml" );
-
-		fileChooser.setSelectedFile( proposedFile );
-		final int returnVal = fileChooser.showSaveDialog( null );
-		if ( returnVal == JFileChooser.APPROVE_OPTION )
-		{
-			proposedFile = fileChooser.getSelectedFile();
-			try
-			{
-				System.out.println("save warped image xml");
-
-				exportAsImagePlus( false, proposedFile.getCanonicalPath() );
-			} catch ( final IOException e )
-			{
-				e.printStackTrace();
-			}
-		}
+//		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+//		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() + ".xml" );
+//
+//		fileChooser.setSelectedFile( proposedFile );
+//		final int returnVal = fileChooser.showSaveDialog( null );
+//		if ( returnVal == JFileChooser.APPROVE_OPTION )
+//		{
+//			proposedFile = fileChooser.getSelectedFile();
+//			try
+//			{
+//				System.out.println("save warped image xml");
+//
+//				exportAsImagePlus( false, proposedFile.getCanonicalPath() );
+//			} catch ( final IOException e )
+//			{
+//				e.printStackTrace();
+//			}
+//		}
 	}
 
 	public AffineTransform3D getCurrentTransformAsAffineTransform3D( )
 	{
 		double[] affine3D = new double[ 12 ];
 
-		if ( currentTransform instanceof AffineModel3D )
+		if ( currentTransform == null )
 		{
-			((AffineModel3D)currentTransform).toArray( affine3D );
+			IJ.log("Cannot export. No transform set yet." );
+			return null;
 		}
-		else if ( currentTransform instanceof SimilarityModel3D )
+
+		final InvertibleCoordinateTransform transform =
+				( ( WrappedCoordinateTransform ) currentTransform ).ct_inv;
+
+		if ( transform instanceof AffineModel3D )
 		{
-			((SimilarityModel3D)currentTransform).toArray( affine3D );
+			((AffineModel3D)transform).toArray( affine3D );
 		}
-		else if ( currentTransform instanceof RigidModel3D )
+		else if ( transform instanceof SimilarityModel3D )
 		{
-			((RigidModel3D)currentTransform).toArray( affine3D );
+			((SimilarityModel3D)transform).toArray( affine3D );
 		}
-		else if ( currentTransform instanceof TranslationModel3D )
+		else if ( transform instanceof RigidModel3D )
+		{
+			((RigidModel3D)transform).toArray( affine3D );
+		}
+		else if ( transform instanceof TranslationModel3D )
 		{
 			final double[] translation = new double[ 3 ];
-			((TranslationModel3D)currentTransform).toArray( translation );
+			((TranslationModel3D)transform).toArray( translation );
 			affine3D[ 4 ] = translation[ 0 ];
 			affine3D[ 8 ] = translation[ 1 ];
 			affine3D[ 12 ] = translation[ 2 ];
 		}
 		else
 		{
-			IJ.log("Cannot convert to transform of type " + currentTransform.getClass().toString()
+			IJ.log("Cannot convert to transform of type " + transform.getClass().toString()
 			+ "\nto a 3D affine tranform.");
-			affine3D = null;
+			return null;
 		}
 
 		final AffineTransform3D bigWarpTransform = new AffineTransform3D();

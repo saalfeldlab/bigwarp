@@ -30,6 +30,8 @@ public class BigWarpBdvCommand implements Command
 	@Parameter ( label = "Moving image file [ xml/hdf5 ]" )
 	public File movingImageFile;
 
+	public BigWarp bw;
+
 	@Override
 	public void run()
 	{
@@ -39,7 +41,7 @@ public class BigWarpBdvCommand implements Command
 			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageFile.getAbsolutePath() );
 			new RepeatingReleasedEventsFixer().install();
 			final BigWarp.BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
-			final BigWarp bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
+			bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
