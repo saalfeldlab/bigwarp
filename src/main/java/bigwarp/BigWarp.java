@@ -39,6 +39,7 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
+import mpicbg.spim.data.SpimData;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -288,6 +289,8 @@ public class BigWarp< T >
 	private static ImageJ ij;
 
 	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
+
+	private SpimData movingSpimData;
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -812,6 +815,86 @@ public class BigWarp< T >
 				e.printStackTrace();
 			}
 		}
+	}
+
+	public void saveMovingImageXml()
+	{
+		System.out.println( "saveWarpedMovingImageXml" );
+
+		if ( movingSpimData == null )
+		{
+			IJ.log("Cannot save moving image XML, because the input was not an XML.");
+			return;
+		}
+
+		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		{
+			IJ.log("Cannot save moving image XML, because the transform is a thin plate spline transform.");
+			return;
+		}
+
+		final AffineTransform3D bigWarpTransform = getCurrentTransformAsAffineTransform3D();
+
+		final AffineTransform3D initialTransform = movingSpimData.getViewRegistrations().getViewRegistrationsOrdered().get( 0 ).getModel();
+
+		final AffineTransform3D concatenate = initialTransform.copy().concatenate( bigWarpTransform );
+
+		// TODO: Nico's code...
+
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() + ".xml" );
+
+		fileChooser.setSelectedFile( proposedFile );
+		final int returnVal = fileChooser.showSaveDialog( null );
+		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		{
+			proposedFile = fileChooser.getSelectedFile();
+			try
+			{
+				System.out.println("save warped image xml");
+
+				exportAsImagePlus( false, proposedFile.getCanonicalPath() );
+			} catch ( final IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public AffineTransform3D getCurrentTransformAsAffineTransform3D( )
+	{
+		double[] affine3D = new double[ 12 ];
+
+		if ( currentTransform instanceof AffineModel3D )
+		{
+			((AffineModel3D)currentTransform).toArray( affine3D );
+		}
+		else if ( currentTransform instanceof SimilarityModel3D )
+		{
+			((SimilarityModel3D)currentTransform).toArray( affine3D );
+		}
+		else if ( currentTransform instanceof RigidModel3D )
+		{
+			((RigidModel3D)currentTransform).toArray( affine3D );
+		}
+		else if ( currentTransform instanceof TranslationModel3D )
+		{
+			final double[] translation = new double[ 3 ];
+			((TranslationModel3D)currentTransform).toArray( translation );
+			affine3D[ 4 ] = translation[ 0 ];
+			affine3D[ 8 ] = translation[ 1 ];
+			affine3D[ 12 ] = translation[ 2 ];
+		}
+		else
+		{
+			IJ.log("Cannot convert to transform of type " + currentTransform.getClass().toString()
+			+ "\nto a 3D affine tranform.");
+			affine3D = null;
+		}
+
+		final AffineTransform3D bigWarpTransform = new AffineTransform3D();
+		bigWarpTransform.set( affine3D );
+		return bigWarpTransform;
 	}
 
 	public void exportAsImagePlus( boolean virtual, String path )
@@ -1864,6 +1947,11 @@ public class BigWarp< T >
 			//e.printStackTrace();
 		}
 
+	}
+
+	public void setMovingSpimData( SpimData movingSpimData )
+	{
+		this.movingSpimData = movingSpimData;
 	}
 
 	public enum WarpVisType

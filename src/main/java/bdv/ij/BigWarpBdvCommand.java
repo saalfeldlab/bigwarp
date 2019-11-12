@@ -3,12 +3,6 @@ package bdv.ij;
 import bdv.ij.util.ProgressWriterIJ;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpInit;
-import ij.IJ;
-import ij.ImageJ;
-import ij.ImagePlus;
-import ij.WindowManager;
-import ij.gui.GenericDialog;
-import ij.plugin.PlugIn;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.XmlIoSpimData;
@@ -44,10 +38,12 @@ public class BigWarpBdvCommand implements Command
 			final SpimData fixedSpimData = new XmlIoSpimData().load( fixedImageFile.getAbsolutePath() );
 			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageFile.getAbsolutePath() );
 			new RepeatingReleasedEventsFixer().install();
-			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData ), "Big Warp",  new ProgressWriterIJ() );
+			final BigWarp.BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
+			final BigWarp bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
+			bw.setMovingSpimData( movingSpimData );
 		}
         catch (final SpimDataException e)
         {
