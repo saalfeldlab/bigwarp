@@ -236,9 +236,8 @@ public class BigWarpActions
 		map.put( LOAD_LANDMARKS, "control O" );
 
 		map.put( EXPORT_IP, "control E" );
-		map.put( SAVE_WARPED, "control alt shift E" );
+//		map.put( SAVE_WARPED, "control alt shift E" );
 		map.put( SAVE_WARPED_XML, "control shift E" );
-
 
 		// TODO if I decide to make clearing / delete hotkeys
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_MOVING, "BACK_SPACE" );
