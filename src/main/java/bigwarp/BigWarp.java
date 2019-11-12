@@ -820,7 +820,12 @@ public class BigWarp< T >
 		}
 	}
 
-	public File saveMovingImageXml()
+	public File saveMovingImageXml( )
+	{
+		return saveMovingImageXml( null );
+	}
+
+	public File saveMovingImageXml( String proposedFilePath )
 	{
 		System.out.println( "saveWarpedMovingImageXml" );
 
@@ -836,22 +841,31 @@ public class BigWarp< T >
 
 		movingSpimData.getViewRegistrations().getViewRegistration( 0, 0 ).concatenateTransform( new ViewTransformAffine( "Big Warp: " + transformType, bigWarpTransform ) );
 
-		final JFileChooser fileChooser = new JFileChooser( movingImageXml.getParent() );
-		File proposedFile = new File(  movingImageXml.getName().replace( ".xml","-bigWarp.xml" ) );
-
-		fileChooser.setSelectedFile( proposedFile );
-		final int returnVal = fileChooser.showSaveDialog( null );
-		if ( returnVal == JFileChooser.APPROVE_OPTION )
+		File proposedFile;
+		if ( proposedFilePath == null )
 		{
-			proposedFile = fileChooser.getSelectedFile();
-			try
-			{
-				System.out.println("save warped image xml");
-				new XmlIoSpimData().save( movingSpimData, proposedFile.getAbsolutePath() );
-			} catch ( SpimDataException e )
-			{
-				e.printStackTrace();
-			}
+			final JFileChooser fileChooser = new JFileChooser( movingImageXml.getParent() );
+			proposedFile = new File( movingImageXml.getName().replace( ".xml", "-bigWarp.xml" ) );
+
+			fileChooser.setSelectedFile( proposedFile );
+			final int returnVal = fileChooser.showSaveDialog( null );
+			if ( returnVal == JFileChooser.APPROVE_OPTION )
+				proposedFile = fileChooser.getSelectedFile();
+			else
+				return null;
+		}
+		else
+		{
+			proposedFile = new File( proposedFilePath );
+		}
+
+		try
+		{
+			System.out.println("save warped image xml");
+			new XmlIoSpimData().save( movingSpimData, proposedFile.getAbsolutePath() );
+		} catch ( SpimDataException e )
+		{
+			e.printStackTrace();
 		}
 
 		return proposedFile;
