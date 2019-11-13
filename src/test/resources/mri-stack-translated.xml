@@ -35,6 +35,10 @@
       <ViewTransform type="affine">
         <affine>1.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0 0.0 0.0 10.0 0.0</affine>
       </ViewTransform>
+      <ViewTransform type="affine">
+        <Name>manual translation</Name>
+        <affine>1.0 0.0 0.0 66.0 0.0 1.0 0.0 -1.0 0.0 0.0 1.0 0.0</affine>
+      </ViewTransform>
     </ViewRegistration>
   </ViewRegistrations>
 </SpimData>

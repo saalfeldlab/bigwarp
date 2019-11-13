@@ -39,6 +39,9 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
+import mpicbg.spim.data.SpimData;
+import mpicbg.spim.data.XmlIoSpimData;
+import mpicbg.spim.data.registration.ViewTransformAffine;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -288,6 +291,9 @@ public class BigWarp< T >
 	private static ImageJ ij;
 
 	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
+
+	private SpimData movingSpimData;
+	private File movingImageXml;
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -812,6 +818,129 @@ public class BigWarp< T >
 			{
 				e.printStackTrace();
 			}
+		}
+	}
+
+	public File saveMovingImageXml( )
+	{
+		return saveMovingImageXml( null );
+	}
+
+	public File saveMovingImageXml( String proposedFilePath )
+	{
+		System.out.println( "saveWarpedMovingImageXml" );
+
+		if ( movingSpimData == null )
+		{
+			IJ.log("Cannot save warped moving image XML, because the input image was not a BDV/XML.");
+			return null;
+		}
+
+		final AffineTransform3D bigWarpTransform = getMovingToFixedTransformAsAffineTransform3D();
+
+		System.out.println( "bigWarp transform as affine 3d: " + bigWarpTransform.toString() );
+
+		movingSpimData.getViewRegistrations().getViewRegistration( 0, 0 ).preconcatenateTransform( new ViewTransformAffine( "Big Warp: " + transformType, bigWarpTransform ) );
+
+		File proposedFile;
+		if ( proposedFilePath == null )
+		{
+			final JFileChooser fileChooser = new JFileChooser( movingImageXml.getParent() );
+			proposedFile = new File( movingImageXml.getName().replace( ".xml", "-bigWarp.xml" ) );
+
+			fileChooser.setSelectedFile( proposedFile );
+			final int returnVal = fileChooser.showSaveDialog( null );
+			if ( returnVal == JFileChooser.APPROVE_OPTION )
+				proposedFile = fileChooser.getSelectedFile();
+			else
+				return null;
+		}
+		else
+		{
+			proposedFile = new File( proposedFilePath );
+		}
+
+		try
+		{
+			System.out.println("save warped image xml");
+			new XmlIoSpimData().save( movingSpimData, proposedFile.getAbsolutePath() );
+		} catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
+
+		return proposedFile;
+	}
+
+	public AffineTransform3D getMovingToFixedTransformAsAffineTransform3D( )
+	{
+		double[][] affine3DMatrix = new double[ 3 ][ 4 ];
+		double[][] affine2DMatrix = new double[ 2 ][ 3 ];
+
+		if ( currentTransform == null )
+		{
+			IJ.log("Cannot export. No transform set yet." );
+			return null;
+		}
+
+		final InvertibleCoordinateTransform transform =
+				( ( WrappedCoordinateTransform ) currentTransform ).ct_inv;
+
+		if ( transform instanceof AffineModel3D )
+		{
+			((AffineModel3D)transform).toMatrix( affine3DMatrix );
+		}
+		else if ( transform instanceof SimilarityModel3D )
+		{
+			((SimilarityModel3D)transform).toMatrix( affine3DMatrix );
+		}
+		else if ( transform instanceof RigidModel3D )
+		{
+			((RigidModel3D)transform).toMatrix( affine3DMatrix );
+		}
+		else if ( transform instanceof TranslationModel3D )
+		{
+			((TranslationModel3D)transform).toMatrix( affine3DMatrix );
+		}
+		else if ( transform instanceof AffineModel2D )
+		{
+			((AffineModel2D)transform).toMatrix( affine2DMatrix );
+			affineMatrix2DtoAffineMatrix3D( affine2DMatrix, affine3DMatrix );
+		}
+		else if ( transform instanceof SimilarityModel2D )
+		{
+			((SimilarityModel2D)transform).toMatrix( affine2DMatrix );
+			affineMatrix2DtoAffineMatrix3D( affine2DMatrix, affine3DMatrix );
+		}
+		else if ( transform instanceof RigidModel2D )
+		{
+			((RigidModel2D)transform).toMatrix( affine2DMatrix );
+			affineMatrix2DtoAffineMatrix3D( affine2DMatrix, affine3DMatrix );
+		}
+		else if ( transform instanceof TranslationModel2D )
+		{
+			((TranslationModel2D)transform).toMatrix( affine2DMatrix );
+			affineMatrix2DtoAffineMatrix3D( affine2DMatrix, affine3DMatrix );
+		}
+		else
+		{
+			IJ.log("Cannot convert to transform of type " + transform.getClass().toString()
+			+ "\nto a 3D affine tranform.");
+			return null;
+		}
+
+		final AffineTransform3D bigWarpTransform = new AffineTransform3D();
+		bigWarpTransform.set( affine3DMatrix );
+		return bigWarpTransform;
+	}
+
+	private void affineMatrix2DtoAffineMatrix3D( double[][] affine2DMatrix,  double[][] affine3DMatrix )
+	{
+		for ( int d = 0; d < 2; ++d )
+		{
+			affine3DMatrix[ d ][ 0 ] = affine2DMatrix[ d ][ 0 ];
+			affine3DMatrix[ d ][ 1 ] = affine2DMatrix[ d ][ 1 ];
+			affine3DMatrix[ d ][ 3 ] = affine2DMatrix[ d ][ 2 ];
 		}
 	}
 
@@ -1958,6 +2087,12 @@ public class BigWarp< T >
 			//e.printStackTrace();
 		}
 
+	}
+
+	public void setMovingSpimData( SpimData movingSpimData, File movingImageXml )
+	{
+		this.movingSpimData = movingSpimData;
+		this.movingImageXml = movingImageXml;
 	}
 
 	public enum WarpVisType

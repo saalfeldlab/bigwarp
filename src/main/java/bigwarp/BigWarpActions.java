@@ -61,6 +61,8 @@ public class BigWarpActions
 	public static final String SAVE_LANDMARKS = "save landmarks";
 
 	public static final String SAVE_WARPED = "save warped";
+	public static final String SAVE_WARPED_XML = "save warped xml";
+
 	public static final String EXPORT_IP = "export imageplus";
 	public static final String EXPORT_WARP = "export warp field"; 
 	public static final String EXPORT_AFFINE = "export affine"; 
@@ -234,7 +236,8 @@ public class BigWarpActions
 		map.put( LOAD_LANDMARKS, "control O" );
 
 		map.put( EXPORT_IP, "control E" );
-		map.put( SAVE_WARPED, "control alt shift E" );
+//		map.put( SAVE_WARPED, "control alt shift E" );
+		map.put( SAVE_WARPED_XML, "control shift E" );
 
 		// TODO if I decide to make clearing / delete hotkeys
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_MOVING, "BACK_SPACE" );
@@ -281,6 +284,7 @@ public class BigWarpActions
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 
 		new SaveWarpedAction( bw ).put( actionMap );
+		new SaveWarpedXmlAction( bw ).put( actionMap );
 		new ExportImagePlusAction( bw ).put( actionMap );
 		new ExportWarpAction( bw ).put( actionMap );
 		new ExportAffineAction( bw ).put( actionMap );
@@ -1051,6 +1055,23 @@ public class BigWarpActions
 		public void actionPerformed(ActionEvent e)
 		{
 			bw.saveMovingImageToFile();
+		}
+	}
+
+	public static class SaveWarpedXmlAction extends AbstractNamedAction
+	{
+//		private static final long serialVersionUID = 4965249994677649713L;
+
+		BigWarp bw;
+		public SaveWarpedXmlAction( final BigWarp bw )
+		{
+			super( SAVE_WARPED_XML );
+			this.bw = bw;
+		}
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.saveMovingImageXml();
 		}
 	}
 
