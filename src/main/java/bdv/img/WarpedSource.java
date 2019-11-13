@@ -50,6 +50,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private Interval warpedInterval;
 
+	private Interval warpedIntervalPhysical;
+
 	public WarpedSource( final Source< T > source, final String name )
 	{
 		this.source = source;
@@ -76,6 +78,23 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		final Interval wrappedInterval = source.getSource( 0, 0 );
 		final InvertibleRealTransform invxfm = xfm.inverse().copy();
 		warpedInterval = BigWarpExporter.estimateBounds( invxfm, wrappedInterval );
+
+		AffineTransform3D sourceTransform = new AffineTransform3D();
+		source.getSourceTransform( 0, 0, sourceTransform );
+
+		int nd = wrappedInterval.numDimensions();
+		long[] minPhysical = new long[ nd ];
+		long[] maxPhysical = new long[ nd ];
+		for( int d = 0; d < nd; d++ )
+		{
+			// TODO assumes that the source transform scales each axis independently
+			minPhysical[ d ] = ( long ) ( Math.floor( sourceTransform.get( d, d ) * warpedInterval.min( d ) ));
+			maxPhysical[ d ] = ( long ) ( Math.ceil( sourceTransform.get( d, d ) * warpedInterval.max( d ) ));
+		}
+		warpedIntervalPhysical = new FinalInterval( minPhysical, maxPhysical );
+
+		System.out.println( "warpedInterval         : " + Util.printInterval( warpedInterval ) );
+		System.out.println( "wapredIntervalPhysical : " + Util.printInterval( warpedIntervalPhysical ) );
 	}
 	
 	public void setIsTransformed( boolean isTransformed )
@@ -104,7 +123,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	public Interval boundingInterval( final int t, final int level )
 	{
 		if( isTransformed && warpedInterval != null)
-			return warpedInterval;
+			return warpedIntervalPhysical;
 		else
 			return source.getSource( t, level );
 	}
@@ -138,8 +157,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			transform.identity();
 		else
 			source.getSourceTransform( t, level, transform );
-
-//		System.out.println( "WarpedSource getSourceTransform: " + transform );
 	}
 
 	public InvertibleRealTransform getTransform()
