@@ -1036,6 +1036,7 @@ public class BigWarpActions
 		}
 	}
 
+	@Deprecated
 	public static class SaveWarpedAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 4965249994677649713L;

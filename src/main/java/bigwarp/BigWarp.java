@@ -792,6 +792,7 @@ public class BigWarp< T >
 		exportAsImagePlus( virtual, "" );
 	}
 
+	@Deprecated
 	public void saveMovingImageToFile()
 	{
 		System.out.println( "saveMovingImageToFile" );
