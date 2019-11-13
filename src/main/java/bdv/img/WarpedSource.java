@@ -47,7 +47,9 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	private InvertibleRealTransform xfm;
 
 	private boolean isTransformed;
-	
+
+	private Interval warpedInterval;
+
 	public WarpedSource( final Source< T > source, final String name )
 	{
 		this.source = source;
@@ -66,9 +68,14 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		return source.isPresent( t );
 	}
 	
-	public void updateTransform( InvertibleRealTransform xfm )
+	public synchronized void updateTransform( InvertibleRealTransform xfm )
 	{
 		this.xfm = xfm;
+
+		// re-estimate interval of warped source
+		final Interval wrappedInterval = source.getSource( 0, 0 );
+		final InvertibleRealTransform invxfm = xfm.inverse().copy();
+		warpedInterval = BigWarpExporter.estimateBounds( invxfm, wrappedInterval );
 	}
 	
 	public void setIsTransformed( boolean isTransformed )
@@ -91,73 +98,15 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	{
 		return Views.interval(
 				Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
-				estimateBoundingInterval( t, level ));
+				boundingInterval( t, level ));
 	}
 
-	public Interval estimateBoundingIntervalWorking( final int t, final int level )
+	public Interval boundingInterval( final int t, final int level )
 	{
-		final Interval wrappedInterval = source.getSource( t, level );
-
-		final Interval itvl;
-////		System.out.println( "source nd: " + source.getSource( t, level ).numDimensions());
-////		System.out.println( "source nz: " + source.getSource( t, level ).dimension( 2 ));
-		boolean is2d = source.getSource( t, level ).numDimensions() == 2 || 
-						source.getSource( t, level ).dimension( 2 ) == 1;
-		if( is2d )
-		{
-			itvl = new FinalInterval(
-					new long[]{ wrappedInterval.min( 0 ), wrappedInterval.min(1)},
-					new long[]{ wrappedInterval.max( 0 ), wrappedInterval.max(1)});
-		}
+		if( isTransformed && warpedInterval != null)
+			return warpedInterval;
 		else
-			itvl = wrappedInterval;
-
-		if( isTransformed && xfm != null)
-		{
-			final InvertibleRealTransform invxfm;
-			if( xfm instanceof Wrapped2DTransformAs3D )
-				invxfm = ((Wrapped2DTransformAs3D)xfm).transform.inverse().copy();
-			else
-				invxfm  = xfm.inverse().copy();
-
-
-			// TODO: Continue work here
-			final Interval movingWarpedInterval = BigWarpExporter.estimateBounds( invxfm, itvl );
-//			final Interval movingWarpedInterval = BigWarpExporter.estimateBounds( xfm.inverse(), itvl );
-
-//			final Interval movingWarpedInterval = BigWarpExporter.estimateBounds( invxfm, wrappedInterval );
-//			System.out.println( "warped interval: " + Util.printInterval( movingWarpedInterval ));
-			
-			if( is2d )
-				return new FinalInterval(
-						new long[]{ movingWarpedInterval.min(0), movingWarpedInterval.min(1), 0 },
-						new long[]{ movingWarpedInterval.max(0), movingWarpedInterval.max(1), 0 });
-			else
-				return movingWarpedInterval;
-		}
-		else
-		{
-			return wrappedInterval;
-		}
-	}
-
-	public Interval estimateBoundingInterval( final int t, final int level )
-	{
-		final Interval wrappedInterval = source.getSource( t, level );
-
-		if( isTransformed && xfm != null)
-		{
-			final InvertibleRealTransform invxfm = xfm.inverse().copy();
-			final Interval movingWarpedInterval = BigWarpExporter.estimateBounds( invxfm, wrappedInterval );
-			System.out.println( "original interval: " + Util.printInterval( wrappedInterval ));
-			System.out.println( "warped interval: " + Util.printInterval( movingWarpedInterval ));
-			System.out.println( " " );
-			return movingWarpedInterval;
-		}
-		else
-		{
-			return wrappedInterval;
-		}
+			return source.getSource( t, level );
 	}
 
 	@Override
@@ -190,11 +139,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		else
 			source.getSourceTransform( t, level, transform );
 
-//		if( isTransformed )
-//		{
-//			Object a = null;
-//		}
-//		
 //		System.out.println( "WarpedSource getSourceTransform: " + transform );
 	}
 
