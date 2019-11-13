@@ -839,7 +839,7 @@ public class BigWarp< T >
 
 		System.out.println( "bigWarp transform as affine 3d: " + bigWarpTransform.toString() );
 
-		movingSpimData.getViewRegistrations().getViewRegistration( 0, 0 ).concatenateTransform( new ViewTransformAffine( "Big Warp: " + transformType, bigWarpTransform ) );
+		movingSpimData.getViewRegistrations().getViewRegistration( 0, 0 ).preconcatenateTransform( new ViewTransformAffine( "Big Warp: " + transformType, bigWarpTransform ) );
 
 		File proposedFile;
 		if ( proposedFilePath == null )
