@@ -1100,9 +1100,102 @@ public class BigWarp< T >
 	public void printAffine()
 	{
 		if( ij != null )
+		{
 			IJ.log( affineToString() );
+			IJ.log( "" + affine3d() );
+		}
 		else
+		{
 			System.out.println( affineToString() );
+			System.out.println( affine3d() );
+		}
+	}
+	
+	/**
+	 * Returns an AffineTransform3D that represents the the transform if the transform
+	 * is linear, or is the affine part of the transform if it is non-linear.
+	 * 
+	 * @return the affine transform
+	 */
+	public AffineTransform3D affine3d()
+	{
+		AffineTransform3D out = new AffineTransform3D();
+		int nd = landmarkModel.getTransform().getNumDims();
+		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		{
+			double[][] tpsAffine = landmarkModel.getTransform().getAffine();
+			double[] translation = landmarkModel.getTransform().getTranslation();
+			for( int i = 0; i < nd ; i++ ) for( int j = 0; j < nd ; j++ )
+			{
+				if( i == j )
+					out.set( 1 + tpsAffine[ i ][ j ], i, j );
+				else
+					out.set( tpsAffine[ i ][ j ], i, j );
+			}
+			for( int i = 0; i < translation.length ; i++ )
+				out.set( translation[ i ], i, 3 );
+		}
+		else
+		{
+			if( landmarkModel.getNumdims() == 2 )
+			{
+				double[][] mtx = new double[2][3];
+				AbstractAffineModel2D model2d = getModel2D();
+				for( int i = 0; i < nd-1 ; i++ ) for( int j = 0; j < nd ; j++ )
+				{
+					out.set( mtx[ i ][ j ], i, j );
+				}
+				for( int i = 0; i < 2 ; i++ )
+					out.set( mtx[ i ][ 2 ], i, 3 );
+			}
+			else if( landmarkModel.getNumdims() == 3 )
+			{
+				AbstractAffineModel3D model3d = getModel3D();
+				double[][] mtx = new double[3][4];
+				for( int i = 0; i < nd ; i++ ) for( int j = 0; j < nd + 1 ; j++ )
+				{
+					out.set( mtx[ i ][ j ], i, j );
+				}
+			}
+			else
+			{
+				System.err.println( "Only support 2d and 3d transformations." );
+				return null;
+			}
+		}
+		return out;
+	}
+	
+	public AbstractAffineModel2D getModel2D( final String transformType )
+	{ 
+		switch( transformType ){
+		case TransformTypeSelectDialog.AFFINE:
+			return ((AffineModel2D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.SIMILARITY:
+			return ((SimilarityModel2D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.ROTATION:
+			return ((RigidModel2D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.TRANSLATION:
+			return ((TranslationModel2D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		}
+
+		return null;
+	}
+
+	public AbstractAffineModel3D getModel3D( final String transformType )
+	{ 
+		switch( transformType ){
+		case TransformTypeSelectDialog.AFFINE:
+			return ((AffineModel3D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.SIMILARITY:
+			return ((SimilarityModel3D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.ROTATION:
+			return ((RigidModel3D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		case TransformTypeSelectDialog.TRANSLATION:
+			return ((TranslationModel3D)((WrappedCoordinateTransform)currentTransform).getTransform());
+		}
+
+		return null;
 	}
 
 	public String affineToString()
