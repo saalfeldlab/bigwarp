@@ -99,6 +99,7 @@ import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader.SetupSettings;
 import bigwarp.source.GridSource;
+import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import ij.IJ;
 import ij.ImageJ;
@@ -159,6 +160,8 @@ public class BigWarp< T >
 	public static final int GRID_SOURCE_ID = 1696993146;
 
 	public static final int WARPMAG_SOURCE_ID = 956736363;
+
+	public static final int JACDET_SOURCE_ID = 1006827158;
 
 	protected BigWarpViewerOptions options;
 
@@ -253,6 +256,8 @@ public class BigWarp< T >
 
 	protected final int warpMagSourceIndex;
 
+	protected final int jacDetSourceIndex;
+
 	protected final AbstractModel< ? >[] baseXfmList;
 
 	private final double[] ptBack;
@@ -344,6 +349,7 @@ public class BigWarp< T >
 
 		baselineModelIndex = 0;
 		warpMagSourceIndex = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
+		jacDetSourceIndex = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
 		gridSourceIndex = addGridSource( data, "GridSource" );
 
 		this.sources = this.data.sources;
@@ -1949,6 +1955,27 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	private static < T > int addJacobianDeterminantSource( final BigWarpData< T > data, final String name )
+	{
+		// TODO think about whether its worth it to pass a type parameter.
+		// or should we just stick with Doubles?
+
+		final JacobianDeterminantSource< FloatType > jdSource = new JacobianDeterminantSource< FloatType >( name, data, new FloatType() );
+
+		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
+		vconverter.setColor( new ARGBType( 0xffffffff ) );
+		final RealARGBColorConverter< ? > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+
+		data.converterSetups.add( new RealARGBColorConverterSetup( JACDET_SOURCE_ID, converter, vconverter ) );
+
+		final SourceAndConverter soc = new SourceAndConverter( jdSource, converter, null );
+		data.sources.add( soc );
+
+		return data.sources.size() - 1;
+	}
+
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	private static < T > int addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
@@ -2109,7 +2136,7 @@ public class BigWarp< T >
 
 	public enum WarpVisType
 	{
-		NONE, WARPMAG, GRID
+		NONE, WARPMAG, JACDET, GRID
 	};
 
 	public void setWarpVisMode( final WarpVisType type, BigWarpViewerFrame viewerFrame, final boolean both )
@@ -2155,10 +2182,19 @@ public class BigWarp< T >
 
 		switch ( type )
 		{
+		case JACDET:
+		{
+			// turn warp mag on
+			vg.setSourceActive( warpMagSourceIndex, false );
+			vg.setSourceActive( jacDetSourceIndex, true );
+			vg.setSourceActive( gridSourceIndex, false );
+
+		}
 		case WARPMAG:
 		{
 			// turn warp mag on
 			vg.setSourceActive( warpMagSourceIndex, true );
+			vg.setSourceActive( jacDetSourceIndex, false );
 			vg.setSourceActive( gridSourceIndex, false );
 //			vg.setSourceActive( offImgIndex, false );
 
@@ -2179,6 +2215,7 @@ public class BigWarp< T >
 			// turn grid vis on
 			
 			vg.setSourceActive( warpMagSourceIndex, false );
+			vg.setSourceActive( jacDetSourceIndex, false );
 			vg.setSourceActive( gridSourceIndex, true );
 //			vg.setSourceActive( offImgIndex, false );
 
@@ -2288,10 +2325,22 @@ public class BigWarp< T >
 		setTransformationMovingSourceOnly( transform );
 
 		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
+		final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) sources.get( jacDetSourceIndex ).getSpimSource() );
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
 		wmSrc.setWarp( transform );
 		fitBaselineWarpMagModel();
+	
+		if( transform instanceof ThinplateSplineTransform )
+		{
+			jdSrc.setTransform( (ThinplateSplineTransform)transform );
+		}
+		else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
+		{
+			jdSrc.setTransform( (ThinplateSplineTransform)((WrappedIterativeInvertibleRealTransform)transform).getTransform() );
+		}
+		else
+			jdSrc.setTransform( null );
 
 		gSrc.setWarp( transform );
 	}
