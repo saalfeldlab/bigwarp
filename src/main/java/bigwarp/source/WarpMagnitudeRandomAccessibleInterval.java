@@ -1,10 +1,6 @@
 package bigwarp.source;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import net.imglib2.AbstractRealInterval;
-import net.imglib2.FinalInterval;
-import net.imglib2.FinalRealInterval;
 import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.RealRandomAccess;
@@ -17,7 +13,7 @@ public class WarpMagnitudeRandomAccessibleInterval<T extends RealType<T>> extend
 	
 	WarpMagnitudeRandomAccess< T > ra;
 	
-	public WarpMagnitudeRandomAccessibleInterval( Interval interval, T t, RealTransform warp, AbstractModel<?> base )
+	public WarpMagnitudeRandomAccessibleInterval( Interval interval, T t, RealTransform warp, RealTransform base )
 	{
 		super( interval );
 		ra = new WarpMagnitudeRandomAccess< T >( new double[ interval.numDimensions() ], t, warp, base );

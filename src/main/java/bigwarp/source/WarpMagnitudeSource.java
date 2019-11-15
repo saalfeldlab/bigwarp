@@ -1,11 +1,14 @@
 package bigwarp.source;
 
+import java.util.Arrays;
+
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractModel;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.Interval;
@@ -27,18 +30,20 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	
 	protected final WarpMagnitudeRandomAccessibleInterval<T> warpMagImg;
 	
+	protected final VoxelDimensions voxDims;
+
 	protected T type;
 	
-	public WarpMagnitudeSource( String name, BigWarpData data, T t  )
+	public WarpMagnitudeSource( String name, BigWarpData<?> data, T t  )
 	{
 		this.name = name;
 		this.type = t;
-		
+
 		sourceData = data;
-		
+
 		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
 		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-		
+
 		// use the interval of the fixed image
 //		if( fixedsrc.dimension( 2 ) == 1 )
 //			interval = new FinalInterval( 
@@ -46,7 +51,9 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 //					new long[]{ fixedsrc.max( 0 ), fixedsrc.max( 1 ) });
 //		else
 		
-		
+		String unit = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+		voxDims = new FinalVoxelDimensions( unit, 1.0, 1.0, 1.0 );
+
 		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
 	}
 	
@@ -54,15 +61,11 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	{
 		double maxVal = 0.0;
 		
-		int ndims = 3;
-		double[] pt = new double[ 3 ];
+		int ndims = lm.getNumdims();
+		double[] pt = new double[ ndims ];
 		
-		int i = 0;
 		for( Double[] movingPt : lm.getPoints( true ) )
 		{
-			if( i == 0 && movingPt.length == 2 )
-				ndims = 2;
-			
 			for( int d = 0; d < ndims; d++ )
 				pt[ d ] = movingPt[ d ];
 			
@@ -71,10 +74,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 			
 			if( val > maxVal )
 				maxVal = val;
-			
-			i++;
 		}
-		
 		return maxVal;
 	}
 	
@@ -83,14 +83,14 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		warpMagImg.ra.warp = warp;
 	}
 	
-	public void setBaseline( AbstractModel<?> baseline )
+	public void setBaseline( RealTransform baseline )
 	{
-		warpMagImg.ra.base = baseline;
+		warpMagImg.ra.baseline = baseline;
 	}
 	
-	public AbstractModel<?> getBaseline()
+	public RealTransform getBaseline()
 	{
-		return warpMagImg.ra.base;
+		return warpMagImg.ra.baseline;
 	}
 	
 	public void debug( double[] pt )
@@ -99,9 +99,10 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		
 		rra.setPosition( pt );
 		
-		System.out.println("at ( 0 0 0 ): ");
+		System.out.println("at : " + Arrays.toString( pt ) );
 		System.out.println( "get val: " + rra.get());
-		double[] baseRes = warpMagImg.ra.base.apply( pt );
+		double[] baseRes = new double[ warpMagImg.ra.warp.numTargetDimensions() ]; 
+		warpMagImg.ra.baseline.apply( pt, baseRes );
 		
 		double[] warpRes = new double[ warpMagImg.ra.warp.numTargetDimensions() ]; 
 		warpMagImg.ra.warp.apply( pt, warpRes );
@@ -110,7 +111,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		System.out.println( "warp res: " + warpRes[0] + " " + warpRes[1]);
 		
 	}
-	
+
 	public double[] minMax()
 	{
 		double[] minmax = new double[ 2 ];
@@ -169,7 +170,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public void getSourceTransform( int t, int level, AffineTransform3D transform )
 	{
-		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+		transform.identity();
 	}
 
 	@Override
@@ -187,7 +188,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		return voxDims;
 	}
 
 	@Override

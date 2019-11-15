@@ -677,7 +677,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.setWarpMagBaseline( i );
+			bw.setWarpMagBaselineIndex( i );
 		}
 	}
 	

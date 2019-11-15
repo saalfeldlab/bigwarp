@@ -1,6 +1,7 @@
 package bigwarp.source;
 
 import mpicbg.models.AbstractModel;
+import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
@@ -12,48 +13,60 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 {
 
 	RealTransform warp;
-	AbstractModel<?> base; 
+	RealTransform baseline;
 	
 	T value;
 	
+	final double[] warpRes;
+	final double[] baseRes;
+
 	protected WarpMagnitudeRandomAccess( double[] dimensions )
 	{
 		this( dimensions, null, null, null );
 	}
 	
-	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, RealTransform warp, AbstractModel<?> base )
+	protected WarpMagnitudeRandomAccess( double[] dimensions, T value, RealTransform warp, RealTransform baseline )
 	{
 		super( dimensions.length );
 		if( warp != null)
-			this.warp = warp;
-		if( base != null )
-			this.base = base.copy();
+		{
+			this.warp = warp.copy();
+		}
+
+		if( baseline != null )
+		{
+			this.baseline = baseline.copy();
+		}
 		this.value = value;
+		warpRes = new double[ numDimensions() ]; 
+		baseRes = new double[ numDimensions() ]; 
 	}
 
 	@Override
 	public T get() 
 	{
-		if( warp == null || base == null )
-			return value;
+		T out = value.copy();
+		if( warp == null || baseline == null )
+		{
+			out.setZero();
+			return out;
+		}
 					
 		double[] mypt = new double[ this.numDimensions() ];
 		this.localize( mypt );
-		
-		double[] warpRes = new double[ warp.numTargetDimensions() ]; 
+
+		// apply the warp
 		warp.apply( mypt, warpRes );
 
-		double[] baseRes = base.apply( mypt );
+		// apply the baseline transform
+		baseline.apply( mypt, baseRes );
 
 		double dist = 0.0;
 		for( int d = 0; d < warpRes.length; d++ )
 			dist += ( warpRes[ d ] - baseRes[ d ] ) * ( warpRes[ d ] - baseRes[ d ] );  
-		
-		dist = Math.sqrt( dist );
-		 
-		T out = value.copy();
-		out.setReal( dist );
-		
+
+		out.setReal( Math.sqrt( dist ));
+
 		return out;
 	}
 	
@@ -70,7 +83,7 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	public RealRandomAccess<T> copy() 
 	{
 		return new WarpMagnitudeRandomAccess< T >( new double[ position.length ], value.copy(), 
-				warp, base.copy() );
+				warp, baseline );
 	}
 
 	public RealRandomAccess<T> copyRandomAccess() 

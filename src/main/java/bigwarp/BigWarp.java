@@ -273,6 +273,8 @@ public class BigWarp< T >
 	 */
 	protected boolean inLandmarkMode;
 
+	protected int baselineModelIndex;
+
 	// file selection
 	final JFrame fileFrame;
 
@@ -340,6 +342,7 @@ public class BigWarp< T >
 		//sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
+		baselineModelIndex = 0;
 		warpMagSourceIndex = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
 		gridSourceIndex = addGridSource( data, "GridSource" );
 
@@ -2025,15 +2028,6 @@ public class BigWarp< T >
 		viewerQ.requestRepaint();
 	}
 
-	public void setWarpMagBaseline( final int i )
-	{
-		final AbstractModel< ? > baseline = this.baseXfmList[ i ];
-		( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() ).setBaseline( baseline );
-
-		viewerP.requestRepaint();
-		viewerQ.requestRepaint();
-	}
-
 	protected void setupWarpMagBaselineOptions( final CoordinateTransform[] xfm, final int ndim )
 	{
 		if ( ndim == 2 )
@@ -2050,9 +2044,18 @@ public class BigWarp< T >
 		}
 	}
 
+	public void setWarpMagBaselineIndex( int index )
+	{
+		baselineModelIndex = index;
+		fitBaselineWarpMagModel();
+	}
+
 	protected void fitBaselineWarpMagModel()
 	{
 		final int numActive = landmarkModel.numActive();
+		if( numActive < 4 )
+			return;
+
 		final int ndims = landmarkModel.getNumdims();
 		final double[][] p = new double[ ndims ][ numActive ];
 		final double[][] q = new double[ ndims ][ numActive ];
@@ -2076,17 +2079,26 @@ public class BigWarp< T >
 
 		try
 		{
-			( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() ).getBaseline().fit( p, q, w );
+			final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
+
+			baseline.fit( p, q, w );  // FITBASELINE
+			WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform( 
+					(InvertibleCoordinateTransform)baseline, ndims );
+
+			// the transform to compare is the inverse (because we use it for rendering)
+			// so need to give the inverse transform for baseline as well
+			( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() ).setBaseline( baselineTransform.inverse() );
 		}
 		catch ( final NotEnoughDataPointsException e )
 		{
-			//e.printStackTrace();
+			e.printStackTrace();
 		}
 		catch ( final IllDefinedDataPointsException e )
 		{
-			//e.printStackTrace();
+			e.printStackTrace();
 		}
-
+		getViewerFrameP().getViewerPanel().requestRepaint();
+		getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
 	public void setMovingSpimData( SpimData movingSpimData, File movingImageXml )
@@ -2151,11 +2163,11 @@ public class BigWarp< T >
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
-			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
-			final double maxval = wmSrc.getMax( landmarkModel );
+//			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
+//			final double maxval = wmSrc.getMax( landmarkModel );
 
 			// set the slider
-			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
+//			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
 			vg.setFusedEnabled( true );
 			vg.setGroupingEnabled( false );
@@ -2239,11 +2251,11 @@ public class BigWarp< T >
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
-			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
-			final double maxval = wmSrc.getMax( landmarkModel );
+//			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
+//			final double maxval = wmSrc.getMax( landmarkModel );
 
 			// set the slider
-			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
+//			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
 			vg.setFusedEnabled( true );
 			message.showMessage( "Displaying Warp Magnitude" );
@@ -2279,6 +2291,8 @@ public class BigWarp< T >
 		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
 
 		wmSrc.setWarp( transform );
+		fitBaselineWarpMagModel();
+
 		gSrc.setWarp( transform );
 	}
 
