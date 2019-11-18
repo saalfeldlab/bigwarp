@@ -373,8 +373,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 1 ] ) };
 
 				long[] max = new long[]{
-					(long)Math.ceil( fovSpec[ 0 ] ),
-					(long)Math.ceil( fovSpec[ 1 ] ) };
+					(long)Math.ceil( offsetSpec[ 0 ] + fovSpec[ 0 ] ),
+					(long)Math.ceil( offsetSpec[ 0 ] + fovSpec[ 1 ] ) };
 				
 				ArrayList<Interval> out = new ArrayList<>();
 				out.add( new FinalInterval( min, max ));
@@ -388,9 +388,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 2 ] ) };
 
 				long[] max = new long[]{
-						(long)Math.ceil( fovSpec[ 0 ] ),
-						(long)Math.ceil( fovSpec[ 1 ] ),
-						(long)Math.ceil( fovSpec[ 2 ] ) };
+						(long) Math.ceil(offsetSpec[0] + fovSpec[0]),
+						(long) Math.ceil(offsetSpec[1] + fovSpec[1]),
+						(long) Math.ceil(offsetSpec[2] + fovSpec[2]) };
 
 				ArrayList<Interval> out = new ArrayList<>();
 				out.add( new FinalInterval( min, max ));
@@ -411,8 +411,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]) };
 
 				long[] max = new long[]{ 
-						(long)Math.floor( fovSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.floor( fovSpec[ 1 ] / outputResolution[ 1 ]) };
+						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 0 ] ) / outputResolution[ 0 ]),
+						(long)Math.floor( (offsetSpec[ 1 ] + fovSpec[ 1 ] ) / outputResolution[ 1 ]) };
 
 				ArrayList<Interval> out = new ArrayList<>();
 				out.add( new FinalInterval( min, max ));
@@ -426,9 +426,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor( offsetSpec[ 2 ] / outputResolution[ 2 ]) };
 
 				long[] max = new long[]{ 
-						(long)Math.floor( fovSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.floor( fovSpec[ 1 ] / outputResolution[ 1 ]),
-						(long)Math.floor( fovSpec[ 2 ] / outputResolution[ 2 ]) };
+						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 0 ] ) / outputResolution[ 0 ]),
+						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 1 ] ) / outputResolution[ 1 ]),
+						(long)Math.floor( (offsetSpec[ 2 ] + fovSpec[ 2 ] ) / outputResolution[ 2 ]) };
 
 
 				ArrayList<Interval> out = new ArrayList<>();

@@ -135,9 +135,9 @@ public class ExportTester
 		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PHYSICAL;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
-		double[] resolutionSpec = new double[]{ 0.4, 0.4, 0.8 };
+		double[] resolutionSpec = new double[]{ 0.5, 0.5, 0.5 };
 		double[] fovSpec = new double[]{ 50, 50, 10};
-		double[] offsetSpec = new double[]{ 93 ,103, 7};
+		double[] offsetSpec = new double[]{ 93*0.5, 103*0.5, 7*0.5};
 		Interpolation interp = Interpolation.NLINEAR;
 		boolean isVirtual = false;
 		int nThreads = 4;
