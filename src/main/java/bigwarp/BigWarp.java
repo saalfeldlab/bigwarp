@@ -885,14 +885,13 @@ public class BigWarp< T >
 		return proposedFile;
 	}
 
-	public AffineTransform3D getMovingToFixedTransformAsAffineTransform3D( )
+	public AffineTransform3D getMovingToFixedTransformAsAffineTransform3D()
 	{
 		double[][] affine3DMatrix = new double[ 3 ][ 4 ];
 		double[][] affine2DMatrix = new double[ 2 ][ 3 ];
 
 		if ( currentTransform == null )
 		{
-			IJ.error("No transform set yet." );
 			return null;
 		}
 
