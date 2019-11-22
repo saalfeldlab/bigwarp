@@ -267,7 +267,7 @@ public class BigWarp< T >
 
 	private long keyClickMaxLength = 250;
 	
-	protected final TransformTypeSelectDialog transformSelector;
+	protected TransformTypeSelectDialog transformSelector;
 
 	protected String transformType = TransformTypeSelectDialog.TPS;
 
@@ -3052,6 +3052,7 @@ public class BigWarp< T >
 	public void setTransformType( final String type )
 	{
 		this.transformType = type;
+		transformSelector.setTransformType( transformType );
 		this.restimateTransformation();
 	}
 
