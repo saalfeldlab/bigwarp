@@ -32,14 +32,14 @@ public class TransformTypeSelectDialog extends JDialog
 	 * 
 	 * @param owner the parent frame
 	 * @param bw a bigwarp instance
-	 * @param transformType the type of transform
 	 */
-	public TransformTypeSelectDialog( final Frame owner, final BigWarp< ? > bw, final String transformType )
+	public TransformTypeSelectDialog( final Frame owner, final BigWarp< ? > bw )
 	{
 		super( owner, "Transform Type select", false );
 
 		this.bw = bw;
 		this.setLayout( new BorderLayout() );
+		String transformType = bw.getTransformType();
 		
 		JRadioButton tpsButton = new JRadioButton( TPS );
 		JRadioButton affineButton = new JRadioButton( AFFINE );

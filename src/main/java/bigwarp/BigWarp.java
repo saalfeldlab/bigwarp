@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RejectedExecutionException;
 
 import javax.swing.ActionMap;
@@ -300,7 +301,10 @@ public class BigWarp< T >
 	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
 
 	private SpimData movingSpimData;
+
 	private File movingImageXml;
+
+	private CopyOnWriteArrayList< TransformListener< InvertibleRealTransform > > transformListeners = new CopyOnWriteArrayList<>( );
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
@@ -492,8 +496,8 @@ public class BigWarp< T >
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
-		
-		transformSelector = new TransformTypeSelectDialog( landmarkFrame, this, TransformTypeSelectDialog.TPS );
+
+		transformSelector = new TransformTypeSelectDialog( landmarkFrame, this );
 		
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); // dialogs have
 																// to be
@@ -888,7 +892,7 @@ public class BigWarp< T >
 
 		if ( currentTransform == null )
 		{
-			IJ.log("Cannot export. No transform set yet." );
+			IJ.error("No transform set yet." );
 			return null;
 		}
 
@@ -933,8 +937,8 @@ public class BigWarp< T >
 		}
 		else
 		{
-			IJ.log("Cannot convert to transform of type " + transform.getClass().toString()
-			+ "\nto a 3D affine tranform.");
+			IJ.error("Cannot convert transform of type " + transform.getClass().toString()
+			+ "\nto an 3D affine tranform.");
 			return null;
 		}
 
@@ -2320,6 +2324,12 @@ public class BigWarp< T >
 		}
 	}
 
+	private synchronized void notifyTransformListeners( )
+	{
+		for ( final TransformListener< InvertibleRealTransform > l : transformListeners )
+			l.transformChanged( currentTransform );
+	}
+
 	private void setTransformationAll( final InvertibleRealTransform transform )
 	{
 		setTransformationMovingSourceOnly( transform );
@@ -2372,6 +2382,9 @@ public class BigWarp< T >
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
+
+		notifyTransformListeners();
+
 		return true;
 	}
 
@@ -3108,6 +3121,11 @@ public class BigWarp< T >
 		return getTransformation( -1 );
 	}
 
+	public synchronized void addTransformListener( TransformListener< InvertibleRealTransform > listener )
+	{
+		transformListeners.add( listener );
+	}
+
 	public InvertibleRealTransform unwrap2d( InvertibleRealTransform ixfm )
 	{
 		if( ixfm instanceof Wrapped2DTransformAs3D )
@@ -3460,7 +3478,7 @@ public class BigWarp< T >
 		}
 	}
 
-	protected void loadLandmarks( final String filename )
+	public void loadLandmarks( final String filename )
 	{
 		File file = new File( filename );
 		setLastDirectory( file.getParentFile() );
