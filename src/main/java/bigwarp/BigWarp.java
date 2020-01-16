@@ -336,6 +336,7 @@ public class BigWarp< T >
 		landmarkPanel.setOpaque( true );
 		landmarkTable = landmarkPanel.getJTable();
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
+//		landmarkModel.setInverseThreshold( inverseThreshold );
 		addDefaultTableMouseListener();
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
@@ -1444,7 +1445,7 @@ public class BigWarp< T >
 		// TODO avoid duplicate effort and comment this section
 		if ( landmarkModel.getTransform() == null || !isMovingViewerXfm )
 		{
-			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false );
+			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false, currentTransform );
 
 			if ( !isMoving && !landmarkModel.isWarped( selectedPointIndex ) )
 				landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
@@ -1551,9 +1552,10 @@ public class BigWarp< T >
 	 */
 	public boolean addPoint( final double[] ptarray, final boolean isMoving )
 	{
-
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
-		final boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true );
+
+		// TODO check this (current transform part)
+		final boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true, currentTransform ); 
 
 		if ( BigWarp.this.landmarkFrame.isVisible() )
 		{
@@ -2764,7 +2766,7 @@ public class BigWarp< T >
 				else
 				{
 					final boolean isWarped = isMovingLocal && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
-					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true );
+					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true, currentTransform );
 				}
 
 				if ( updateWarpOnPtChange && !wasNewRowAdded )
@@ -2824,7 +2826,7 @@ public class BigWarp< T >
 					{
 						logger.trace("Drag default");
 						// The fixed image
-						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false );
+						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false, currentTransform );
 						thisViewer.requestRepaint();
 					}
 				}
@@ -3290,7 +3292,7 @@ public class BigWarp< T >
 						// and update warped point
 						// both for rendering purposes
 						if ( !isMoving )
-							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false );
+							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false, bw.currentTransform );
 
 						/*
 						 * repaint both panels so that: 

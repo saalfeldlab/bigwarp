@@ -28,6 +28,8 @@ import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
+import net.imglib2.realtransform.RealTransform;
+
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 
@@ -95,7 +97,9 @@ public class LandmarkTableModel extends AbstractTableModel {
 	// this lets us both render points correctly, and create desirable undo behavior
 	// for point drags.
 	protected double[] lastPoint; 
-	
+
+	protected double[] tmp;
+
 	// keep track of edits for undo's and redo's
 	protected LandmarkUndoManager undoRedoManager;
 	
@@ -154,6 +158,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		undoRedoManager = new LandmarkUndoManager();
 
 		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
+
+		tmp = new double[ ndims ];
 	}
 
 	public void setMessage( final BigWarpMessageAnimator message )
@@ -614,24 +620,32 @@ public class LandmarkTableModel extends AbstractTableModel {
 	
 	public boolean add( double[] pt, boolean isMoving )
 	{
-		return pointEdit( -1, pt, true, isMoving, false, true );
+		return pointEdit( -1, pt, true, isMoving, false, true, null );
 	}
-	
-	public void setPoint( int row, boolean isMoving, double[] pt )
+
+	public boolean add( double[] pt, boolean isMoving, final RealTransform xfm )
 	{
-		setPoint( row, isMoving, pt, true );
+		return pointEdit( -1, pt, true, isMoving, false, true, xfm );
 	}
 	
-	public void setPoint( int row, boolean isMoving, double[] pt, boolean isUndoable )
+	public void setPoint( int row, boolean isMoving, double[] pt, final RealTransform xfm )
 	{
-		pointEdit( row, pt, false, isMoving, false, isUndoable );
+		setPoint( row, isMoving, pt, true, xfm );
 	}
 	
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, boolean isWarped, boolean isUndoable )
+	public void setPoint( int row, boolean isMoving, double[] pt, boolean isUndoable, final RealTransform xfm )
+	{
+		pointEdit( row, pt, false, isMoving, false, isUndoable, xfm );
+	}
+
+	public boolean pointEdit( final int index, final double[] pt, final boolean forceAdd, final boolean isMoving, final boolean isWarped, final boolean isUndoable, final RealTransform xfm )
 	{
 		//TODO point edit
 		if( isWarped )
-			return pointEdit( index, estimatedXfm.apply( pt ), forceAdd, isMoving, pt, isUndoable, false );
+		{
+			xfm.apply( pt, tmp );
+			return pointEdit( index, tmp, forceAdd, isMoving, pt, isUndoable, false );
+		}
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
 	}
@@ -656,6 +670,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
 	{
+		// this means we should add a new point.  
+		// index of this point should be the next free row in the table
 		if( index == -1 )
 		{
 			if( isMoving )
@@ -671,7 +687,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 		if( isAdd )
 			addEmptyRow( index );
-		
+
 		double[] oldpt = copy( PENDING_PT );
 		if( !isAdd )
 		{
@@ -690,14 +706,17 @@ public class LandmarkTableModel extends AbstractTableModel {
 		
 		ArrayList< Double[] > pts;
 		
+
 		/********************
 		 * Update the point *
 		 ********************/
+		// get the relevant list of points (moving or target)
 		if( isMoving )
 			pts = movingPts;
 		else
 			pts = targetPts;
 		
+		// create a new point and add it
 		Double[] exPts = new Double[ ndims ];
 		for( int i = 0; i < ndims; i++ ){
 			exPts[ i ] = pt[ i ];
@@ -712,6 +731,8 @@ public class LandmarkTableModel extends AbstractTableModel {
 		else
 			resetWarpedPoint( index );
 
+		// make sure we can undo this action if relevant
+		// some point-drag behaviors are not and should not be undo-able
 		if ( isUndoable )
 		{
 			if ( isAdd )
@@ -1251,12 +1272,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 			for ( int d = 0; d < ndims; d++ )
 				tmp[ d ] = thisMoving[ d ];
 
-			inv.add( tmp, false );
+			inv.add( tmp, false, null );
 
 			for ( int d = 0; d < ndims; d++ )
 				tmp[ d ] = thisTarget[ d ];
 
-			inv.setPoint( i, true, tmp );
+			inv.setPoint( i, true, tmp, null );
 		}
 
 		return inv;

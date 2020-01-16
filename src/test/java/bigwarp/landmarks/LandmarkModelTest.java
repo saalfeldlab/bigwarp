@@ -58,7 +58,7 @@ public class LandmarkModelTest
 		assertEquals( "initial selection ", -1, table.getSelectedRow() );
 
 		// add a moving point
-		ltm.add( new double[]{ 0.0, 0.0 },  true );
+		ltm.add( new double[]{ 0.0, 0.0 }, true );
 		BigWarp.updateRowSelection( ltm, table, true, nr );
 		nr = ltm.getRowCount(); // num rows
 		assertEquals(" 1 empty target point " , nr, ltm.getNextRow( true ));
@@ -91,7 +91,7 @@ public class LandmarkModelTest
 		// set the next point to be in the middle, make sure nextPointP is incremented correctly
 		k = 6;
 		ltm.setNextRow( true, k );
-		ltm.pointEdit( k, new double[]{ 2.0, 2.0 }, false, true, false, true );
+		ltm.pointEdit( k, new double[]{ 2.0, 2.0 }, false, true, false, true, null );
 		ltm.updateNextRows( k );
 		assertEquals(" nextRowP inc " , 7, ltm.getNextRow( true ));
 		
@@ -111,7 +111,7 @@ public class LandmarkModelTest
 		// test wrapping
 		k = ltm.getNextRow( true );
 		logger.info( "k: " + k );
-		ltm.pointEdit( k, new double[]{ 3.0, 3.0 }, false, true, false, true );
+		ltm.pointEdit( k, new double[]{ 3.0, 3.0 }, false, true, false, true, null );
 		ltm.updateNextRows( k );
 		logger.info( ltm.getNextRow( true ) );
 		assertEquals(" nextRowP inc wrap ", 5, ltm.getNextRow( true ));
