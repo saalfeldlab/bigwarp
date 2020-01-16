@@ -25,6 +25,13 @@ public class TransformTypeSelectDialog extends JDialog
 	public static final String TRANSLATION = "Translation";
 	
 	private final BigWarp< ? > bw;
+	private String transformType;
+
+	private final JRadioButton tpsButton;
+	private final JRadioButton affineButton;
+	private final JRadioButton similarityButton;
+	private final JRadioButton rotationButton;
+	private final JRadioButton translationButton;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
@@ -32,20 +39,20 @@ public class TransformTypeSelectDialog extends JDialog
 	 * 
 	 * @param owner the parent frame
 	 * @param bw a bigwarp instance
-	 * @param transformType the type of transform
 	 */
-	public TransformTypeSelectDialog( final Frame owner, final BigWarp< ? > bw, final String transformType )
+	public TransformTypeSelectDialog( final Frame owner, final BigWarp< ? > bw )
 	{
 		super( owner, "Transform Type select", false );
 
 		this.bw = bw;
 		this.setLayout( new BorderLayout() );
-		
-		JRadioButton tpsButton = new JRadioButton( TPS );
-		JRadioButton affineButton = new JRadioButton( AFFINE );
-		JRadioButton similarityButton = new JRadioButton( SIMILARITY );
-		JRadioButton rotationButton = new JRadioButton( ROTATION );
-		JRadioButton translationButton = new JRadioButton( TRANSLATION );
+		transformType = bw.getTransformType();
+
+		tpsButton = new JRadioButton( TPS );
+		affineButton = new JRadioButton( AFFINE );
+		similarityButton = new JRadioButton( SIMILARITY );
+		rotationButton = new JRadioButton( ROTATION );
+		translationButton = new JRadioButton( TRANSLATION );
 		
 		ButtonGroup group = new ButtonGroup();
 		group.add( tpsButton );
@@ -54,6 +61,35 @@ public class TransformTypeSelectDialog extends JDialog
 		group.add( rotationButton );
 		group.add( translationButton );
 
+		updateButtonGroup();
+
+		addActionListender( tpsButton );
+		addActionListender( affineButton );
+		addActionListender( similarityButton );
+		addActionListender( rotationButton );
+		addActionListender( translationButton );
+		
+		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
+		radioPanel.add( tpsButton );
+		radioPanel.add( affineButton );
+		radioPanel.add( similarityButton );
+		radioPanel.add( rotationButton );
+		radioPanel.add( translationButton );
+		
+		radioPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"Transform type" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
+		add( radioPanel, BorderLayout.LINE_START );
+		pack();
+	}
+
+	private void updateButtonGroup()
+	{
 		switch( transformType )
 		{
 		case TPS:
@@ -72,32 +108,8 @@ public class TransformTypeSelectDialog extends JDialog
 			translationButton.setSelected( true );
 			break;
 		}
-
-		addActionListender( tpsButton );
-		addActionListender( affineButton );
-		addActionListender( similarityButton );
-		addActionListender( rotationButton );
-		addActionListender( translationButton );
-		
-		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
-		radioPanel.add(tpsButton);
-		radioPanel.add(affineButton);
-		radioPanel.add(similarityButton);
-		radioPanel.add(rotationButton);
-		radioPanel.add(translationButton);
-		
-		radioPanel.setBorder( BorderFactory.createCompoundBorder(
-				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
-				BorderFactory.createCompoundBorder(
-						BorderFactory.createTitledBorder(
-								BorderFactory.createEtchedBorder(),
-								"Transform type" ),
-						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-
-		add( radioPanel, BorderLayout.LINE_START );
-		pack();
 	}
-	
+
 	public void addActionListender( final JRadioButton button )
 	{
 		button.addActionListener( new ActionListener() {
@@ -106,5 +118,13 @@ public class TransformTypeSelectDialog extends JDialog
 				bw.setTransformType( button.getText() );
 			}
 		});
+	}
+
+	public void setTransformType( String transformType )
+	{
+		this.transformType = transformType;
+		updateButtonGroup();
+		this.validate();
+		this.repaint();
 	}
 }
