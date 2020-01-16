@@ -28,7 +28,10 @@ import bigwarp.landmarks.actions.LandmarkUndoManager;
 import bigwarp.landmarks.actions.ModifyPointEdit;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
+import net.imglib2.ui.TransformListener;
 
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
@@ -39,7 +42,7 @@ import bdv.gui.BigWarpMessageAnimator;
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  *
  */
-public class LandmarkTableModel extends AbstractTableModel {
+public class LandmarkTableModel extends AbstractTableModel implements TransformListener< InvertibleRealTransform >{
 
 	private static final long serialVersionUID = -5865789085410559166L;
 	
@@ -644,15 +647,10 @@ public class LandmarkTableModel extends AbstractTableModel {
 		if( isWarped )
 		{
 			xfm.apply( pt, tmp );
-			return pointEdit( index, tmp, forceAdd, isMoving, pt, isUndoable, false );
+			return pointEdit( index, tmp, forceAdd, isMoving, pt, isUndoable );
 		}
 		else
 			return pointEdit( index, pt, forceAdd, isMoving, null, isUndoable );
-	}
-
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
-	{
-		return pointEdit( index, pt, forceAdd, isMoving, warpedPt, isUndoable, true );
 	}
 
 	/**
@@ -668,7 +666,7 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * @param forceUpdateWarpedPts updated warped point positions
 	 * @return true if a new row was added
 	 */
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable, boolean forceUpdateWarpedPts )
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
 		// this means we should add a new point.  
 		// index of this point should be the next free row in the table
@@ -679,9 +677,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 			else
 				index = nextRowQ;
 		}
-
-		if ( warpedPt != null )
-			forceUpdateWarpedPts = false;
 
 		boolean isAdd = forceAdd || (index == getRowCount());
 
@@ -762,9 +757,6 @@ public class LandmarkTableModel extends AbstractTableModel {
 
 		activateRow( index );
 
-		if( forceUpdateWarpedPts )
-			computeWarpedPoint( index );
-
 		firePointUpdated( index, isMoving );
 
 		return isAdd;
@@ -787,13 +779,13 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * Looks through the table for points where there is a point in moving space but not fixed space.
 	 * For any such landmarks that are found, compute the inverse transform and add the result to the fixed points line.
 	 * 
+	 *  @param xfm the new transformation
 	 */
-	public void updateAllWarpedPoints()
+	public void updateAllWarpedPoints( final InvertibleRealTransform xfm )
 	{
 		for ( int i = 0; i < numRows; i++ )
 			if ( !isFixedPoint( i ) && isMovingPoint( i ) )
-				computeWarpedPoint( i );
-
+				computeWarpedPoint( i, xfm );
 	}
 
 	/**
@@ -811,25 +803,34 @@ public class LandmarkTableModel extends AbstractTableModel {
 	 * spline transformation.
 	 * 
 	 * @param i the row in the table
+	 * @param xfm the invertible transformation
 	 */
-	public synchronized void computeWarpedPoint( int i )
+	public synchronized void computeWarpedPoint( int i, final InvertibleRealTransform xfm )
 	{
+		// TODO pass a transform here as argument - don't use estimatedXfm stored here
+
 		// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
-		if ( !isFixedPoint( i ) && isMovingPoint( i ) && estimatedXfm.getNumLandmarks() > 0 )
+		if ( !isFixedPoint( i ) && isMovingPoint( i ) && xfm != null )
 		{
 			double[] tgt = toPrimitive( movingPts.get( i ) );
 
 			double[] warpedPt = new double[ ndims ];
-			double error = estimatedXfm.inverse( tgt, warpedPt, inverseThreshold, maxInverseIterations );
+			xfm.applyInverse( warpedPt, tgt );
 
-			if( error > inverseThreshold )
+			if( xfm instanceof WrappedIterativeInvertibleRealTransform )
 			{
-				movingDisplayPointUnreliable.set( i, true );
-				message.showMessage( String.format(
-					"Warning: location of moving point %s in warped space is innacurate", names.get( i )));
+				WrappedIterativeInvertibleRealTransform<?> inv = (WrappedIterativeInvertibleRealTransform<?>)xfm;
+				double error = inv.getOptimzer().getError();
+
+				if( error > inverseThreshold )
+				{
+					movingDisplayPointUnreliable.set( i, true );
+					message.showMessage( String.format(
+						"Warning: location of moving point %s in warped space is innacurate", names.get( i )));
+				}
+				else
+					movingDisplayPointUnreliable.set( i, false );
 			}
-			else
-				movingDisplayPointUnreliable.set( i, false );
 
 			// TODO should check for failure or non-convergence here
 			// can use the error returned by the inverse method to do this. 
@@ -1304,5 +1305,12 @@ public class LandmarkTableModel extends AbstractTableModel {
 			out[ i ] = in[ i ];
 
 		return out;
+	}
+
+	@Override
+	public void transformChanged( final InvertibleRealTransform transform )
+	{
+		// update warped point locations when the transform changes
+		updateAllWarpedPoints( transform );
 	}
 }

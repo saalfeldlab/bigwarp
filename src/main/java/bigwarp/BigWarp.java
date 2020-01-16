@@ -334,6 +334,7 @@ public class BigWarp< T >
 		landmarkModel = new LandmarkTableModel( ndims );
 		landmarkModellistener = new LandmarkTableListener();
 		landmarkModel.addTableModelListener( landmarkModellistener );
+		addTransformListener( landmarkModel );
 
 		/* Set up landmark panel */
 		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
@@ -2831,7 +2832,7 @@ public class BigWarp< T >
 						BigWarp.this.landmarkModel.pointEdit(
 								selectedPointIndex,
 								BigWarp.this.landmarkModel.getTransform().apply( ptarrayLoc ),
-								false, isMoving, ptarrayLoc, false, false );
+								false, isMoving, ptarrayLoc, false );
 						thisViewer.requestRepaint();
 					}
 					else
@@ -3294,7 +3295,7 @@ public class BigWarp< T >
 							bw.landmarkModel.resetWarpedPoints();
 
 							// re-compute all warped points for non-active points
-							bw.landmarkModel.updateAllWarpedPoints();
+							bw.landmarkModel.updateAllWarpedPoints( bw.currentTransform );
 
 							// update sources with the new transformation
 							bw.setTransformationAll( invXfm );
