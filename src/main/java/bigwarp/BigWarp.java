@@ -292,7 +292,7 @@ public class BigWarp< T >
 
 	protected boolean firstWarpEstimation = true;
 
-	JMenu landmarkMenu;
+	JMenu fileMenu;
 
 	final ProgressWriter progressWriter;
 
@@ -800,11 +800,11 @@ public class BigWarp< T >
 
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
 		exportToImagePlus.setText( "Export as ImagePlus" );
-		landmarkMenu.add( exportToImagePlus );
+		fileMenu.add( exportToImagePlus );
 		
 		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
 		exportWarpField.setText( "Export warp field" );
-		landmarkMenu.add( exportWarpField );
+		fileMenu.add( exportWarpField );
 
 	}
 
@@ -1152,25 +1152,33 @@ public class BigWarp< T >
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
 
 		final JMenuBar landmarkMenuBar = new JMenuBar();
-		landmarkMenu = new JMenu( "File" );
+		fileMenu = new JMenu( "File" );
 		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
 		openItem.setText( "Import landmarks" );
-		landmarkMenu.add( openItem );
+		fileMenu.add( openItem );
 
 		final JMenuItem saveItem = new JMenuItem( actionMap.get( BigWarpActions.SAVE_LANDMARKS ));
 		saveItem.setText( "Export landmarks" );
-		landmarkMenu.add( saveItem );
+		fileMenu.add( saveItem );
 
-		landmarkMenu.addSeparator();
+		fileMenu.addSeparator();
 		final JMenuItem exportImageItem = new JMenuItem( "Export Moving Image" );
 
-		landmarkMenuBar.add( landmarkMenu );
+		landmarkMenuBar.add( fileMenu );
 		landmarkFrame.setJMenuBar( landmarkMenuBar );
 		//	exportMovingImage( file, state, progressWriter );
 
 		final JMenuItem saveExport = new JMenuItem( actionMap.get( BigWarpActions.SAVE_WARPED ) );
 		saveExport.setText( "Save warped image" );
-		landmarkMenu.add( saveExport );
+		fileMenu.add( saveExport );
+
+		final JMenu landmarkMenu = new JMenu( "Landmarks" );
+		final JMenuItem landmarkGridItem = new JMenuItem( actionMap.get( BigWarpActions.LANDMARK_GRID_DIALOG ) );
+		landmarkGridItem.setText( "Build landmark grid" );
+		landmarkMenu.add( landmarkGridItem );
+
+		landmarkMenuBar.add( landmarkMenu );
+
 
 		if( ij != null )
 			setupImageJExportOption();
@@ -1204,6 +1212,11 @@ public class BigWarp< T >
 	public SetupAssignments getSetupAssignments()
 	{
 		return setupAssignments;
+	}
+
+	public BigWarpData<T> getData()
+	{
+		return data;
 	}
 
 	public List< SourceAndConverter< T > > getSources()

@@ -16,6 +16,7 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
+import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import mpicbg.models.AbstractModel;
@@ -59,6 +60,8 @@ public class BigWarpActions
 	public static final String LOAD_SETTINGS = "load settings";
 	public static final String LOAD_LANDMARKS = "load landmarks";
 	public static final String SAVE_LANDMARKS = "save landmarks";
+
+	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
@@ -291,6 +294,8 @@ public class BigWarpActions
 
 		new LoadLandmarksAction( bw ).put( actionMap );
 		new SaveLandmarksAction( bw ).put( actionMap );
+
+		new LandmarkGridDialogAction( bw ).put( actionMap );
 
 		new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ).put( actionMap );
 		new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ).put( actionMap );
@@ -1072,6 +1077,25 @@ public class BigWarpActions
 		public void actionPerformed(ActionEvent e)
 		{
 			bw.saveMovingImageXml();
+		}
+	}
+
+	public static class LandmarkGridDialogAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 1L;
+		BigWarp bw;
+
+		public LandmarkGridDialogAction( final BigWarp bw )
+		{
+			super( LANDMARK_GRID_DIALOG );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			System.out.println( "LandmarkGridGenerator.fillFromDialog( bw )" );
+			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}
 
