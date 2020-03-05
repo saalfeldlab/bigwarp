@@ -44,11 +44,7 @@ import net.imglib2.view.Views;
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > extends BigWarpExporter<T>
 {
 
-	final private boolean needConversion;
-
 	final private T baseType;
-
-	final private Converter<T,FloatType> converter;
 
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
@@ -60,14 +56,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final ProgressWriter progress )
 	{
 		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
-
-		this.needConversion = needConversion;
 		this.baseType = baseType;
-
-		if( needConversion )
-			converter = new RealFloatConverter<T>();
-		else
-			converter = null;
 	}
 
 	public BigWarpRealExporter(
@@ -141,6 +130,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return false;
 	}
 
+	@SuppressWarnings("unchecked")
 	public ImagePlus export()
 	{
 		int numChannels = movingSourceIndexList.length;
@@ -246,13 +236,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		long[] dims = new long[ target.numDimensions() ];
 		target.dimensions( dims );
 
-		double k = 0;
-		long N = 1;
-		for ( int i = 0; i < itvl.numDimensions(); i++ )
-			N *= dimensions[ i ];
-
+		long N = Intervals.numElements(itvl);
 		final Cursor< T > c = target.cursor();
 		final RandomAccess< T > ra = raip.randomAccess();
+		double k = 0;
 		while ( c.hasNext() )
 		{
 			c.fwd();
@@ -319,71 +306,4 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return null;
 	}
 
-	@SuppressWarnings( "unchecked" )
-	public static RandomAccessibleInterval< FloatType > convertToFloat( SourceAndConverter< ? > source, int index )
-	{
-		Object type = source.getSpimSource().getType();
-		
-		RandomAccessibleInterval< FloatType > out; // = Converters.convert( (RandomAccessibleInterval<RealType<?>>)img, converter, destType );
-		if ( ByteType.class.isInstance( type ) )
-		{
-			 out = Converters.convert( 
-					 ( RandomAccessibleInterval< ByteType > ) source.getSpimSource().getSource( 0, 0 ), 
-					 new RealFloatConverter< ByteType >(),
-					 new FloatType());
-		}
-		else if ( UnsignedByteType.class.isInstance( type ) )
-		{
-			 out = Converters.convert( 
-					 ( RandomAccessibleInterval< UnsignedByteType > ) source.getSpimSource().getSource( 0, 0 ), 
-					 new RealFloatConverter< UnsignedByteType >(),
-					 new FloatType());
-		}
-		else if ( IntType.class.isInstance( type ) )
-		{
-			 out = Converters.convert( 
-					 ( RandomAccessibleInterval< IntType > ) source.getSpimSource().getSource( 0, 0 ), 
-					 new RealFloatConverter< IntType >(),
-					 new FloatType());
-		}
-		else if ( FloatType.class.isInstance( type ) )
-		{
-			 out = ( RandomAccessibleInterval< FloatType > ) source.getSpimSource().getSource( 0, 0 );
-		}
-		else if ( DoubleType.class.isInstance( type ) )
-		{
-			 out = Converters.convert( 
-					 ( RandomAccessibleInterval< DoubleType > ) source.getSpimSource().getSource( 0, 0 ), 
-					 new RealFloatConverter< DoubleType >(),
-					 new FloatType());
-		}
-		else if ( ARGBType.class.isInstance( type ) )
-		{
-			out = Converters.convert( 
-					 ( RandomAccessibleInterval< ARGBType > ) source.getSpimSource().getSource( 0, 0 ), 
-					 new ARGBFloatConverter(),
-					 new FloatType());
-		}
-		else
-		{
-			System.err.println( "Can't convert type " + type.getClass() + " to FloatType" );
-			return null;
-		}
-		
-		return out;
-	}
-
-	public static class ARGBFloatConverter implements Converter< ARGBType, FloatType >
-	{
-		@Override
-		public void convert( ARGBType input, FloatType output )
-		{
-			int v = input.getIndex();
-			float r = ARGBType.red( v );
-			float g = ARGBType.green( v );
-			float b = ARGBType.blue( v );
-			output.set( r + g + b );
-		}
-
-	}
 }
