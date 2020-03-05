@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import bdv.export.ProgressWriter;
+import bdv.export.ProgressWriterConsole;
 import bdv.img.WarpedSource;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
@@ -108,7 +109,11 @@ public abstract class BigWarpExporter <T>
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
 
-		this.progress = progress;
+		if( progress == null )
+			this.progress = new ProgressWriterConsole();
+		else
+			this.progress = progress;
+
 		this.setInterp( interp );
 		
 		pixelRenderToPhysical = new AffineTransform3D();

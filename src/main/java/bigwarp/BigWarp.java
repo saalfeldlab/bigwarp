@@ -58,6 +58,7 @@ import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
 import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
+import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
@@ -316,7 +317,11 @@ public class BigWarp< T >
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
-		this.progressWriter = progressWriter;
+
+		if( progressWriter == null )
+			this.progressWriter = new ProgressWriterConsole();
+		else
+			this.progressWriter = progressWriter;
 
 		this.data = data;
 		this.options = options;
