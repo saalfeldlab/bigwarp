@@ -1794,7 +1794,6 @@ public class BigWarp< T >
 		if ( inLandmarkMode )
 		{
 			message.showMessage( "Can't move viewer in landmark mode." );
-			message.showMessage( "Can't move viewer in landmark mode." );
 			return;
 		}
 
@@ -1807,8 +1806,7 @@ public class BigWarp< T >
 	{
 		if( inLandmarkMode )
 		{
-			getViewerFrameP().getViewerPanel().showMessage( "Can't move viewer in landmark mode." );
-			getViewerFrameQ().getViewerPanel().showMessage( "Can't move viewer in landmark mode." );
+			message.showMessage( "Can't move viewer in landmark mode." );
 			return;
 		}
 
@@ -1927,10 +1925,7 @@ public class BigWarp< T >
 		logger.trace( "toggleMovingImageDisplay, success: " + success );
 		if ( !success )
 		{
-			getViewerFrameP().getViewerPanel().showMessage(
-					"Require at least 4 points to estimate a transformation" );
-			getViewerFrameQ().getViewerPanel().showMessage(
-					"Require at least 4 points to estimate a transformation" );
+			message.showMessage( "Require at least 4 points to estimate a transformation" );
 			return false;
 		}
 
