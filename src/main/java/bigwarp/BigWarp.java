@@ -1771,11 +1771,13 @@ public class BigWarp< T >
 		final AffineTransform3D xfm = new AffineTransform3D();
 		viewerP.getState().getViewerTransform( xfm );
 		System.out.println( "mvg viewer xfm: " + xfm );
-		System.out.println( "    det = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
 
 		viewerQ.getState().getViewerTransform( xfm );
 		System.out.println( "tgt viewer xfm: " + xfm );
-		System.out.println( "    det = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
 	}
 
 	/**

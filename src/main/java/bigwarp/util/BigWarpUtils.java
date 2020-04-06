@@ -58,6 +58,13 @@ public class BigWarpUtils
 				xfm.get(2, 0), xfm.get(2, 1), xfm.get(2, 2) );
 	}
 
+	public static double dotXy( final AffineTransform3D xfm )
+	{
+		return  xfm.get(0, 0) * xfm.get( 0, 1 ) +
+				xfm.get(1, 0) * xfm.get( 1, 1 ) +
+				xfm.get(2, 0) * xfm.get( 2, 1 );
+	}
+
 	public static void flipX( final AffineTransform3D xfm )
 	{
 		for( int i = 0; i < 4; i++ )
