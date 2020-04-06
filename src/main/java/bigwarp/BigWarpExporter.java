@@ -9,6 +9,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+
 import bdv.export.ProgressWriter;
 import bdv.img.WarpedSource;
 import bdv.tools.brightness.ConverterSetup;
@@ -16,7 +19,14 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarp.WrappedCoordinateTransform;
 import ij.ImagePlus;
+import mpicbg.models.AffineModel2D;
+import mpicbg.models.AffineModel3D;
+import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.InvertibleCoordinateTransform;
+import mpicbg.models.Model;
+import mpicbg.models.NotEnoughDataPointsException;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -78,6 +88,8 @@ public abstract class BigWarpExporter <T>
 
 	private boolean showResult = true;
 
+	protected static Logger logger = LogManager.getLogger( BigWarpExporter.class.getName() );
+
 	public BigWarpExporter(
 			final List< SourceAndConverter< T >> sourcesIn,
 			final int[] movingSourceIndexList,
@@ -94,8 +106,12 @@ public abstract class BigWarpExporter <T>
 			{
 				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
 				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
-				wsCopy.updateTransform( ws.getTransform().copy() );
-				wsCopy.setIsTransformed( true );
+	
+				if( ws.getTransform() != null )
+				{
+					wsCopy.updateTransform( ws.getTransform().copy() );
+					wsCopy.setIsTransformed( true );
+				}
 				srcCopy = wsCopy;
 			}
 			else
