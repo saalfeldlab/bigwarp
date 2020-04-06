@@ -16,10 +16,16 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
+import bdv.viewer.SourceAndConverter;
+import bdv.viewer.state.ViewerState;
+import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
+import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.util.LinAlgHelpers;
 
 public class BigWarpActions
 {
@@ -252,7 +258,7 @@ public class BigWarpActions
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
 		map.put( GARBAGE_COLLECTION, "F10" );
 		map.put( PRINT_TRANSFORM, "P" );
-		//map.put( DEBUG, "F10" );
+		map.put( DEBUG, "F10" );
 		
 		return inputMap;
 	}
@@ -509,15 +515,35 @@ public class BigWarpActions
 		{
 			System.out.println( "Debug" );
 
-			System.out.println( "viewerP is Transformed: " + bw.isMovingDisplayTransformed() );
-
-			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
-			// ltm.printState();
+//			System.out.println( "viewerP is Transformed: " + bw.isMovingDisplayTransformed() );
+//			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
+//			 ltm.printState();
 			// ltm.validateTransformPoints();
 
 			// System.out.println( ltm.getChangedSinceWarp() );
-			// System.out.println( ltm.getWarpedPoints() );
-			ltm.printWarpedPoints();
+//			 System.out.println( ltm.getWarpedPoints() );
+//			ltm.printWarpedPoints();
+			
+			AffineTransform3D xfm = new AffineTransform3D();
+			bw.viewerP.getState().getViewerTransform( xfm );
+			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
+
+			bw.viewerQ.getState().getViewerTransform( xfm );
+			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
+			
+			BigWarpData data = bw.getData();
+			for( int mi : data.movingSourceIndices )
+			{
+				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
+				System.out.println( "mvg src xfm " + xfm  );
+			}
+
+			for( int ti : data.targetSourceIndices )
+			{
+				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
+				System.out.println( "tgt src xfm " + xfm  );
+			}
+
 
 			System.out.println( " " );
 		}

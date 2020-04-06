@@ -6,6 +6,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 
+import bigwarp.util.BigWarpUtils;
+import bigwarp.util.Rotation2DHelpers;
 import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.ui.TransformEventHandler;
@@ -64,17 +66,34 @@ public class TransformHandler3DWrapping2D extends MouseAdapter implements KeyLis
 	@Override
 	public void setTransform( AffineTransform3D transform ) 
 	{
+//		System.out.println( "xfm handler 3d to 2d ");
 		synchronized ( affine3d ) 
 		{
+//			affine3d.set( 
+//					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 3 ), 
+//					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 3 ),
+//					0.0, 0.0, 1.0, 0.0);
+//			
+//			AffineTransform2D tmp2dxfm = new AffineTransform2D();
+//			tmp2dxfm.set( 	transform.get( 0, 0 ), transform.get( 0, 1 ), transform.get( 0, 3 ),
+//							transform.get( 1, 0 ), transform.get( 1, 1 ), transform.get( 1, 3 ));
+//			handler2d.setTransform(tmp2dxfm);
+			
+//			System.out.println( "  det before: " + BigWarpUtils.det( transform ));
+			
+
 			affine3d.set( 
 					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 3 ), 
 					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 3 ),
-					0.0, 0.0, 1.0, 0.0);
+					0.0, 0.0, transform.get(2, 2), 0.0);
+
+//			System.out.println( "  det after: " + BigWarpUtils.det( transform ));
 			
 			AffineTransform2D tmp2dxfm = new AffineTransform2D();
 			tmp2dxfm.set( 	transform.get( 0, 0 ), transform.get( 0, 1 ), transform.get( 0, 3 ),
 							transform.get( 1, 0 ), transform.get( 1, 1 ), transform.get( 1, 3 ));
 			handler2d.setTransform(tmp2dxfm);
+
 		}
 	}
 
@@ -132,13 +151,39 @@ public class TransformHandler3DWrapping2D extends MouseAdapter implements KeyLis
 	
 	private void project( final AffineTransform2D transform )
 	{
+		System.out.println( " " );
 		synchronized ( affine3d ) 
 		{
+//			affine3d.set( 
+//					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 2 ), 
+//					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 2 ), 
+//					0.0, 0.0, 1.0, 0.0);
+
+			//double det2 = BigWarpUtils.det(xfm)
+			double det2 = Rotation2DHelpers.determinant2d( transform );
+			System.out.println( "det2 before: " + det2 );
+
 			affine3d.set( 
 					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 2 ), 
 					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 2 ), 
 					0.0, 0.0, 1.0, 0.0);
+
+//			double z = det2 < 0 ? -1: 1;
+//			affine3d.set( 
+//					transform.get( 0, 0 ), transform.get( 0, 1 ), 0.0, transform.get( 0, 2 ), 
+//					transform.get( 1, 0 ), transform.get( 1, 1 ), 0.0, transform.get( 1, 2 ), 
+//					0.0, 0.0, z, 0.0);
+
+			if( det2 < 0 )
+				BigWarpUtils.permuteXY( affine3d );
+
+//			if( det2 < 0 )
+//				BigWarpUtils.flipX( affine3d );
+
+			double det3 = BigWarpUtils.det( affine3d );
+			System.out.println( "det3 after: "  + det3 );
 		}
+		System.out.println( " " );
 	}
 	
 	protected void update()

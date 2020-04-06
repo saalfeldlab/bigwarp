@@ -15,10 +15,13 @@ import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
 import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.OverlayAnimator;
+import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.RotationAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.state.SourceState;
+import bigwarp.util.BigWarpUtils;
+import bigwarp.util.Rotation2DHelpers;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
@@ -58,6 +61,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected boolean boxOverlayVisible = true;
 
 	protected boolean textOverlayVisible = true;
+	
+	protected ArrayList< AffineTransform3D > orthoTransforms;
 
 	// root two over two
 	public static final double R2o2 = Math.sqrt( 2 ) / 2;
@@ -91,6 +96,23 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		overlayAnimators.add( message );
 		updateGrouping();
+	}
+	
+	public void precomputeRotations2d( final AffineTransform3D initialViewTransform )
+	{
+		orthoTransforms = new ArrayList<>();
+		AffineTransform3D rot = new AffineTransform3D();
+		rot.rotate( 2, -Math.PI / 2 );
+
+		AffineTransform3D xfm = initialViewTransform;
+		orthoTransforms.add( xfm );
+		for( int i = 1; i < 4; i++ )
+		{
+			AffineTransform3D newXfm = xfm.copy();
+			newXfm.rotate( 2, -Math.PI/2);
+			orthoTransforms.add( newXfm );
+			xfm = newXfm;
+		}
 	}
 
 	public void toggleTextOverlayVisible()
@@ -317,63 +339,15 @@ public class BigWarpViewerPanel extends ViewerPanel
 	
 		System.out.println( stateTransform );
 	}
-	
+
 	public synchronized void rotateView2d( boolean isClockwise )
 	{
 		if ( !transformEnabled )
 			return;
 
-		final SourceState< ? > source = state.getSources().get( state.getCurrentSource() );
-		final AffineTransform3D sourceTransform = new AffineTransform3D();
-		source.getSpimSource().getSourceTransform( state.getCurrentTimepoint(), 0, sourceTransform );
+		final AffineTransform3D transform = new AffineTransform3D();
+		state.getViewerTransform( transform );
 
-		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
-
-		// avoid computing angle explicitly ( and thus avoid expensive inverse tan op )
-		// and instead do a verbose, but faster if statements
-		double m00 = transform.get( 0, 0 );
-		double m01 = transform.get( 0, 1 );
-		double m10 = transform.get( 1, 0 );
-		double m11 = transform.get( 1, 1 );
-
-		boolean xpos = ( m00 + m10 > 0 );
-		boolean ypos = ( m01 + m11 > 0 );
-		
-		RotatePlane2d qTarget;
-		if( isClockwise )
-		{
-			if( xpos && ypos )
-				qTarget = RotatePlane2d.qpY;
-			else if( xpos && !ypos )
-				qTarget = RotatePlane2d.qnX;
-			else if( !xpos && ypos )
-				qTarget = RotatePlane2d.qpX;
-			else if( !xpos && !ypos )
-				qTarget = RotatePlane2d.qnY;
-			else
-				qTarget = null; 
-		}
-		else
-		{
-			if( xpos && ypos )
-				qTarget = RotatePlane2d.qnY;
-			else if( xpos && !ypos )
-				qTarget = RotatePlane2d.qpX;
-			else if( !xpos && ypos )
-				qTarget = RotatePlane2d.qnX;
-			else if( !xpos && !ypos )
-				qTarget = RotatePlane2d.qpY;
-			else
-				qTarget = null; 
-		}
-		
-		if( qTarget == null ) return;
-		
-		double[][] R = new double[4][4];
-		LinAlgHelpers.quaternionToR( qTarget.qAlign, R );
-		R[3][3] = 1.0;
-		destXfm.set( R );
-		
 		double centerX;
 		double centerY;
 		if ( mouseCoordinates.isMouseInsidePanel() )
@@ -386,32 +360,50 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerY = getHeight() / 2.0;
 			centerX = getWidth() / 2.0;
 		}
-		
-//		currentAnimator = new RotationAnimator( transform, centerX, centerY, q, 300 );
-//		currentAnimator = new RotationAnimator( transform, centerX, centerY, qTarget.qAlign, 300 );
-		currentAnimator = new RotationAnimator2D( transform, centerX, centerY, destXfm, 300 );
+
+		AffineTransform3D newTransform = null;
+		for( int i = 0; i < 4; i++ )
+		{
+			try
+			{
+				newTransform = Rotation2DHelpers.targetViewerTransform2d( transform , isClockwise );
+				break;
+			}
+			catch(Exception e)
+			{
+				if( isClockwise )
+					transform.rotate( 2, -0.1 );
+				else
+					transform.rotate( 2, 0.1 );
+			}
+		}
+
+		double[] qNew = new double[ 4 ];
+		Affine3DHelpers.extractRotation( newTransform, qNew );
+		currentAnimator = new RotationAnimator(transform, centerX, centerY, qNew, 300 );
 
 		currentAnimator.setTime( System.currentTimeMillis() );
-		transformChanged( transform );
+		transformChanged( destXfm );
 	}
 
 	@Override
 	public synchronized void align( AlignPlane plane )
 	{
+		System.out.println( "align" );
 		if ( !transformEnabled )
 			return;
 
 		super.align( plane );
 	}
 
-    public synchronized void animateTransformation( AffineTransform3D destinationXfm, int millis )
+    public synchronized void animateTransformation( final AffineTransform3D destinationXfm, int millis )
     {
 		if ( !transformEnabled )
 			return;
 
-    	AffineTransform3D startXfm = new AffineTransform3D();
+    	final AffineTransform3D startXfm = new AffineTransform3D();
     	getState().getViewerTransform( startXfm );
-    	
+ 
 		double centerX;
 		double centerY;
 		if ( mouseCoordinates.isMouseInsidePanel() )
@@ -424,16 +416,16 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerY = getHeight() / 2.0;
 			centerX = getWidth() / 2.0;
 		}
-    	
-		if( ndims == 2 ){
-			currentAnimator = 
-				new SimilarityTransformAnimator2D( startXfm, destinationXfm, centerX, centerY, millis );
-		}else
-		{
-			currentAnimator = 
-    			new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
-		}
-    	
+ 
+		// TODO fixes to transform handlers mean the 3d animator works.
+		// 2d similar animator is still broken though.
+//		if( ndims == 2 )
+//			currentAnimator = new SimilarityTransformAnimator2D( startXfm, destinationXfm, centerX, centerY, millis );
+//		else
+//			currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
+
+		currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
+
     	currentAnimator.setTime( System.currentTimeMillis() );
 		transformChanged( destinationXfm );
     }
@@ -457,12 +449,26 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public synchronized void transformChanged( final AffineTransform3D transform )
 	{
 		if( transformEnabled )
+		{
+//			System.out.println("viewer transform changed to: " + transform );
+//			double det = BigWarpUtils.det( transform );
+//			System.out.println("   det: " + det );
+//			if( det < 0 )
+//			{
+//				System.out.println("      uh oh" );
+//			}
+//
+//			if( transform.get(2, 2) < 0 )
+//			{
+//				System.out.println("      zoh no" );
+//			}
+			
 			super.transformChanged( transform );
+		}
 	}
 	
 	public static enum RotatePlane2d
 	{
-		
 		qpX( "pX", new double[]{   1.0, 0.0, 0.0,   0.0 }),
 		qpY( "pY", new double[]{  R2o2, 0.0, 0.0,  R2o2 }),
 		qnX( "nX", new double[]{   0.0, 0.0, 0.0,   1.0 }),

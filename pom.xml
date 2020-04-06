@@ -115,7 +115,7 @@
 		<bigdataviewer_fiji.version>6.0.0</bigdataviewer_fiji.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-15</bigdataviewer-vistools.version>
         <jitk-tps.version>3.0.1</jitk-tps.version>
-        <imglib2-realtransform.version>2.2.1</imglib2-realtransform.version>
+        <imglib2-realtransform.version>3.0.0</imglib2-realtransform.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
