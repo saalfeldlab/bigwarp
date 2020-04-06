@@ -1,10 +1,12 @@
 package bdv.img;
 
+import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
+import bigwarp.BigWarpExporter;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -12,6 +14,7 @@ import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
+import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
 
@@ -84,48 +87,72 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )
 	{
-		return Views.interval(
-				Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
-				estimateBoundingInterval( t, level ));
+//		System.out.println("WarpedSource getSource");
+		if( isTransformed )
+		{
+			return Views.interval(
+					Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
+					estimateBoundingInterval( t, level ));
+		}
+		return source.getSource( t, level );
 	}
 
 	private Interval estimateBoundingInterval( final int t, final int level )
 	{
+		System.out.println("WarpedSource estimateBoundingInterval");
+
 		final Interval wrappedInterval = source.getSource( t, level );
+
+		AffineTransform3D affine = new AffineTransform3D();
+
+		BigWarpExporter.estimateAffineFromCorners( affine, xfm, wrappedInterval );
+		System.out.println("affine " + affine );
+
+//		source.getSourceTransform( t, level, affine );
+		
+
+		return BigWarpExporter.estimateBounds( xfm, wrappedInterval );
+
 		// TODO: Do something meaningful: apply transform, estimate bounding box, etc.
-		return wrappedInterval;
+//		return wrappedInterval;
 	}
+	
+//	private static void approximateAffineFromCorners( AffineTransform3D affine, RealTransform xfm, Interval interval )
+//	{
+//		
+//	}
 
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
-		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
-
-		if( isTransformed )
+		RealRandomAccessible<T> realSrc = source.getInterpolatedSource( t, level, method );
+		if( isTransformed && xfm != null )
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
-			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 
-			if( xfm == null )
-				return srcRaTransformed;
-			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm );
+			RealTransformSequence totalTransform = new RealTransformSequence();
+			totalTransform.add( transform );
+			totalTransform.add( xfm );
+			totalTransform.add( transform.inverse() );
+
+			return new RealTransformRealRandomAccessible< T, RealTransform >( realSrc, xfm );
 		}
 		else
 		{
-			return sourceRealAccessible;
+			return realSrc;
 		}
 	}
 
 	@Override
 	public void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-		if( isTransformed )
-			transform.identity();
-		else
-			source.getSourceTransform( t, level, transform );
-//		source.getSourceTransform( t, level, transform );
+		source.getSourceTransform( t, level, transform );
+
+//		if( isTransformed )
+//			transform.identity();
+//		else
+//			source.getSourceTransform( t, level, transform );
 	}
 
 	public RealTransform getTransform()

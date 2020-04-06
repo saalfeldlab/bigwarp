@@ -43,6 +43,8 @@ import javax.swing.table.TableCellEditor;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.registration.ViewTransformAffine;
+
+import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -102,6 +104,8 @@ import bigwarp.loader.ImagePlusLoader.SetupSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
+import bigwarp.util.BigWarpUtils;
+import bigwarp.util.Rotation2DHelpers;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -148,7 +152,9 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
+import net.imglib2.ui.TransformEventHandler2Dto3D;
 import net.imglib2.ui.TransformListener;
+import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -394,40 +400,33 @@ public class BigWarp< T >
 		{
 
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
-			final Class< ? > c_idcc = viewerP.getDisplay().getClass();
 			try
 			{
-				final Field handlerField = c_idcc.getDeclaredField( "handler" );
-				handlerField.setAccessible( true );
-
-				viewerP.getDisplay().removeHandler(
-						handlerField.get( viewerP.getDisplay() ) );
-				viewerQ.getDisplay().removeHandler(
-						handlerField.get( viewerQ.getDisplay() ) );
-
-				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D
-						.factory().create( viewerP.getDisplay() );
-				pHandler.setCanvasSize( viewerP.getDisplay().getWidth(), viewerP
-						.getDisplay().getHeight(), false );
-
-				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D
-						.factory().create( viewerQ.getDisplay() );
-				qHandler.setCanvasSize( viewerQ.getDisplay().getWidth(), viewerQ
-						.getDisplay().getHeight(), false );
-
-				handlerField.set( viewerP.getDisplay(), pHandler );
-				handlerField.set( viewerQ.getDisplay(), qHandler );
-
-				viewerP.getDisplay().addHandler( pHandler );
-				viewerQ.getDisplay().addHandler( qHandler );
-				handlerField.setAccessible( false );
+////				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D.factory()
+////						.create( viewerP.getDisplay() );
+//				final TransformEventHandler< AffineTransform3D > pHandler = TransformEventHandler2Dto3D.factory()
+//						.create( viewerP.getDisplay() );
+//				pHandler.setCanvasSize( 
+//						viewerP.getDisplay().getWidth(), 
+//						viewerP.getDisplay().getHeight(), false );
+//				viewerP.getDisplay().setTransformEventHandler( pHandler );
+//
+////				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D.factory()
+////						.create( viewerQ.getDisplay() );
+//				final TransformEventHandler< AffineTransform3D > qHandler = TransformEventHandler2Dto3D.factory()
+//						.create( viewerQ.getDisplay() );
+//				qHandler.setCanvasSize( 
+//						viewerQ.getDisplay().getWidth(), 
+//						viewerQ.getDisplay().getHeight(), false );
+//				viewerQ.getDisplay().setTransformEventHandler( qHandler );
 
 				final Field overlayRendererField = c_vp.getDeclaredField( "multiBoxOverlayRenderer" );
 				overlayRendererField.setAccessible( true );
 
 				final MultiBoxOverlayRenderer overlayRenderP = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
 				final MultiBoxOverlayRenderer overlayRenderQ = new MultiBoxOverlayRenderer( DEFAULT_WIDTH, DEFAULT_HEIGHT );
-
+				
+				// TODO hopefully I won't' need reflection any more
 				final Field boxField = overlayRenderP.getClass().getDeclaredField( "box" );
 				boxField.setAccessible( true );
 				boxField.set( overlayRenderP, new MultiBoxOverlay2d() );
@@ -447,6 +446,7 @@ public class BigWarp< T >
 
 		try
 		{
+			// TODO hopefully I won't' need reflection any more
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			final Field sourceInfoOverlayRendererField = c_vp.getDeclaredField( "sourceInfoOverlayRenderer" );
 			sourceInfoOverlayRendererField.setAccessible( true );
@@ -539,8 +539,33 @@ public class BigWarp< T >
 		setupKeyListener();
 
 		// set initial transforms so data are visible
-		InitializeViewerState.initTransform( viewerP );
-		InitializeViewerState.initTransform( viewerQ );
+		AffineTransform3D xfm = new AffineTransform3D();
+		if( options.is2d )
+		{
+			BigWarpUtils.initTransform( viewerP );
+			BigWarpUtils.initTransform( viewerQ );
+//			viewerP.getState().getViewerTransform( xfm );
+//			viewerP.precomputeRotations2d( xfm );
+//			viewerQ.getState().getViewerTransform( xfm );
+//			viewerQ.precomputeRotations2d( xfm );
+		}
+		else
+		{
+			InitializeViewerState.initTransform( viewerP );
+			InitializeViewerState.initTransform( viewerQ );
+		}
+
+//		viewerP.getState().getViewerTransform( xfm );
+//		BigWarpUtils.ensurePositiveZ( xfm );
+//		BigWarpUtils.ensurePositiveDeterminant( xfm );
+//		viewerP.transformChanged(xfm);
+//		Rotation2DHelpers.isSimilarity(xfm);
+//
+//		viewerQ.getState().getViewerTransform( xfm );
+//		BigWarpUtils.ensurePositiveZ( xfm );
+//		BigWarpUtils.ensurePositiveDeterminant( xfm );
+//		viewerQ.transformChanged(xfm);
+//		Rotation2DHelpers.isSimilarity(xfm);
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
@@ -1700,28 +1725,49 @@ public class BigWarp< T >
 		viewerP.setTransformEnabled( true );
 		viewerQ.setTransformEnabled( true );
 	}
+	
+	private void printSourceTransforms()
+	{
+		final AffineTransform3D xfm = new AffineTransform3D();
+		for( SourceAndConverter<?> sac  : data.sources )
+		{
+			sac.getSpimSource().getSourceTransform(0, 0, xfm );
+			double det = BigWarpUtils.det( xfm );
+			System.out.println( "source xfm ( " + sac.getSpimSource().getName()  + " ) : " + xfm );
+			System.out.println( "    det = " + det );
+		}
+	}
+
+	private void printViewerTransforms()
+	{
+		final AffineTransform3D xfm = new AffineTransform3D();
+		viewerP.getState().getViewerTransform( xfm );
+		System.out.println( "mvg viewer xfm: " + xfm );
+		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
+
+		viewerQ.getState().getViewerTransform( xfm );
+		System.out.println( "tgt viewer xfm: " + xfm );
+		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
+		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
+	}
 
 	/**
 	 * Changes the view transformation of 'panelToChange' to match that of 'panelToMatch' 
 	 * @param panelToChange the viewer panel whose transform will change
 	 * @param panelToMatch the viewer panel the transform will come from
-	 * @param toPreconcat currently unused
 	 */
-	protected void matchWindowTransforms( final BigWarpViewerPanel panelToChange, final BigWarpViewerPanel panelToMatch, final AffineTransform3D toPreconcat )
+	protected void matchWindowTransforms( final BigWarpViewerPanel panelToChange, final BigWarpViewerPanel panelToMatch )
 	{
 		panelToChange.showMessage( "Aligning" );
 		panelToMatch.showMessage( "Matching alignment" );
-
+	
 		// get the transform from panelToMatch
 		final AffineTransform3D viewXfm = new AffineTransform3D();
 		panelToMatch.getState().getViewerTransform( viewXfm );
 
 		// change transform of panelToChange
 		panelToChange.animateTransformation( viewXfm );
-
-		final AffineTransform3D resXfm = new AffineTransform3D();
-		panelToChange.getState().getViewerTransform( resXfm );
-
 	}
 
 	public void matchOtherViewerPanelToActive()
@@ -1735,8 +1781,6 @@ public class BigWarp< T >
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 
-		AffineTransform3D toPreconcat = null;
-
 		if ( viewerFrameP.isActive() )
 		{
 			panelToChange = viewerQ;
@@ -1746,12 +1790,11 @@ public class BigWarp< T >
 		{
 			panelToChange = viewerP;
 			panelToMatch = viewerQ;
-			toPreconcat = fixedViewXfm;
 		}
 		else
 			return;
 
-		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
+		matchWindowTransforms( panelToChange, panelToMatch );
 	}
 
 	public void matchActiveViewerPanelToOther()
@@ -1765,13 +1808,10 @@ public class BigWarp< T >
 		BigWarpViewerPanel panelToChange;
 		BigWarpViewerPanel panelToMatch;
 
-		AffineTransform3D toPreconcat = null;
-
 		if ( viewerFrameP.isActive() )
 		{
 			panelToChange = viewerP;
 			panelToMatch = viewerQ;
-			toPreconcat = fixedViewXfm;
 		}
 		else if ( viewerFrameQ.isActive() )
 		{
@@ -1781,7 +1821,7 @@ public class BigWarp< T >
 		else
 			return;
 
-		matchWindowTransforms( panelToChange, panelToMatch, toPreconcat );
+		matchWindowTransforms( panelToChange, panelToMatch );
 	}
 
 	public void warpToNearest( BigWarpViewerPanel viewer )
@@ -2524,19 +2564,23 @@ public class BigWarp< T >
 
 			ProgressWriterIJ progress = new ProgressWriterIJ();
 			BigWarp bw;
+			BigWarpData bwdata; 
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
-				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXML( fnP, fnQ ), new File( fnP ).getName(), progress );
+			{
+				bwdata = BigWarpInit.createBigWarpDataFromXML( fnP, fnQ );
+				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
+			}
 			else if ( fnP.endsWith( "xml" ) && !fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impQ = IJ.openImage( fnQ );
-				bw = new BigWarp( BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ ),
-						 new File( fnP ).getName(), progress );
+				bwdata = BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ );
+				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
 			}
 			else if ( !fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
-				bw = new BigWarp( BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ ),
-						 new File( fnP ).getName(), progress );
+				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
+				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
 			}
 			else
 			{
@@ -2545,7 +2589,7 @@ public class BigWarp< T >
 
 				if ( !( impP == null || impQ == null ) )
 				{
-					BigWarpData bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
+					bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
 					
 					bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
 				}
@@ -2569,8 +2613,36 @@ public class BigWarp< T >
 
 			e.printStackTrace();
 		}
+		
+		// debug
 
 		System.out.println( "done" );
+	}
+	
+	private void viewerXfmTest()
+	{
+		AffineTransform3D srcTransform0 = new AffineTransform3D();
+		sources.get( 0 ).getSpimSource().getSourceTransform(0, 0, srcTransform0 );
+
+		AffineTransform3D srcTransform1 = new AffineTransform3D();
+		sources.get( 1 ).getSpimSource().getSourceTransform(0, 0, srcTransform1 );
+
+		AffineTransform3D viewerTransformM = new AffineTransform3D();
+		viewerP.getState().getViewerTransform( viewerTransformM );
+
+		AffineTransform3D viewerTransformT = new AffineTransform3D();
+		viewerQ.getState().getViewerTransform( viewerTransformT );
+		
+		System.out.println( " " );
+		System.out.println( " " );
+		System.out.println( "srcXfm 0 " + srcTransform0 );
+		System.out.println( "srcXfm 1 " + srcTransform1 );
+
+		System.out.println( "viewerXfm M " + viewerTransformM );
+		System.out.println( "viewerXfm T " + viewerTransformT );
+		System.out.println( " " );
+		System.out.println( " " );
+
 	}
 
 	public void checkBoxInputMaps()
@@ -2625,6 +2697,7 @@ public class BigWarp< T >
 
 			this.movingSourceIndexList = new ArrayList<>();
 			this.targetSourceIndexList = new ArrayList<>();
+			
 
 			if ( cache == null )
 				this.cache = new CacheControl.Dummy();

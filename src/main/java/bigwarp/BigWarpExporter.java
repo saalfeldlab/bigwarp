@@ -9,6 +9,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+
 import bdv.export.ProgressWriter;
 import bdv.img.WarpedSource;
 import bdv.tools.brightness.ConverterSetup;
@@ -16,7 +19,14 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarp.WrappedCoordinateTransform;
 import ij.ImagePlus;
+import mpicbg.models.AffineModel2D;
+import mpicbg.models.AffineModel3D;
+import mpicbg.models.IllDefinedDataPointsException;
+import mpicbg.models.InvertibleCoordinateTransform;
+import mpicbg.models.Model;
+import mpicbg.models.NotEnoughDataPointsException;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -78,6 +88,8 @@ public abstract class BigWarpExporter <T>
 
 	private boolean showResult = true;
 
+	protected static Logger logger = LogManager.getLogger( BigWarpExporter.class.getName() );
+
 	public BigWarpExporter(
 			final List< SourceAndConverter< T >> sourcesIn,
 			final int[] movingSourceIndexList,
@@ -94,8 +106,12 @@ public abstract class BigWarpExporter <T>
 			{
 				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
 				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
-				wsCopy.updateTransform( ws.getTransform().copy() );
-				wsCopy.setIsTransformed( true );
+	
+				if( ws.getTransform() != null )
+				{
+					wsCopy.updateTransform( ws.getTransform().copy() );
+					wsCopy.setIsTransformed( true );
+				}
 				srcCopy = wsCopy;
 			}
 			else
@@ -507,6 +523,95 @@ public abstract class BigWarpExporter <T>
 		copyToLongCeil( ptxfm, max );
 		
 		return new FinalInterval( min, max );
+	}
+
+	/**
+	 * Only works for 2D or 3D.
+	 * 
+	 * @param affine variable in which to store the result
+	 * @param xfm the transform 
+	 * @param interval the interval
+	 */
+	public static void estimateAffineFromCorners( AffineTransform3D affine, RealTransform xfm, Interval interval )
+	{
+		int nd = interval.numDimensions();
+		
+		int N;
+		Model model;
+		if ( nd == 2 )
+		{
+			N = 4;
+			model = new AffineModel2D();
+		}
+		else
+		{
+			N = 8;
+			model = new AffineModel3D();
+		}
+		
+		double[][] mvgPts = new double[ nd ][ N ];
+		double[][] tgtPts = new double[ nd ][ N ];
+
+		double[] w = new double[ N ];
+		Arrays.fill( w, 1.0 );
+
+		double[] pt = new double[ nd ];
+		double[] ptxfm = new double[ nd ];
+
+		long[] unitInterval = new long[ nd ];
+		Arrays.fill( unitInterval, 2 );
+		
+		int i = 0;
+		IntervalIterator it = new IntervalIterator( unitInterval );
+		while( it.hasNext() )
+		{
+			it.fwd();
+			for( int d = 0; d < nd; d++ )
+			{
+				if( it.getLongPosition( d ) == 0 )
+					pt[ d ] = interval.min( d );
+				else
+					pt[ d ] = interval.max( d );
+			}
+
+			xfm.apply( pt, ptxfm );
+//			System.out.println( "pt   : " + Arrays.toString ( pt ));
+//			System.out.println( "ptxfm: " + Arrays.toString ( ptxfm ));
+
+			for( int d = 0; d < nd; d++ )
+			{
+				mvgPts[ d ][ i ] = pt[ d ];
+				tgtPts[ d ][ i ] = ptxfm[ d ];
+			}
+			
+			i++;
+		}
+
+		try {
+			model.fit( mvgPts, tgtPts, w );
+		} catch (Exception e) {
+//			e.printStackTrace();
+			affine.identity();
+			return;
+		}
+		
+		if ( nd == 2 )
+		{
+			double[] mat = new double[ 6 ];
+			((AffineModel2D)model).toArray( mat );
+			affine.set( mat[ 0 ], 0, 0);
+			affine.set( mat[ 1 ], 1, 0);
+			affine.set( mat[ 2 ], 0, 1);
+			affine.set( mat[ 3 ], 1, 1);
+			affine.set( mat[ 4 ], 0, 2);
+			affine.set( mat[ 5 ], 1, 2);
+		}
+		else
+		{
+			double[] mat = new double[ 12 ];
+			((AffineModel3D)model).getMatrix( mat );
+			affine.set( mat );
+		}
 	}
 	
 	public static FinalInterval estimateBounds( RealTransform xfm, Interval interval )
