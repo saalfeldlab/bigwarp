@@ -1,6 +1,10 @@
 package bdv.viewer.animate;
 
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.loops.LoopBuilder;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.LinAlgHelpers;
 import bdv.util.Affine3DHelpers;
 

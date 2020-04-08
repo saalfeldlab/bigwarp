@@ -10,8 +10,8 @@ public class RotationAnimator2D extends AbstractTransformAnimator
 	private final double cX, cY;
 	
 	private final double totalAngle;
-	
-	private final static double PI = Math.PI;
+
+	private final AffineTransform3D transform;
 
 	public RotationAnimator2D( final AffineTransform3D transformStart, final double viewerCenterX, final double viewerCenterY, AffineTransform3D target, final long duration )
 	{
@@ -23,33 +23,26 @@ public class RotationAnimator2D extends AbstractTransformAnimator
 
 		final double angleStart = Rotation2DHelpers.extractRotation( transformStart );
 		final double angleEnd	= Rotation2DHelpers.extractRotation( target );
-		
+
 		totalAngle = Rotation2DHelpers.shorterAngleBetweenRotations( angleStart, angleEnd );
-		
+		transform = new AffineTransform3D();
 	}
 	
 	@Override
 	public AffineTransform3D get( final double t )
 	{
-		final AffineTransform3D transform = new AffineTransform3D();
 		transform.set( transformStart );
 
-		// center shift
-		transform.set( transform.get( 0, 3 ) - cX, 0, 3 );
-		transform.set( transform.get( 1, 3 ) - cY, 1, 3 );
-
-		// rotate
-		final AffineTransform3D tAddCurrent = Rotation2DHelpers.rotationToTransform( totalAngle * t );
-		transform.preConcatenate( tAddCurrent );
-
-		// center un-shift
-		transform.set( transform.get( 0, 3 ) + cX, 0, 3 );
-		transform.set( transform.get( 1, 3 ) + cY, 1, 3 );
-		
+		transform.translate( -cX, -cY, 0 );
+		transform.rotate( 2, totalAngle * t );
+		transform.translate( cX, cY, 0 );
 
 		return transform;
 	}
 	
+	/*
+	 * AN OLD TEST
+	 */
 //	public static void main( String[] args )
 //	{
 //		// test me

@@ -1,11 +1,15 @@
 package bdv.gui;
 
+import java.lang.reflect.Field;
+
 import bdv.BehaviourTransformEventHandler2D;
 import bdv.BehaviourTransformEventHandler3D;
+import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.MessageOverlayAnimator;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.ui.TransformEventHandler2Dto3D;
 import net.imglib2.ui.TransformEventHandlerFactory;
 
 public class BigWarpViewerOptions extends ViewerOptions
@@ -55,16 +59,38 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return this;
 	}
 	
+	@Override
+	public ViewerOptions transformEventHandlerFactory( final TransformEventHandlerFactory< AffineTransform3D > f )
+	{
+		try
+		{
+			final Field xfmHandlerField = values.getClass().getDeclaredField( "transformEventHandlerFactory" );
+			xfmHandlerField.setAccessible( true );
+			xfmHandlerField.set( values, f );
+			xfmHandlerField.setAccessible( false );
+		}
+		catch (IllegalArgumentException | IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		}
+		return this;
+	}
+	
 	public static BigWarpViewerOptions options( final boolean is2d )
 	{
 		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
 		if ( is2d )
 		{
-			out.factory = BehaviourTransformEventHandler2D.factory();
+			out.factory = TransformEventHandler2Dto3D.factory();
+			out.transformEventHandlerFactory( out.factory );
 		}
 		else
 		{
 			out.factory = BehaviourTransformEventHandler3D.factory();
+			out.transformEventHandlerFactory( out.factory );
 		}
 		return out;
 	}
@@ -76,7 +102,9 @@ public class BigWarpViewerOptions extends ViewerOptions
 		private MessageOverlayAnimator msgOverlayP; 
 
 		private MessageOverlayAnimator msgOverlayQ; 
-		
+
+		private TransformEventHandlerFactory< AffineTransform3D > transformEventHandlerFactory = BehaviourTransformEventHandler3D.factory();
+
 		private int width;
 		
 		private int height;
@@ -108,6 +136,11 @@ public class BigWarpViewerOptions extends ViewerOptions
 		public MessageOverlayAnimator getMsgOverlayMoving()
 		{
 			return msgOverlayP;
+		}
+		
+		public TransformEventHandlerFactory< AffineTransform3D > getTransformEventHandlerFactory()
+		{
+			return transformEventHandlerFactory; 
 		}
 	}
 }
