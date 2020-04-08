@@ -539,19 +539,15 @@ public class BigWarp< T >
 		setupKeyListener();
 
 		// set initial transforms so data are visible
-		System.out.println(" ");
-		System.out.println("initialize viewer xfms");
-		System.out.println("VIEWER TRANSFORMS BEFORE INIT");
-		printViewerTransforms();
 		AffineTransform3D xfm = new AffineTransform3D();
 		if( options.is2d )
 		{
 			BigWarpUtils.initTransform( viewerP );
 			BigWarpUtils.initTransform( viewerQ );
-			viewerP.getState().getViewerTransform( xfm );
-			viewerP.precomputeRotations2d( xfm );
-			viewerQ.getState().getViewerTransform( xfm );
-			viewerQ.precomputeRotations2d( xfm );
+//			viewerP.getState().getViewerTransform( xfm );
+//			viewerP.precomputeRotations2d( xfm );
+//			viewerQ.getState().getViewerTransform( xfm );
+//			viewerQ.precomputeRotations2d( xfm );
 		}
 		else
 		{
@@ -559,46 +555,22 @@ public class BigWarp< T >
 			InitializeViewerState.initTransform( viewerQ );
 		}
 
-		System.out.println(" ");
-		System.out.println(" ");
-		System.out.println("VIEWER TRANSFORMS AFTER INIT BEFORE CORRECTION");
-		printViewerTransforms();
-
-		System.out.println(" ");
-		System.out.println(" ");
-		viewerP.getState().getViewerTransform( xfm );
-		BigWarpUtils.ensurePositiveZ( xfm );
-		BigWarpUtils.ensurePositiveDeterminant( xfm );
-		viewerP.transformChanged(xfm);
-		Rotation2DHelpers.isSimilarity(xfm);
-
-		viewerQ.getState().getViewerTransform( xfm );
-		BigWarpUtils.ensurePositiveZ( xfm );
-		BigWarpUtils.ensurePositiveDeterminant( xfm );
-		viewerQ.transformChanged(xfm);
-		Rotation2DHelpers.isSimilarity(xfm);
-
-		System.out.println(" ");
-		System.out.println(" ");
-		System.out.println("VIEWER TRANSFORMS AFTER ");
-		printViewerTransforms();
-
-
-
-		System.out.println(" ");
+//		viewerP.getState().getViewerTransform( xfm );
+//		BigWarpUtils.ensurePositiveZ( xfm );
+//		BigWarpUtils.ensurePositiveDeterminant( xfm );
+//		viewerP.transformChanged(xfm);
+//		Rotation2DHelpers.isSimilarity(xfm);
+//
+//		viewerQ.getState().getViewerTransform( xfm );
+//		BigWarpUtils.ensurePositiveZ( xfm );
+//		BigWarpUtils.ensurePositiveDeterminant( xfm );
+//		viewerQ.transformChanged(xfm);
+//		Rotation2DHelpers.isSimilarity(xfm);
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
 		viewerP.getState().getViewerTransform( initialViewP );
 		viewerQ.getState().getViewerTransform( initialViewQ );
-
-		System.out.println("initial xfms: ");
-		System.out.println(" viewer P : " + initialViewP );
-		System.out.println("   det : " + BigWarpUtils.det( initialViewP ));
-		System.out.println(" viewer Q : " + initialViewQ );
-		System.out.println("   det : " + BigWarpUtils.det( initialViewQ ));
-
-		System.out.println(" ");
 
 		// set brightness contrast to appropriate values
 		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
@@ -1790,18 +1762,12 @@ public class BigWarp< T >
 		panelToChange.showMessage( "Aligning" );
 		panelToMatch.showMessage( "Matching alignment" );
 	
-		printViewerTransforms();
-		printSourceTransforms();
-
 		// get the transform from panelToMatch
 		final AffineTransform3D viewXfm = new AffineTransform3D();
 		panelToMatch.getState().getViewerTransform( viewXfm );
 
-		System.out.println("BigWarp match window transforms: " + viewXfm );
 		// change transform of panelToChange
 		panelToChange.animateTransformation( viewXfm );
-		
-		printViewerTransforms();
 	}
 
 	public void matchOtherViewerPanelToActive()
@@ -2640,17 +2606,6 @@ public class BigWarp< T >
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
-
-			bw.viewerXfmTest();
-			
-//			int midx = bwdata.movingSourceIndices[ 0 ];
-//			SourceAndConverter msrcac = (SourceAndConverter)bw.sources.get( midx );
-//			
-//			AffineTransform3D transform = new AffineTransform3D();
-//			msrcac.getSpimSource().getSourceTransform( 0, 0, transform );
-//
-//			System.out.println( "msrcac " + msrcac );
-//			System.out.println( transform );
 
 		}
 		catch ( final Exception e )

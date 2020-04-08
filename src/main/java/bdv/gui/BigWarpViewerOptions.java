@@ -84,14 +84,11 @@ public class BigWarpViewerOptions extends ViewerOptions
 		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
 		if ( is2d )
 		{
-			System.out.println( "behaviour handler 2d" );
-			//out.factory = BehaviourTransformEventHandler2D.factory();
 			out.factory = TransformEventHandler2Dto3D.factory();
 			out.transformEventHandlerFactory( out.factory );
 		}
 		else
 		{
-			System.out.println( "behaviour handler 3d" );
 			out.factory = BehaviourTransformEventHandler3D.factory();
 			out.transformEventHandlerFactory( out.factory );
 		}

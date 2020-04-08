@@ -16,15 +16,10 @@ import bdv.util.Prefs;
 import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
-import bdv.viewer.animate.RotationAnimator2D;
-import bdv.viewer.animate.SimilarityTransformAnimator2D;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
-import bdv.viewer.state.SourceState;
-import bigwarp.util.BigWarpUtils;
 import bigwarp.util.Rotation2DHelpers;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.util.LinAlgHelpers;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
@@ -389,7 +384,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	@Override
 	public synchronized void align( AlignPlane plane )
 	{
-		System.out.println( "align" );
 		if ( !transformEnabled )
 			return;
 
@@ -449,45 +443,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public synchronized void transformChanged( final AffineTransform3D transform )
 	{
 		if( transformEnabled )
-		{
-//			System.out.println("viewer transform changed to: " + transform );
-//			double det = BigWarpUtils.det( transform );
-//			System.out.println("   det: " + det );
-//			if( det < 0 )
-//			{
-//				System.out.println("      uh oh" );
-//			}
-//
-//			if( transform.get(2, 2) < 0 )
-//			{
-//				System.out.println("      zoh no" );
-//			}
-			
 			super.transformChanged( transform );
-		}
-	}
-	
-	public static enum RotatePlane2d
-	{
-		qpX( "pX", new double[]{   1.0, 0.0, 0.0,   0.0 }),
-		qpY( "pY", new double[]{  R2o2, 0.0, 0.0,  R2o2 }),
-		qnX( "nX", new double[]{   0.0, 0.0, 0.0,   1.0 }),
-		qnY( "nY", new double[]{  R2o2, 0.0, 0.0, -R2o2 });
-		
-		private final String name;
-
-		public String getName()
-		{
-			return name;
-		}
-
-		private final double[] qAlign;
-
-		private RotatePlane2d( final String name, final double[] q )
-		{
-			this.name = name;
-			this.qAlign = q;
-		}
 	}
 	
 }

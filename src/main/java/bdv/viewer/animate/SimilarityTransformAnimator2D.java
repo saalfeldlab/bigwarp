@@ -25,38 +25,10 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 	private final double[] xg0Start;
 
 	private final double[] xg0Diff;
-	
-//	private final boolean flippedZ;
-//
-//	private final double flipping;
-//
-//	private final boolean isLeftHanded;
-//	
-//	private final AffineTransform3D pre;
-	
+
 	public SimilarityTransformAnimator2D( final AffineTransform3D transformStart, final AffineTransform3D transformEnd, final double cX, final double cY, final long duration )
 	{
 		super( duration );
-
-//		double startDet = Rotation2DHelpers.determinant2d( transformStart );
-//		double endDet = Rotation2DHelpers.determinant2d( transformEnd );
-//		System.out.println( "startDet: " + startDet );
-//		System.out.println( "endDet: " + endDet );
-//
-//		if( startDet * endDet > 0 )
-//			flipping = 0;
-//		else
-//			flipping = 1.0;
-//
-//		if( startDet < 0 && endDet < 0 )
-//			isLeftHanded = true;
-//		else 
-//			isLeftHanded = false;
-
-//		if( transformStart.get(2, 2) < 0 )
-//			flippedZ = true;
-//		else
-//			flippedZ = false;
 
 		startAngle = Rotation2DHelpers.extractRotation( transformStart );
 		final double endAngle = Rotation2DHelpers.extractRotation( transformEnd );
@@ -93,15 +65,6 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 		LinAlgHelpers.scale( xg0End, -1, xg0End );
 
 		LinAlgHelpers.subtract( xg0End, xg0Start, xg0Diff );
-		
-//		if( isLeftHanded )
-//		{
-//			AffineTransform3D startEstimated = get( 0 );
-//			pre =  startEstimated.inverse();
-//			pre.preConcatenate( transformStart );
-//		}
-//		else
-//			pre = null;
 	}
 
 	@Override
@@ -118,18 +81,7 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 			xg0Current[ r ] -= xg0Start[ r ];
 		
 		double[][] Rcurrent = Rotation2DHelpers.rotationToMatrix( angleCurrent );
-
-//		double[][] Rcurrent;
-//		if( isLeftHanded )
-//		{
-//			System.out.println("left handed");
-//			Rcurrent = Rotation2DHelpers.rotationToMatrixLeftHanded( angleCurrent );
-//		}
-//		else
-//			Rcurrent = Rotation2DHelpers.rotationToMatrix( angleCurrent );
-
 		LinAlgHelpers.mult( Rcurrent, xg0Current, tCurrent );
-
 
 		final double[][] m = new double[ 3 ][ 4 ];
 		for ( int r = 0; r < 3; ++r )
@@ -141,10 +93,6 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 		
 		final AffineTransform3D transform = new AffineTransform3D();
 		transform.set( m );
-		//transform.set( 1.0, 2, 2 );
-
-//		System.out.println( "    2d rot helper xfm : " + transform );
-//		System.out.println( "    2d rot helper det : " + BigWarpUtils.det( transform ));
 
 		return transform;
 	}
@@ -251,9 +199,6 @@ public class SimilarityTransformAnimator2D extends AbstractTransformAnimator
 
 //		System.out.println("\ncompXfm:");
 //		Rotation2DHelpers.printXfm( compXfm );
-
-		
-
 
 		
 //		// handedness exps
