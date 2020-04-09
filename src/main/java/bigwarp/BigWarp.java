@@ -1,5 +1,7 @@
 package bigwarp;
 
+import bdv.viewer.DisplayMode;
+import bdv.viewer.ViewerState;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -44,7 +46,6 @@ import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.registration.ViewTransformAffine;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -79,9 +80,7 @@ import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
-import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
-import bdv.viewer.BigWarpConverterSetupWrapper;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
@@ -99,14 +98,12 @@ import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
-import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader.SetupSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.util.BigWarpUtils;
-import bigwarp.util.Rotation2DHelpers;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -151,11 +148,8 @@ import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformEventHandler2Dto3D;
 import net.imglib2.ui.TransformListener;
-import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -260,11 +254,11 @@ public class BigWarp< T >
 
 	protected TransformEventHandler< AffineTransform3D > handlerP;
 
-	protected final int gridSourceIndex;
+	protected final SourceAndConverter< FloatType > gridSource;
 
-	protected final int warpMagSourceIndex;
+	protected final SourceAndConverter< FloatType > warpMagSource;
 
-	protected final int jacDetSourceIndex;
+	protected final SourceAndConverter< FloatType > jacDetSource;
 
 	protected final AbstractModel< ? >[] baseXfmList;
 
@@ -365,9 +359,9 @@ public class BigWarp< T >
 		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
 		baselineModelIndex = 0;
-		warpMagSourceIndex = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
-		jacDetSourceIndex = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
-		gridSourceIndex = addGridSource( data, "GridSource" );
+		warpMagSource = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
+		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
+		gridSource = addGridSource( data, "GridSource" );
 
 		this.sources = this.data.sources;
 		final List< ConverterSetup > converterSetups = data.converterSetups;
@@ -473,11 +467,11 @@ public class BigWarp< T >
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
 		
 		// set warp mag source to inactive at the start
-		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
-		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( warpMagSourceIndex, false );
+		viewerP.state().setSourceActive( warpMagSource, false );
+		viewerQ.state().setSourceActive( warpMagSource, false );
 		// set warp grid source to inactive at the start
-		viewerFrameP.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
-		viewerFrameQ.getViewerPanel().getVisibilityAndGrouping().setSourceActive( gridSourceIndex, false );
+		viewerP.state().setSourceActive( gridSource, false );
+		viewerQ.state().setSourceActive( gridSource, false );
 
 		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
 		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
@@ -620,7 +614,7 @@ public class BigWarp< T >
 	 * @param state the viewer state 
 	 * @param setupAssignments the setup assignments 
 	 */
-	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final SetupAssignments setupAssignments )
+	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final bdv.viewer.state.ViewerState state, final SetupAssignments setupAssignments )
 	{
 		int srcidx = state.getCurrentSource();
 		final Source< ? > source = state.getSources().get( srcidx ).getSpimSource();
@@ -1993,7 +1987,7 @@ public class BigWarp< T >
 
 	public void setGridType( final GridSource.GRID_TYPE method )
 	{
-		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setMethod( method );
+		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( method );
 	}
 
 	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources, final int ndims, final int[] warpUsIndices )
@@ -2018,66 +2012,48 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > int addJacobianDeterminantSource( final BigWarpData< T > data, final String name )
+	private static < T > SourceAndConverter< FloatType > addJacobianDeterminantSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Doubles?
 
-		final JacobianDeterminantSource< FloatType > jdSource = new JacobianDeterminantSource< FloatType >( name, data, new FloatType() );
-
-		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
-		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< ? > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
+		final JacobianDeterminantSource< FloatType > jdSource = new JacobianDeterminantSource<>( name, data, new FloatType() );
+		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
-
-		data.converterSetups.add( new RealARGBColorConverterSetup( JACDET_SOURCE_ID, converter, vconverter ) );
-
-		final SourceAndConverter soc = new SourceAndConverter( jdSource, converter, null );
-		data.sources.add( soc );
-
-		return data.sources.size() - 1;
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter<>( jdSource, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, JACDET_SOURCE_ID ) );
+		data.sources.add( ( SourceAndConverter ) soc );
+		return soc;
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > int addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
+	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Doubles?
 
-		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource< FloatType >( name, data, new FloatType() );
-
-		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
-		vconverter.setColor( new ARGBType( 0xffffffff ) );
-		final RealARGBColorConverter< ? > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
+		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource<>( name, data, new FloatType() );
+		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
-
-		data.converterSetups.add( new RealARGBColorConverterSetup( WARPMAG_SOURCE_ID, converter, vconverter ) );
-
-		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
-		data.sources.add( soc );
-
-		return data.sources.size() - 1;
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter<>( magSource, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, WARPMAG_SOURCE_ID ) );
+		data.sources.add( ( SourceAndConverter ) soc );
+		return soc;
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	private static < T > int addGridSource( final BigWarpData< T > data, final String name )
+	private static < T > SourceAndConverter< FloatType > addGridSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Floats?
 
-		final GridSource< FloatType > magSource = new GridSource< FloatType >( name, data, new FloatType(), null );
-
-		final RealARGBColorConverter< VolatileFloatType > vconverter = RealARGBColorConverter.create( new VolatileFloatType(), 0, 512 );
-		vconverter.setColor( new ARGBType( 0xffffffff ) );
+		final GridSource< FloatType > gridSource = new GridSource<>( name, data, new FloatType(), null );
 		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
-
-		data.converterSetups.add( new RealARGBColorConverterSetup( GRID_SOURCE_ID, converter, vconverter ) );
-
-		final SourceAndConverter soc = new SourceAndConverter( magSource, converter, null );
-		data.sources.add( soc );
-
-		return data.sources.size() - 1;
+		final SourceAndConverter< FloatType > soc = new SourceAndConverter<>( gridSource, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, GRID_SOURCE_ID ) );
+		data.sources.add( ( SourceAndConverter ) soc );
+		return soc;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -2099,21 +2075,21 @@ public class BigWarp< T >
 
 	public void setWarpVisGridType( final GridSource.GRID_TYPE type )
 	{
-		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setMethod( type );
+		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( type );
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
 
 	public void setWarpGridWidth( final double width )
 	{
-		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setGridWidth( width );
+		( ( GridSource< ? > ) gridSource.getSpimSource() ).setGridWidth( width );
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
 
 	public void setWarpGridSpacing( final double spacing )
 	{
-		( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() ).setGridSpacing( spacing );
+		( ( GridSource< ? > ) gridSource.getSpimSource() ).setGridSpacing( spacing );
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
 	}
@@ -2172,12 +2148,12 @@ public class BigWarp< T >
 			final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
 
 			baseline.fit( p, q, w );  // FITBASELINE
-			WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform( 
+			WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform(
 					(InvertibleCoordinateTransform)baseline, ndims );
 
 			// the transform to compare is the inverse (because we use it for rendering)
 			// so need to give the inverse transform for baseline as well
-			( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() ).setBaseline( baselineTransform.inverse() );
+			( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() ).setBaseline( baselineTransform.inverse() );
 		}
 		catch ( final NotEnoughDataPointsException e )
 		{
@@ -2241,24 +2217,24 @@ public class BigWarp< T >
 			message.showMessage( "No warp - estimate warp first." );
 			return;
 		}
-		final VisibilityAndGrouping vg = viewerFrame.getViewerPanel().getVisibilityAndGrouping();
+		final ViewerState state = viewerFrame.getViewerPanel().state();
 
 		switch ( type )
 		{
 		case JACDET:
 		{
 			// turn warp mag on
-			vg.setSourceActive( warpMagSourceIndex, false );
-			vg.setSourceActive( jacDetSourceIndex, true );
-			vg.setSourceActive( gridSourceIndex, false );
+			state.setSourceActive( warpMagSource, false );
+			state.setSourceActive( jacDetSource, true );
+			state.setSourceActive( gridSource, false );
 
 		}
 		case WARPMAG:
 		{
 			// turn warp mag on
-			vg.setSourceActive( warpMagSourceIndex, true );
-			vg.setSourceActive( jacDetSourceIndex, false );
-			vg.setSourceActive( gridSourceIndex, false );
+			state.setSourceActive( warpMagSource, true );
+			state.setSourceActive( jacDetSource, false );
+			state.setSourceActive( gridSource, false );
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
@@ -2268,29 +2244,27 @@ public class BigWarp< T >
 			// set the slider
 //			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
-			vg.setFusedEnabled( true );
-			vg.setGroupingEnabled( false );
+			state.setDisplayMode( DisplayMode.FUSED );
 			message.showMessage( "Displaying Warp Magnitude" );
 			break;
 		}
 		case GRID:
 		{
 			// turn grid vis on
-			
-			vg.setSourceActive( warpMagSourceIndex, false );
-			vg.setSourceActive( jacDetSourceIndex, false );
-			vg.setSourceActive( gridSourceIndex, true );
+
+			state.setSourceActive( warpMagSource, false );
+			state.setSourceActive( jacDetSource, false );
+			state.setSourceActive( gridSource, true );
 //			vg.setSourceActive( offImgIndex, false );
 
-			vg.setFusedEnabled( true );
-			vg.setGroupingEnabled( false );
+			state.setDisplayMode( DisplayMode.FUSED );
 			message.showMessage( "Displaying Warp Grid" );
 			break;
 		}
 		default:
 		{
-			vg.setSourceActive( warpMagSourceIndex, false );
-			vg.setSourceActive( gridSourceIndex, false );
+			state.setSourceActive( warpMagSource, false );
+			state.setSourceActive( gridSource, false );
 //			vg.setSourceActive( offImgIndex, true );
 
 //			vg.setFusedEnabled( false );
@@ -2330,24 +2304,24 @@ public class BigWarp< T >
 			return;
 		}
 
-		final VisibilityAndGrouping vg = viewerFrame.getViewerPanel().getVisibilityAndGrouping();
+		final ViewerState state = viewerFrame.getViewerPanel().state();
 
 		// TODO consider remembering whether fused was on before displaying
 		// warpmag
 		// so that its still on or off after we turn it off
-		if ( vg.isSourceActive( warpMagSourceIndex ) ) // warp mag is visible,
+		if ( state.isSourceActive( warpMagSource ) ) // warp mag is visible,
 														// turn it off
 		{
-			vg.setSourceActive( warpMagSourceIndex, false );
+			state.setSourceActive( warpMagSource, false );
 
 //			vg.setSourceActive( offImgIndex, true );
 
-			vg.setFusedEnabled( false );
+			state.setDisplayMode( state.getDisplayMode().withFused( false ) );
 			message.showMessage( "Removing Warp Magnitude" );
 		}
 		else // warp mag is invisible, turn it on
 		{
-			vg.setSourceActive( warpMagSourceIndex, true );
+			state.setSourceActive( warpMagSource, true );
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
@@ -2357,7 +2331,7 @@ public class BigWarp< T >
 			// set the slider
 //			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
-			vg.setFusedEnabled( true );
+			state.setDisplayMode( state.getDisplayMode().withFused( false ) );
 			message.showMessage( "Displaying Warp Magnitude" );
 		}
 
@@ -2393,9 +2367,9 @@ public class BigWarp< T >
 	{
 		setTransformationMovingSourceOnly( transform );
 
-		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
-		final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) sources.get( jacDetSourceIndex ).getSpimSource() );
-		final GridSource< ? > gSrc = ( ( GridSource< ? > ) sources.get( gridSourceIndex ).getSpimSource() );
+		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() );
+		final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) jacDetSource.getSpimSource() );
+		final GridSource< ? > gSrc = ( ( GridSource< ? > ) gridSource.getSpimSource() );
 
 		wmSrc.setWarp( transform );
 		fitBaselineWarpMagModel();
@@ -2632,11 +2606,11 @@ public class BigWarp< T >
 		sources.get( 1 ).getSpimSource().getSourceTransform(0, 0, srcTransform1 );
 
 		AffineTransform3D viewerTransformM = new AffineTransform3D();
-		viewerP.getState().getViewerTransform( viewerTransformM );
+		viewerP.state().getViewerTransform( viewerTransformM );
 
 		AffineTransform3D viewerTransformT = new AffineTransform3D();
-		viewerQ.getState().getViewerTransform( viewerTransformT );
-		
+		viewerQ.state().getViewerTransform( viewerTransformT );
+
 		System.out.println( " " );
 		System.out.println( " " );
 		System.out.println( "srcXfm 0 " + srcTransform0 );
