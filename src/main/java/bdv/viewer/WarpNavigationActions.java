@@ -56,17 +56,13 @@ public class WarpNavigationActions extends Actions
 			final KeyStrokeAdder.Factory keyProperties,
 			final boolean is2d )
 	{
-		BigWarpViewerPanel panel = viewer.getViewerPanel();
+		final ActionMap actionMap = createActionMap( viewer.getViewerPanel() );
+		final InputMap inputMap = createInputMap( keyProperties, is2d );
 
-		WarpNavigationActions actions = new WarpNavigationActions( keyProperties );
+		Actions actions = new Actions( inputMap, actionMap, keyProperties, "bdv" );
 		actions.runnableAction( viewer::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
 		actions.runnableAction( viewer::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
-
-		inputActionBindings.addActionMap( "bdv", createActionMap( panel ));
-		inputActionBindings.addInputMap( "bdv", createInputMap( keyProperties, is2d ) );
-		
-		actions.install( inputActionBindings, "bdv" );
-		panel.getActionMap().get( "bdv" );
+		actions.install( inputActionBindings, "navigation" );
 	}
 
 	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties, final boolean is2d )
