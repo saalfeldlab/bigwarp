@@ -7,11 +7,13 @@ import javax.swing.InputMap;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
+import bdv.gui.BigWarpViewerFrame;
 import bdv.viewer.ViewerPanel.AlignPlane;
 
-public class WarpNavigationActions 
+public class WarpNavigationActions extends Actions
 {
 
 	public static final String TOGGLE_INTERPOLATION = "toggle interpolation";
@@ -19,14 +21,22 @@ public class WarpNavigationActions
 	public static final String TOGGLE_GROUPING = "toggle grouping";
 	public static final String SET_CURRENT_SOURCE = "set current source %d";
 	public static final String TOGGLE_SOURCE_VISIBILITY = "toggle source visibility %d";
-	
 	public static final String ALIGN_PLANE = "align %s plane";
 	public static final String ROTATE_PLANE = "rotate %s";
-	
-
 	public static final String DISPLAY_XFMS = "display transforms";
+	public static final String EXPAND_CARDS = "expand and focus cards panel";
+	public static final String COLLAPSE_CARDS = "collapse cards panel";
+
+	public static final String[] EXPAND_CARDS_KEYS         = new String[] { "P" };
+	public static final String[] COLLAPSE_CARDS_KEYS       = new String[] { "shift P", "shift ESCAPE" };
 	
 	public static enum rotationDirections2d { CLOCKWISE, COUNTERCLOCKWISE }; 
+
+	public WarpNavigationActions( final KeyStrokeAdder.Factory keyConfig )
+	{
+		super( keyConfig, new String[] { "bw_warpNav" } );
+	}	
+	
 	
 	/**
 	 * Create navigation actions and install them in the specified
@@ -42,14 +52,21 @@ public class WarpNavigationActions
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarpViewerPanel viewer,
+			final BigWarpViewerFrame viewer,
 			final KeyStrokeAdder.Factory keyProperties,
 			final boolean is2d )
 	{
-		inputActionBindings.addActionMap( "navigation", createActionMap( viewer ) );
-		inputActionBindings.addInputMap( "navigation", createInputMap( keyProperties, is2d ) );
+		BigWarpViewerPanel panel = viewer.getViewerPanel();
+
+		WarpNavigationActions actions = new WarpNavigationActions( keyProperties );
+		actions.runnableAction( viewer::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
+		actions.runnableAction( viewer::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+
+		inputActionBindings.addActionMap( "bdv", createActionMap( panel ));
+		inputActionBindings.addInputMap( "bdv", createInputMap( keyProperties, is2d ) );
 		
-		viewer.getActionMap().get( "navigation" );
+		actions.install( inputActionBindings, "bdv" );
+		panel.getActionMap().get( "bdv" );
 	}
 
 	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties, final boolean is2d )
@@ -68,7 +85,7 @@ public class WarpNavigationActions
 			map.put( String.format( TOGGLE_SOURCE_VISIBILITY, i ), "shift " + numkeys[ i ] );
 		}
 
-		map.put( DISPLAY_XFMS, "shift P" );
+		map.put( DISPLAY_XFMS, "shift V" );
 		
 		if( !is2d )
 		{
@@ -271,8 +288,4 @@ public class WarpNavigationActions
 		private static final long serialVersionUID = 1L;
 	}
 	
-	
-	
-	private WarpNavigationActions()
-	{}
 }

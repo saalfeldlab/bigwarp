@@ -18,8 +18,12 @@ import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
 import bdv.BehaviourTransformEventHandler;
 import bdv.cache.CacheControl;
+import bdv.ui.BdvDefaultCards;
+import bdv.ui.CardPanel;
+import bdv.ui.splitpanel.SplitPanel;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
 import bigwarp.BigWarp;
@@ -36,6 +40,12 @@ public class BigWarpViewerFrame extends JFrame
 	private final TriggerBehaviourBindings triggerbindings;
 
 	private final BigWarp<?> bw;
+
+	private SplitPanel splitPanel;
+
+	private CardPanel cards;
+
+	private final ConverterSetups setups;
 
 	private static final long serialVersionUID = -7630931733043185034L;
 

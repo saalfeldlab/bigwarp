@@ -511,10 +511,11 @@ public class BigWarp< T >
 																// maps are made
 
 		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
-		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerP, keyProperties, ( ndims == 2 ) );
+
+		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
 
-		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerQ, keyProperties, ( ndims == 2 ) );
+		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerFrameQ, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, keyProperties );
 
 		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, keyProperties );
