@@ -495,11 +495,15 @@ public class BigWarp< T >
 		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners();
 
-		final ArrayList< ConverterSetup > csetups = new ArrayList< ConverterSetup >();
 		for ( final ConverterSetup cs : converterSetups )
-			csetups.add( new BigWarpConverterSetupWrapper( this, cs ) );
+		{
+			cs.setupChangeListeners().add( s -> {
+				viewerP.requestRepaint();
+				viewerQ.requestRepaint();
+			} );
+		}
 
-		setupAssignments = new SetupAssignments( csetups, 0, 65535 );
+		setupAssignments = new SetupAssignments( new ArrayList<>( converterSetups ), 0, 65535 );
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );

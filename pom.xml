@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>26.0.0</version>
+		<version>28.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -111,9 +111,9 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
-		<bigdataviewer-core.version>7.0.0</bigdataviewer-core.version>
-		<bigdataviewer_fiji.version>6.0.0</bigdataviewer_fiji.version>
-		<bigdataviewer-vistools.version>1.0.0-beta-15</bigdataviewer-vistools.version>
+		<bigdataviewer-core.version>9.0.1</bigdataviewer-core.version>
+		<bigdataviewer_fiji.version>6.1.0</bigdataviewer_fiji.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-20</bigdataviewer-vistools.version>
         <jitk-tps.version>3.0.1</jitk-tps.version>
         <imglib2-realtransform.version>3.0.0</imglib2-realtransform.version>
 
