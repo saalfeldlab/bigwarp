@@ -78,6 +78,8 @@ public class BigWarpViewerFrame extends JFrame
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		this.bw = bw;
 		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
+		setups = new ConverterSetups( viewer.state() );
+		setups.listeners().add( s -> viewer.requestRepaint() );
 
 		// TODO this needs to change for multi-channel!
 		if( !isMoving )
@@ -85,6 +87,9 @@ public class BigWarpViewerFrame extends JFrame
 		
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();
+
+		setUpCards();
+		//expandAndFocusCardPanel();
 
 		getRootPane().setDoubleBuffered( true );
 		setPreferredSize( new Dimension( width, height ) );
@@ -125,14 +130,45 @@ public class BigWarpViewerFrame extends JFrame
 			( ( BehaviourTransformEventHandler< ? > ) tfHandler ).install( triggerbindings );
 	}
 
+	public void setUpCards()
+	{
+//		System.out.println( "inputTriggerConfig : " + viewer.getOptionValues().getInputTriggerConfig() );
+		cards = new CardPanel();
+		BdvDefaultCards.setup( cards, viewer, setups );
+		splitPanel = new SplitPanel( viewer, cards );
+	}
+
 	public boolean isMoving()
 	{
 		return viewer.getIsMoving();
 	}
-	
+
 	public BigWarpViewerPanel getViewerPanel()
 	{
 		return viewer;
+	}
+
+	public CardPanel getCardPanel()
+	{
+		return cards;
+	}
+
+	public SplitPanel getSplitPanel()
+	{
+		return splitPanel;
+	}
+
+	public void expandAndFocusCardPanel()
+	{
+		//System.out.println("expandAndFocusCardPanel");
+		getSplitPanel().setCollapsed( false );
+		getSplitPanel().getRightComponent().requestFocusInWindow();
+	}
+
+	public void collapseCardPanel()
+	{
+		getSplitPanel().setCollapsed( true );
+		viewer.requestFocusInWindow();
 	}
 	
 	public InputActionBindings getKeybindings()

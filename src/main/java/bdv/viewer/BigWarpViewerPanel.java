@@ -92,7 +92,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 		overlayAnimators.add( message );
 		updateGrouping();
 	}
-	
+
+	@Override
+	public ViewerOptions.Values getOptionValues()
+	{
+		return options.values;
+	}
+
 	public void precomputeRotations2d( final AffineTransform3D initialViewTransform )
 	{
 		orthoTransforms = new ArrayList<>();

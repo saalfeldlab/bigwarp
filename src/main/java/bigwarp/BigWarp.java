@@ -376,6 +376,10 @@ public class BigWarp< T >
 
 		viewerSettings = new BigWarpViewerSettings();
 
+		// key properties
+		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
+		options = options.inputTriggerConfig( keyProperties );
+
 		// Viewer frame for the moving image
 		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
 				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
@@ -510,7 +514,6 @@ public class BigWarp< T >
 																// before action
 																// maps are made
 
-		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
 
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
