@@ -88,14 +88,15 @@ public class BigWarpViewerFrame extends JFrame
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();
 
-		setUpCards();
-		//expandAndFocusCardPanel();
+		cards = new CardPanel();
+		BdvDefaultCards.setup( cards, viewer, setups );
+		splitPanel = new SplitPanel( viewer, cards );
 
 		getRootPane().setDoubleBuffered( true );
-		setPreferredSize( new Dimension( width, height ) );
-		add( viewer, BorderLayout.CENTER );
-		
+		add( splitPanel, BorderLayout.CENTER );
 		pack();
+
+		setPreferredSize( new Dimension( width, height ) );
 
 		setDefaultCloseOperation( JFrame.DO_NOTHING_ON_CLOSE );
 		addWindowListener( new WindowAdapter()
@@ -128,14 +129,6 @@ public class BigWarpViewerFrame extends JFrame
 		final TransformEventHandler< ? > tfHandler = viewer.getDisplay().getTransformEventHandler();
 		if ( tfHandler instanceof BehaviourTransformEventHandler )
 			( ( BehaviourTransformEventHandler< ? > ) tfHandler ).install( triggerbindings );
-	}
-
-	public void setUpCards()
-	{
-//		System.out.println( "inputTriggerConfig : " + viewer.getOptionValues().getInputTriggerConfig() );
-		cards = new CardPanel();
-		BdvDefaultCards.setup( cards, viewer, setups );
-		splitPanel = new SplitPanel( viewer, cards );
 	}
 
 	public boolean isMoving()
