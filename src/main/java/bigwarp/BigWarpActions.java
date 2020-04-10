@@ -257,7 +257,7 @@ public class BigWarpActions
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
 		map.put( GARBAGE_COLLECTION, "F10" );
-		map.put( PRINT_TRANSFORM, "P" );
+		map.put( PRINT_TRANSFORM, "control shift T" );
 		map.put( DEBUG, "F10" );
 		
 		return inputMap;
@@ -323,7 +323,6 @@ public class BigWarpActions
 		new DebugAction( DEBUG, bw ).put( actionMap );
 		new PrintTransformAction( PRINT_TRANSFORM, bw ).put( actionMap );
 
-			
 		return actionMap;
 	}
 

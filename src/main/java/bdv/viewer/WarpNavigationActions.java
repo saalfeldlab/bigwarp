@@ -37,7 +37,6 @@ public class WarpNavigationActions extends Actions
 		super( keyConfig, new String[] { "bw_warpNav" } );
 	}	
 	
-	
 	/**
 	 * Create navigation actions and install them in the specified
 	 * {@link InputActionBindings}.
@@ -52,16 +51,16 @@ public class WarpNavigationActions extends Actions
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarpViewerFrame viewer,
+			final BigWarpViewerFrame frame,
 			final KeyStrokeAdder.Factory keyProperties,
 			final boolean is2d )
 	{
-		final ActionMap actionMap = createActionMap( viewer.getViewerPanel() );
+		final ActionMap actionMap = createActionMap( frame );
 		final InputMap inputMap = createInputMap( keyProperties, is2d );
 
-		Actions actions = new Actions( inputMap, actionMap, keyProperties, "bdv" );
-		actions.runnableAction( viewer::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
-		actions.runnableAction( viewer::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+		Actions actions = new Actions( inputMap, actionMap, keyProperties, "navigation" );
+//		actions.runnableAction( viewer::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
+//		actions.runnableAction( viewer::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
 		actions.install( inputActionBindings, "navigation" );
 	}
 
@@ -94,23 +93,29 @@ public class WarpNavigationActions extends Actions
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), "shift X" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), "shift Z" );
 		}
+
+		map.put( EXPAND_CARDS, EXPAND_CARDS_KEYS );
+		map.put( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+
 		return inputMap;
 	}
 
-	public static ActionMap createActionMap( final BigWarpViewerPanel viewer )
+	public static ActionMap createActionMap( final BigWarpViewerFrame frame )
 	{
-		return createActionMap( viewer, 10 );
+		return createActionMap( frame, 10 );
 	}
 
-	public static ActionMap createActionMap( final BigWarpViewerPanel viewer, final int numSourceKeys )
+	public static ActionMap createActionMap( final BigWarpViewerFrame frame, final int numSourceKeys )
 	{
 		final ActionMap actionMap = new ActionMap();
-		addToActionMap( actionMap, viewer, numSourceKeys );
+		addToActionMap( actionMap, frame, numSourceKeys );
 		return actionMap;
 	}
 
-	public static void addToActionMap( final ActionMap actionMap, final BigWarpViewerPanel viewer, final int numSourceKeys )
+	public static void addToActionMap( final ActionMap actionMap, final BigWarpViewerFrame frame, final int numSourceKeys )
 	{
+		final BigWarpViewerPanel viewer = frame.getViewerPanel();
+
 		new ToggleInterPolationAction( viewer ).put( actionMap );
 		new ToggleFusedModeAction( viewer ).put( actionMap );
 		new ToggleGroupingAction( viewer ).put( actionMap );
@@ -128,10 +133,15 @@ public class WarpNavigationActions extends Actions
 		new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ).put( actionMap ); // counterclockwise
 
 		new DisplayXfmAction( viewer ).put( actionMap );
+
+		new ExpandCardAction( frame ).put( actionMap );
+		new CollapseCardAction( frame ).put( actionMap );
 	}
 
 	private static abstract class NavigationAction extends AbstractNamedAction
 	{
+		private static final long serialVersionUID = 1607667614920666360L;
+
 		protected final ViewerPanel viewer;
 
 		public NavigationAction( final String name, final ViewerPanel viewer )
@@ -139,8 +149,6 @@ public class WarpNavigationActions extends Actions
 			super( name );
 			this.viewer = viewer;
 		}
-
-		private static final long serialVersionUID = 1L;
 	}
 
 	public static class ToggleInterPolationAction extends NavigationAction
@@ -267,6 +275,8 @@ public class WarpNavigationActions extends Actions
 	
 	public static class AlignPlaneAction extends NavigationAction
 	{
+		private static final long serialVersionUID = -5868085804210873492L;
+
 		private final AlignPlane plane;
 
 		public AlignPlaneAction( final ViewerPanel viewer, final AlignPlane plane )
@@ -280,8 +290,72 @@ public class WarpNavigationActions extends Actions
 		{
 			viewer.align( plane );
 		}
+	}
 
-		private static final long serialVersionUID = 1L;
+	public static class CollapseCardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -2337698189753056286L;
+
+		public BigWarpViewerFrame frame;
+
+		public CollapseCardAction( BigWarpViewerFrame frame )
+		{
+			super( COLLAPSE_CARDS, frame.getViewerPanel() );
+			this.frame = frame;
+			System.out.println("card action name: " + name());
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			System.out.println("card action " + name() );
+			frame.collapseCardPanel();
+		}
+	}
+
+	public static class ExpandCardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -4267852269622298980L;
+
+		public BigWarpViewerFrame frame;
+
+		public ExpandCardAction( BigWarpViewerFrame frame )
+		{
+			super( EXPAND_CARDS, frame.getViewerPanel() );
+			this.frame = frame;
+			System.out.println("card action name: " + name());
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			System.out.println("card action " + name() );
+			frame.expandAndFocusCardPanel();
+		}
+	}
+
+	public static class CardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -8949725696799894130L;
+
+		public BigWarpViewerFrame frame;
+
+		public CardAction( BigWarpViewerFrame frame, final String name )
+		{
+			super( name, frame.getViewerPanel() );
+			this.frame = frame;
+			System.out.println("card action name: " + name());
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			System.out.println("card action " + name() );
+			if( name().equals( EXPAND_CARDS ) )
+				frame.expandAndFocusCardPanel();
+			else
+				frame.collapseCardPanel();
+		}
 	}
 	
 }
