@@ -1265,6 +1265,11 @@ public class BigWarp< T >
 
 	public String transformToString()
 	{
+		if( currentTransform == null )
+		{
+			return "(identity)";
+		}
+
 		String s = "";
 		if ( currentTransform instanceof InverseRealTransform )
 		{

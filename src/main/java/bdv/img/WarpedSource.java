@@ -98,25 +98,17 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private Interval estimateBoundingInterval( final int t, final int level )
 	{
-//		System.out.println("WarpedSource estimateBoundingInterval");
-
 		final Interval wrappedInterval = source.getSource( t, level );
 		AffineTransform3D affine = new AffineTransform3D();
-		BigWarpExporter.estimateAffineFromCorners( affine, xfm, wrappedInterval );
+
+		if( xfm != null )
+			BigWarpExporter.estimateAffineFromCorners( affine, xfm, wrappedInterval );
 
 //		System.out.println("affine " + affine );
 //		source.getSourceTransform( t, level, affine );
 
-		return BigWarpExporter.estimateBounds( xfm, wrappedInterval );
-
-		// TODO: Do something meaningful: apply transform, estimate bounding box, etc.
-//		return wrappedInterval;
+		return BigWarpExporter.estimateBounds( affine, wrappedInterval );
 	}
-	
-//	private static void approximateAffineFromCorners( AffineTransform3D affine, RealTransform xfm, Interval interval )
-//	{
-//		
-//	}
 
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
