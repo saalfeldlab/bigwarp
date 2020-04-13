@@ -18,6 +18,7 @@ import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
 import bdv.BehaviourTransformEventHandler;
 import bdv.cache.CacheControl;
+import bdv.tools.brightness.ConverterSetup;
 import bdv.ui.BdvDefaultCards;
 import bdv.ui.CardPanel;
 import bdv.ui.splitpanel.SplitPanel;
@@ -53,6 +54,7 @@ public class BigWarpViewerFrame extends JFrame
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
+			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final String title,
@@ -60,13 +62,14 @@ public class BigWarpViewerFrame extends JFrame
 			final int[] movingIndexList,
 			final int[] targetIndexList )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
+		this( bw, width, height, sources, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
 	
 	public BigWarpViewerFrame(
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
+			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final BigWarpViewerOptions optional,
@@ -80,6 +83,17 @@ public class BigWarpViewerFrame extends JFrame
 		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
 		setups = new ConverterSetups( viewer.state() );
 		setups.listeners().add( s -> viewer.requestRepaint() );
+
+		if ( converterSetups.size() != sources.size() )
+			System.err.println( "WARNING! Constructing BigWarp with converterSetups.size() that is not the same as sources.size()." );
+		final int numSetups = Math.min( converterSetups.size(), sources.size() );
+		for ( int i = 0; i < numSetups; ++i )
+		{
+			final SourceAndConverter< ? > source = sources.get( i );
+			final ConverterSetup setup = converterSetups.get( i );
+			if ( setup != null )
+				setups.put( source, setup );
+		}
 
 		// TODO this needs to change for multi-channel!
 		if( !isMoving )
@@ -151,9 +165,13 @@ public class BigWarpViewerFrame extends JFrame
 		return splitPanel;
 	}
 
+	public ConverterSetups getConverterSetups()
+	{
+		return setups;
+	}
+
 	public void expandAndFocusCardPanel()
 	{
-		//System.out.println("expandAndFocusCardPanel");
 		getSplitPanel().setCollapsed( false );
 		getSplitPanel().getRightComponent().requestFocusInWindow();
 	}

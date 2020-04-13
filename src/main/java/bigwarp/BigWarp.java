@@ -381,13 +381,13 @@ public class BigWarp< T >
 		options = options.inputTriggerConfig( keyProperties );
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
 				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
 				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
@@ -405,24 +405,6 @@ public class BigWarp< T >
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			try
 			{
-////				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D.factory()
-////						.create( viewerP.getDisplay() );
-//				final TransformEventHandler< AffineTransform3D > pHandler = TransformEventHandler2Dto3D.factory()
-//						.create( viewerP.getDisplay() );
-//				pHandler.setCanvasSize( 
-//						viewerP.getDisplay().getWidth(), 
-//						viewerP.getDisplay().getHeight(), false );
-//				viewerP.getDisplay().setTransformEventHandler( pHandler );
-//
-////				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D.factory()
-////						.create( viewerQ.getDisplay() );
-//				final TransformEventHandler< AffineTransform3D > qHandler = TransformEventHandler2Dto3D.factory()
-//						.create( viewerQ.getDisplay() );
-//				qHandler.setCanvasSize( 
-//						viewerQ.getDisplay().getWidth(), 
-//						viewerQ.getDisplay().getHeight(), false );
-//				viewerQ.getDisplay().setTransformEventHandler( qHandler );
-
 				final Field overlayRendererField = c_vp.getDeclaredField( "multiBoxOverlayRenderer" );
 				overlayRendererField.setAccessible( true );
 

@@ -454,14 +454,16 @@ public class BigWarpInit
 		for ( AbstractSpimData< ? > spimDataP : spimDataPList )
 		{
 			numMovingSources += spimDataP.getSequenceDescription().getViewSetups().size();
-			BigWarpInit.initSetups( spimDataP, converterSetups, sources );
+//			BigWarpInit.initSetups( spimDataP, converterSetups, sources );
+			BigDataViewer.initSetups(spimDataP, converterSetups, sources);
 		}
 
 		int numTargetSources = 0;
 		for ( AbstractSpimData< ? > spimDataQ : spimDataQList )
 		{
 			numTargetSources += spimDataQ.getSequenceDescription().getViewSetups().size();
-			BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
+//			BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
+			BigDataViewer.initSetups(spimDataQ, converterSetups, sources);
 		}
 
 		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
