@@ -141,7 +141,9 @@ import net.imglib2.histogram.Histogram1d;
 import net.imglib2.histogram.Real1dBinMapper;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
+import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform;
+import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
@@ -313,6 +315,8 @@ public class BigWarp< T >
 
 	private CopyOnWriteArrayList< TransformListener< InvertibleRealTransform > > transformListeners = new CopyOnWriteArrayList<>( );
 
+	final int ndims;
+
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
@@ -333,10 +337,10 @@ public class BigWarp< T >
 		this.options = options;
 
 		ptBack = new double[ 3 ];
-
-		int ndims = 3;
 		if( options.is2d )
 			ndims = 2;
+		else
+			ndims = 3;
 
 		/*
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
@@ -607,6 +611,11 @@ public class BigWarp< T >
 
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
+	}
+
+	public int numDimensions()
+	{
+		return ndims;
 	}
 
 	/**
@@ -1296,52 +1305,180 @@ public class BigWarp< T >
 			System.out.println( affine3d() );
 		}
 	}
+
+	/**
+	 * Returns an AffineGet that represents the the transform if the transform
+	 * is linear, or is the affine part of the transform if it is non-linear.
+	 * 
+	 * The output is an AffineTransform2D or AffineTransform3D
+	 * 
+	 * @return the affine transform
+	 */
+	public AffineGet affine()
+	{
+		if( ndims == 2 )
+			return affine2d();
+		else 
+			return affine3d();
+	}
+
+	/**
+	 * Returns an AffineTransform2D that represents the the transform if the transform
+	 * is linear, or is the affine part of the transform if it is non-linear.
+	 * 
+	 * Returns a valid transform only if the estimated transform is 2d.  Returns null
+	 * if the transformation is 3d.
+	 * 
+	 * @return the affine transform
+	 */
+	public AffineTransform2D affine2d()
+	{
+		if( ndims != 2 )
+		{
+			System.err.println( "affine2d() only works for 2d transformations." );
+			return null;
+		}
+
+		AffineTransform2D out = new AffineTransform2D();
+		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		{
+			double[][] tpsAffine = getTpsBase().getAffine();
+			double[] translation = getTpsBase().getTranslation();
+
+			double[] affine = new double[ 6 ];
+			affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
+			affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
+			affine[ 2 ] = translation[ 0 ];
+
+			affine[ 3 ] = tpsAffine[ 1 ][ 0 ];
+			affine[ 4 ] = 1 + tpsAffine[ 1 ][ 1 ];
+			affine[ 5 ] = translation[ 1 ];
+
+			out.set( affine );
+		}
+		else
+		{
+			AbstractAffineModel2D model2d = (AbstractAffineModel2D)getCoordinateTransform();
+
+			double[][] mtx = new double[2][3];
+			model2d.toMatrix( mtx );
+
+			double[] affine = new double[ 6 ];
+			affine[ 0 ] = mtx[ 0 ][ 0 ];
+			affine[ 1 ] = mtx[ 0 ][ 1 ];
+			affine[ 2 ] = mtx[ 0 ][ 2 ];
+
+			affine[ 3 ] = mtx[ 1 ][ 0 ];
+			affine[ 4 ] = mtx[ 1 ][ 1 ];
+			affine[ 5 ] = mtx[ 1 ][ 2 ];
+
+			out.set( affine );
+		}
+		return out;
+	}
 	
 	/**
 	 * Returns an AffineTransform3D that represents the the transform if the transform
 	 * is linear, or is the affine part of the transform if it is non-linear.
+	 * 
+	 * Returns a valid transform even if the estimated transformation is 2d.
 	 * 
 	 * @return the affine transform
 	 */
 	public AffineTransform3D affine3d()
 	{
 		AffineTransform3D out = new AffineTransform3D();
-		int nd = landmarkModel.getTransform().getNumDims();
 		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
 		{
-			double[][] tpsAffine = landmarkModel.getTransform().getAffine();
-			double[] translation = landmarkModel.getTransform().getTranslation();
-			for( int i = 0; i < nd ; i++ ) for( int j = 0; j < nd ; j++ )
+			double[][] tpsAffine = getTpsBase().getAffine();
+			double[] translation = getTpsBase().getTranslation();
+
+			double[] affine = new double[ 12 ];
+			if( ndims == 2 )
 			{
-				if( i == j )
-					out.set( 1 + tpsAffine[ i ][ j ], i, j );
-				else
-					out.set( tpsAffine[ i ][ j ], i, j );
+				affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
+				affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
+				// dont set affine 2
+				affine[ 3 ] = translation[ 0 ];
+
+				affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
+				affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
+				// dont set 6
+				affine[ 7 ] = translation[ 1 ];
+
+				// dont set 8,9,11
+				affine[ 10 ] = 1.0;
 			}
-			for( int i = 0; i < translation.length ; i++ )
-				out.set( translation[ i ], i, 3 );
+			else
+			{
+				affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
+				affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
+				affine[ 2 ] = tpsAffine[ 0 ][ 2 ];
+				affine[ 3 ] = translation[ 0 ];
+
+				affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
+				affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
+				affine[ 6 ] = tpsAffine[ 1 ][ 2 ];
+				affine[ 7 ] = translation[ 1 ];
+
+				affine[ 8 ] = tpsAffine[ 2 ][ 0 ];
+				affine[ 9 ] = tpsAffine[ 2 ][ 1 ];
+				affine[ 10 ] = 1 + tpsAffine[ 2 ][ 2 ];
+				affine[ 11 ] = translation[ 2 ];
+			}
+
+			out.set( affine );
 		}
 		else
 		{
-			if( landmarkModel.getNumdims() == 2 )
+			if( ndims == 2 )
 			{
+				AbstractAffineModel2D model2d = (AbstractAffineModel2D)getCoordinateTransform();
+
 				double[][] mtx = new double[2][3];
-				AbstractAffineModel2D model2d = getModel2D();
-				for( int i = 0; i < nd-1 ; i++ ) for( int j = 0; j < nd ; j++ )
-				{
-					out.set( mtx[ i ][ j ], i, j );
-				}
-				for( int i = 0; i < 2 ; i++ )
-					out.set( mtx[ i ][ 2 ], i, 3 );
+				model2d.toMatrix( mtx );
+
+				double[] affine = new double[ 12 ];
+				affine[ 0 ] = mtx[ 0 ][ 0 ];
+				affine[ 1 ] = mtx[ 0 ][ 1 ];
+				// dont set affine 2
+				affine[ 3 ] = mtx[ 0 ][ 2 ];
+
+				affine[ 4 ] = mtx[ 1 ][ 0 ];
+				affine[ 5 ] = mtx[ 1 ][ 1 ];
+				// dont set affine 6
+				affine[ 7 ] = mtx[ 1 ][ 2 ];
+
+				// dont set affines 8,9,11
+				affine[ 10 ] = 1.0;
+
+				out.set( affine );
+
 			}
-			else if( landmarkModel.getNumdims() == 3 )
+			else if( ndims == 3 )
 			{
-				AbstractAffineModel3D model3d = getModel3D();
+				AbstractAffineModel3D model3d = (AbstractAffineModel3D)getCoordinateTransform();
+
 				double[][] mtx = new double[3][4];
-				for( int i = 0; i < nd ; i++ ) for( int j = 0; j < nd + 1 ; j++ )
-				{
-					out.set( mtx[ i ][ j ], i, j );
-				}
+				model3d.toMatrix( mtx );
+
+				double[] affine = new double[ 12 ];
+				affine[ 0 ] = mtx[ 0 ][ 0 ];
+				affine[ 1 ] = mtx[ 0 ][ 1 ];
+				affine[ 2 ] = mtx[ 0 ][ 2 ];
+				affine[ 3 ] = mtx[ 0 ][ 3 ];
+
+				affine[ 4 ] = mtx[ 1 ][ 0 ];
+				affine[ 5 ] = mtx[ 1 ][ 1 ];
+				affine[ 6 ] = mtx[ 1 ][ 2 ];
+				affine[ 7 ] = mtx[ 1 ][ 3 ];
+
+				affine[ 8 ] = mtx[ 2 ][ 0 ];
+				affine[ 9 ] = mtx[ 2 ][ 1 ];
+				affine[ 10 ] = mtx[ 2 ][ 2 ];
+				affine[ 11 ] = mtx[ 2 ][ 3 ];
+
+				out.set( affine );
 			}
 			else
 			{
@@ -3363,6 +3500,7 @@ public class BigWarp< T >
 					pleaseResolve = false;
 				}
 				if ( b )
+				{
 					try
 					{
 						InvertibleRealTransform invXfm = bw.getTransformation( index );
@@ -3406,6 +3544,8 @@ public class BigWarp< T >
 						 */
 						bw.getViewerFrameP().getViewerPanel().requestRepaint();
 						bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+
+//						bw.notifyTransformListeners();
 					}
 
 					catch ( final RejectedExecutionException e )
@@ -3413,6 +3553,8 @@ public class BigWarp< T >
 						// this happens when the rendering threadpool
 						// is killed before the painter thread.
 					}
+				}
+
 				synchronized ( this )
 				{
 					try

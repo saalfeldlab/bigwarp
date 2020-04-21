@@ -621,6 +621,11 @@ public abstract class BigWarpExporter <T>
 	
 	public static FinalInterval estimateBounds( RealTransform xfm, Interval interval )
 	{
+		if( xfm == null )
+			return new FinalInterval( 
+							Intervals.minAsLongArray(interval),
+							Intervals.maxAsLongArray(interval) );
+
 		int nd = interval.numDimensions();
 		double[] pt = new double[ nd ];
 		double[] ptxfm = new double[ nd ];
