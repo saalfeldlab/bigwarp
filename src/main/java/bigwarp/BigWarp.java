@@ -1,5 +1,7 @@
 package bigwarp;
 
+import bdv.util.Bounds;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.DisplayMode;
 import bdv.viewer.ViewerState;
 import java.awt.Color;
@@ -555,8 +557,8 @@ public class BigWarp< T >
 
 		// set brightness contrast to appropriate values
 		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
-		initBrightness( 0.001, 0.999, viewerP.getState(), setupAssignments );
-		initBrightness( 0.001, 0.999, viewerQ.getState(), setupAssignments );
+		initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
+		initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
 
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
@@ -589,43 +591,19 @@ public class BigWarp< T >
 	 * TODO Make a PR that updates this method in InitializeViewerState in bdv-core
 	 * @param cumulativeMinCutoff the min image intensity
 	 * @param cumulativeMaxCutoff the max image intensity
-	 * @param state the viewer state 
-	 * @param setupAssignments the setup assignments 
+	 * @param state the viewer state
+	 * @param converterSetups the converter setups
 	 */
-	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final bdv.viewer.state.ViewerState state, final SetupAssignments setupAssignments )
+	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final ConverterSetups converterSetups )
 	{
-		int srcidx = state.getCurrentSource();
-		final Source< ? > source = state.getSources().get( srcidx ).getSpimSource();
+		final SourceAndConverter< ? > current = state.getCurrentSource();
+		if ( current == null )
+			return;
+		final Source< ? > source = current.getSpimSource();
 		final int timepoint = state.getCurrentTimepoint();
-		if ( !source.isPresent( timepoint ) )
-			return;
-		if ( !UnsignedShortType.class.isInstance( source.getType() ) )
-			return;
-		@SuppressWarnings( "unchecked" )
-		final RandomAccessibleInterval< UnsignedShortType > img = ( RandomAccessibleInterval< UnsignedShortType > ) source.getSource( timepoint, source.getNumMipmapLevels() - 1 );
-		final long z = ( img.min( 2 ) + img.max( 2 ) + 1 ) / 2;
-
-		final int numBins = 6535;
-		final Histogram1d< UnsignedShortType > histogram = new Histogram1d<>( Views.iterable( Views.hyperSlice( img, 2, z ) ), new Real1dBinMapper< UnsignedShortType >( 0, 65535, numBins, false ) );
-		final DiscreteFrequencyDistribution dfd = histogram.dfd();
-		final long[] bin = new long[] { 0 };
-		double cumulative = 0;
-		int i = 0;
-		for ( ; i < numBins && cumulative < cumulativeMinCutoff; ++i )
-		{
-			bin[ 0 ] = i;
-			cumulative += dfd.relativeFrequency( bin );
-		}
-		final int min = i * 65535 / numBins;
-		for ( ; i < numBins && cumulative < cumulativeMaxCutoff; ++i )
-		{
-			bin[ 0 ] = i;
-			cumulative += dfd.relativeFrequency( bin );
-		}
-		final int max = i * 65535 / numBins;
-		final MinMaxGroup minmax = setupAssignments.getMinMaxGroups().get( srcidx );
-		minmax.getMinBoundedValue().setCurrentValue( min );
-		minmax.getMaxBoundedValue().setCurrentValue( max );
+		final Bounds bounds = InitializeViewerState.estimateSourceRange( source, timepoint, cumulativeMinCutoff, cumulativeMaxCutoff );
+		final ConverterSetup setup = converterSetups.getConverterSetup( current );
+		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
