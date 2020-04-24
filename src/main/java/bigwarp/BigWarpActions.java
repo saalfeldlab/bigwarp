@@ -124,8 +124,8 @@ public class BigWarpActions
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 		
 		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
-		Component c = celled.getTableCellEditorComponent(landmarkTable, new Boolean(true), true, 0, 1 );
-		
+		Component c = celled.getTableCellEditorComponent(landmarkTable, Boolean.TRUE, true, 0, 1 );
+
 		InputMap parentInputMap = ((JCheckBox)c).getInputMap().getParent();
 		parentInputMap.clear();
 		KeyStroke enterDownKS = KeyStroke.getKeyStroke("pressed ENTER" );
@@ -524,12 +524,12 @@ public class BigWarpActions
 //			ltm.printWarpedPoints();
 			
 			AffineTransform3D xfm = new AffineTransform3D();
-			bw.viewerP.getState().getViewerTransform( xfm );
+			bw.viewerP.state().getViewerTransform( xfm );
 			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
 
-			bw.viewerQ.getState().getViewerTransform( xfm );
+			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
-			
+
 			BigWarpData data = bw.getData();
 			for( int mi : data.movingSourceIndices )
 			{

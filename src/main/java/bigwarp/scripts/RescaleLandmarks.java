@@ -65,7 +65,7 @@ public class RescaleLandmarks
 	{
 		for ( int i = 0; i < point.length; i++ )
 		{
-			point[ i ] = new Double( point[ i ].doubleValue() * scale[ i ] );
+			point[ i ] = point[ i ] * scale[ i ];
 		}
 	}
 

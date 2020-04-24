@@ -552,8 +552,8 @@ public class BigWarp< T >
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
-		viewerP.getState().getViewerTransform( initialViewP );
-		viewerQ.getState().getViewerTransform( initialViewQ );
+		viewerP.state().getViewerTransform( initialViewP );
+		viewerQ.state().getViewerTransform( initialViewQ );
 
 		// set brightness contrast to appropriate values
 		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
@@ -1598,12 +1598,12 @@ public class BigWarp< T >
 		final AffineTransform3D viewerXfm = new AffineTransform3D();
 		if ( isMoving ) //&& !isMovingDisplayTransformed() )
 		{
-			viewerP.getState().getViewerTransform( viewerXfm );
+			viewerP.state().getViewerTransform( viewerXfm );
 			radsq = viewerP.getSettings().getSpotSize();
 		}
 		else
 		{
-			viewerQ.getState().getViewerTransform( viewerXfm );
+			viewerQ.state().getViewerTransform( viewerXfm );
 			radsq = viewerQ.getSettings().getSpotSize();
 		}
 		radsq = ( radsq * radsq );
@@ -1679,10 +1679,10 @@ public class BigWarp< T >
 	protected void enableTransformHandlers()
 	{
 		// reset the viewer transform
-		viewerP.getState().getViewerTransform( tmpTransform );
+		viewerP.state().getViewerTransform( tmpTransform );
 		handlerP.setTransform( tmpTransform );
 
-		viewerQ.getState().getViewerTransform( tmpTransform );
+		viewerQ.state().getViewerTransform( tmpTransform );
 		handlerQ.setTransform( tmpTransform );
 
 		// enable navigation listeners
@@ -1705,12 +1705,12 @@ public class BigWarp< T >
 	private void printViewerTransforms()
 	{
 		final AffineTransform3D xfm = new AffineTransform3D();
-		viewerP.getState().getViewerTransform( xfm );
+		viewerP.state().getViewerTransform( xfm );
 		System.out.println( "mvg viewer xfm: " + xfm );
 		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
 		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
 
-		viewerQ.getState().getViewerTransform( xfm );
+		viewerQ.state().getViewerTransform( xfm );
 		System.out.println( "tgt viewer xfm: " + xfm );
 		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
 		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
@@ -1728,7 +1728,7 @@ public class BigWarp< T >
 	
 		// get the transform from panelToMatch
 		final AffineTransform3D viewXfm = new AffineTransform3D();
-		panelToMatch.getState().getViewerTransform( viewXfm );
+		panelToMatch.state().getViewerTransform( viewXfm );
 
 		// change transform of panelToChange
 		panelToChange.animateTransformation( viewXfm );
@@ -2398,7 +2398,7 @@ public class BigWarp< T >
 
 		viewerP.requestRepaint();
 
-		if ( viewerQ.getVisibilityAndGrouping().isFusedEnabled() )
+		if ( viewerQ.state().getDisplayMode().hasFused() )
 		{
 			viewerQ.requestRepaint();
 		}
@@ -2591,7 +2591,7 @@ public class BigWarp< T >
 		// This is super ugly ... why does it have to be this way.
 
 		final TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
-		final Component c = celled.getTableCellEditorComponent( landmarkTable, new Boolean( true ), true, 0, 1 );
+		final Component c = celled.getTableCellEditorComponent( landmarkTable, Boolean.TRUE, true, 0, 1 );
 
 		final InputMap parentInputMap = ( ( JCheckBox ) c ).getInputMap().getParent();
 		parentInputMap.clear();

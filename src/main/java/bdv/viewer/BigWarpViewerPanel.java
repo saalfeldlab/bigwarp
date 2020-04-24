@@ -402,8 +402,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 			return;
 
     	final AffineTransform3D startXfm = new AffineTransform3D();
-    	getState().getViewerTransform( startXfm );
- 
+    	state().getViewerTransform( startXfm );
+
 		double centerX;
 		double centerY;
 		if ( mouseCoordinates.isMouseInsidePanel() )

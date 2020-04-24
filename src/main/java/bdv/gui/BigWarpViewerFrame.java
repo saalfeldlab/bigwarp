@@ -97,8 +97,8 @@ public class BigWarpViewerFrame extends JFrame
 
 		// TODO this needs to change for multi-channel!
 		if( !isMoving )
-			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
-		
+			viewer.state().setCurrentSource( viewer.state().getSources().get( 1 ) );
+
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();
 
