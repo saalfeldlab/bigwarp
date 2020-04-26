@@ -5,10 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import bdv.BigDataViewer;
-import bdv.SpimSource;
-import bdv.VolatileSpimSource;
 import bdv.img.RenamableSource;
-import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
@@ -25,16 +22,13 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.Angle;
 import mpicbg.spim.data.sequence.Channel;
-import net.imglib2.Volatile;
 import net.imglib2.converter.Converter;
-import net.imglib2.display.ARGBARGBColorConverter;
-import net.imglib2.display.ARGBtoRandomARGBColorConverter;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.volatiles.VolatileARGBType;
-import net.imglib2.util.Util;
 
 public class BigWarpInit
 {
@@ -279,7 +273,7 @@ public class BigWarpInit
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
-		addSourceToListsGenericType( src, setupId, numTimepoints, src.getType(), bwdata.converterSetups, bwdata.sources );
+		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
 
 		int N = bwdata.sources.size();
 		if ( isMoving )
@@ -309,10 +303,6 @@ public class BigWarpInit
 	 *            source to add.
 	 * @param setupId
 	 *            id of the new source for use in {@link SetupAssignments}.
-	 * @param numTimepoints
-	 *            the number of timepoints of the source.
-	 * @param type
-	 *            instance of the {@code img} type.
 	 * @param converterSetups
 	 *            list of {@link ConverterSetup}s to which the source should be
 	 *            added.
@@ -321,14 +311,15 @@ public class BigWarpInit
 	 *            be added.
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > void addSourceToListsGenericType( final Source< T > source, final int setupId, final int numTimepoints, final T type, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< T > > sources )
+	private static < T > void addSourceToListsGenericType(
+			final Source< T > source,
+			final int setupId,
+			final List< ConverterSetup > converterSetups,
+			final List< SourceAndConverter< T > > sources )
 	{
-		if ( type instanceof RealType )
-			addSourceToListsRealType( ( Source ) source, setupId, ( List ) converterSetups, ( List ) sources );
-		else if ( type instanceof ARGBType )
-			addSourceToListsARGBType( ( Source ) source, setupId, ( List ) converterSetups, ( List ) sources );
-		else if ( type instanceof VolatileARGBType )
-			addSourceToListsVolatileARGBType( ( Source ) source, setupId, ( List ) converterSetups, ( List ) sources );
+		final T type = source.getType();
+		if ( type instanceof RealType || type instanceof ARGBType || type instanceof VolatileARGBType )
+			addSourceToListsNumericType( ( Source ) source, setupId, converterSetups, ( List ) sources );
 		else
 			throw new IllegalArgumentException( "Unknown source type. Expected RealType, ARGBType, or VolatileARGBType" );
 	}
@@ -336,8 +327,8 @@ public class BigWarpInit
 	/**
 	 * Add the given {@code source} to the lists of {@code converterSetups}
 	 * (using specified {@code setupId}) and {@code sources}. For this, the
-	 * {@code source} is wrapped with a {@link RealARGBColorConverter} and into
-	 * a {@link TransformedSource}.
+	 * {@code source} is wrapped with an appropriate {@link Converter} to
+	 * {@link ARGBType} and into a {@link TransformedSource}.
 	 *
 	 * @param source
 	 *            source to add.
@@ -350,82 +341,16 @@ public class BigWarpInit
 	 *            list of {@link SourceAndConverter}s to which the source should
 	 *            be added.
 	 */
-	private static < T extends RealType< T > > void addSourceToListsRealType( final Source< T > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< T > > sources )
+	private static < T extends NumericType< T > > void addSourceToListsNumericType(
+			final Source< T > source,
+			final int setupId,
+			final List< ConverterSetup > converterSetups,
+			final List< SourceAndConverter< T > > sources )
 	{
-		final T type = Util.getTypeFromInterval( source.getSource( 0, 0 ) );
-		final double typeMin = Math.max( 0, Math.min( type.getMinValue(), 65535 ) );
-		final double typeMax = Math.max( 0, Math.min( type.getMaxValue(), 65535 ) );
-		final RealARGBColorConverter< T > converter;
-		if ( source.getType() instanceof Volatile )
-			converter = RealARGBColorConverter.create( type, typeMin, typeMax );
-		else
-			converter = RealARGBColorConverter.create( type, typeMin, typeMax );
-		converter.setColor( new ARGBType( 0xffffffff ) );
-
-		final TransformedSource< T > ts = new TransformedSource<>( source );
-		final SourceAndConverter< T > soc = new SourceAndConverter<>( ts, converter );
-
-		final RealARGBColorConverterSetup setup = new RealARGBColorConverterSetup( setupId, converter );
-
-		converterSetups.add( setup );
-		sources.add( soc );
-	}
-
-	/**
-	 * Add the given {@code source} to the lists of {@code converterSetups}
-	 * (using specified {@code setupId}) and {@code sources}. For this, the
-	 * {@code source} is wrapped with a {@link ScaledARGBConverter.ARGB} and
-	 * into a {@link TransformedSource}.
-	 *
-	 * @param source
-	 *            source to add.
-	 * @param setupId
-	 *            id of the new source for use in {@link SetupAssignments}.
-	 * @param converterSetups
-	 *            list of {@link ConverterSetup}s to which the source should be
-	 *            added.
-	 * @param sources
-	 *            list of {@link SourceAndConverter}s to which the source should
-	 *            be added.
-	 */
-	private static void addSourceToListsARGBType( final Source< ARGBType > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ARGBType > > sources )
-	{
-		final TransformedSource< ARGBType > ts = new TransformedSource<>( source );
-		final ScaledARGBConverter.ARGB converter = new ScaledARGBConverter.ARGB( 0, 255 );
-		final SourceAndConverter< ARGBType > soc = new SourceAndConverter<>( ts, converter );
-
-		final RealARGBColorConverterSetup setup = new RealARGBColorConverterSetup( setupId, converter );
-
-		converterSetups.add( setup );
-		sources.add( soc );
-	}
-
-	/**
-	 * Add the given {@code source} to the lists of {@code converterSetups}
-	 * (using specified {@code setupId}) and {@code sources}. For this, the
-	 * {@code source} is wrapped with a {@link ScaledARGBConverter.ARGB} and
-	 * into a {@link TransformedSource}.
-	 *
-	 * @param source
-	 *            source to add.
-	 * @param setupId
-	 *            id of the new source for use in {@link SetupAssignments}.
-	 * @param converterSetups
-	 *            list of {@link ConverterSetup}s to which the source should be
-	 *            added.
-	 * @param sources
-	 *            list of {@link SourceAndConverter}s to which the source should
-	 *            be added.
-	 */
-	private static void addSourceToListsVolatileARGBType( final Source< VolatileARGBType > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< VolatileARGBType > > sources )
-	{
-		final TransformedSource< VolatileARGBType > ts = new TransformedSource<>( source );
-		final ScaledARGBConverter.VolatileARGB converter = new ScaledARGBConverter.VolatileARGB( 0, 255 );
-		final SourceAndConverter< VolatileARGBType > soc = new SourceAndConverter<>( ts, converter );
-
-		final RealARGBColorConverterSetup setup = new RealARGBColorConverterSetup( setupId, converter );
-
-		converterSetups.add( setup );
+		final T type = source.getType();
+		final SourceAndConverter< T > soc = BigDataViewer.wrapWithTransformedSource(
+				new SourceAndConverter<>( source, BigDataViewer.createConverterToARGB( type ) ) );
+		converterSetups.add( BigDataViewer.createConverterSetup( soc, setupId ) );
 		sources.add( soc );
 	}
 
