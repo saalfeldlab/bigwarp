@@ -141,7 +141,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 			// repaint
 			if ( null != overlay ) {
-				overlay.setViewerState( state );
+				overlay.setViewerState( state.getState() );
 			}
 		}
 	}
@@ -313,7 +313,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			display.repaint();
 		
 		if ( null != overlay ) {
-			overlay.setViewerState( state );
+			overlay.setViewerState( state.getState() );
 			overlay.paint( ( Graphics2D ) g );
 		}
 		
