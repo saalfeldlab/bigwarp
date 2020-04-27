@@ -2,6 +2,8 @@ package bdv.viewer;
 
 import java.awt.event.ActionEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
@@ -43,8 +45,8 @@ public class WarpNavigationActions extends Actions
 	 *
 	 * @param inputActionBindings
 	 *            {@link InputMap} and {@link ActionMap} are installed here.
-	 * @param viewer
-	 *            Navigation actions are targeted at this {@link ViewerPanel}.
+	 * @param frame
+	 *            Navigation actions are targeted at this {@link BigWarpViewerFrame}.
 	 * @param keyProperties
 	 *            user-defined key-bindings.
 	 * @param is2d does this bigwarp instance work on 2d images 
@@ -177,7 +179,9 @@ public class WarpNavigationActions extends Actions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setFusedEnabled( !viewer.visibilityAndGrouping.isFusedEnabled() );
+			final ViewerState state = viewer.state();
+			final DisplayMode mode = state.getDisplayMode();
+			state.setDisplayMode( mode.withFused( !mode.hasFused() ) );
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -193,7 +197,9 @@ public class WarpNavigationActions extends Actions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setGroupingEnabled( !viewer.visibilityAndGrouping.isGroupingEnabled() );
+			final ViewerState state = viewer.state();
+			final DisplayMode mode = state.getDisplayMode();
+			state.setDisplayMode( mode.withGrouping( !mode.hasGrouping() ) );
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -201,18 +207,42 @@ public class WarpNavigationActions extends Actions
 
 	public static class SetCurrentSourceOrGroupAction extends NavigationAction
 	{
-		private final int sourceIndex;
+		private final int index;
 
-		public SetCurrentSourceOrGroupAction( final ViewerPanel viewer, final int sourceIndex )
+		public SetCurrentSourceOrGroupAction( final ViewerPanel viewer, final int index )
 		{
-			super( String.format( SET_CURRENT_SOURCE, sourceIndex ), viewer );
-			this.sourceIndex = sourceIndex;
+			super( String.format( SET_CURRENT_SOURCE, index ), viewer );
+			this.index = index;
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setCurrentGroupOrSource( sourceIndex );
+			final ViewerState state = viewer.state();
+			synchronized ( state )
+			{
+				if ( state.getDisplayMode().hasGrouping() )
+				{
+					final List< SourceGroup > groups = state.getGroups();
+					if ( index >= 0 && index < groups.size() )
+					{
+						final SourceGroup group = groups.get( index );
+						state.setCurrentGroup( group );
+						final List< SourceAndConverter< ? > > sources = new ArrayList<>( state.getSourcesInGroup( group ) );
+						if ( !sources.isEmpty() )
+						{
+							sources.sort( state.sourceOrder() );
+							state.setCurrentSource( sources.get( 0 ) );
+						}
+					}
+				}
+				else
+				{
+					final List< SourceAndConverter< ? > > sources = state.getSources();
+					if ( index >= 0 && index < sources.size() )
+						state.setCurrentSource( sources.get( index ) );
+				}
+			}
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -220,18 +250,39 @@ public class WarpNavigationActions extends Actions
 
 	public static class ToggleSourceOrGroupVisibilityAction extends NavigationAction
 	{
-		private final int sourceIndex;
+		private final int index;
 
-		public ToggleSourceOrGroupVisibilityAction( final ViewerPanel viewer, final int sourceIndex )
+		public ToggleSourceOrGroupVisibilityAction( final ViewerPanel viewer, final int index )
 		{
-			super( String.format( TOGGLE_SOURCE_VISIBILITY, sourceIndex ), viewer );
-			this.sourceIndex = sourceIndex;
+			super( String.format( TOGGLE_SOURCE_VISIBILITY, index ), viewer );
+			this.index = index;
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().toggleActiveGroupOrSource( sourceIndex );
+			final ViewerState state = viewer.state();
+			synchronized ( state )
+			{
+				if ( state.getDisplayMode().hasGrouping() )
+				{
+					final List< SourceGroup > groups = state.getGroups();
+					if ( index >= 0 && index < groups.size() )
+					{
+						final SourceGroup group = groups.get( index );
+						state.setGroupActive( group, !state.isGroupActive( group ) );
+					}
+				}
+				else
+				{
+					final List< SourceAndConverter< ? > > sources = state.getSources();
+					if ( index >= 0 && index < sources.size() )
+					{
+						final SourceAndConverter< ? > source = sources.get( index );
+						state.setSourceActive( source, !state.isSourceActive( source ) );
+					}
+				}
+			}
 		}
 
 		private static final long serialVersionUID = 1L;

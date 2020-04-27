@@ -5,7 +5,7 @@ import java.awt.Dimension;
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.state.ViewerState;
+import bdv.viewer.ViewerState;
 import net.imglib2.Interval;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
@@ -31,7 +31,7 @@ public class BigWarpUtils
 	public static void initTransform( final ViewerPanel viewer )
 	{
 		final Dimension dim = viewer.getDisplay().getSize();
-		final ViewerState state = viewer.getState();
+		final ViewerState state = viewer.state();
 		final AffineTransform3D viewerTransform = initTransform( dim.width, dim.height, false, state );
 		viewer.setCurrentViewerTransform( viewerTransform );
 	}
@@ -105,7 +105,7 @@ public class BigWarpUtils
 		final int cX = viewerWidth / 2;
 		final int cY = viewerHeight / 2;
 
-		final Source< ? > source = state.getSources().get( state.getCurrentSource() ).getSpimSource();
+		final Source< ? > source = state.getCurrentSource().getSpimSource();
 		final int timepoint = state.getCurrentTimepoint();
 		if ( !source.isPresent( timepoint ) )
 			return new AffineTransform3D();

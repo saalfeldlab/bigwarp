@@ -598,10 +598,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		Double[] movingPt = new Double[ ndims ];
 		Double[] targetPt = new Double[ ndims ];
-		
-		Arrays.fill( targetPt, new Double( Double.POSITIVE_INFINITY ) );
-		Arrays.fill( movingPt, new Double( Double.POSITIVE_INFINITY ) );
-		
+
+		Arrays.fill( targetPt, Double.POSITIVE_INFINITY );
+		Arrays.fill( movingPt, Double.POSITIVE_INFINITY );
+
 		movingPts.add( index, movingPt );
 		targetPts.add( index, targetPt );
 		
@@ -1239,9 +1239,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		else if ( columnIndex == ACTIVECOLUMN )
 			return activeList.get( rowIndex );
 		else if( columnIndex < 2 + ndims )
-			return new Double( movingPts.get( rowIndex )[ columnIndex - 2 ] );
-		else 
-			return new Double( targetPts.get( rowIndex )[ columnIndex - ndims - 2 ] );
+			return movingPts.get( rowIndex )[ columnIndex - 2 ];
+		else
+			return targetPts.get( rowIndex )[ columnIndex - ndims - 2 ];
 	}
 
 	/**

@@ -154,43 +154,45 @@ public class BigWarpViewerPanel extends ViewerPanel
 	 */
 	public int updateGrouping()
 	{
-		getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).setName( "moving images" );
-		getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).setName( "fixed images" );
-		int numGroups = getVisibilityAndGrouping().getSourceGroups().size();
-		for ( int i = 0; i < sources.size(); i++ )
+		final ViewerState state = this.state.getState();
+		synchronized ( state )
 		{
-			int idxP = Arrays.binarySearch( movingSourceIndexList, i );
-			int idxQ = Arrays.binarySearch( targetSourceIndexList, i );
-			if ( idxP >= 0 )
-			{
-				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).addSource( i );
-				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).removeSource( i );
-			}
-			else if ( idxQ >= 0 )
-			{
-				getVisibilityAndGrouping().getSourceGroups().get( TARGET_GROUP_INDEX ).addSource( i );
-				getVisibilityAndGrouping().getSourceGroups().get( MOVING_GROUP_INDEX ).removeSource( i );
-			}
-			else
-			{
-				getVisibilityAndGrouping().removeSourceFromGroup( i, MOVING_GROUP_INDEX );
-				getVisibilityAndGrouping().removeSourceFromGroup( i, TARGET_GROUP_INDEX );
-			}
+			// TODO: work backwards to find out whether movingSourceIndexList
+			//  and targetSourceIndexList are required, or whether a
+			//  List<SourceAndConverter<?>> can be used directly
+			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
+			for ( int i : movingSourceIndexList )
+				moving.add( state.getSources().get( i ) );
+			final List< SourceAndConverter< ? > > target = new ArrayList<>();
+			for ( int i : targetSourceIndexList )
+				target.add( state.getSources().get( i ) );
+
+			state.clearGroups();
+
+			final SourceGroup movingGroup = new SourceGroup();
+			state.addGroup( movingGroup );
+			state.setGroupName( movingGroup, "moving images" );
+			state.addSourcesToGroup( moving, movingGroup );
+
+			final SourceGroup targetGroup = new SourceGroup();
+			state.addGroup( targetGroup );
+			state.setGroupName( targetGroup, "fixed images" );
+			state.addSourcesToGroup( target, targetGroup );
+
+			// make only moving and target image groups active in fused mode
+			state.setGroupActive( movingGroup, true );
+			state.setGroupActive( targetGroup, true );
+
+			// only turn grouping enabled by default if there are multiple moving or
+			// target images
+			if ( moving.size() > 1 || target.size() > 1 )
+				state.setDisplayMode( state.getDisplayMode().withGrouping( true ) );
+
+			state.setCurrentGroup( isMoving ? movingGroup : targetGroup );
+
+			// TODO: This does not what the javadoc says. Change javadoc? Return void.
+			return state.getGroups().size();
 		}
-
-		// make only moving and target image groups active in fused mode
-		for ( int i = 2; i < numGroups; i++ )
-			getVisibilityAndGrouping().setGroupActive( i, false );
-
-		// only turn grouping enabled by default if there are multiple moving or
-		// target images
-		if ( movingSourceIndexList.length > 1 || targetSourceIndexList.length > 1 )
-			getVisibilityAndGrouping().setGroupingEnabled( true );
-
-		if( !isMoving )
-			getVisibilityAndGrouping().setCurrentGroup( 1 );
-
-		return numGroups;
 	}
 
 	public boolean isInFixedImageSpace()
@@ -258,7 +260,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		boolean requiresRepaint = false;
 		if( boxOverlayVisible )
 		{
-			multiBoxOverlayRenderer.setViewerState( state );
+			multiBoxOverlayRenderer.setViewerState( state.getState() );
 			multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
 			multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
 			requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
@@ -266,13 +268,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		if( textOverlayVisible )
 		{
-			sourceInfoOverlayRenderer.setViewerState( state );
+			sourceInfoOverlayRenderer.setViewerState( state.getState() );
 			sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
 		}
 
 		if ( Prefs.showScaleBar() )
 		{
-			scaleBarOverlayRenderer.setViewerState( state );
+			scaleBarOverlayRenderer.setViewerState( state.getState() );
 			scaleBarOverlayRenderer.paint( ( Graphics2D ) g );
 		}
 
