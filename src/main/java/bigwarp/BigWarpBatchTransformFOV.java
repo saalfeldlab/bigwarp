@@ -320,10 +320,11 @@ public class BigWarpBatchTransformFOV
 		
 		int[] targetSourceIndexList = data.targetSourceIndices;
 		
+		@SuppressWarnings("unchecked")
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				data.sources, 
 				ltm.getNumdims(),
-				movingSourceIndexList );
+				data );
 
 		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 

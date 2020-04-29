@@ -28,6 +28,8 @@ import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import ij.ImagePlus;
 import ij.process.LUT;
@@ -51,13 +53,14 @@ import net.imglib2.type.numeric.ARGBType;
 public class ImagePlusLoader implements Loader
 {
 	final private ImagePlus[] impList;
-	final private int numChannels;
+	private int numChannels;
 	private int index; // keep track of the setupIds given to each source
 
 	private boolean is3d;
 	private boolean isMultiChannel;
+	private boolean[] isComposite;
 
-	private HashMap< Integer, SetupSettings > settingsMap;
+	private HashMap< Integer, ColorSettings > settingsMap;
 
 	public ImagePlusLoader( final ImagePlus imp )
 	{
@@ -67,11 +70,16 @@ public class ImagePlusLoader implements Loader
 	public ImagePlusLoader( final ImagePlus[] impList )
 	{
 		this.impList = impList;
-		int nc = 0;
-		for( ImagePlus ip : impList )
-			nc += ip.getNChannels();
+		numChannels = 0;
+		isComposite = new boolean[ impList.length ];
 
-		numChannels = nc;
+		int i = 0;
+		for( ImagePlus ip : impList )
+		{
+			numChannels += ip.getNChannels();
+			isComposite[ i ] = ip.isComposite();
+		}
+
 		settingsMap = new HashMap<>();
 	}
 
@@ -90,7 +98,7 @@ public class ImagePlusLoader implements Loader
 		return isMultiChannel;
 	}
 
-	public HashMap< Integer, SetupSettings > getSetupSettings()
+	public HashMap< Integer, ColorSettings > getSetupSettings()
 	{
 		return settingsMap;
 	}
@@ -98,7 +106,11 @@ public class ImagePlusLoader implements Loader
 	public void update( final BigWarpData< ? > data )
 	{
 		for( Integer key : settingsMap.keySet() )
+		{
+			SourceAndConverter<?> sac = data.sources.get( key.intValue() );
 			data.setupSettings.put( key, settingsMap.get( key ) );
+			data.sourceColorSettings.put( sac, settingsMap.get( key ));
+		}
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -114,7 +126,7 @@ public class ImagePlusLoader implements Loader
 		index = startid;
 		for( int i = 0; i < impList.length; i++ )
 		{
-			out[ i ] = load( startid, impList[ i ] );
+			out[ i ] = load( index, impList[ i ] );
 			index += impList[ i ].getNChannels();
 		}
 		return out;
@@ -196,7 +208,7 @@ public class ImagePlusLoader implements Loader
 			setup.setAttribute( new Channel( id + 1 ) );
 			setups.put( id, setup );
 
-			settingsMap.put( id, SetupSettings.fromImagePlus( imp, id, s ));
+			settingsMap.put( id, ColorSettings.fromImagePlus( imp, id, s ));
 		}
 
 		// create timepoints
@@ -237,14 +249,14 @@ public class ImagePlusLoader implements Loader
 		return out;
 	}
 
-	public static class SetupSettings
+	public static class ColorSettings
 	{
 		public final int converterSetupIndex; // index into the ConverterSetups list that this corresponds to
 		public final double min;
 		public final double max;
 		public final ARGBType color;
 
-		public SetupSettings( int converterSetupIndex, double min, double max, ARGBType color)
+		public ColorSettings( int converterSetupIndex, double min, double max, ARGBType color)
 		{
 			this.converterSetupIndex = converterSetupIndex;
 			this.min = min;
@@ -252,6 +264,9 @@ public class ImagePlusLoader implements Loader
 			this.color = color;
 		}
 
+		/**
+		 * @deprecated
+		 */
 		public void updateSetup( final SetupAssignments setups )
 		{
 			updateSetup( setups.getConverterSetups().get( converterSetupIndex ) );
@@ -264,7 +279,7 @@ public class ImagePlusLoader implements Loader
 				setup.setColor( color );
 		}
 
-		public static SetupSettings fromImagePlus( final ImagePlus imp, int converterSetupIndex, int channelOffset )
+		public static ColorSettings fromImagePlus( final ImagePlus imp, int converterSetupIndex, int channelOffset )
 		{
 			double min = imp.getDisplayRangeMin();
 			double max = imp.getDisplayRangeMax();
@@ -281,7 +296,7 @@ public class ImagePlusLoader implements Loader
 				max = luts[ channelOffset ].max;
 			}
 
-			return new SetupSettings( converterSetupIndex, min, max, color );
+			return new ColorSettings( converterSetupIndex, min, max, color );
 		}
 	}
 }

@@ -93,6 +93,7 @@ import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
@@ -101,11 +102,12 @@ import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.loader.ImagePlusLoader.SetupSettings;
+import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.util.BigWarpUtils;
+import ij.CompositeImage;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -135,9 +137,6 @@ import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
 import net.imglib2.RealPositionable;
 import net.imglib2.display.RealARGBColorConverter;
-import net.imglib2.histogram.DiscreteFrequencyDistribution;
-import net.imglib2.histogram.Histogram1d;
-import net.imglib2.histogram.Real1dBinMapper;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.realtransform.AffineTransform;
@@ -372,7 +371,7 @@ public class BigWarp< T >
 		Arrays.sort( movingSourceIndexList );
 		Arrays.sort( targetSourceIndexList );
 
-		sources = wrapSourcesAsTransformed( data.sources, ndims, data.movingSourceIndices );
+		sources = wrapSourcesAsTransformed( data.sources, ndims, data );
 
 		setGridType( GridSource.GRID_TYPE.LINE );
 
@@ -555,8 +554,11 @@ public class BigWarp< T >
 		viewerP.state().getViewerTransform( initialViewP );
 		viewerQ.state().getViewerTransform( initialViewQ );
 
+		// set colors and min/max ranges
+		data.transferChannelSettings( viewerFrameP );
+		data.transferChannelSettings( viewerFrameQ );
+
 		// set brightness contrast to appropriate values
-		data.transferChannelSettings( setupAssignments, null ); // TODO  fix
 		initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
 		initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
 
@@ -1951,16 +1953,24 @@ public class BigWarp< T >
 		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( method );
 	}
 
-	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources, final int ndims, final int[] warpUsIndices )
+	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources,
+			final int ndims,
+			final BigWarpData<?> data )
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
+
+		int[] warpUsIndices = data.movingSourceIndices;
+		HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
+
 		int i = 0;
 		for ( final SourceAndConverter<T>sac : sources )
 		{
 			int idx = Arrays.binarySearch( warpUsIndices, i );
 			if ( idx >= 0 )
 			{
-				wrappedSource.add( wrapSourceAsTransformed( sac, "xfm_" + i, ndims ) );
+				SourceAndConverter<T> newSac = wrapSourceAsTransformed( sac, "xfm_" + i, ndims );
+				wrappedSource.add( newSac );
+				colorSettings.put( newSac, colorSettings.get( sac ));
 			}
 			else
 			{
@@ -2625,7 +2635,9 @@ public class BigWarp< T >
 
 		public final ArrayList< Integer > targetSourceIndexList;
 
-		public final HashMap< Integer, SetupSettings > setupSettings;
+		public final HashMap< Integer, ColorSettings > setupSettings;
+
+		public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
 
 		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
@@ -2644,6 +2656,7 @@ public class BigWarp< T >
 				this.cache = cache;
 
 			setupSettings = new HashMap<>();
+			sourceColorSettings = new HashMap<>();
 		}
 
 		public void wrapUp()
@@ -2655,10 +2668,25 @@ public class BigWarp< T >
 			Arrays.sort( targetSourceIndices );
 		}
 
+		/**
+		 * @deprecated
+		 */
 		public void transferChannelSettings( final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
 		{
 			for( Integer key : setupSettings.keySet() )
 				setupSettings.get( key ).updateSetup( setupAssignments );
+		}
+
+		public void transferChannelSettings( final BigWarpViewerFrame viewer )
+		{
+			SynchronizedViewerState state = viewer.getViewerPanel().state();
+			ConverterSetups setups = viewer.getConverterSetups();
+			synchronized( state )
+			{
+				for( SourceAndConverter<?> sac : state.getSources() )
+					if( sourceColorSettings.containsKey( sac ))
+						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
+			}
 		}
 	}
 

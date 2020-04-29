@@ -12,6 +12,7 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
@@ -471,7 +472,8 @@ public class BigWarpInit
 		return createBigWarpData( loaderP, loaderQ, null );
 	}
 
-	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, final String[] names )
+	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, 
+			final String[] names )
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
@@ -519,7 +521,6 @@ public class BigWarpInit
 	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] names )
 	{
 		/* Load the first source */
-
 
 		final AbstractSpimData< ? >[] spimDataP;
 		if( loaderP instanceof ImagePlusLoader  )
