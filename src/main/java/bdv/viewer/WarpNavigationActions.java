@@ -30,7 +30,7 @@ public class WarpNavigationActions extends Actions
 	public static final String COLLAPSE_CARDS = "collapse cards panel";
 
 	public static final String[] EXPAND_CARDS_KEYS         = new String[] { "P" };
-	public static final String[] COLLAPSE_CARDS_KEYS       = new String[] { "shift P", "shift ESCAPE" };
+	public static final String[] COLLAPSE_CARDS_KEYS       = new String[] { "shift P", "ESCAPE" };
 	
 	public static enum rotationDirections2d { CLOCKWISE, COUNTERCLOCKWISE }; 
 

@@ -253,7 +253,7 @@ public class BigWarpActions
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
 //		map.put( LandmarkPointMenu.DELETE_SELECTED, "DELETE" );
 
-		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "ESCAPE" );
+		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
 		map.put( GARBAGE_COLLECTION, "F10" );
