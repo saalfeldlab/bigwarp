@@ -353,13 +353,11 @@ public class WarpNavigationActions extends Actions
 		{
 			super( COLLAPSE_CARDS, frame.getViewerPanel() );
 			this.frame = frame;
-			System.out.println("card action name: " + name());
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			System.out.println("card action " + name() );
 			frame.collapseCardPanel();
 		}
 	}
@@ -374,13 +372,11 @@ public class WarpNavigationActions extends Actions
 		{
 			super( EXPAND_CARDS, frame.getViewerPanel() );
 			this.frame = frame;
-			System.out.println("card action name: " + name());
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			System.out.println("card action " + name() );
 			frame.expandAndFocusCardPanel();
 		}
 	}
@@ -395,13 +391,11 @@ public class WarpNavigationActions extends Actions
 		{
 			super( name, frame.getViewerPanel() );
 			this.frame = frame;
-			System.out.println("card action name: " + name());
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			System.out.println("card action " + name() );
 			if( name().equals( EXPAND_CARDS ) )
 				frame.expandAndFocusCardPanel();
 			else

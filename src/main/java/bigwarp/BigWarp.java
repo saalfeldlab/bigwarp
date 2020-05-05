@@ -521,33 +521,16 @@ public class BigWarp< T >
 		setupKeyListener();
 
 		// set initial transforms so data are visible
-		AffineTransform3D xfm = new AffineTransform3D();
 		if( options.is2d )
 		{
 			BigWarpUtils.initTransform( viewerP );
 			BigWarpUtils.initTransform( viewerQ );
-//			viewerP.getState().getViewerTransform( xfm );
-//			viewerP.precomputeRotations2d( xfm );
-//			viewerQ.getState().getViewerTransform( xfm );
-//			viewerQ.precomputeRotations2d( xfm );
 		}
 		else
 		{
 			InitializeViewerState.initTransform( viewerP );
 			InitializeViewerState.initTransform( viewerQ );
 		}
-
-//		viewerP.getState().getViewerTransform( xfm );
-//		BigWarpUtils.ensurePositiveZ( xfm );
-//		BigWarpUtils.ensurePositiveDeterminant( xfm );
-//		viewerP.transformChanged(xfm);
-//		Rotation2DHelpers.isSimilarity(xfm);
-//
-//		viewerQ.getState().getViewerTransform( xfm );
-//		BigWarpUtils.ensurePositiveZ( xfm );
-//		BigWarpUtils.ensurePositiveDeterminant( xfm );
-//		viewerQ.transformChanged(xfm);
-//		Rotation2DHelpers.isSimilarity(xfm);
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
@@ -2512,24 +2495,24 @@ public class BigWarp< T >
 
 
 			ProgressWriterIJ progress = new ProgressWriterIJ();
-			BigWarp bw;
-			BigWarpData bwdata; 
+			BigWarp<?> bw;
+			BigWarpData<?> bwdata; 
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				bwdata = BigWarpInit.createBigWarpDataFromXML( fnP, fnQ );
-				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 			}
 			else if ( fnP.endsWith( "xml" ) && !fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impQ = IJ.openImage( fnQ );
 				bwdata = BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ );
-				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 			}
 			else if ( !fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
-				bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 			}
 			else
 			{
@@ -2540,7 +2523,7 @@ public class BigWarp< T >
 				{
 					bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
 					
-					bw = new BigWarp( bwdata, new File( fnP ).getName(), progress );
+					bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 				}
 				else
 				{
@@ -2562,10 +2545,6 @@ public class BigWarp< T >
 
 			e.printStackTrace();
 		}
-		
-		// debug
-
-		System.out.println( "done" );
 	}
 	
 	private void viewerXfmTest()
