@@ -356,7 +356,6 @@ public class BigWarp< T >
 		landmarkPanel.setOpaque( true );
 		landmarkTable = landmarkPanel.getJTable();
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
-//		landmarkModel.setInverseThreshold( inverseThreshold );
 		addDefaultTableMouseListener();
 
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
@@ -411,24 +410,6 @@ public class BigWarp< T >
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
 			try
 			{
-////				final TransformEventHandler< AffineTransform3D > pHandler = TransformHandler3DWrapping2D.factory()
-////						.create( viewerP.getDisplay() );
-//				final TransformEventHandler< AffineTransform3D > pHandler = TransformEventHandler2Dto3D.factory()
-//						.create( viewerP.getDisplay() );
-//				pHandler.setCanvasSize( 
-//						viewerP.getDisplay().getWidth(), 
-//						viewerP.getDisplay().getHeight(), false );
-//				viewerP.getDisplay().setTransformEventHandler( pHandler );
-//
-////				final TransformEventHandler< AffineTransform3D > qHandler = TransformHandler3DWrapping2D.factory()
-////						.create( viewerQ.getDisplay() );
-//				final TransformEventHandler< AffineTransform3D > qHandler = TransformEventHandler2Dto3D.factory()
-//						.create( viewerQ.getDisplay() );
-//				qHandler.setCanvasSize( 
-//						viewerQ.getDisplay().getWidth(), 
-//						viewerQ.getDisplay().getHeight(), false );
-//				viewerQ.getDisplay().setTransformEventHandler( qHandler );
-
 				final Field overlayRendererField = c_vp.getDeclaredField( "multiBoxOverlayRenderer" );
 				overlayRendererField.setAccessible( true );
 
@@ -548,33 +529,16 @@ public class BigWarp< T >
 		setupKeyListener();
 
 		// set initial transforms so data are visible
-		AffineTransform3D xfm = new AffineTransform3D();
 		if( options.is2d )
 		{
 			BigWarpUtils.initTransform( viewerP );
 			BigWarpUtils.initTransform( viewerQ );
-//			viewerP.getState().getViewerTransform( xfm );
-//			viewerP.precomputeRotations2d( xfm );
-//			viewerQ.getState().getViewerTransform( xfm );
-//			viewerQ.precomputeRotations2d( xfm );
 		}
 		else
 		{
 			InitializeViewerState.initTransform( viewerP );
 			InitializeViewerState.initTransform( viewerQ );
 		}
-
-//		viewerP.getState().getViewerTransform( xfm );
-//		BigWarpUtils.ensurePositiveZ( xfm );
-//		BigWarpUtils.ensurePositiveDeterminant( xfm );
-//		viewerP.transformChanged(xfm);
-//		Rotation2DHelpers.isSimilarity(xfm);
-//
-//		viewerQ.getState().getViewerTransform( xfm );
-//		BigWarpUtils.ensurePositiveZ( xfm );
-//		BigWarpUtils.ensurePositiveDeterminant( xfm );
-//		viewerQ.transformChanged(xfm);
-//		Rotation2DHelpers.isSimilarity(xfm);
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
@@ -1283,6 +1247,10 @@ public class BigWarp< T >
 		else if( currentTransform instanceof WrappedCoordinateTransform )
 		{
 			s = (( WrappedCoordinateTransform ) currentTransform).ct.toString();
+		}
+		else if( currentTransform instanceof Wrapped2DTransformAs3D )
+		{
+			s = ( ( Wrapped2DTransformAs3D) currentTransform ).toString();
 		}
 		else
 		{
@@ -3355,7 +3323,7 @@ public class BigWarp< T >
 	public InvertibleRealTransform unwrap2d( InvertibleRealTransform ixfm )
 	{
 		if( ixfm instanceof Wrapped2DTransformAs3D )
-			return ((Wrapped2DTransformAs3D)ixfm).transform;
+			return ((Wrapped2DTransformAs3D)ixfm).getTransform();
 		else
 			return ixfm;
 	}

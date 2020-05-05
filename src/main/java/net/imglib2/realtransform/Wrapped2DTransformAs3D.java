@@ -12,6 +12,11 @@ public class Wrapped2DTransformAs3D implements InvertibleRealTransform
 		this.transform = transform;
 	}
 
+	public InvertibleRealTransform getTransform()
+	{
+		return transform;
+	}
+
 	@Override
 	public int numSourceDimensions()
 	{
