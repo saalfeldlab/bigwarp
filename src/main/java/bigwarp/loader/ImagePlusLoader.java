@@ -120,6 +120,17 @@ public class ImagePlusLoader implements Loader
 		return out;
 	}
 
+	public static double sanitizeCalibration( double in, String dim )
+	{
+		if( Double.isNaN( in ) || Double.isInfinite( in ))
+		{
+			System.err.println("WARNING: Check image calibration. dimension " + dim + " was " + in + " changing to 1.0");
+			return 1.0;
+		}
+		else
+			return in;
+	}
+
 	public SpimDataMinimal load( final int setupIdOffset, ImagePlus imp )
 	{
 		// get calibration and image size
@@ -127,9 +138,9 @@ public class ImagePlusLoader implements Loader
 		final double ph;
 		final double pd;
 
-		pw = imp.getCalibration().pixelWidth;
-		ph = imp.getCalibration().pixelHeight;
-		pd = imp.getCalibration().pixelDepth;
+		pw = sanitizeCalibration( imp.getCalibration().pixelWidth, "x" );
+		ph = sanitizeCalibration( imp.getCalibration().pixelHeight, "y" );
+		pd = sanitizeCalibration( imp.getCalibration().pixelDepth, "z" );
 
 		String punit = imp.getCalibration().getUnit();
 		if ( punit == null || punit.isEmpty() )
