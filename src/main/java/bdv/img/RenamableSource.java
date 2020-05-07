@@ -48,7 +48,7 @@ public class RenamableSource< T > implements Source< T >
 	}
 
 	@Override
-	public void getSourceTransform( int t, int level, AffineTransform3D transform )
+	public synchronized void getSourceTransform( int t, int level, AffineTransform3D transform )
 	{
 		src.getSourceTransform( t, level, transform );
 	}
