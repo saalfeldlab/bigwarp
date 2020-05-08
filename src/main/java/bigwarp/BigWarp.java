@@ -3358,7 +3358,7 @@ public class BigWarp< T >
 				ndims = landmarkModel.getNumdims();
 				xfm = getLandmarkPanel().getTableModel().getTransform();
 			}
-			invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform(xfm) );
+			invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ));
 		}
 		else
 		{
@@ -3472,11 +3472,6 @@ public class BigWarp< T >
 					try
 					{
 						InvertibleRealTransform invXfm = bw.getTransformation( index );
-
-//						System.out.println( "ct   : " + bw.getCoordinateTransform());
-//						System.out.println( "tpsb : " + bw.getTpsBase());
-//						System.out.println( "tps  : " + bw.getTps());
-//						System.out.println( "xfm  : " + bw.getTransformation());
 
 						if ( invXfm == null )
 							return;

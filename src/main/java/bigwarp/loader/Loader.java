@@ -28,4 +28,15 @@ import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 public interface Loader
 {
 	public < S extends AbstractSequenceDescription< ?, ?, ? > > AbstractSpimData< S >[] load();
+
+	public int numSources();
+
+	/**
+	 * Return the name of the ith source.
+	 * Only valid after a call to load.
+	 * 
+	 * @param i source index
+	 * @return the name
+	 */
+	public String name( int i );
 }

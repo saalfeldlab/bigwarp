@@ -446,10 +446,6 @@ public class BigWarpInit
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
 
-		// TODO this may need improving
-		final AbstractSequenceDescription< ?, ?, ? > seqP = spimDataPList[ 0 ].getSequenceDescription();
-		final AbstractSequenceDescription< ?, ?, ? > seqQ = spimDataQList[ 0 ].getSequenceDescription();
-
 		int numMovingSources = 0;
 		for ( AbstractSpimData< ? > spimDataP : spimDataPList )
 		{
@@ -467,7 +463,7 @@ public class BigWarpInit
 		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
 		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
 
-		if ( names != null )
+		if ( names != null && names.length == sources.size() )
 		{
 			return new BigWarpData( wrapSourcesAsRenamable( sources, names ), converterSetups, null, movingSourceIndices, targetSourceIndices );
 		}
@@ -589,23 +585,37 @@ public class BigWarpInit
 	 *            list of names
 	 * @return BigWarpData
 	 */
-	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] names )
+	public static BigWarpData< ? > createBigWarpData( final Loader loaderP, final Loader loaderQ, final String[] namesIn )
 	{
-		/* Load the first source */
-
-
+		/* Load the moving sources */
 		final AbstractSpimData< ? >[] spimDataP;
 		if( loaderP instanceof ImagePlusLoader  )
 			spimDataP = loaderP.load();
 		else 
 			spimDataP = loaderP.load();
 
-
+		/* Load the fixed sources */
 		final AbstractSpimData< ? >[] spimDataQ;
 		if( loaderQ instanceof ImagePlusLoader  )
 			spimDataQ = ((ImagePlusLoader)loaderQ).loadAll( spimDataP.length );
 		else
 			spimDataQ = loaderQ.load();
+
+		int N = loaderP.numSources() + loaderQ.numSources();
+
+		String[] names;
+		if( namesIn == null || namesIn.length != N )
+		{
+			names = new String[ N ];
+			int j = 0;
+			for( int i = 0; i < loaderP.numSources(); i++ )
+				names[ j++ ] = loaderP.name( i );
+
+			for( int i = 0; i < loaderQ.numSources(); i++ )
+				names[ j++ ] = loaderQ.name( i );
+		}
+		else
+			names = namesIn;
 
 		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
 
@@ -629,10 +639,7 @@ public class BigWarpInit
 	 */
 	public static BigWarpData< ? > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
-		File fP = new File( xmlFilenameP );
-		File fQ = new File( xmlFilenameQ );
-		// TODO: wrong when XMLLoaders return multichannel sources
-		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), new String[] { fP.getName(), fQ.getName() } );
+		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
 	}
 
 	/**
@@ -646,8 +653,7 @@ public class BigWarpInit
 	 */
 	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
-		String[] names = namesFromImagePluses( impP, impQ );
-		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), names );
+		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), null );
 	}
 
 	/**

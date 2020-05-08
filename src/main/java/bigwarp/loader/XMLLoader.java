@@ -16,10 +16,14 @@
  */
 package bigwarp.loader;
 
+import java.util.List;
+import java.util.ArrayList;
+
 import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.spimdata.XmlIoSpimDataMinimal;
 import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 
 /**
  *
@@ -30,19 +34,43 @@ public class XMLLoader implements Loader
 {
 	final private String xmlPath;
 
+	private List<String> names;
+
+	private int numSources = 0;
+
 	public XMLLoader( final String xmlPath )
 	{
 		this.xmlPath = xmlPath;
+	}
+
+	@Override
+	public String name( final int i )
+	{
+		assert( i <= numSources );
+		return names.get( i );
+	}
+
+	@Override
+	public int numSources()
+	{
+		return numSources;
 	}
 
 	@SuppressWarnings( "unchecked" )
 	@Override
 	public SpimDataMinimal[] load()
 	{
+		names = new ArrayList<String>();
 		SpimDataMinimal spimData = null;
 		try
 		{
 			spimData = new XmlIoSpimDataMinimal().load( xmlPath );
+
+			numSources = spimData.getSequenceDescription().getViewSetupsOrdered().size();
+			for( BasicViewSetup s : spimData.getSequenceDescription().getViewSetupsOrdered())
+			{
+				names.add( s.getName());
+			}
 
 			if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
 			{

@@ -51,13 +51,15 @@ import net.imglib2.type.numeric.ARGBType;
 public class ImagePlusLoader implements Loader
 {
 	final private ImagePlus[] impList;
-	final private int numChannels;
+	final private int numSources;
 	private int index; // keep track of the setupIds given to each source
 
 	private boolean is3d;
 	private boolean isMultiChannel;
 
 	private HashMap< Integer, SetupSettings > settingsMap;
+
+	private final String[] names;
 
 	public ImagePlusLoader( final ImagePlus imp )
 	{
@@ -69,15 +71,45 @@ public class ImagePlusLoader implements Loader
 		this.impList = impList;
 		int nc = 0;
 		for( ImagePlus ip : impList )
+		{
 			nc += ip.getNChannels();
+		}
 
-		numChannels = nc;
+		names = new String[ nc ];
+		int k = 0;
+		for( ImagePlus ip : impList )
+		{
+			for( int i = 0; i < ip.getNChannels(); i++ )
+			{
+				names[ k++ ] = ip.getTitle() + String.format("_ch-%d", i );
+			}
+		}
+
+		numSources = nc;
 		settingsMap = new HashMap<>();
 	}
 
+	/*
+	 * Use numSources 
+	 */
+	@Deprecated
 	public int numChannels()
 	{
-		return numChannels;
+		return numSources;
+	}
+
+	@Override
+	public int numSources()
+	{
+		return numSources;
+	}
+
+	@Override
+	public String name( final int i )
+	{
+		assert( i < numSources );
+
+		return names[ i ];
 	}
 
 	public boolean is3d()
