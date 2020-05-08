@@ -539,8 +539,10 @@ public abstract class BigWarpExporter <T>
 	 */
 	public static void estimateAffineFromCorners( AffineTransform3D affine, RealTransform xfm, Interval interval )
 	{
+		if( xfm == null ) 
+			return;
+
 		int nd = interval.numDimensions();
-		
 		int N;
 		Model model;
 		if ( nd == 2 )

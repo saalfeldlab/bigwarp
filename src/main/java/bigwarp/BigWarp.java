@@ -155,9 +155,7 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.type.volatiles.VolatileFloatType;
 import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformEventHandler2Dto3D;
 import net.imglib2.ui.TransformListener;
-import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -1706,8 +1704,15 @@ public class BigWarp< T >
 	{
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 
+
+		InvertibleRealTransform transform; 
+		if( options.is2d )
+			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
+		else
+			transform = currentTransform;
+
 		// TODO check this (current transform part)
-		final boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true, currentTransform ); 
+		final boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true, transform ); 
 
 		if ( BigWarp.this.landmarkFrame.isVisible() )
 		{
@@ -3310,11 +3315,6 @@ public class BigWarp< T >
 		return null;
 	}
 
-	public InvertibleRealTransform getTransformation()
-	{
-		return getTransformation( -1 );
-	}
-
 	public synchronized void addTransformListener( TransformListener< InvertibleRealTransform > listener )
 	{
 		transformListeners.add( listener );
@@ -3326,6 +3326,11 @@ public class BigWarp< T >
 			return ((Wrapped2DTransformAs3D)ixfm).getTransform();
 		else
 			return ixfm;
+	}
+
+	public InvertibleRealTransform getTransformation()
+	{
+		return getTransformation( -1 );
 	}
 
 	public InvertibleRealTransform getTransformation( final int index )
