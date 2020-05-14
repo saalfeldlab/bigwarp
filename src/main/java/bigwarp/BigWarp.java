@@ -1704,9 +1704,8 @@ public class BigWarp< T >
 	{
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 
-
 		InvertibleRealTransform transform; 
-		if( options.is2d )
+		if( options.is2d  && currentTransform != null )
 			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
 		else
 			transform = currentTransform;
