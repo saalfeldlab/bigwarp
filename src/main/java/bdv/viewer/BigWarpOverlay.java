@@ -12,14 +12,10 @@ import javax.swing.JTable;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import bdv.gui.BigWarpLandmarkPanel;
-import bdv.viewer.state.ViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 
 public class BigWarpOverlay {
-	
-	/** The viewer state. */
-	private ViewerState state;
-	
+
 	private BigWarpViewerPanel viewer;
 	
 	protected JTable table;
@@ -67,11 +63,6 @@ public class BigWarpOverlay {
 
 	public void paint( final Graphics2D g ) 
 	{
-		/*
-		 * Collect current view.
-		 */
-		state.getViewerTransform( transform );
-
 		// Save graphic device original settings
 		final Composite originalComposite = g.getComposite();
 		final Stroke originalStroke = g.getStroke();
@@ -217,7 +208,10 @@ public class BigWarpOverlay {
 	 */
 	public void setViewerState( final ViewerState state )
 	{
-		this.state = state;
+		/*
+		 * Collect current view.
+		 */
+		state.getViewerTransform( transform );
 	}
 	
 	public void setEstimatedTransform( final RealTransform estimatedXfm )

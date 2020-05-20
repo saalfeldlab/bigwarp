@@ -18,8 +18,13 @@ import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
 import bdv.BehaviourTransformEventHandler;
 import bdv.cache.CacheControl;
+import bdv.tools.brightness.ConverterSetup;
+import bdv.ui.BdvDefaultCards;
+import bdv.ui.CardPanel;
+import bdv.ui.splitpanel.SplitPanel;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.ViewerOptions;
 import bigwarp.BigWarp;
@@ -37,12 +42,19 @@ public class BigWarpViewerFrame extends JFrame
 
 	private final BigWarp<?> bw;
 
+	private SplitPanel splitPanel;
+
+	private CardPanel cards;
+
+	private final ConverterSetups setups;
+
 	private static final long serialVersionUID = -7630931733043185034L;
 
 	public BigWarpViewerFrame(
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
+			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final String title,
@@ -50,13 +62,14 @@ public class BigWarpViewerFrame extends JFrame
 			final int[] movingIndexList,
 			final int[] targetIndexList )
 	{
-		this( bw, width, height, sources, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
+		this( bw, width, height, sources, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
 	
 	public BigWarpViewerFrame(
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
+			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final BigWarpViewerOptions optional,
@@ -68,19 +81,36 @@ public class BigWarpViewerFrame extends JFrame
 		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
 		this.bw = bw;
 		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
+		setups = new ConverterSetups( viewer.state() );
+		setups.listeners().add( s -> viewer.requestRepaint() );
+
+		if ( converterSetups.size() != sources.size() )
+			System.err.println( "WARNING! Constructing BigWarp with converterSetups.size() that is not the same as sources.size()." );
+		final int numSetups = Math.min( converterSetups.size(), sources.size() );
+		for ( int i = 0; i < numSetups; ++i )
+		{
+			final SourceAndConverter< ? > source = sources.get( i );
+			final ConverterSetup setup = converterSetups.get( i );
+			if ( setup != null )
+				setups.put( source, setup );
+		}
 
 		// TODO this needs to change for multi-channel!
 		if( !isMoving )
-			viewer.getVisibilityAndGrouping().setCurrentSource( 1 );
-		
+			viewer.state().setCurrentSource( viewer.state().getSources().get( 1 ) );
+
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();
 
+		cards = new CardPanel();
+		BdvDefaultCards.setup( cards, viewer, setups );
+		splitPanel = new SplitPanel( viewer, cards );
+
 		getRootPane().setDoubleBuffered( true );
-		setPreferredSize( new Dimension( width, height ) );
-		add( viewer, BorderLayout.CENTER );
-		
+		add( splitPanel, BorderLayout.CENTER );
 		pack();
+
+		setPreferredSize( new Dimension( width, height ) );
 
 		setDefaultCloseOperation( JFrame.DO_NOTHING_ON_CLOSE );
 		addWindowListener( new WindowAdapter()
@@ -119,10 +149,37 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		return viewer.getIsMoving();
 	}
-	
+
 	public BigWarpViewerPanel getViewerPanel()
 	{
 		return viewer;
+	}
+
+	public CardPanel getCardPanel()
+	{
+		return cards;
+	}
+
+	public SplitPanel getSplitPanel()
+	{
+		return splitPanel;
+	}
+
+	public ConverterSetups getConverterSetups()
+	{
+		return setups;
+	}
+
+	public void expandAndFocusCardPanel()
+	{
+		getSplitPanel().setCollapsed( false );
+		getSplitPanel().getRightComponent().requestFocusInWindow();
+	}
+
+	public void collapseCardPanel()
+	{
+		getSplitPanel().setCollapsed( true );
+		viewer.requestFocusInWindow();
 	}
 	
 	public InputActionBindings getKeybindings()

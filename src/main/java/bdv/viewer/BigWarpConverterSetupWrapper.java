@@ -3,22 +3,30 @@ package bdv.viewer;
 import net.imglib2.type.numeric.ARGBType;
 import bdv.tools.brightness.ConverterSetup;
 import bigwarp.BigWarp;
+import org.scijava.listeners.Listeners;
 
+@Deprecated
 public class BigWarpConverterSetupWrapper implements ConverterSetup {
 
 	protected ConverterSetup cs;
 	protected BigWarp bw;
-	
+
 	public BigWarpConverterSetupWrapper( BigWarp bw, ConverterSetup cs )
 	{
 		this.bw = bw;
 		this.cs = cs;
 	}
-	
+
 	public ConverterSetup getSourceConverterSetup(){
 		return cs;
 	}
-	
+
+	@Override
+	public Listeners< SetupChangeListener > setupChangeListeners()
+	{
+		return cs.setupChangeListeners();
+	}
+
 	@Override
 	public int getSetupId() {
 		return cs.getSetupId();
@@ -44,7 +52,7 @@ public class BigWarpConverterSetupWrapper implements ConverterSetup {
 		cs.setDisplayRange(min, max);
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
-		
+
 	}
 
 	@Override
@@ -64,11 +72,4 @@ public class BigWarpConverterSetupWrapper implements ConverterSetup {
 	{
 		return cs.getDisplayRangeMax();
 	}
-
-	@Override
-	public void setViewer( RequestRepaint arg0 )
-	{
-		// do nothing
-	}
-
 }

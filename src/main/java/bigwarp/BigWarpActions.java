@@ -124,8 +124,8 @@ public class BigWarpActions
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 		
 		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
-		Component c = celled.getTableCellEditorComponent(landmarkTable, new Boolean(true), true, 0, 1 );
-		
+		Component c = celled.getTableCellEditorComponent(landmarkTable, Boolean.TRUE, true, 0, 1 );
+
 		InputMap parentInputMap = ((JCheckBox)c).getInputMap().getParent();
 		parentInputMap.clear();
 		KeyStroke enterDownKS = KeyStroke.getKeyStroke("pressed ENTER" );
@@ -253,11 +253,11 @@ public class BigWarpActions
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
 //		map.put( LandmarkPointMenu.DELETE_SELECTED, "DELETE" );
 
-		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "ESCAPE" );
+		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
 		map.put( GARBAGE_COLLECTION, "F10" );
-		map.put( PRINT_TRANSFORM, "P" );
+		map.put( PRINT_TRANSFORM, "control shift T" );
 		map.put( DEBUG, "F10" );
 		
 		return inputMap;
@@ -323,7 +323,6 @@ public class BigWarpActions
 		new DebugAction( DEBUG, bw ).put( actionMap );
 		new PrintTransformAction( PRINT_TRANSFORM, bw ).put( actionMap );
 
-			
 		return actionMap;
 	}
 
@@ -525,12 +524,12 @@ public class BigWarpActions
 //			ltm.printWarpedPoints();
 			
 			AffineTransform3D xfm = new AffineTransform3D();
-			bw.viewerP.getState().getViewerTransform( xfm );
+			bw.viewerP.state().getViewerTransform( xfm );
 			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
 
-			bw.viewerQ.getState().getViewerTransform( xfm );
+			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
-			
+
 			BigWarpData data = bw.getData();
 			for( int mi : data.movingSourceIndices )
 			{

@@ -2,9 +2,9 @@ package bdv.gui;
 
 import java.lang.reflect.Field;
 
-import bdv.BehaviourTransformEventHandler2D;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
+
 import bdv.BehaviourTransformEventHandler3D;
-import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.MessageOverlayAnimator;
@@ -39,7 +39,14 @@ public class BigWarpViewerOptions extends ViewerOptions
 	{
 		return options( false );
 	}
-	
+
+	@Override
+	public BigWarpViewerOptions inputTriggerConfig( final InputTriggerConfig c )
+	{
+		super.inputTriggerConfig( c );
+		return this;
+	}
+
 	public BwValues getValues()
 	{
 		return bwValues;

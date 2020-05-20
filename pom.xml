@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>26.0.0</version>
+		<version>28.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>5.1.1-SNAPSHOT</version>
+	<version>6.0.0-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -111,11 +111,12 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
-		<bigdataviewer-core.version>7.0.0</bigdataviewer-core.version>
-		<bigdataviewer_fiji.version>6.0.0</bigdataviewer_fiji.version>
-		<bigdataviewer-vistools.version>1.0.0-beta-15</bigdataviewer-vistools.version>
+		<bigdataviewer-core.version>9.0.4</bigdataviewer-core.version>
+		<bigdataviewer_fiji.version>6.1.0</bigdataviewer_fiji.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-19</bigdataviewer-vistools.version>
         <jitk-tps.version>3.0.1</jitk-tps.version>
         <imglib2-realtransform.version>3.0.0</imglib2-realtransform.version>
+		<ui-behaviour.version>2.0.1</ui-behaviour.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
@@ -197,6 +198,10 @@
 					<artifactId>jhdf5</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>ui-behaviour</artifactId>
 		</dependency>
 	</dependencies>
 </project>

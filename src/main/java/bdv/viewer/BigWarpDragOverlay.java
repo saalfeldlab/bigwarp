@@ -65,8 +65,8 @@ public class BigWarpDragOverlay
 		// System.out.println("BigWarpDragOverlay - PAINT" );
 		if( inProgress )
 		{
-			viewer.getState().getViewerTransform( transform );
-			
+			viewer.state().getViewerTransform( transform );
+
 			//System.out.println("BigWarpDragOverlay - PAINT IN PROGRESS" );
 			transform.apply( movingPoint, movingPointScreen );
 			transform.apply( targetPoint, targetPointScreen );

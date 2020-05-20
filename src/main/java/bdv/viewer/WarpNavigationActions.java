@@ -2,16 +2,20 @@ package bdv.viewer;
 
 import java.awt.event.ActionEvent;
 
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
+import bdv.gui.BigWarpViewerFrame;
 import bdv.viewer.ViewerPanel.AlignPlane;
 
-public class WarpNavigationActions 
+public class WarpNavigationActions extends Actions
 {
 
 	public static final String TOGGLE_INTERPOLATION = "toggle interpolation";
@@ -19,14 +23,21 @@ public class WarpNavigationActions
 	public static final String TOGGLE_GROUPING = "toggle grouping";
 	public static final String SET_CURRENT_SOURCE = "set current source %d";
 	public static final String TOGGLE_SOURCE_VISIBILITY = "toggle source visibility %d";
-	
 	public static final String ALIGN_PLANE = "align %s plane";
 	public static final String ROTATE_PLANE = "rotate %s";
-	
-
 	public static final String DISPLAY_XFMS = "display transforms";
+	public static final String EXPAND_CARDS = "expand and focus cards panel";
+	public static final String COLLAPSE_CARDS = "collapse cards panel";
+
+	public static final String[] EXPAND_CARDS_KEYS         = new String[] { "P" };
+	public static final String[] COLLAPSE_CARDS_KEYS       = new String[] { "shift P", "ESCAPE" };
 	
 	public static enum rotationDirections2d { CLOCKWISE, COUNTERCLOCKWISE }; 
+
+	public WarpNavigationActions( final KeyStrokeAdder.Factory keyConfig )
+	{
+		super( keyConfig, new String[] { "bw_warpNav" } );
+	}	
 	
 	/**
 	 * Create navigation actions and install them in the specified
@@ -34,22 +45,25 @@ public class WarpNavigationActions
 	 *
 	 * @param inputActionBindings
 	 *            {@link InputMap} and {@link ActionMap} are installed here.
-	 * @param viewer
-	 *            Navigation actions are targeted at this {@link ViewerPanel}.
+	 * @param frame
+	 *            Navigation actions are targeted at this {@link BigWarpViewerFrame}.
 	 * @param keyProperties
 	 *            user-defined key-bindings.
 	 * @param is2d does this bigwarp instance work on 2d images 
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarpViewerPanel viewer,
+			final BigWarpViewerFrame frame,
 			final KeyStrokeAdder.Factory keyProperties,
 			final boolean is2d )
 	{
-		inputActionBindings.addActionMap( "navigation", createActionMap( viewer ) );
-		inputActionBindings.addInputMap( "navigation", createInputMap( keyProperties, is2d ) );
-		
-		viewer.getActionMap().get( "navigation" );
+		final ActionMap actionMap = createActionMap( frame );
+		final InputMap inputMap = createInputMap( keyProperties, is2d );
+
+		Actions actions = new Actions( inputMap, actionMap, keyProperties, "navigation" );
+//		actions.runnableAction( viewer::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
+//		actions.runnableAction( viewer::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+		actions.install( inputActionBindings, "navigation" );
 	}
 
 	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties, final boolean is2d )
@@ -68,7 +82,7 @@ public class WarpNavigationActions
 			map.put( String.format( TOGGLE_SOURCE_VISIBILITY, i ), "shift " + numkeys[ i ] );
 		}
 
-		map.put( DISPLAY_XFMS, "shift P" );
+		map.put( DISPLAY_XFMS, "shift V" );
 		
 		if( !is2d )
 		{
@@ -81,23 +95,29 @@ public class WarpNavigationActions
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.CLOCKWISE.name() ), "shift X" );
 			map.put( String.format( ROTATE_PLANE, rotationDirections2d.COUNTERCLOCKWISE.name() ), "shift Z" );
 		}
+
+		map.put( EXPAND_CARDS, EXPAND_CARDS_KEYS );
+		map.put( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+
 		return inputMap;
 	}
 
-	public static ActionMap createActionMap( final BigWarpViewerPanel viewer )
+	public static ActionMap createActionMap( final BigWarpViewerFrame frame )
 	{
-		return createActionMap( viewer, 10 );
+		return createActionMap( frame, 10 );
 	}
 
-	public static ActionMap createActionMap( final BigWarpViewerPanel viewer, final int numSourceKeys )
+	public static ActionMap createActionMap( final BigWarpViewerFrame frame, final int numSourceKeys )
 	{
 		final ActionMap actionMap = new ActionMap();
-		addToActionMap( actionMap, viewer, numSourceKeys );
+		addToActionMap( actionMap, frame, numSourceKeys );
 		return actionMap;
 	}
 
-	public static void addToActionMap( final ActionMap actionMap, final BigWarpViewerPanel viewer, final int numSourceKeys )
+	public static void addToActionMap( final ActionMap actionMap, final BigWarpViewerFrame frame, final int numSourceKeys )
 	{
+		final BigWarpViewerPanel viewer = frame.getViewerPanel();
+
 		new ToggleInterPolationAction( viewer ).put( actionMap );
 		new ToggleFusedModeAction( viewer ).put( actionMap );
 		new ToggleGroupingAction( viewer ).put( actionMap );
@@ -115,10 +135,15 @@ public class WarpNavigationActions
 		new RotatePlaneAction( viewer, rotationDirections2d.COUNTERCLOCKWISE ).put( actionMap ); // counterclockwise
 
 		new DisplayXfmAction( viewer ).put( actionMap );
+
+		new ExpandCardAction( frame ).put( actionMap );
+		new CollapseCardAction( frame ).put( actionMap );
 	}
 
 	private static abstract class NavigationAction extends AbstractNamedAction
 	{
+		private static final long serialVersionUID = 1607667614920666360L;
+
 		protected final ViewerPanel viewer;
 
 		public NavigationAction( final String name, final ViewerPanel viewer )
@@ -126,8 +151,6 @@ public class WarpNavigationActions
 			super( name );
 			this.viewer = viewer;
 		}
-
-		private static final long serialVersionUID = 1L;
 	}
 
 	public static class ToggleInterPolationAction extends NavigationAction
@@ -156,7 +179,9 @@ public class WarpNavigationActions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setFusedEnabled( !viewer.visibilityAndGrouping.isFusedEnabled() );
+			final ViewerState state = viewer.state();
+			final DisplayMode mode = state.getDisplayMode();
+			state.setDisplayMode( mode.withFused( !mode.hasFused() ) );
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -172,7 +197,9 @@ public class WarpNavigationActions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setGroupingEnabled( !viewer.visibilityAndGrouping.isGroupingEnabled() );
+			final ViewerState state = viewer.state();
+			final DisplayMode mode = state.getDisplayMode();
+			state.setDisplayMode( mode.withGrouping( !mode.hasGrouping() ) );
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -180,18 +207,42 @@ public class WarpNavigationActions
 
 	public static class SetCurrentSourceOrGroupAction extends NavigationAction
 	{
-		private final int sourceIndex;
+		private final int index;
 
-		public SetCurrentSourceOrGroupAction( final ViewerPanel viewer, final int sourceIndex )
+		public SetCurrentSourceOrGroupAction( final ViewerPanel viewer, final int index )
 		{
-			super( String.format( SET_CURRENT_SOURCE, sourceIndex ), viewer );
-			this.sourceIndex = sourceIndex;
+			super( String.format( SET_CURRENT_SOURCE, index ), viewer );
+			this.index = index;
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().setCurrentGroupOrSource( sourceIndex );
+			final ViewerState state = viewer.state();
+			synchronized ( state )
+			{
+				if ( state.getDisplayMode().hasGrouping() )
+				{
+					final List< SourceGroup > groups = state.getGroups();
+					if ( index >= 0 && index < groups.size() )
+					{
+						final SourceGroup group = groups.get( index );
+						state.setCurrentGroup( group );
+						final List< SourceAndConverter< ? > > sources = new ArrayList<>( state.getSourcesInGroup( group ) );
+						if ( !sources.isEmpty() )
+						{
+							sources.sort( state.sourceOrder() );
+							state.setCurrentSource( sources.get( 0 ) );
+						}
+					}
+				}
+				else
+				{
+					final List< SourceAndConverter< ? > > sources = state.getSources();
+					if ( index >= 0 && index < sources.size() )
+						state.setCurrentSource( sources.get( index ) );
+				}
+			}
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -199,18 +250,39 @@ public class WarpNavigationActions
 
 	public static class ToggleSourceOrGroupVisibilityAction extends NavigationAction
 	{
-		private final int sourceIndex;
+		private final int index;
 
-		public ToggleSourceOrGroupVisibilityAction( final ViewerPanel viewer, final int sourceIndex )
+		public ToggleSourceOrGroupVisibilityAction( final ViewerPanel viewer, final int index )
 		{
-			super( String.format( TOGGLE_SOURCE_VISIBILITY, sourceIndex ), viewer );
-			this.sourceIndex = sourceIndex;
+			super( String.format( TOGGLE_SOURCE_VISIBILITY, index ), viewer );
+			this.index = index;
 		}
 
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			viewer.getVisibilityAndGrouping().toggleActiveGroupOrSource( sourceIndex );
+			final ViewerState state = viewer.state();
+			synchronized ( state )
+			{
+				if ( state.getDisplayMode().hasGrouping() )
+				{
+					final List< SourceGroup > groups = state.getGroups();
+					if ( index >= 0 && index < groups.size() )
+					{
+						final SourceGroup group = groups.get( index );
+						state.setGroupActive( group, !state.isGroupActive( group ) );
+					}
+				}
+				else
+				{
+					final List< SourceAndConverter< ? > > sources = state.getSources();
+					if ( index >= 0 && index < sources.size() )
+					{
+						final SourceAndConverter< ? > source = sources.get( index );
+						state.setSourceActive( source, !state.isSourceActive( source ) );
+					}
+				}
+			}
 		}
 
 		private static final long serialVersionUID = 1L;
@@ -254,6 +326,8 @@ public class WarpNavigationActions
 	
 	public static class AlignPlaneAction extends NavigationAction
 	{
+		private static final long serialVersionUID = -5868085804210873492L;
+
 		private final AlignPlane plane;
 
 		public AlignPlaneAction( final ViewerPanel viewer, final AlignPlane plane )
@@ -267,12 +341,66 @@ public class WarpNavigationActions
 		{
 			viewer.align( plane );
 		}
+	}
 
-		private static final long serialVersionUID = 1L;
+	public static class CollapseCardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -2337698189753056286L;
+
+		public BigWarpViewerFrame frame;
+
+		public CollapseCardAction( BigWarpViewerFrame frame )
+		{
+			super( COLLAPSE_CARDS, frame.getViewerPanel() );
+			this.frame = frame;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			frame.collapseCardPanel();
+		}
+	}
+
+	public static class ExpandCardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -4267852269622298980L;
+
+		public BigWarpViewerFrame frame;
+
+		public ExpandCardAction( BigWarpViewerFrame frame )
+		{
+			super( EXPAND_CARDS, frame.getViewerPanel() );
+			this.frame = frame;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			frame.expandAndFocusCardPanel();
+		}
+	}
+
+	public static class CardAction extends NavigationAction
+	{
+		private static final long serialVersionUID = -8949725696799894130L;
+
+		public BigWarpViewerFrame frame;
+
+		public CardAction( BigWarpViewerFrame frame, final String name )
+		{
+			super( name, frame.getViewerPanel() );
+			this.frame = frame;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			if( name().equals( EXPAND_CARDS ) )
+				frame.expandAndFocusCardPanel();
+			else
+				frame.collapseCardPanel();
+		}
 	}
 	
-	
-	
-	private WarpNavigationActions()
-	{}
 }

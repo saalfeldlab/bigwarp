@@ -673,7 +673,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				sources, 
 				landmarks.getNumdims(),
-				movingSourceIndexList );
+				bwData );
 
 		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
 		InvertibleRealTransform invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ) );

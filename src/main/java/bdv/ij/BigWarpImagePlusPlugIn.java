@@ -80,7 +80,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try
         {
         	new RepeatingReleasedEventsFixer().install();
-			final BigWarp bw = new BigWarp( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
+			final BigWarp<?> bw = new BigWarp<>( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();

@@ -320,10 +320,11 @@ public class BigWarpBatchTransformFOV
 		
 		int[] targetSourceIndexList = data.targetSourceIndices;
 		
+		@SuppressWarnings("unchecked")
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				data.sources, 
 				ltm.getNumdims(),
-				movingSourceIndexList );
+				data );
 
 		ThinPlateR2LogRSplineKernelTransform xfm = ltm.getTransform();
 
@@ -490,8 +491,7 @@ public class BigWarpBatchTransformFOV
 				public RandomAccessibleInterval< T > getImage( int timepointId,
 						ImgLoaderHint... hints )
 				{
-					return ConstantUtils.constantRandomAccessibleInterval( type,
-							dim.length, new FinalInterval( dim ) );
+					return ConstantUtils.constantRandomAccessibleInterval( type, new FinalInterval( dim ) );
 				}
 
 				@Override
