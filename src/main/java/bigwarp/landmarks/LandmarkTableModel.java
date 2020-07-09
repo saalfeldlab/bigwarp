@@ -35,6 +35,7 @@ import net.imglib2.ui.TransformListener;
 
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
+import com.opencsv.exceptions.CsvException;
 
 import bdv.gui.BigWarpMessageAnimator;
 
@@ -1046,8 +1047,19 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		clear();
 
 		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
-		List<String[]> rows = reader.readAll();
-		reader.close();
+		List< String[] > rows = null;
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch ( CsvException e )
+		{
+			System.err.println( "Could not read csv: " + f );
+			e.printStackTrace();
+			reader.close();
+			return;
+		}
 
 		int ndims = 3;
 		int expectedRowLength = 8;
@@ -1153,7 +1165,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public void save( File f ) throws IOException
 	{
-		CSVWriter csvWriter = new CSVWriter(new FileWriter( f.getAbsoluteFile() ),','); 
+		CSVWriter csvWriter = new CSVWriter(new FileWriter( f.getAbsoluteFile() )); 
 		int N = names.size();
 		List<String[]> rows = new ArrayList<String[]>( N );
 		
