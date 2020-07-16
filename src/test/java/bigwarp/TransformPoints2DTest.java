@@ -2,7 +2,9 @@ package bigwarp;
 
 import ij.IJ;
 import ij.ImagePlus;
+import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealPoint;
+import net.imglib2.realtransform.InvertibleRealTransform;
 
 import java.io.File;
 
@@ -15,10 +17,11 @@ public class TransformPoints2DTest {
         BigWarp.BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( impBlobs, impBlobs );
 
         BigWarp bigWarp = new BigWarp(bwData, "2D points transform", null);
-        bigWarp.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/landmarks2d-blobs.csv" ));
+//        bigWarp.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/landmarks2d-blobs.csv" ));
+        bigWarp.loadLandmarks( "src/test/resources/landmarks2d-blobs.csv" );
 
         bigWarp.toggleMovingImageDisplay();
-
+        
         // Making a realpoint, and transform it
 
         double xTest = 100;
@@ -34,8 +37,11 @@ public class TransformPoints2DTest {
 
         // ------------------- Deprecated transform computation
         // -------- FWD
-        double[] ptTransformDeprecatedFwd = bigWarp.getTransform().apply(ptCoords2D);
+        ThinPlateR2LogRSplineKernelTransform ltmTransform = bigWarp.getTransform();
+        double[] ptTransformDeprecatedFwd = ltmTransform.apply(ptCoords2D);
         System.out.println("Fwd Deprecated \t x:"+ptTransformDeprecatedFwd[0]+" \t y:"+ptTransformDeprecatedFwd[1]);
+
+
 
         // -------- BWD
         double[] ptTransformDeprecatedBwd = bigWarp.getTransform().inverse(ptCoords2D,0.001);
@@ -56,9 +62,9 @@ public class TransformPoints2DTest {
         pt3D.setPosition(yTest, 1);
         pt3D.setPosition(0, 2);
 
+        InvertibleRealTransform bwTransform = bigWarp.getTransformation();
         RealPoint fwdTransformedPt3D = new RealPoint(3);
-        bigWarp.getTransformation()
-                .apply(pt3D, fwdTransformedPt3D);
+        bwTransform.apply(pt3D, fwdTransformedPt3D);
 
         System.out.println("Fwd 3D \t x:"+fwdTransformedPt3D.getDoublePosition(0)+" \t y:"+fwdTransformedPt3D.getDoublePosition(1));
         // Why are the numbers so different from the result we get in the deprecated computation ? Who's right who's wrong
@@ -82,6 +88,16 @@ public class TransformPoints2DTest {
 
         System.out.println("Fwd \t x:"+bwdTransformedPt3D.getDoublePosition(0)+" \t y:"+bwdTransformedPt3D.getDoublePosition(1));
         // Why are the numbers so different from the result we get in the deprecated computation ? Who's right who's wrong
+
+        // Using 3d points *should* have worked, this is a bug in a dependency.
+        // I'll fix and PR
+ 
+        // This works
+		RealPoint bwdTransformedPt2D = new RealPoint( 2 );
+		bigWarp.unwrap2d( bigWarp.getTransformation() )
+				.inverse()
+				.apply(pt2D, bwdTransformedPt2D); // uncomment to see the exception
+		System.out.println("Bwd unwrapped 2D \t x:"+bwdTransformedPt2D.getDoublePosition(0)+" \t y:"+bwdTransformedPt2D.getDoublePosition(1));
 
     }
 }
