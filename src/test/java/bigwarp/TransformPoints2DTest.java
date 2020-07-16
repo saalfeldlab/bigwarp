@@ -33,7 +33,7 @@ public class TransformPoints2DTest {
 
         double[] ptCoords2D = new double[2];
         ptCoords2D[0]=pt2D.getDoublePosition(0);
-        ptCoords2D[0]=pt2D.getDoublePosition(1);
+        ptCoords2D[1]=pt2D.getDoublePosition(1);
 
         // ------------------- Deprecated transform computation
         // -------- FWD
