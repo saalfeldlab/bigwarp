@@ -149,7 +149,6 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.ui.TransformEventHandler;
 import net.imglib2.ui.TransformListener;
@@ -2806,11 +2805,16 @@ public class BigWarp< T >
 		{
 			SynchronizedViewerState state = viewer.getViewerPanel().state();
 			ConverterSetups setups = viewer.getConverterSetups();
-			synchronized( state )
+			synchronized ( state )
 			{
-				for( SourceAndConverter<?> sac : state.getSources() )
-					if( sourceColorSettings.containsKey( sac ))
+				for ( SourceAndConverter< ? > sac : state.getSources() )
+					if ( sourceColorSettings.containsKey( sac ) )
+					{
+						if ( sourceColorSettings.get( sac ) == null )
+							continue;
+
 						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
+					}
 			}
 		}
 	}
@@ -3601,13 +3605,13 @@ public class BigWarp< T >
 		}
 
 		@Override
-		public InvertibleRealTransform copy()
+		public WrappedCoordinateTransform copy()
         {
 			return new WrappedCoordinateTransform( ct, nd );
 		}
 
 		@Override
-		public InvertibleRealTransform inverse()
+		public WrappedCoordinateTransform inverse()
         {
 			return new WrappedCoordinateTransform( ct_inv, nd );
 		}
