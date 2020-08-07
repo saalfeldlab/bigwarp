@@ -134,9 +134,9 @@ public class BigWarpActions
 
 		map.put(RESET_VIEWER, "R");
 		
-		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F6" );
-		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F7" );
-		map.put( String.format( VISIBILITY_AND_GROUPING, "transform type" ), "F8" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F3" );
+		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F4" );
+		map.put( "transform type", "F2" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
