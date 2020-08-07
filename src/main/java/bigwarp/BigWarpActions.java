@@ -17,20 +17,15 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.state.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
-import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.util.LinAlgHelpers;
 
 public class BigWarpActions
 {
-	//public static final String TOGGLE_LANDMARK_MODE  = "toggle landmark mode";
-
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
@@ -42,11 +37,7 @@ public class BigWarpActions
 	public static final String ESTIMATE_WARP = "estimate warp";
 	public static final String PRINT_TRANSFORM = "print transform";
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
-	
-//	public static final String TOGGLE_WARP_VIS = "toggle warp vis";
-//	public static final String TOGGLE_WARPMAG_VIS_P = "toggle warp magnitude p";
-//	public static final String TOGGLE_WARPMAG_VIS_Q = "toggle warp magnitude q";
-	
+
 	public static final String SHOW_WARPTYPE_DIALOG = "show warp vis dialog" ;
 	public static final String SET_WARPTYPE_VIS = "set warp vis type %s" ;
 	public static final String SET_WARPTYPE_VIS_P = "p " + SET_WARPTYPE_VIS;
@@ -105,18 +96,19 @@ public class BigWarpActions
 	 */
 	public static void installActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarp bw,
+			final BigWarp< ? > bw,
 			final KeyStrokeAdder.Factory keyProperties )
 	{
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
-		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
+
+		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bwv", createInputMapViewer( keyProperties ) );
 	}
 	
 	public static void installLandmarkPanelActionBindings(
 			final InputActionBindings inputActionBindings,
-			final BigWarp bw,
+			final BigWarp< ? > bw,
 			final JTable landmarkTable,
 			final KeyStrokeAdder.Factory keyProperties )
 	{
@@ -166,13 +158,13 @@ public class BigWarpActions
 		return inputMap;
 	}
 
-	public static ActionMap createActionMapViewer( final BigWarp bw )
+	public static ActionMap createActionMapViewer( final BigWarp< ? > bw )
 	{
 		final ActionMap actionMap = new ActionMap();
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
-		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "transform type" ), bw.transformSelector ).put( actionMap );
+		new ToggleDialogAction( "transform type", bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -248,7 +240,6 @@ public class BigWarpActions
 //		map.put( SAVE_WARPED, "control alt shift E" );
 		map.put( SAVE_WARPED_XML, "control shift E" );
 
-		// TODO if I decide to make clearing / delete hotkeys
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_MOVING, "BACK_SPACE" );
 //		map.put( LandmarkPointMenu.CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
 //		map.put( LandmarkPointMenu.DELETE_SELECTED, "DELETE" );
@@ -256,14 +247,14 @@ public class BigWarpActions
 		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
-		map.put( GARBAGE_COLLECTION, "F10" );
+		map.put( GARBAGE_COLLECTION, "F9" );
 		map.put( PRINT_TRANSFORM, "control shift T" );
-		map.put( DEBUG, "F10" );
+		map.put( DEBUG, "F11" );
 		
 		return inputMap;
 	}
 
-	public static ActionMap createActionMap( final BigWarp bw )
+	public static ActionMap createActionMap( final BigWarp< ? > bw )
 	{
 		final ActionMap actionMap = new ActionMap();
 
@@ -277,7 +268,6 @@ public class BigWarpActions
 //		new ToggleLandmarkModeAction( LANDMARK_MODE_OFF, bw ).put( actionMap );
 
 
-		// TODO if I decide to make clearing / delete hotkeys
 //		bw.landmarkPopupMenu.deleteSelectedHandler.put( actionMap );
 //		bw.landmarkPopupMenu.activateAllHandler.put( actionMap );
 //		bw.landmarkPopupMenu.deactivateAllHandler.put( actionMap );
@@ -332,10 +322,10 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -5413579107763110117L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		private boolean isRedo;
 
-		public UndoRedoAction( final String name, BigWarp bw )
+		public UndoRedoAction( final String name, BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -356,7 +346,7 @@ public class BigWarpActions
 				return;
 			}
 
-			// TODO I would love for this check to work instead of using a try-catch
+			// I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
 //			if( isRedo && manager.canRedo() ){
 			try { 
@@ -404,11 +394,11 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 4079013525930019558L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
 		private final boolean isOn;
 
-		public LandmarkModeAction( final String name, final BigWarp bw, final boolean on )
+		public LandmarkModeAction( final String name, final BigWarp< ? > bw, final boolean on )
 		{
 			super( name );
 			this.bw = bw;
@@ -427,9 +417,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 234323425930019L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
-		public ToggleLandmarkModeAction( final String name, final BigWarp bw )
+		public ToggleLandmarkModeAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -483,9 +473,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 6065343788485350279L;
 
-		private BigWarp bw;
-
-		public PrintTransformAction( final String name, final BigWarp bw )
+		private BigWarp< ? > bw;
+ 
+		public PrintTransformAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -501,9 +491,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 7408679512565343805L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
-		public DebugAction( final String name, final BigWarp bw )
+		public DebugAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -530,7 +520,7 @@ public class BigWarpActions
 			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			BigWarpData data = bw.getData();
+			BigWarpData< ? > data = bw.getData();
 			for( int mi : data.movingSourceIndices )
 			{
 				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
@@ -552,9 +542,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -210012348709096037L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
-		public EstimateWarpAction( final String name, final BigWarp bw )
+		public EstimateWarpAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -571,9 +561,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 6495981071796613953L;
 		
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		
-		public ToggleMovingImageDisplayAction( final String name, final BigWarp bw )
+		public ToggleMovingImageDisplayAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -590,9 +580,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 2639535533224809586L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
-		public TogglePointNameVisibleAction( final String name, final BigWarp bw )
+		public TogglePointNameVisibleAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -609,9 +599,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -900781969157241037L;
 
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 
-		public ToggleBoxAndTexOverlayVisibility( final String name, final BigWarp bw )
+		public ToggleBoxAndTexOverlayVisibility( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -632,9 +622,9 @@ public class BigWarpActions
 	public static class TogglePointsVisibleAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 8747830204501341125L;
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		
-		public TogglePointsVisibleAction( final String name, final BigWarp bw )
+		public TogglePointsVisibleAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
 			this.bw = bw;
@@ -651,9 +641,9 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -130575800163574517L;
 		
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		
-		public ResetActiveViewerAction( final BigWarp bw )
+		public ResetActiveViewerAction( final BigWarp< ? > bw )
 		{
 			super( String.format( RESET_VIEWER ) );
 			this.bw = bw;
@@ -671,10 +661,10 @@ public class BigWarpActions
 		
 		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE };
 		
-		private BigWarp bw;
+		private BigWarp< ? >bw;
 		private TYPE type;
 		
-		public AlignViewerPanelAction( final BigWarp bw, TYPE type )
+		public AlignViewerPanelAction( final BigWarp< ? > bw, TYPE type )
 		{
 			super( String.format( ALIGN_VIEW_TRANSFORMS, type ) );
 			this.bw = bw;
@@ -694,10 +684,10 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
 		
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		private int i;
 		
-		public SetWarpMagBaseAction( final String name, final BigWarp bw, int i )
+		public SetWarpMagBaseAction( final String name, final BigWarp< ? > bw, int i )
 		{
 			super( name );
 			this.bw = bw;
@@ -715,10 +705,10 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
 		
-		private final BigWarp bw;
+		private final BigWarp< ? > bw;
 		private final GridSource.GRID_TYPE type;
 		
-		public SetWarpVisGridTypeAction( final String name, final BigWarp bw, final GridSource.GRID_TYPE type )
+		public SetWarpVisGridTypeAction( final String name, final BigWarp< ? > bw, final GridSource.GRID_TYPE type )
 		{
 			super( name );
 			this.bw = bw;
@@ -736,16 +726,16 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
 		
-		private BigWarp bw;
+		private BigWarp< ? > bw;
 		private BigWarpViewerFrame p;
 		private BigWarp.WarpVisType type;
 		
-		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp bw )
+		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw )
 		{
 			this( type, bw, null );
 		}
 		
-		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp bw, BigWarpViewerFrame p )
+		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw, BigWarpViewerFrame p )
 		{
 			super( getName( type, p ));
 			this.bw = bw;
@@ -800,9 +790,9 @@ public class BigWarpActions
 	public static class SetBookmarkAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -4060308986781809606L;
-		BigWarp bw;
+		BigWarp< ? > bw;
 
-		public SetBookmarkAction( final BigWarp bw )
+		public SetBookmarkAction( final BigWarp< ? > bw )
 		{
 			super( SET_BOOKMARK );
 			this.bw = bw;
@@ -822,9 +812,9 @@ public class BigWarpActions
 	public static class GoToBookmarkAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 8777199828772379323L;
-		BigWarp bw;
+		BigWarp< ? > bw;
 
-		public GoToBookmarkAction( final BigWarp bw )
+		public GoToBookmarkAction( final BigWarp< ? > bw )
 		{
 			super( GO_TO_BOOKMARK );
 			this.bw = bw;
@@ -840,9 +830,9 @@ public class BigWarpActions
 	public static class GoToBookmarkRotationAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -6169895035295179820L;
-		BigWarp bw;
+		BigWarp< ? > bw;
 
-		public GoToBookmarkRotationAction( final BigWarp bw )
+		public GoToBookmarkRotationAction( final BigWarp< ? > bw )
 		{
 			super( GO_TO_BOOKMARK_ROTATION );
 			this.bw = bw;
@@ -860,8 +850,8 @@ public class BigWarpActions
 
 	public static class SaveSettingsAction extends AbstractNamedAction
 	{
-		BigWarp bw;
-		public SaveSettingsAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public SaveSettingsAction( final BigWarp< ? > bw )
 		{
 			super( SAVE_SETTINGS );
 			this.bw = bw;
@@ -878,8 +868,8 @@ public class BigWarpActions
 
 	public static class LoadSettingsAction extends AbstractNamedAction
 	{
-		BigWarp bw;
-		public LoadSettingsAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public LoadSettingsAction( final BigWarp< ? > bw )
 		{
 			super( LOAD_SETTINGS );
 			this.bw = bw;
@@ -896,9 +886,9 @@ public class BigWarpActions
 
 	public static class WarpToSelectedAction extends AbstractNamedAction
 	{
-		final BigWarp bw;
+		final BigWarp< ? > bw;
 
-		public WarpToSelectedAction( final BigWarp bw )
+		public WarpToSelectedAction( final BigWarp< ? > bw )
 		{
 			super( WARP_TO_SELECTED_POINT );
 			this.bw = bw;
@@ -924,8 +914,8 @@ public class BigWarpActions
 
 	public static class WarpToNearest extends AbstractNamedAction
 	{
-		final BigWarp bw;
-		public WarpToNearest( final BigWarp bw )
+		final BigWarp< ? > bw;
+		public WarpToNearest( final BigWarp< ? > bw )
 		{
 			super( WARP_TO_NEAREST_POINT );
 			this.bw = bw;
@@ -944,10 +934,10 @@ public class BigWarpActions
 
 	public static class WarpToNextAction extends AbstractNamedAction
 	{
-		final BigWarp bw;
+		final BigWarp< ? > bw;
 		final int inc;
 
-		public WarpToNextAction( final BigWarp bw, boolean fwd )
+		public WarpToNextAction( final BigWarp< ? > bw, boolean fwd )
 		{
 			super( String.format( WARP_TO_NEXT_POINT, fwd) );
 			this.bw = bw;
@@ -992,8 +982,8 @@ public class BigWarpActions
 	public static class LoadLandmarksAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -5405137757290988030L;
-		BigWarp bw;
-		public LoadLandmarksAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public LoadLandmarksAction( final BigWarp< ? > bw )
 		{
 			super( LOAD_LANDMARKS );
 			this.bw = bw;
@@ -1009,8 +999,8 @@ public class BigWarpActions
 	public static class SaveLandmarksAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7897687176745034315L;
-		BigWarp bw;
-		public SaveLandmarksAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public SaveLandmarksAction( final BigWarp< ? > bw )
 		{
 			super( SAVE_LANDMARKS );
 			this.bw = bw;
@@ -1025,8 +1015,8 @@ public class BigWarpActions
 	public static class ExportImagePlusAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -8109832912959931917L;
-		BigWarp bw;
-		public ExportImagePlusAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public ExportImagePlusAction( final BigWarp< ? > bw )
 		{
 			super( EXPORT_IP );
 			this.bw = bw;
@@ -1041,8 +1031,8 @@ public class BigWarpActions
 	public static class ExportWarpAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 4626378501415886468L;
-		BigWarp bw;
-		public ExportWarpAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public ExportWarpAction( final BigWarp< ? > bw )
 		{
 			super( EXPORT_WARP );
 			this.bw = bw;
@@ -1057,8 +1047,8 @@ public class BigWarpActions
 	public static class ExportAffineAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 9190515918045510236L;
-		BigWarp<?> bw;
-		public ExportAffineAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public ExportAffineAction( final BigWarp< ? > bw )
 		{
 			super( EXPORT_AFFINE );
 			this.bw = bw;
@@ -1075,8 +1065,8 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = 4965249994677649713L;
 
-		BigWarp bw;
-		public SaveWarpedAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public SaveWarpedAction( final BigWarp< ? > bw )
 		{
 			super( SAVE_WARPED );
 			this.bw = bw;
@@ -1090,10 +1080,10 @@ public class BigWarpActions
 
 	public static class SaveWarpedXmlAction extends AbstractNamedAction
 	{
-//		private static final long serialVersionUID = 4965249994677649713L;
+		private static final long serialVersionUID = -5437508072904256758L;
 
-		BigWarp bw;
-		public SaveWarpedXmlAction( final BigWarp bw )
+		BigWarp< ? > bw;
+		public SaveWarpedXmlAction( final BigWarp< ? > bw )
 		{
 			super( SAVE_WARPED_XML );
 			this.bw = bw;
@@ -1108,9 +1098,9 @@ public class BigWarpActions
 	public static class LandmarkGridDialogAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 1L;
-		BigWarp bw;
+		BigWarp< ? > bw;
 
-		public LandmarkGridDialogAction( final BigWarp bw )
+		public LandmarkGridDialogAction( final BigWarp< ? > bw )
 		{
 			super( LANDMARK_GRID_DIALOG );
 			this.bw = bw;
