@@ -1048,16 +1048,11 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
 		List< String[] > rows = null;
-		try
+		rows = reader.readAll();
+		reader.close();
+		if( rows == null || rows.size() < 1 )
 		{
-			rows = reader.readAll();
-			reader.close();
-		}
-		catch ( CsvException e )
-		{
-			System.err.println( "Could not read csv: " + f );
-			e.printStackTrace();
-			reader.close();
+			System.err.println("Error reading csv");
 			return;
 		}
 
