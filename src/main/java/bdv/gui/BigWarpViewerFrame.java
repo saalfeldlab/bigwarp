@@ -1,5 +1,7 @@
 package bdv.gui;
 
+import bdv.TransformEventHandler;
+import bdv.util.AWTUtils;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.WindowAdapter;
@@ -12,11 +14,12 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.scijava.ui.behaviour.InputTriggerMap;
 import org.scijava.ui.behaviour.MouseAndKeyHandler;
+import org.scijava.ui.behaviour.util.Behaviours;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
-import bdv.BehaviourTransformEventHandler;
 import bdv.cache.CacheControl;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.ui.BdvDefaultCards;
@@ -26,10 +29,7 @@ import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerOptions;
 import bigwarp.BigWarp;
-import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.util.GuiUtil;
 
 public class BigWarpViewerFrame extends JFrame
 {
@@ -78,7 +78,7 @@ public class BigWarpViewerFrame extends JFrame
 			final int[] movingIndexList,
 			final int[] targetIndexList )
 	{
-		super( title, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL ) );
+		super( title, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL ) );
 		this.bw = bw;
 		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
 		setups = new ConverterSetups( viewer.state() );
@@ -140,9 +140,12 @@ public class BigWarpViewerFrame extends JFrame
 		mouseAndKeyHandler.setBehaviourMap( triggerbindings.getConcatenatedBehaviourMap() );
 		viewer.getDisplay().addHandler( mouseAndKeyHandler );
 
-		final TransformEventHandler< ? > tfHandler = viewer.getDisplay().getTransformEventHandler();
-		if ( tfHandler instanceof BehaviourTransformEventHandler )
-			( ( BehaviourTransformEventHandler< ? > ) tfHandler ).install( triggerbindings );
+		// TODO: should be a field?
+		final Behaviours transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bdv" );
+		transformBehaviours.install( triggerbindings, "transform" );
+
+		final TransformEventHandler tfHandler = viewer.getTransformEventHandler();
+		tfHandler.install( transformBehaviours );
 	}
 
 	public boolean isMoving()
@@ -185,5 +188,14 @@ public class BigWarpViewerFrame extends JFrame
 	public InputActionBindings getKeybindings()
 	{
 		return keybindings;
+	}
+
+	public void setTransformEnabled( final boolean enabled )
+	{
+		viewer.setTransformEnabled( enabled );
+		if ( enabled )
+			triggerbindings.removeInputTriggerMap( "block_transform" );
+		else
+			triggerbindings.addInputTriggerMap( "block_transform", new InputTriggerMap(), "transform" );
 	}
 }

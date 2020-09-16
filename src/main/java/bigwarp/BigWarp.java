@@ -1,8 +1,11 @@
 package bigwarp;
 
+import bdv.TransformEventHandler3D;
+import bdv.TransformState;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.DisplayMode;
+import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerState;
 import java.awt.Color;
 import java.awt.Component;
@@ -59,7 +62,6 @@ import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
-import bdv.BehaviourTransformEventHandler3D;
 import bdv.BigDataViewer;
 import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
@@ -81,7 +83,6 @@ import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.MinMaxGroup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -107,7 +108,6 @@ import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.util.BigWarpUtils;
-import ij.CompositeImage;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -150,8 +150,6 @@ import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.ui.TransformEventHandler;
-import net.imglib2.ui.TransformListener;
 import net.imglib2.view.Views;
 
 public class BigWarp< T >
@@ -251,10 +249,6 @@ public class BigWarp< T >
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
 
 	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
-
-	protected TransformEventHandler< AffineTransform3D > handlerQ;
-
-	protected TransformEventHandler< AffineTransform3D > handlerP;
 
 	protected final SourceAndConverter< FloatType > gridSource;
 
@@ -1798,28 +1792,18 @@ public class BigWarp< T >
 
 	protected void disableTransformHandlers()
 	{
-		handlerP = viewerP.getDisplay().getTransformEventHandler();
-		handlerQ = viewerQ.getDisplay().getTransformEventHandler();
-
 		// disable navigation listeners
-		viewerP.setTransformEnabled( false );
-		viewerQ.setTransformEnabled( false );
+		viewerFrameP.setTransformEnabled( false );
+		viewerFrameQ.setTransformEnabled( false );
 	}
 
 	protected void enableTransformHandlers()
 	{
-		// reset the viewer transform
-		viewerP.state().getViewerTransform( tmpTransform );
-		handlerP.setTransform( tmpTransform );
-
-		viewerQ.state().getViewerTransform( tmpTransform );
-		handlerQ.setTransform( tmpTransform );
-
 		// enable navigation listeners
-		viewerP.setTransformEnabled( true );
-		viewerQ.setTransformEnabled( true );
+		viewerFrameP.setTransformEnabled( true );
+		viewerFrameQ.setTransformEnabled( true );
 	}
-	
+
 	private void printSourceTransforms()
 	{
 		final AffineTransform3D xfm = new AffineTransform3D();
@@ -1975,7 +1959,7 @@ public class BigWarp< T >
 		if ( Double.isInfinite( pt[ 0 ] ) )
 			return;
 
-		final AffineTransform3D transform = viewer.getDisplay().getTransformEventHandler().getTransform();
+		final AffineTransform3D transform = viewer.state().getViewerTransform();
 		final AffineTransform3D xfmCopy = transform.copy();
 		xfmCopy.set( 0.0, 0, 3 );
 		xfmCopy.set( 0.0, 1, 3 );
@@ -1991,7 +1975,6 @@ public class BigWarp< T >
 		// this should work fine in the 2d case
 		final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
 		viewer.setTransformAnimator( animator );
-		viewer.transformChanged( transform );
 	}
 
 	public void goToBookmark()
@@ -3170,7 +3153,7 @@ public class BigWarp< T >
 				if ( Double.isInfinite( pt[ 0 ] ) )
 					return;
 
-				final AffineTransform3D transform = viewer.getDisplay().getTransformEventHandler().getTransform();
+				final AffineTransform3D transform = viewer.state().getViewerTransform();
 				final AffineTransform3D xfmCopy = transform.copy();
 				xfmCopy.set( 0.0, 0, 3 );
 				xfmCopy.set( 0.0, 1, 3 );
@@ -3184,8 +3167,6 @@ public class BigWarp< T >
 				// this should work fine in the 2d case
 				final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
 				viewer.setTransformAnimator( animator );
-				viewer.transformChanged( transform );
-
 			}
 			else
 			{
@@ -3214,23 +3195,6 @@ public class BigWarp< T >
 		public void mouseReleased( final MouseEvent e )
 		{}
 
-	}
-
-	protected static class DummyBehaviourTransformEventHandler extends
-			BehaviourTransformEventHandler3D
-	{
-
-		public DummyBehaviourTransformEventHandler(
-				TransformListener< AffineTransform3D > listener, InputTriggerConfig config )
-		{
-			super( listener, config );
-		}
-
-		@Override
-		public AffineTransform3D getTransform()
-		{
-			return null;
-		}
 	}
 
 	public void setTransformType( final String type )

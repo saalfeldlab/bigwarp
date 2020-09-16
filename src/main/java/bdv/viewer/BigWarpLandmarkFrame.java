@@ -1,5 +1,6 @@
 package bdv.viewer;
 
+import bdv.util.AWTUtils;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -12,7 +13,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
-import net.imglib2.ui.util.GuiUtil;
 
 public class BigWarpLandmarkFrame extends JFrame {
 
@@ -26,7 +26,7 @@ public class BigWarpLandmarkFrame extends JFrame {
 
 	public BigWarpLandmarkFrame( String name, BigWarpLandmarkPanel panel, BigWarp bw )
 	{
-		super( name, GuiUtil.getSuitableGraphicsConfiguration( GuiUtil.RGB_COLOR_MODEL )  );
+		super( name, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL )  );
 		this.bw = bw;
 		setLandmarkPanel( panel );
 
