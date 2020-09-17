@@ -362,8 +362,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 		double[] qNew = new double[ 4 ];
 		Affine3DHelpers.extractRotation( newTransform, qNew );
 		currentAnimator = new RotationAnimator(transform, centerX, centerY, qNew, 300 );
-
 		currentAnimator.setTime( System.currentTimeMillis() );
+		requestRepaint();
 	}
 
 	@Override
@@ -405,6 +405,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
 
 		currentAnimator.setTime( System.currentTimeMillis() );
+		requestRepaint();
     }
     
     public void animateTransformation( AffineTransform3D destinationXfm )
