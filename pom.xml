@@ -111,6 +111,8 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
+		<bigdataviewer-core.version>10.0.1</bigdataviewer-core.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-22</bigdataviewer-vistools.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>

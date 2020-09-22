@@ -5,7 +5,6 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import bdv.cache.CacheControl;
@@ -45,8 +44,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	protected boolean transformEnabled = true;
 
-	protected AffineTransform3D destXfm;
-
 	protected int ndims;
 
 	final protected int[] movingSourceIndexList;
@@ -82,8 +79,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 										// image by default
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
-		destXfm = new AffineTransform3D();
-		
+
 		if( isMoving )
 			message = optional.getValues().getMsgOverlayMoving();
 		else
@@ -246,15 +242,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	}
 
 	@Override
-	public void paint()
-	{
-		if ( currentAnimator!=null && currentAnimator.isComplete() )
-			transformChanged( destXfm );
-		
-		super.paint();
-	}
-	
-	@Override
 	public void drawOverlays( final Graphics g )
 	{
 		boolean requiresRepaint = false;
@@ -332,15 +319,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public void displayViewerTransforms()
 	{
-		final AffineTransform3D transform = display.getTransformEventHandler().getTransform();
-		
-		final AffineTransform3D stateTransform = new AffineTransform3D();
-		state.getViewerTransform( stateTransform );
-		
-		final double[] q = new double[ 4 ];
-		Affine3DHelpers.extractRotationAnisotropic( transform, q );
-	
-		System.out.println( stateTransform );
+		System.out.println( state().getViewerTransform() );
 	}
 
 	public synchronized void rotateView2d( boolean isClockwise )
@@ -348,8 +327,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if ( !transformEnabled )
 			return;
 
-		final AffineTransform3D transform = new AffineTransform3D();
-		state.getViewerTransform( transform );
+		final AffineTransform3D transform = state().getViewerTransform();
 
 		double centerX;
 		double centerY;
@@ -384,9 +362,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 		double[] qNew = new double[ 4 ];
 		Affine3DHelpers.extractRotation( newTransform, qNew );
 		currentAnimator = new RotationAnimator(transform, centerX, centerY, qNew, 300 );
-
 		currentAnimator.setTime( System.currentTimeMillis() );
-		transformChanged( destXfm );
+		requestRepaint();
 	}
 
 	@Override
@@ -403,8 +380,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if ( !transformEnabled )
 			return;
 
-    	final AffineTransform3D startXfm = new AffineTransform3D();
-    	state().getViewerTransform( startXfm );
+		final AffineTransform3D startXfm = state().getViewerTransform();
 
 		double centerX;
 		double centerY;
@@ -428,8 +404,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
 
-    	currentAnimator.setTime( System.currentTimeMillis() );
-		transformChanged( destinationXfm );
+		currentAnimator.setTime( System.currentTimeMillis() );
+		requestRepaint();
     }
     
     public void animateTransformation( AffineTransform3D destinationXfm )
@@ -446,12 +422,4 @@ public class BigWarpViewerPanel extends ViewerPanel
     {
     	return transformEnabled;
     }
-    
-	@Override
-	public synchronized void transformChanged( final AffineTransform3D transform )
-	{
-		if( transformEnabled )
-			super.transformChanged( transform );
-	}
-	
 }
