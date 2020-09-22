@@ -1,17 +1,146 @@
 package bigwarp.util;
 
 import java.awt.Dimension;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
+import net.imglib2.FinalRealInterval;
 import net.imglib2.Interval;
+import net.imglib2.RealInterval;
+import net.imglib2.RealLocalizable;
+import net.imglib2.RealPoint;
+import net.imglib2.iterator.RealIntervalIterator;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.util.LinAlgHelpers;
 
 public class BigWarpUtils
 {
+
+	/**
+	 * Estimate an interval bounding the given interval after transformation
+	 * by sampling points along faces.
+	 * 
+	 * @param transform the transform
+	 * @param interval the starting interval
+	 * @param number number of points along each dimension to sample face
+	 * @return an new bounding interval
+	 */
+	public static RealInterval intervalBoundingBoxFacesNumber(
+			final RealTransform transform,
+			final RealInterval interval,
+			final int[] number )
+	{
+		double[] spacing = new double[ number.length ];
+		for( int i = 0; i < number.length; i++ )
+		{
+			spacing[ i ] = number[ i ] / ( interval.realMax( i ) - interval.realMin( i ) );
+		}
+
+		return intervalBoundingBoxFacesSpacing( transform, interval, spacing );
+	}
+
+	public static RealInterval intervalBoundingBoxFacesSpacing(
+			final RealTransform transform,
+			final RealInterval interval,
+			final double[] spacing )
+	{
+		List< RealLocalizable > pts = getFaces( interval ).stream().map( x -> sampleFace( x, spacing ))
+				.flatMap( Collection::stream )
+				.collect( Collectors.toList() );
+
+		return smallestContainingInterval( pts, transform );
+	}
+
+	public static FinalRealInterval smallestContainingInterval( List< RealLocalizable > pts , final RealTransform transform )
+	{
+		int nd = pts.get( 0 ).numDimensions();
+		double[] min = new double[ nd ];
+		double[] max = new double[ nd ];
+
+		Arrays.fill(min, Double.MAX_VALUE);
+		Arrays.fill(max, Double.MIN_VALUE);
+
+		RealPoint pXfm = new RealPoint( nd );
+		for( RealLocalizable p : pts )
+		{
+			transform.apply( p, pXfm );
+			for( int d = 0; d < nd; d++ )
+			{
+				if( pXfm.getDoublePosition( d ) < min[ d ])
+				{
+					min[ d ]  = pXfm.getDoublePosition( d );
+				}
+
+				if( pXfm.getDoublePosition( d ) > max[ d ])
+				{
+					max[ d ]  = pXfm.getDoublePosition( d );
+				}
+			}
+		}
+
+		return new FinalRealInterval(min, max);
+	}
+
+	public static List<RealInterval> getFaces( final RealInterval interval )
+	{
+		int nd = interval.numDimensions();
+		ArrayList< RealInterval > faces = new ArrayList<>();
+		for( int d = 0; d < nd; d++ )
+		{
+			// face at min(d)
+			faces.add( intervalHyperSlice( interval, d, interval.realMin( d )));
+
+			// face at max(d)
+			faces.add( intervalHyperSlice( interval, d, interval.realMax( d )));
+		}
+		return faces;
+	}
+
+	public static List< RealPoint > sampleFace( RealInterval interval, double[] spacing )
+	{
+		ArrayList< RealPoint > pts = new ArrayList<>();
+		RealIntervalIterator it = new RealIntervalIterator( interval, spacing );
+
+		while( it.hasNext() )
+		{
+			RealPoint p = new RealPoint( interval.numDimensions() );
+			p.setPosition( it );
+			pts.add( p );
+		}
+
+		return pts;
+	}
+
+	public static RealInterval intervalHyperSlice( final RealInterval interval, int dim, double pos )
+	{
+		int nd = interval.numDimensions();
+		double[] min = new double[ nd ];
+		double[] max = new double[ nd ];
+		for( int d = 0; d < nd; d++ )
+		{
+			if( d == dim )
+			{
+				min[ d ] = pos;
+				max[ d ] = pos;
+			}
+			else
+			{
+				min[ d ] = interval.realMin( d );
+				max[ d ] = interval.realMax( d );
+			}
+		}
+
+		return new FinalRealInterval( min, max );
+	}
+
 	/**
 	 * Set a "good" initial viewer transform. The viewer transform is chosen
 	 * such that for the first source,
@@ -43,9 +172,6 @@ public class BigWarpUtils
 
 	public static void ensurePositiveDeterminant( final AffineTransform3D xfm )
 	{
-//		if( det( xfm ) < 0 )
-//			permuteXY( xfm );
-
 		if( det( xfm ) < 0 )
 			flipX( xfm );
 	}
@@ -156,7 +282,6 @@ public class BigWarpUtils
 		else
 			scale = Math.min( scaleX, scaleY );
 		viewerTransform.scale( scale );
-//		viewerTransform.set( 1.0, 2, 2 );
 
 		// window center offset
 		viewerTransform.set( viewerTransform.get( 0, 3 ) + cX, 0, 3 );
@@ -180,20 +305,6 @@ public class BigWarpUtils
 
 		return Math.acos( 2 * dot * dot  - 1);
 	}
-	
-//	public static double angleBetween( final AffineTransform3D xfm1, final AffineTransform3D xfm2 )
-//	{
-//		double[][] tmpMat = new double[ 3 ][ 4 ];
-//		double[] q1 = new double[ 4 ];
-//		double[] q2 = new double[ 4 ];
-//
-//		xfm1.toMatrix( tmpMat );
-//		LinAlgHelpers.qu
-//	
-//		normalize( q1 );
-//		normalize( q2 );
-//
-//	}
 
 	public static void normalize( double[] x )
 	{
@@ -204,18 +315,4 @@ public class BigWarpUtils
 		for( int i = 0; i < x.length; i++ )
 			x[ i ] /= magSqr;
 	}
-
-
-//	/**
-//	 * Computes the angle of rotation between the two input quaternions,
-//	 * returning the result in degrees.  Assumes the inputs are unit quaternions.
-//	 * 
-//	 * @param q1 first quaternion
-//	 * @param q2 second quaternion
-//	 * @return the angle in degrees
-//	 */
-//	public static double quaternionAngleD( double[] q1, double q2 )
-//	{
-//		
-//	}
 }
