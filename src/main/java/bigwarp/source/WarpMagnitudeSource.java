@@ -41,19 +41,13 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 
 		sourceData = data;
 
-		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
 		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		String unit = "pix";
+		if( srcVoxDims != null )
+			unit = srcVoxDims.unit();
 
-		// use the interval of the fixed image
-//		if( fixedsrc.dimension( 2 ) == 1 )
-//			interval = new FinalInterval( 
-//					new long[]{ fixedsrc.min( 0 ), fixedsrc.min( 1 ) }, 
-//					new long[]{ fixedsrc.max( 0 ), fixedsrc.max( 1 ) });
-//		else
-		
-		String unit = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
 		voxDims = new FinalVoxelDimensions( unit, 1.0, 1.0, 1.0 );
-
 		warpMagImg = new WarpMagnitudeRandomAccessibleInterval<T>( interval, t, null, null );
 	}
 	

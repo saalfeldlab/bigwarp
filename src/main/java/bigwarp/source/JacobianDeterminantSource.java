@@ -45,7 +45,11 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
 		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
-		String unit = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		String unit = "pix";
+		if( srcVoxDims != null )
+			unit = srcVoxDims.unit();
+
 		voxDims = new FinalVoxelDimensions( unit, 1.0, 1.0, 1.0 );
 
 		jacDetImg = new JacobianDeterminantRandomAccess.JacobianDeterminantRandomAccessibleInterval< T >( interval, t, null );

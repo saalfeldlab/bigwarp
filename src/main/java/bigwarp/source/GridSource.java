@@ -23,23 +23,18 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	protected final BigWarpData<?> sourceData;
 	
 	protected final Interval interval;
-	
-//	protected final GridRandomAccessibleInterval<T> gridImg;
+
 	protected final GridRealRandomAccessibleRealInterval<T> gridImg;
 	
 	protected T type;
 	
-	public GridSource( String name, BigWarpData data, T t, RealTransform warp  )
+	public GridSource( String name, BigWarpData< ? > data, T t, RealTransform warp  )
 	{
 		this.name = name;
 		this.type = t.copy();
 		sourceData = data;
 		
-		//RandomAccessibleInterval<?> fixedsrc = data.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-	
 		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-		//interval = ((SourceAndConverter)data.sources.get( data.targetSourceIndices[ 0 ] )).getSpimSource().getSource( 0, 0 );
-		
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
 	
@@ -52,19 +47,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	{
 		gridImg.ra.setGridWidth( width );
 	}
-	
-//	public void debug( long[] pt )
-//	{
-////		RandomAccess<T> rra = gridImg.randomAccess();
-////		RealRandomAccess<T> rra = gridImg.randomAccess();
-//		
-//		rra.setPosition( pt );
-//		
-//		System.out.println("at ( 0 0 0 ): ");
-//		System.out.println( "get val: " + rra.get());
-//		
-//	}
-	
+
 	public void setWarp( RealTransform warp )
 	{
 		gridImg.ra.warp = warp;
@@ -100,18 +83,6 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	{
 		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
 	}
-	
-//	@Override
-//	public RealRandomAccessible<T> getInterpolatedSource( int t, int level, Interpolation method ) 
-//	{
-//		return Views.interpolate( getSource( t, level ), new NearestNeighborInterpolatorFactory<T>() );
-//	}
-//
-//	@Override
-//	public void getSourceTransform( int t, int level, AffineTransform3D transform )
-//	{
-//		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
-//	}
 
 	@Override
 	public T getType()

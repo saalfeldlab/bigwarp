@@ -119,15 +119,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static String getUnit( final BigWarpData<?> bwData, 
 			final String resolutionOption )
 	{
+		String unit = "pix";
 		if( resolutionOption.equals( MOVING ))
 		{
-			return bwData.sources.get( bwData.movingSourceIndices[0] ).getSpimSource().getVoxelDimensions().unit();
+			VoxelDimensions mvgVoxDims = bwData.sources.get( bwData.movingSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			if( mvgVoxDims != null )
+				unit = mvgVoxDims.unit();
 		}
 		else 
 		{
 			// use target units even if 
-			return bwData.sources.get( bwData.targetSourceIndices[0] ).getSpimSource().getVoxelDimensions().unit();
+			VoxelDimensions tgtVoxDims = bwData.sources.get( bwData.targetSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			if( tgtVoxDims != null )
+				unit = tgtVoxDims.unit();
 		}
+		return unit;
 	}
 
 	
