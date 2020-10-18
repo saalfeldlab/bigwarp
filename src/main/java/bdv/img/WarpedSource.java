@@ -1,5 +1,7 @@
 package bdv.img;
 
+import java.util.function.Supplier;
+
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
@@ -13,7 +15,6 @@ import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.view.Views;
 
@@ -45,12 +46,21 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private boolean isTransformed;
 	
+	private final Supplier< Boolean > boundingBoxCullingSupplier;
+
 	public WarpedSource( final Source< T > source, final String name )
+	{
+		this( source, name, null );
+	}
+
+	public WarpedSource( final Source< T > source, final String name,
+			final Supplier< Boolean > doBoundingBoxCulling )
 	{
 		this.source = source;
 		this.name = name;
 		this.isTransformed = false;
-		
+		this.boundingBoxCullingSupplier = doBoundingBoxCulling;
+
 		this.xfm = null;
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
@@ -63,6 +73,15 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		return source.isPresent( t );
 	}
 	
+	@Override
+	public boolean doBoundingBoxCulling()
+	{
+		if( boundingBoxCullingSupplier != null )
+			return boundingBoxCullingSupplier.get();
+		else
+			return ( !isTransformed ) && ( source.doBoundingBoxCulling() );
+	}
+
 	public void updateTransform( RealTransform xfm )
 	{
 		this.xfm = xfm;
@@ -86,7 +105,6 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )
 	{
-//		System.out.println("WarpedSource getSource");
 		if( isTransformed )
 		{
 			return Views.interval(
@@ -197,4 +215,5 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	{
 		return sourceMipmapOrdering.getMipmapHints( screenTransform, timepoint, previousTimepoint );
 	}
+
 }
