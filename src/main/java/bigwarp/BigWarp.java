@@ -51,6 +51,7 @@ import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.registration.ViewTransformAffine;
 
+import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -312,6 +313,8 @@ public class BigWarp< T >
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
+		BasicConfigurator.configure(); // logger
+
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
