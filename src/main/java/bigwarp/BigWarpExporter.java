@@ -20,7 +20,6 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
-import bigwarp.BigWarp.WrappedCoordinateTransform;
 import ij.ImagePlus;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -719,8 +718,6 @@ public abstract class BigWarpExporter <T>
 				long startTime = System.currentTimeMillis();
 				exporter.result = exporter.export();
 				long endTime = System.currentTimeMillis();
-
-				System.out.println("export took " + (endTime - startTime) + "ms");
 
 				if (exporter.result != null && exporter.showResult )
 					exporter.result.show();

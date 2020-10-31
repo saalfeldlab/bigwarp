@@ -6,6 +6,7 @@ import java.util.Arrays;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.animate.SimilarityModel3D;
 import bigwarp.landmarks.LandmarkTableModel;
+import ij.IJ;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractAffineModel2D;
 import mpicbg.models.AbstractAffineModel3D;
@@ -21,6 +22,7 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
@@ -32,7 +34,14 @@ public class BigWarpTransform
 
 	private final LandmarkTableModel tableModel;
 
-	private final String transformType;
+	private String transformType;
+	
+	private InvertibleRealTransform currentTransform;
+
+	public BigWarpTransform( final LandmarkTableModel tableModel )
+	{
+		this( tableModel, TransformTypeSelectDialog.TPS );
+	}
 
 	public BigWarpTransform( final LandmarkTableModel tableModel, final String transformType )
 	{
@@ -40,7 +49,17 @@ public class BigWarpTransform
 		this.ndims = tableModel.getNumdims();
 		this.transformType = transformType;
 	}
-	
+
+	public void setTransformType( final String transformType )
+	{
+		this.transformType = transformType;
+	}
+
+	public String getTransformType()
+	{
+		return transformType;
+	}
+
 	public InvertibleRealTransform getTransformation()
 	{
 		return getTransformation( -1 );
@@ -66,6 +85,7 @@ public class BigWarpTransform
 			invXfm = new Wrapped2DTransformAs3D( invXfm );
 		}
 
+		currentTransform = invXfm;
 		return invXfm;
 	}
 
@@ -292,6 +312,119 @@ public class BigWarpTransform
 			return ((ThinplateSplineTransform)wiirt.getTransform());
 		}
 		return null;
+	}
+
+	public void printAffine()
+	{
+		if( IJ.getInstance() != null )
+		{
+			IJ.log( affineToString() );
+			IJ.log( "" + affine3d() );
+		}
+		else
+		{
+			System.out.println( affineToString() );
+			System.out.println( affine3d() );
+		}
+	}
+
+	public String transformToString()
+	{
+		if( currentTransform == null )
+		{
+			return "(identity)";
+		}
+
+		String s = "";
+		if ( currentTransform instanceof InverseRealTransform )
+		{
+			s = ( ( InverseRealTransform ) currentTransform ).toString();
+		}
+		else if( currentTransform instanceof WrappedCoordinateTransform )
+		{
+			s = (( WrappedCoordinateTransform ) currentTransform).getTransform().toString();
+		}
+		else if( currentTransform instanceof Wrapped2DTransformAs3D )
+		{
+			s = ( ( Wrapped2DTransformAs3D) currentTransform ).toString();
+		}
+		else
+		{
+			s = ( ( WrappedIterativeInvertibleRealTransform<?> ) currentTransform ).getTransform().toString();
+		}
+		System.out.println( s );
+		return s;
+	}
+
+	public String affineToString()
+	{
+		String s = "";
+		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		{
+			double[][] affine = affinePartOfTpsHC();
+			for( int r = 0; r < affine.length; r++ )
+			{
+				s += Arrays.toString(affine[r]).replaceAll("\\[|\\]||\\s", "");
+				if( r < affine.length - 1 )
+					s += "\n";
+			}
+		}
+		else if( currentTransform instanceof WrappedCoordinateTransform )
+			s = (( WrappedCoordinateTransform ) currentTransform).getTransform().toString();
+
+		return s;
+	}
+
+	/**
+	 * Returns the affine part of the thin plate spline model, 
+	 * as a matrix in homogeneous coordinates.
+	 * 
+	 * double[i][:] contains the i^th row of the matrix.
+	 * 
+	 * @return the matrix as a double array
+	 */
+	public double[][] affinePartOfTpsHC()
+	{
+		int nr = 3;
+		int nc = 4;
+		double[][] mtx = null;
+		if( ndims == 2 )
+		{
+			nr = 2;
+			nc = 3;
+			mtx = new double[2][3];
+		}
+		else
+		{
+			mtx = new double[3][4];
+		}
+		
+		ThinPlateR2LogRSplineKernelTransform tps = getTpsBase();
+		double[][] tpsAffine = tps.getAffine();
+		double[] translation = tps.getTranslation();
+		for( int r = 0; r < nr; r++ )
+			for( int c = 0; c < nc; c++ )
+			{
+				if( c == (nc-1))
+				{
+					mtx[r][c] = translation[r];
+				}
+				else if( r == c )
+				{
+					/* the affine doesn't contain the identity "part" of the affine.
+					 *	i.e., the tps builds the affine A such that
+					 *	y = x + Ax 
+					 *  o
+					 *  y = ( A + I )x
+					 */
+					mtx[r][c] = 1 + tpsAffine[ r ][ c ];
+				}
+				else
+				{
+					mtx[r][c] = tpsAffine[ r ][ c ];
+				}
+			}
+		return mtx;
 	}
 
 }

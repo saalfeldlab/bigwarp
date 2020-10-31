@@ -53,6 +53,7 @@ public class LandmarkModelTest
 
 		// if we have a complete table
 		int nr = ltm.getRowCount(); // num rows ( and the index to append )
+		assertEquals(" init table size " , 5, nr );
 		assertEquals(" complete table " , nr, ltm.getNextRow( true ));
 		assertEquals(" complete table " , nr, ltm.getNextRow( false ));
 		assertEquals( "initial selection ", -1, table.getSelectedRow() );

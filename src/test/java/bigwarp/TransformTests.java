@@ -125,9 +125,7 @@ public class TransformTests
 		{
 			System.out.println( "transform changed" );
 			System.out.println( transform );
-			System.out.println( bw.affine3d() );
-			System.out.println( bw.affine() );
-
+			System.out.println( bw.getBwTransform().affine3d() );
 		}
 	}
 

@@ -1,6 +1,5 @@
 package bigwarp;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,11 +7,9 @@ import bdv.BigDataViewer;
 import bdv.img.RenamableSource;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
-import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;

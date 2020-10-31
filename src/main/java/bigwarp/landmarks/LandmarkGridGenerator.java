@@ -1,5 +1,7 @@
 package bigwarp.landmarks;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,9 +18,9 @@ public class LandmarkGridGenerator
 {
 	
 	final protected double[] spacing;
-	
+
 	final protected RealInterval interval;
-	
+
 	public LandmarkGridGenerator( final RealInterval interval, final double[] spacing )
 	{
 		this.interval = interval;
@@ -158,6 +160,19 @@ public class LandmarkGridGenerator
 
 		gen.fill( ltm );
 		return true;
+	}
+
+	public static void main( String[] args ) throws IOException
+	{
+		File f = new File( "/home/john/landmarkGrid.csv" );
+		LandmarkGridGenerator grid = new LandmarkGridGenerator( new FinalRealInterval( 
+				new double[] {0,0,0}, new double[] {200,100,50} ), 
+				new long[] {10,10,10} );
+
+		LandmarkTableModel ltm = new LandmarkTableModel( 3 );
+
+		grid.fill( ltm );
+		ltm.save( f );
 	}
 
 }
