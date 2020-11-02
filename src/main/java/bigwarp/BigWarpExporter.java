@@ -582,8 +582,6 @@ public abstract class BigWarpExporter <T>
 			}
 
 			xfm.apply( pt, ptxfm );
-//			System.out.println( "pt   : " + Arrays.toString ( pt ));
-//			System.out.println( "ptxfm: " + Arrays.toString ( ptxfm ));
 
 			for( int d = 0; d < nd; d++ )
 			{
@@ -594,10 +592,12 @@ public abstract class BigWarpExporter <T>
 			i++;
 		}
 
-		try {
+		try
+		{
 			model.fit( mvgPts, tgtPts, w );
-		} catch (Exception e) {
-//			e.printStackTrace();
+		}
+		catch ( Exception e )
+		{
 			affine.identity();
 			return;
 		}
@@ -606,12 +606,7 @@ public abstract class BigWarpExporter <T>
 		{
 			double[] mat = new double[ 6 ];
 			((AffineModel2D)model).toArray( mat );
-			affine.set( mat[ 0 ], 0, 0);
-			affine.set( mat[ 1 ], 1, 0);
-			affine.set( mat[ 2 ], 0, 1);
-			affine.set( mat[ 3 ], 1, 1);
-			affine.set( mat[ 4 ], 0, 2);
-			affine.set( mat[ 5 ], 1, 2);
+			affine.set( mat );
 		}
 		else
 		{
