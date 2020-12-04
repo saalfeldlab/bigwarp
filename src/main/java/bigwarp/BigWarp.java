@@ -1,7 +1,5 @@
 package bigwarp;
 
-import bdv.TransformEventHandler3D;
-import bdv.TransformState;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.DisplayMode;
@@ -517,16 +515,8 @@ public class BigWarp< T >
 		setupKeyListener();
 
 		// set initial transforms so data are visible
-		if( options.is2d )
-		{
-			BigWarpUtils.initTransform( viewerP );
-			BigWarpUtils.initTransform( viewerQ );
-		}
-		else
-		{
-			InitializeViewerState.initTransform( viewerP );
-			InitializeViewerState.initTransform( viewerQ );
-		}
+		InitializeViewerState.initTransform( viewerP );
+		InitializeViewerState.initTransform( viewerQ );
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
@@ -538,8 +528,8 @@ public class BigWarp< T >
 		data.transferChannelSettings( viewerFrameQ );
 
 		// set brightness contrast to appropriate values
-		initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
-		initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
+		InitializeViewerState.initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
+		InitializeViewerState.initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
 
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
@@ -571,25 +561,6 @@ public class BigWarp< T >
 	public int numDimensions()
 	{
 		return ndims;
-	}
-
-	/**
-	 * TODO Make a PR that updates this method in InitializeViewerState in bdv-core
-	 * @param cumulativeMinCutoff the min image intensity
-	 * @param cumulativeMaxCutoff the max image intensity
-	 * @param state the viewer state
-	 * @param converterSetups the converter setups
-	 */
-	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final ConverterSetups converterSetups )
-	{
-		final SourceAndConverter< ? > current = state.getCurrentSource();
-		if ( current == null )
-			return;
-		final Source< ? > source = current.getSpimSource();
-		final int timepoint = state.getCurrentTimepoint();
-		final Bounds bounds = InitializeViewerState.estimateSourceRange( source, timepoint, cumulativeMinCutoff, cumulativeMaxCutoff );
-		final ConverterSetup setup = converterSetups.getConverterSetup( current );
-		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
