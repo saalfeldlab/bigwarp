@@ -1208,12 +1208,10 @@ public class BigWarp< T >
 		if( ij != null )
 		{
 			IJ.log( affineToString() );
-			IJ.log( "" + affine3d() );
 		}
 		else
 		{
 			System.out.println( affineToString() );
-			System.out.println( affine3d() );
 		}
 	}
 
@@ -1434,21 +1432,10 @@ public class BigWarp< T >
 
 	public String affineToString()
 	{
-		String s = "";
-		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
-		{
-			double[][] affine = affinePartOfTpsHC();
-			for( int r = 0; r < affine.length; r++ )
-			{
-				s += Arrays.toString(affine[r]).replaceAll("\\[|\\]||\\s", "");
-				if( r < affine.length - 1 )
-					s += "\n";
-			}
-		}
+		if( options.is2d )
+			return Arrays.toString(affine2d().getRowPackedCopy() );
 		else
-			s = (( WrappedCoordinateTransform ) currentTransform).ct.toString();
-
-		return s;
+			return Arrays.toString(affine3d().getRowPackedCopy() );
 	}
 
 	/**
