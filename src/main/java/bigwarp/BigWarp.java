@@ -563,6 +563,28 @@ public class BigWarp< T >
 		return ndims;
 	}
 
+	/**
+	 * TODO Make a PR that updates this method in InitializeViewerState in bdv-core
+	 * @deprecated Use {@link InitializeViewerState} method instead.
+	 * 
+	 * @param cumulativeMinCutoff the min image intensity
+	 * @param cumulativeMaxCutoff the max image intensity
+	 * @param state the viewer state
+	 * @param converterSetups the converter setups
+	 */
+	@Deprecated
+	public static void initBrightness( final double cumulativeMinCutoff, final double cumulativeMaxCutoff, final ViewerState state, final ConverterSetups converterSetups )
+	{
+		final SourceAndConverter< ? > current = state.getCurrentSource();
+		if ( current == null )
+			return;
+		final Source< ? > source = current.getSpimSource();
+		final int timepoint = state.getCurrentTimepoint();
+		final Bounds bounds = InitializeViewerState.estimateSourceRange( source, timepoint, cumulativeMinCutoff, cumulativeMaxCutoff );
+		final ConverterSetup setup = converterSetups.getConverterSetup( current );
+		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
+	}
+
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
 	{
 		keyEventPostProcessorSet.add( ke );
