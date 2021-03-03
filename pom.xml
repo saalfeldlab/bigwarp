@@ -198,5 +198,9 @@
 			<groupId>org.scijava</groupId>
 			<artifactId>ui-behaviour</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>fiji</artifactId>
+		</dependency>
 	</dependencies>
 </project>

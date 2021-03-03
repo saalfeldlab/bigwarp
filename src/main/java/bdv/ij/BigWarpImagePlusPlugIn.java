@@ -3,22 +3,15 @@ package bdv.ij;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ij.util.ProgressWriterIJ;
-import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.SetupAssignments;
-import bdv.viewer.DisplayMode;
-import bdv.viewer.VisibilityAndGrouping;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpInit;
-import ij.CompositeImage;
+import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
-import ij.process.LUT;
 import mpicbg.spim.data.SpimDataException;
-import net.imglib2.type.numeric.ARGBType;
 
 /**
  * ImageJ plugin to show the current image in BigDataViewer.
@@ -35,7 +28,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 	public static void main( final String[] args )
 	{
-//		System.setProperty( "apple.laf.useScreenMenuBar", "true" );
 		new ImageJ();
 		IJ.run("Boats (356K)");
 		IJ.run("Boats (356K)");
@@ -62,7 +54,8 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         }
 
         // Build a dialog to choose the moving and fixed images
-        final GenericDialog gd = new GenericDialog( "Big Warp Setup" );
+        final GenericDialogPlus gd = new GenericDialogPlus( "Big Warp Setup" );
+
         gd.addMessage( "Image Selection:" );
         final String current = WindowManager.getCurrentImage().getTitle();
         gd.addChoice( "moving_image", titles, current );
@@ -70,17 +63,25 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         	gd.addChoice( "target_image", titles, current.equals( titles[ 0 ] ) ? titles[ 1 ] : titles[ 0 ] );
         else 
         	gd.addChoice( "target_image", titles, titles[ 0 ] );
+
+        gd.addFileField( "Landmarks file", "" );
+
         gd.showDialog();
 
         if (gd.wasCanceled()) return;
 
         moving_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
         target_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
+        final String landmarkPath = gd.getNextString();
 
         try
         {
         	new RepeatingReleasedEventsFixer().install();
 			final BigWarp<?> bw = new BigWarp<>( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
+
+			if( landmarkPath != null && !landmarkPath.isEmpty())
+				bw.loadLandmarks( landmarkPath );
+
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
