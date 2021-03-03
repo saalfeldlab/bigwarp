@@ -200,7 +200,7 @@
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
-			<artifactId>fiji</artifactId>
+			<artifactId>fiji-lib</artifactId>
 		</dependency>
 	</dependencies>
 </project>
