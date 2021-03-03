@@ -65,6 +65,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         	gd.addChoice( "target_image", titles, titles[ 0 ] );
 
         gd.addFileField( "Landmarks file", "" );
+        gd.addCheckbox( "Apply transform from landmarks", true );
 
         gd.showDialog();
 
@@ -73,6 +74,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         moving_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
         target_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
         final String landmarkPath = gd.getNextString();
+        final boolean applyTransform = gd.getNextBoolean();
 
         try
         {
@@ -80,7 +82,10 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			final BigWarp<?> bw = new BigWarp<>( BigWarpInit.createBigWarpDataFromImages( moving_imp, target_imp ), "Big Warp",  new ProgressWriterIJ() );
 
 			if( landmarkPath != null && !landmarkPath.isEmpty())
+			{
 				bw.loadLandmarks( landmarkPath );
+				bw.setIsMovingDisplayTransformed( applyTransform );
+			}
 
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
