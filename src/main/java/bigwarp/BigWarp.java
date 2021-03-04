@@ -1,6 +1,5 @@
 package bigwarp;
 
-import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.DisplayMode;
 import bdv.viewer.TransformListener;
@@ -20,8 +19,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -281,7 +282,13 @@ public class BigWarp< T >
 
 	final FileDialog fileDialog;
 
+	protected File autoSaveDirectory;
+
 	protected File lastDirectory;
+
+	protected File lastLandmarks;
+
+	protected BigWarpAutoSaver autoSaver;
 
 	protected boolean updateWarpOnPtChange = false;
 
@@ -542,7 +549,11 @@ public class BigWarp< T >
 		// file selection
 		fileFrame = new JFrame( "Select File" );
 		fileDialog = new FileDialog( fileFrame );
-		lastDirectory = null;
+
+		if ( ij == null )
+			lastDirectory = new File( System.getProperty( "user.home" ));
+		else
+			lastDirectory = new File( IJ.getDirectory( "current" ));
 
 		// default to linear interpolation
 		fileFrame.setVisible( false );
@@ -3539,20 +3550,127 @@ public class BigWarp< T >
 		}
 	}
 
+	/**
+	 * Set the folder where the results of auto-saving will be stored.
+	 * 
+	 * @param autoSaveFolder the destination folder
+	 */
+	public void setAutosaveFolder( final File autoSaveFolder )
+	{
+		boolean exists = autoSaveFolder.exists();
+		if( !exists )
+			exists = autoSaveFolder.mkdir();
+
+		if( exists && autoSaveFolder.isDirectory() )
+		{
+			this.autoSaveDirectory = autoSaveFolder;
+			warpVisDialog.autoSaveFolderText.setText( autoSaveFolder.getAbsolutePath() );
+			warpVisDialog.repaint();
+		}
+	}
+
+	/**
+	 * Saves landmarks to a new File in the user's bigwarp folder.
+	 */
+	public void autoSaveLandmarks()
+	{
+		final File baseFolder;
+		if( autoSaveDirectory != null )
+			baseFolder = autoSaveDirectory;
+		else
+			baseFolder = getBigwarpSettingsFolder();
+
+		File proposedLandmarksFile = new File( baseFolder.getAbsolutePath() +
+				File.separator + "bigwarp_landmarks_" +
+				new SimpleDateFormat( "yyyyMMdd-HHmmss" ).format( Calendar.getInstance().getTime() ) +
+				".csv" );
+
+		try
+		{
+			saveLandmarks( proposedLandmarksFile.getCanonicalPath() );
+		}
+		catch ( IOException e ) { e.printStackTrace(); }
+	}
+
+	/**
+	 * Saves landmarks to either the last File the user
+	 * saved landmarks to, or a unique location in the user's bigwarp folder.
+	 * 
+	 */
+	public void quickSaveLandmarks()
+	{
+		if(lastLandmarks != null)
+		{
+			try
+			{
+				saveLandmarks( lastLandmarks.getCanonicalPath() );
+			}
+			catch ( IOException e ) { e.printStackTrace(); }
+		}
+		else
+		{
+			autoSaveLandmarks();
+			return;
+		}
+	}
+
+	/**
+	 * Returns the default location for bigwarp settings / auto saved files: ~/.bigwarp
+	 * @return the folder 
+	 */
+	public File getBigwarpSettingsFolder()
+	{
+
+		final File hiddenFolder = new File( System.getProperty( "user.home" ) + File.separator + ".bigwarp");
+		boolean exists = hiddenFolder.isDirectory();
+		if( !exists )
+		{
+			exists = hiddenFolder.mkdir();
+		}
+
+		if( exists )
+			return hiddenFolder;
+		else
+			return null;
+	}
+
+	/**
+	 * Returns the {@link BigWarpAutoSaver}.
+	 * 
+	 * @return
+	 */
+	public BigWarpAutoSaver getAutoSaver()
+	{
+		return autoSaver;
+	}
+
+	public void stopAutosave()
+	{
+		if( autoSaver != null )
+		{
+			autoSaver.stop();;
+			autoSaver = null;
+		}
+	}
+
 	protected void saveLandmarks()
 	{
 		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedSettingsFile = new File( "landmarks.csv" );
+		File proposedLandmarksFile;
+		if(lastLandmarks != null)
+			proposedLandmarksFile = lastLandmarks;
+		else
+			proposedLandmarksFile = new File( "landmarks.csv" );
 
-		fileChooser.setSelectedFile( proposedSettingsFile );
+		fileChooser.setSelectedFile( proposedLandmarksFile );
 		final int returnVal = fileChooser.showSaveDialog( null );
 		if ( returnVal == JFileChooser.APPROVE_OPTION )
 		{
-			proposedSettingsFile = fileChooser.getSelectedFile();
+			proposedLandmarksFile = fileChooser.getSelectedFile();
 			try
 			{
-				System.out.println("save landmarks");
-				saveLandmarks( proposedSettingsFile.getCanonicalPath() );
+				saveLandmarks( proposedLandmarksFile.getCanonicalPath() );
+				lastLandmarks = proposedLandmarksFile;
 			} catch ( final IOException e )
 			{
 				e.printStackTrace();
@@ -3568,16 +3686,16 @@ public class BigWarp< T >
 	protected void loadLandmarks()
 	{
 		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedSettingsFile = new File( "landmarks.csv" );
+		File proposedLandmarksFile = new File( "landmarks.csv" );
 
-		fileChooser.setSelectedFile( proposedSettingsFile );
+		fileChooser.setSelectedFile( proposedLandmarksFile );
 		final int returnVal = fileChooser.showOpenDialog( null );
 		if ( returnVal == JFileChooser.APPROVE_OPTION )
 		{
-			proposedSettingsFile = fileChooser.getSelectedFile();
+			proposedLandmarksFile = fileChooser.getSelectedFile();
 			try
 			{
-				loadLandmarks( proposedSettingsFile.getCanonicalPath() );
+				loadLandmarks( proposedLandmarksFile.getCanonicalPath() );
 			} catch ( final IOException e )
 			{
 				e.printStackTrace();
@@ -3646,6 +3764,23 @@ public class BigWarp< T >
 
 		root.addContent( setupAssignments.toXml() );
 		root.addContent( bookmarks.toXml() );
+
+		final Element autoSaveNode = new Element( "autosave" );
+		final Element autoSaveLocation = new Element( "location" );
+		if( autoSaveDirectory != null )
+			autoSaveLocation.setText( autoSaveDirectory.getAbsolutePath() ); 
+		else
+			autoSaveLocation.setText( getBigwarpSettingsFolder().getAbsolutePath() );
+
+		final Element autoSavePeriod = new Element( "period" );
+		final String periodString = autoSaver == null ? "-1" : Long.toString(autoSaver.getPeriod());
+		autoSavePeriod.setText( periodString );
+
+		autoSaveNode.addContent( autoSaveLocation );
+		autoSaveNode.addContent( autoSavePeriod );
+		root.addContent( autoSaveNode );
+
+
 		final Document doc = new Document( root );
 		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
 		xout.output( doc, new FileWriter( xmlFilename ) );
@@ -3683,6 +3818,13 @@ public class BigWarp< T >
 		bookmarks.restoreFromXml( root );
 		activeSourcesDialogP.update();
 		activeSourcesDialogQ.update();
+
+		// auto-save settings
+		Element autoSaveElem = root.getChild( "autosave" );
+		final String autoSavePath = autoSaveElem.getChild( "location" ).getText();
+		final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText());
+		setAutosaveFolder( new File( autoSavePath ));
+		BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();

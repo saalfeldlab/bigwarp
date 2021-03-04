@@ -108,6 +108,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	protected BigWarpMessageAnimator message;
 
+	protected boolean modifiedSinceLastSave;
+
 	final static String[] columnNames3d = new String[]
 			{
 			"Name", "Active",
@@ -247,7 +249,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			}
 		});
 	}
-	
+
+	public boolean isModifiedSinceSave()
+	{
+		return modifiedSinceLastSave;
+	}
+
 	protected void importTransformation( File ffwd, File finv ) throws IOException
 	{
 		byte[] data = FileUtils.readFileToByteArray( ffwd );
@@ -359,6 +366,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 		if( activeList.get( row ) != isActive )
 			fireTableCellUpdated( row, ACTIVECOLUMN );
+
+		modifiedSinceLastSave = true;
 	}
 	
 	public Class<?> getColumnClass( int col ){
@@ -422,6 +431,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		nextRowQ = numRows;
 
 		fireTableRowsDeleted( i, i );
+		modifiedSinceLastSave = true;
 	}
 
 	/**
@@ -590,6 +600,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	protected void firePointUpdated( int row, boolean isMoving )
 	{
+		modifiedSinceLastSave = true;
 		for( int d = 0; d < ndims; d++ )
 			fireTableCellUpdated( row, 2 + d );
 	}
@@ -614,6 +625,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		fireTableRowsInserted( index, index );
 		
 		numRows++;
+		modifiedSinceLastSave = true;
 	}
 	
 	public void clearPt( int row, boolean isMoving )
@@ -1185,7 +1197,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 		csvWriter.writeAll( rows );
 		csvWriter.close();
-		
+
+		modifiedSinceLastSave = false;
 	}
 	
 	public static String print( Double[] d )
