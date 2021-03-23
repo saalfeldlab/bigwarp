@@ -1,18 +1,16 @@
 package bigwarp;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import bdv.BigDataViewer;
 import bdv.img.RenamableSource;
+import bdv.spimdata.SpimDataMinimal;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
-import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
@@ -250,15 +248,16 @@ public class BigWarpInit
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )
 	{
-
 		BigWarpData data = initData();
 
 		int setupId = 0;
+		// moving
 		for ( Source< ? > mvgSource : movingSourceList )
 		{
 			add( data, mvgSource, setupId++, 1, true );
 		}
 
+		// target
 		for ( Source< ? > fxdSource : fixedSourceList )
 		{
 			add( data, fxdSource, setupId, 1, false );
@@ -271,6 +270,19 @@ public class BigWarpInit
 		return data;
 	}
 
+	@SuppressWarnings( { "rawtypes" } )
+	public static < T > int add( BigWarpData bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	{
+		ImagePlusLoader loader = new ImagePlusLoader( ip );
+		SpimDataMinimal[] dataList = loader.loadAll( 0 );
+		for ( SpimDataMinimal data : dataList )
+		{
+			add( bwdata, data, setupId, numTimepoints, isMoving );
+			setupId++;
+		}
+		return loader.numSources();
+	}
+
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
@@ -281,6 +293,25 @@ public class BigWarpInit
 			bwdata.movingSourceIndexList.add( N - 1 );
 		else
 			bwdata.targetSourceIndexList.add( N - 1 );
+
+		return bwdata;
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static < T > BigWarpData< ? > add( BigWarpData bwdata, AbstractSpimData< ? > data, int setupId, int numTimepoints, boolean isMoving )
+	{
+		int startSize = bwdata.sources.size();
+		BigDataViewer.initSetups( data, bwdata.converterSetups, bwdata.sources );
+
+		int N = bwdata.sources.size();
+		final ArrayList<Integer > idxList;
+		if ( isMoving )
+			idxList = bwdata.movingSourceIndexList;
+		else
+			idxList = bwdata.targetSourceIndexList;
+
+		for( int i = startSize; i < N; i++ )
+			idxList.add( i );
 
 		return bwdata;
 	}

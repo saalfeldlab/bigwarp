@@ -182,7 +182,6 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>bigdataviewer-vistools</artifactId>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>ome</groupId>
@@ -191,6 +190,10 @@
 				<exclusion>
 					<groupId>ch.systems.cisd</groupId>
 					<artifactId>jhdf5</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>com.fasterxml.jackson.core</groupId>
+					<artifactId>jackson-core</artifactId>
 				</exclusion>
 			</exclusions>
 		</dependency>
@@ -201,6 +204,11 @@
 		<dependency>
 			<groupId>sc.fiji</groupId>
 			<artifactId>fiji-lib</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-ij</artifactId>
+			<version>1.2.1-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>
