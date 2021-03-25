@@ -28,7 +28,9 @@ import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
 import ij.plugin.PlugIn;
+import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.XmlIoSpimData;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
@@ -51,7 +53,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
     private ImagePlus movingIp;
     private ImagePlus targetIp;
 
-	public static void main( final String[] args )
+	public static void main( final String[] args ) throws IOException
 	{
 		new ImageJ();
 		IJ.run("Boats (356K)");
@@ -126,9 +128,10 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			id += BigWarpInit.add( bigwarpdata, movingIp, id, 0, true );
 		}
 
+		SpimData movingSpimData = null;
 		if ( !mvgRoot.isEmpty() )
 		{
-			BigWarpInit.add( bigwarpdata, loadN5Source( mvgRoot, mvgDataset ), id, 0, true );
+			movingSpimData = addToData( bigwarpdata, true, id, mvgRoot, mvgDataset );
 			id++;
 		}
 
@@ -139,7 +142,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 		if ( !tgtRoot.isEmpty() )
 		{
-			BigWarpInit.add( bigwarpdata, loadN5Source( tgtRoot, tgtDataset ), id, 0, false );
+			addToData( bigwarpdata, false, id, tgtRoot, tgtDataset );
 			id++;
 		}
 		bigwarpdata.wrapUp();
@@ -158,6 +161,9 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 					bw.setIsMovingDisplayTransformed( applyTransform );
 			}
 
+			if( movingSpimData != null )
+				bw.setMovingSpimData( movingSpimData, new File( mvgRoot ));
+
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();
@@ -170,22 +176,28 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 	}
 
-	public static String urlFromFile( final File f )
+	private static SpimData addToData( final BigWarpData<?> bwdata, 
+			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
-		final String p = f.getPath();
-		if ( p.startsWith( "http" ) || p.startsWith( "gs" ) || p.startsWith( "s3" ) )
+		if( rootPath.endsWith( "xml" ))
 		{
-			int i = p.indexOf( ':' );
-			String pre = p.substring( 0, i + 1 );
-			String post = p.substring( i + 1 );
+			SpimData spimData;
+			try
+			{
+				spimData = new XmlIoSpimData().load( rootPath );
+				BigWarpInit.add( bwdata, spimData, setupId, 0, isMoving );
 
-			if ( post.startsWith( "//" ) )
-				return pre + post;
-			else
-				return pre + "/" + post;
+				if( isMoving )
+					return spimData;
+			}
+			catch ( SpimDataException e ) { e.printStackTrace(); }
+			return null;
 		}
 		else
-			return p;
+		{
+			BigWarpInit.add( bwdata, loadN5Source( rootPath, dataset ), setupId, 0, isMoving );
+			return null;
+		}
 	}
 
 	public static Source<?> loadN5Source( final String n5Root, final String n5Dataset )
