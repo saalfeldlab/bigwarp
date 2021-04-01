@@ -1004,7 +1004,7 @@ public class BigWarp< T >
 		final String fileOrN5Root = gd.getNextString();
 		final String n5Dataset = gd.getNextString();
 		final String blockSizeString = gd.getNextString();
-		final String compressionString = gd.getNextString();
+		final String compressionString = gd.getNextChoice();
 
 		final int[] blockSize = ApplyBigwarpPlugin.parseBlockSize( blockSizeString, this.ndims );
 		final Compression compression = ApplyBigwarpPlugin.getCompression( compressionString );
@@ -2492,7 +2492,7 @@ public class BigWarp< T >
 	 * @param <T> the type
 	 * @return dimension of the input sources
 	 */
-	protected static <T> int detectNumDims( List< SourceAndConverter< T > > sources )
+	public static <T> int detectNumDims( List< SourceAndConverter< T > > sources )
 	{
 		boolean isAnySource3d = false;
 		for ( SourceAndConverter< T > sac : sources )

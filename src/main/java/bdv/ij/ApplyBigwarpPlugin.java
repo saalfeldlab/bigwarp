@@ -846,7 +846,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final WriteDestinationOptions writeOpts,
 			final ExecutorService exec )
 	{
-		final int nd = outputInterval.numDimensions();
+		final int nd = BigWarp.detectNumDims( data.sources );
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -898,14 +898,23 @@ public class ApplyBigwarpPlugin implements PlugIn
 			
 			final IntervalView< T > img = Views.interval( Views.raster( rai ), outputInterval );
 			final String srcName = data.sources.get( data.movingSourceIndices[ i ]).getSpimSource().getName();
-			final String destDataset = N == 1 ? dataset : dataset + String.format( "/%s", srcName );
+
+			String destDataset = dataset;
+			if( N >  1 )
+				destDataset = dataset + String.format( "/%s", srcName.replace( " " , "_" ));
+
+			RandomAccessibleInterval<T> imgToWrite;
+			if( nd == 2 )
+				imgToWrite = Views.hyperSlice( img, 2, 0 );
+			else
+				imgToWrite = img;
 
 			try
 			{
-				N5Utils.save( img, n5, destDataset, blockSize, compression, exec );
+				N5Utils.save( imgToWrite, n5, destDataset, blockSize, compression, exec );
 
 				if( metadata != null )
-					metadata.writeMetadata( metadata, n5, dataset );
+					metadata.writeMetadata( metadata, n5, destDataset );
 			}
 			catch ( Exception e )
 			{
