@@ -5,10 +5,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.GzipCompression;
+import org.janelia.saalfeldlab.n5.Lz4Compression;
+import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.RawCompression;
+import org.janelia.saalfeldlab.n5.XzCompression;
+import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
+import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5Factory;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.util.ProgressWriterIJ;
@@ -27,18 +40,32 @@ import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealRandomAccessible;
+import net.imglib2.converter.Converter;
+import net.imglib2.converter.Converters;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
+import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.NumericType;
+import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.Views;
 
 /**
  * 
@@ -639,7 +666,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 	}
 
-	public static <T> List<ImagePlus> apply(
+	public static List<ImagePlus> apply(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
@@ -659,7 +686,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 				interp, isVirtual, nThreads );
 	}
 
-	@SuppressWarnings( { "rawtypes" } )
 	public static <T> List<ImagePlus> apply(
 			final BigWarpData<T> bwData,
 			final LandmarkTableModel landmarks,
@@ -674,17 +700,16 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final int nThreads )
 	{
 		int numChannels = bwData.movingSourceIndices.length;
-		List< SourceAndConverter<T> > sources = bwData.sources;
 		int[] movingSourceIndexList = bwData.movingSourceIndices;
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-				sources, 
+				bwData.sources, 
 				landmarks.getNumdims(),
 				bwData );
 
 		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
 		InvertibleRealTransform invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ) );
 
-		boolean is2d = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) < 2;
+		boolean is2d = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) < 2;
 		if( is2d )
 		{
 			invXfm = new Wrapped2DTransformAs3D( invXfm );
@@ -693,8 +718,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			System.out.println( "transforming source " + movingSourceIndexList[ i ] );
-			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
-			((WarpedSource< T >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
+			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
+			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
 		}
 
 		ProgressWriter progressWriter = new ProgressWriterIJ();
@@ -702,7 +727,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
 		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
-		String unit = getUnit( bwData, resolutionOption );
+//		String unit = getUnit( bwData, resolutionOption );
 
 		List<Interval> outputIntervalList = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
@@ -731,10 +756,20 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads,
 			final ProgressWriter progressWriter,
-			final boolean show
-			)
+			final boolean show )
 	{
 		ArrayList<ImagePlus> ipList = new ArrayList<>();
+
+		// TODO do I change things here?
+//		String unit = null;
+//		if( fieldOfViewOption.equals( TARGET ) || fieldOfViewOption.equals( MOVING_WARPED ))
+//		{
+//			unit = data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+//		}
+//		else if( fieldOfViewOption.equals( MOVING ))
+//		{
+//			unit = data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+//		}
 
 		int i = 0;
 		for( Interval outputInterval : outputIntervalList )
@@ -743,13 +778,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			// need to declare the exporter in the loop since the actual work
 			// is done asynchronously, and changing variables in the loop would mess it up
-			BigWarpExporter< ? > exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
+			BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 			exporter.setRenderResolution( resolution );
 			exporter.setOffset( offset );
 			exporter.setVirtual( isVirtual );
 			exporter.setNumThreads( nThreads );
 
-			System.out.println( "interval: " + Util.printInterval( outputInterval ) );
+//			if( unit != null )
+//				exporter.setUnit( unit );
+
 			exporter.setInterval( outputInterval );
 
 			if( matchedPtNames.size() > 0 )
@@ -771,6 +808,86 @@ public class ApplyBigwarpPlugin implements PlugIn
 			i++;
 		}
 		return ipList;
+	}
+
+	public static <S, T extends NativeType<T> & NumericType<T>> void runN5Export(
+			final BigWarpData<S> data,
+			final List< SourceAndConverter< S >> sources,
+			final String fieldOfViewOption,
+			final Interval outputInterval,
+			final Interpolation interp,
+			final double[] offsetSpec,
+			final double[] resolution,
+			final String unit,
+			final ProgressWriter progressWriter,
+			final WriteDestinationOptions writeOpts,
+			final ExecutorService exec )
+	{
+		final int nd = outputInterval.numDimensions();
+
+		// setup n5 parameters
+		final String dataset = writeOpts.n5Dataset;
+		final int[] blockSize = writeOpts.blockSize;
+		final Compression compression = writeOpts.compression;
+		if( dataset == null || dataset.isEmpty() )
+		{
+			return;
+		}
+		N5Writer n5;
+		try
+		{
+			n5 = new N5Factory().openWriter( writeOpts.pathOrN5Root );
+		}
+		catch ( IOException e1 )
+		{
+			e1.printStackTrace();
+			return;
+		}
+
+		double[] offsetPixel = getPixelOffset( fieldOfViewOption, offsetSpec, resolution, outputInterval );
+
+		// build metadata
+		double[] offsetPhysical = new double[ offsetPixel.length ];
+		for( int i = 0; i < offsetPixel.length; i++ )
+			offsetPhysical[ i ] = offsetPixel[ i ] * resolution[ i ];
+
+		final String[] axes = nd == 2 ? new String[] { "y", "x" } :new String[]{ "z", "y", "x" } ;
+		final String[] units = nd == 2 ? new String[]{ unit, unit } : new String[] { unit, unit, unit };
+
+		final N5CosemMetadata metadata = new N5CosemMetadata( new N5CosemMetadata.CosemTransform( axes, resolution, offsetPhysical, units ));
+		
+		// setup physical to pixel transform
+		AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
+		pixelRenderToPhysical.scale( resolution[ 0 ], resolution[ 1 ],  resolution.length < 3 ? 1 : resolution[ 2 ] );
+		pixelRenderToPhysical.translate( offsetPhysical[ 0 ], offsetPhysical[ 1 ],  offsetPhysical.length < 3 ? 1 : offsetPhysical[ 2 ] );
+
+		// render and write 
+		final int N = data.movingSourceIndices.length;
+		for ( int i = 0; i < N; i++ )
+		{
+			final int movingSourceIndex = data.movingSourceIndices[ i ];
+			@SuppressWarnings( "unchecked" )
+			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
+
+			// to pixel space
+			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
+					raiRaw, pixelRenderToPhysical.inverse() );
+			
+			IntervalView< T > img = Views.interval( Views.raster( rai ), outputInterval );
+
+			try
+			{
+				N5Utils.save( img, n5, dataset, blockSize, compression, exec );
+
+				if( metadata != null )
+					metadata.writeMetadata( metadata, n5, dataset );
+			}
+			catch ( Exception e )
+			{
+				e.printStackTrace();
+			}
+		}
+
 	}
 
 	@Override
@@ -882,6 +999,63 @@ public class ApplyBigwarpPlugin implements PlugIn
 		for( ImagePlus warpedIp : warpedIpList )
 			warpedIp.show();
 
+	}
+	
+	public static int[] parseBlockSize( final String blockSizeArg, final int nd )
+	{
+		if( blockSizeArg.isEmpty())
+			return null;
+
+		final int[] blockSize = new int[ nd ];
+		final String[] blockArgList = blockSizeArg.split(",");
+		int i = 0;
+		while( i < blockArgList.length && i < nd )
+		{
+			blockSize[ i ] = Integer.parseInt( blockArgList[ i ] );
+			i++;
+		}
+		int N = blockArgList.length - 1;
+
+		while( i < nd )
+		{
+			blockSize[ i ] = blockSize[ N ];
+			i++;
+		}
+		return blockSize;
+	}
+	
+	public static Compression getCompression( final String compressionArg ) {
+		switch (compressionArg) {
+		case N5Exporter.GZIP_COMPRESSION:
+			return new GzipCompression();
+		case N5Exporter.LZ4_COMPRESSION:
+			return new Lz4Compression();
+		case N5Exporter.XZ_COMPRESSION:
+			return new XzCompression();
+		case N5Exporter.RAW_COMPRESSION:
+			return new RawCompression();
+		case N5Exporter.BLOSC_COMPRESSION:
+			return new BloscCompression();
+		default:
+			return new RawCompression();
+		}
+	}
+	
+	public static class WriteDestinationOptions
+	{
+		final public String pathOrN5Root;
+		final public String n5Dataset;
+		final public int[] blockSize;
+		final public Compression compression;
+
+		public WriteDestinationOptions( final String pathOrN5Root, final String n5Dataset,
+				final int[] blockSize, final Compression compression )
+		{
+			this.pathOrN5Root = pathOrN5Root;
+			this.n5Dataset = n5Dataset;
+			this.blockSize = blockSize;
+			this.compression = compression;
+		}
 	}
 
 }

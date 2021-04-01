@@ -89,12 +89,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 			if ( !baseType.getClass().equals( type.getClass() ) )
 				return false;
-
 		}
 
 		return true;
 	}
 	
+	@Override
 	public RandomAccessibleInterval< T > exportRai()
 	{
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
@@ -110,7 +110,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
+			final int movingSourceIndex = movingSourceIndexList[ i ];
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
@@ -278,7 +278,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		double k = 0;
 		final long N = dimensions[ 0 ] * dimensions[ 1 ] * dimensions[ 2 ];
 
-		final net.imglib2.Cursor< T > c = target.cursor();
+		final Cursor< T > c = target.cursor();
 		final RealRandomAccess< T > ra = rai.realRandomAccess();
 		while ( c.hasNext() )
 		{

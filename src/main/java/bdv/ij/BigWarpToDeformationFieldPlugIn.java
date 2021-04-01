@@ -19,8 +19,6 @@ import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.dataaccess.DataAccessException;
-import org.janelia.saalfeldlab.n5.dataaccess.DataAccessFactory;
-import org.janelia.saalfeldlab.n5.dataaccess.DataAccessType;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
@@ -28,12 +26,11 @@ import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
-
+import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
@@ -46,7 +43,6 @@ import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
@@ -99,32 +95,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if ( ij == null )
 			return;
 
-		final GenericDialog gd = new GenericDialog( "BigWarp to Deformation" );
-		gd.addMessage( "Deformation field export:" );
-		gd.addCheckbox( "Ignore affine part", false );
-		gd.addNumericField( "threads", 1, 0 );
 
-		gd.addMessage( "Leave n5 path empty to export as ImagePlus" );
-		gd.addStringField( "n5 path", "");
-		gd.addStringField( "n5 block size", "32,32,32");
-		gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
-		gd.showDialog();
-
-		if ( gd.wasCanceled() )
-			return;
-
-		final boolean ignoreAffine = gd.getNextBoolean();
-		final int nThreads = ( int ) gd.getNextNumber();
-
-		final String n5Base = gd.getNextString();
-		final String n5BlockSizeString = gd.getNextString();
-		final String n5CompressionString = gd.getNextChoice();
-
-		final Compression compression = getCompression( n5CompressionString );
-		final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
-			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
-
-		RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		final DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( false, false );
+		final RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
 		long[] dims;
@@ -148,15 +121,21 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
 		voxelDim.dimensions( spacing );
 
-		if( n5Base.isEmpty() )
+		if( params.spacing != null )
+			spacing = params.spacing;
+
+		if( params.size != null )
+			dims = params.size;
+
+		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( landmarkModel, ignoreAffine, dims, spacing, nThreads );
+			toImagePlus( landmarkModel, params.ignoreAffine, dims, spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( n5Base, landmarkModel, dims, spacing, blockSize, compression, nThreads );
+				writeN5( params.n5Base, landmarkModel, dims, spacing, params.blockSize, params.compression, params.nThreads );
 			}
 			catch ( IOException e )
 			{
@@ -175,72 +154,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if ( IJ.versionLessThan( "1.40" ) )
 			return;
 
-		final int[] ids = WindowManager.getIDList();
-		if ( ids == null || ids.length < 1 )
-		{
-			IJ.showMessage( "You should have at least one image open." );
-			return;
-		}
-
-		// Find any open images
-		final String[] titles = new String[ ids.length ];
-		for ( int i = 0; i < ids.length; ++i )
-		{
-			titles[ i ] = ( WindowManager.getImage( ids[ i ] ) ).getTitle();
-		}
-
-		// Build a dialog to choose how to export the deformation field
-		final GenericDialog gd = new GenericDialog( "BigWarp to Deformation" );
-		gd.addMessage( "Landmarks and Image Selection:" );
-		gd.addStringField( "landmarks_image_file", "" );
-		final String current = WindowManager.getCurrentImage().getTitle();
-		gd.addChoice( "reference_image", titles, current );
-		gd.addCheckbox( "Ignore affine part", false );
-		gd.addNumericField( "threads", 1, 0 );
-
-		gd.addMessage( "Leave n5 path empty to export as ImagePlus" );
-		gd.addStringField( "n5 path", "");
-		gd.addStringField( "n5 block size", "32,32,32");
-		gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
-
-		gd.showDialog();
-
-		if ( gd.wasCanceled() )
-			return;
-
-		final String landmarksPath = gd.getNextString();
-		final ImagePlus ref_imp = WindowManager.getImage( ids[ gd.getNextChoiceIndex() ] );
-		final boolean ignoreAffine = gd.getNextBoolean();
-		final int nThreads = ( int ) gd.getNextNumber();
-
-		final String n5Base = gd.getNextString();
-		final String n5BlockSizeString = gd.getNextString();
-		final String n5CompressionString = gd.getNextChoice();
-
-		final Compression compression = getCompression( n5CompressionString );
-		final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
-			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
-
-
-		int nd = 2;
-		if ( ref_imp.getNSlices() > 1 )
-			nd = 3;
-
-		// account for physical units of reference image
-		final double[] spacing = new double[ nd ];
-		spacing[ 0 ] = ref_imp.getCalibration().pixelWidth;
-		spacing[ 1 ] = ref_imp.getCalibration().pixelHeight;
-
-		if ( nd > 2 )
-			spacing[ 2 ] = ref_imp.getCalibration().pixelDepth;
-
-		final long[] dims = dimensionsFromImagePlus( ref_imp );
+		DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( true, true );
+		int nd = params.size.length;
 
 		// load
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		try
 		{
-			ltm.load( new File( landmarksPath ) );
+			ltm.load( new File( params.landmarkPath ) );
 		}
 		catch ( IOException e )
 		{
@@ -248,15 +169,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return;
 		}
 
-		if( n5Base.isEmpty() )
+		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( ltm, ignoreAffine, dims, spacing, nThreads );
+			toImagePlus( ltm, params.ignoreAffine, params.size, params.spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( n5Base, ltm, dims, spacing, blockSize, compression, nThreads );
+				writeN5( params.n5Base, params.n5Dataset, ltm, params.size, params.spacing, params.blockSize, params.compression, params.nThreads );
 			}
 			catch ( IOException e )
 			{
@@ -316,7 +237,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return dfieldIp;
 	}
 
-	public static void writeN5( final String n5BasePath, final LandmarkTableModel ltm,
+	public static void writeN5( 
+			final String n5BasePath, 
+			final LandmarkTableModel ltm,
 			final long[] dims,
 			final double[] spacing,
 			final int[] spatialBlockSize,
@@ -435,7 +358,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return affine;
 	}
 
-	public long[] dimensionsFromImagePlus( final ImagePlus ref_imp )
+	public static long[] dimensionsFromImagePlus( final ImagePlus ref_imp )
 	{
 		long[] dims;
 		if( ref_imp.getNSlices() < 2 )
@@ -629,8 +552,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 						CompositeIntervalView< T, ? extends GenericComposite< T > > col = Views.collapse( deformationField );
 						final IntervalView< ? extends GenericComposite< T > > subTgt = Views.interval( col, subItvl );
 
-//						System.out.println( "subTgt size: " + Util.printInterval( subTgt ));
-						
 						Cursor< ? extends GenericComposite< T > > c = Views.flatIterable( subTgt ).cursor();
 						while ( c.hasNext() )
 						{
@@ -687,6 +608,161 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return new BloscCompression();
 		default:
 			return new RawCompression();
+		}
+	}
+	
+	/**
+	 * A helper that stores the parameters for export
+	 * and can prompt the user for these parameters.
+	 * 
+	 */
+	private static class DeformationFieldExportParameters 
+	{
+		public final String landmarkPath;
+		public final boolean ignoreAffine;
+		public final int nThreads;
+
+		public final long[] size;
+		public final double[] spacing;
+
+		public final String n5Base;
+		public final String n5Dataset;
+		public final Compression compression;
+		public final int[] blockSize;
+
+		public DeformationFieldExportParameters(
+				final String landmarkPath,
+				final boolean ignoreAffine,
+				final int nThreads,
+				final long[] size,
+				final double[] spacing,
+				final String n5Base,
+				final String n5Dataset,
+				final int[] blockSize, 
+				final Compression compression )
+		{
+			this.landmarkPath = landmarkPath;
+			this.ignoreAffine = ignoreAffine;
+			this.nThreads = nThreads;
+
+			this.size = size;
+			this.spacing = spacing;
+
+			this.n5Base = n5Base;
+			this.n5Dataset = n5Dataset;
+			this.blockSize  = blockSize;
+			this.compression = compression;
+		}
+
+		public static DeformationFieldExportParameters fromDialog( 
+				final boolean promptLandmarks,
+				final boolean promptReference )
+		{
+			final GenericDialogPlus gd = new GenericDialogPlus( "BigWarp to Deformation" );
+			gd.addMessage( "Deformation field export:" );
+			if( promptLandmarks )
+			{
+				gd.addFileField( "landmarks_image_file", "" );
+			}
+
+			gd.addCheckbox( "Ignore affine part", false );
+			gd.addNumericField( "threads", 1, 0 );
+			gd.addMessage( "Size and spacing" );
+
+			final int[] ids = WindowManager.getIDList();
+			if( promptReference )
+			{
+				final String[] titles = new String[ ids.length + 1 ];
+				for ( int i = 0; i < ids.length; ++i )
+				{
+					titles[ i ] = ( WindowManager.getImage( ids[ i ] ) ).getTitle();
+				}
+				titles[ ids.length ] = "None";
+
+				final String current = WindowManager.getCurrentImage().getTitle();
+				gd.addChoice( "reference_image", titles, current );
+			}
+			gd.addStringField( "output size", "");
+			gd.addStringField( "output spacing", "");
+
+			gd.addMessage( "Leave n5 path empty to export as ImagePlus" );
+			gd.addDirectoryOrFileField( "n5 root path", "" );
+			gd.addStringField( "n5 dataset", "");
+			gd.addStringField( "n5 block size", "32,32,32");
+			gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
+			gd.showDialog();
+
+			if ( gd.wasCanceled() )
+				return null;
+
+			String landmarkPath = null;
+			if( promptLandmarks )
+				landmarkPath = gd.getNextString();
+
+			final boolean ignoreAffine = gd.getNextBoolean();
+			final int nThreads = ( int ) gd.getNextNumber();
+
+			ImagePlus ref_imp = null;
+			if( promptReference )
+			{
+				final int idx = ids[ gd.getNextChoiceIndex() ] ;
+				if( idx < ids.length )
+					ref_imp = WindowManager.getImage( idx );
+			}
+
+			final String sizeString = gd.getNextString();
+			final String spacingString = gd.getNextString();
+
+			final String n5Base = gd.getNextString();
+			final String n5Dataset = gd.getNextString();
+			final String n5BlockSizeString = gd.getNextString();
+			final String n5CompressionString = gd.getNextChoice();
+
+			final Compression compression = getCompression( n5CompressionString );
+			final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
+				Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
+
+			final long[] size;
+			final double[] spacing;
+			if( ref_imp == null )
+			{
+				if( !sizeString.isEmpty())
+					size = Arrays.stream( sizeString.split( "," ) ).mapToLong( Long::parseLong ).toArray();
+				else
+					size = null;
+
+				if( !spacingString.isEmpty() )
+					spacing = Arrays.stream( spacingString.split( "," ) ).mapToDouble( Double::parseDouble ).toArray();
+				else
+					spacing = null;
+			}
+			else
+			{
+				int nd = 2;
+				if ( ref_imp.getNSlices() > 1 )
+					nd = 3;
+
+				// account for physical units of reference image
+				spacing = new double[ nd ];
+				spacing[ 0 ] = ref_imp.getCalibration().pixelWidth;
+				spacing[ 1 ] = ref_imp.getCalibration().pixelHeight;
+
+				if ( nd > 2 )
+					spacing[ 2 ] = ref_imp.getCalibration().pixelDepth;
+
+				size = BigWarpToDeformationFieldPlugIn.dimensionsFromImagePlus( ref_imp );
+			}
+
+			return new DeformationFieldExportParameters( 
+					landmarkPath,
+					ignoreAffine,
+					nThreads,
+					size,
+					spacing,
+					n5Base,
+					n5Dataset,
+					blockSize,
+					compression );
 		}
 	}
 

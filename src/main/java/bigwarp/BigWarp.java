@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 import javax.swing.ActionMap;
@@ -52,6 +53,7 @@ import mpicbg.spim.data.registration.ViewTransformAffine;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -73,6 +75,7 @@ import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
+import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
@@ -91,7 +94,6 @@ import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
-import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
@@ -107,6 +109,7 @@ import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.util.BigWarpUtils;
+import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -911,7 +914,7 @@ public class BigWarp< T >
 		if( ij == null )
 			return;
 
-		final GenericDialog gd = new GenericDialog( "Apply Big Warp transform" );
+		final GenericDialogPlus gd = new GenericDialogPlus( "Apply Big Warp transform" );
 
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution", 
@@ -947,7 +950,7 @@ public class BigWarp< T >
 		gd.addNumericField( "y", -1, 0 );
 		gd.addNumericField( "z", -1, 0 );
 		
-		gd.addMessage( "Output options");
+		gd.addMessage( "Other Output options");
 		gd.addChoice( "Interpolation", new String[]{ "Nearest Neighbor", "Linear" }, "Linear" );
 		
 		gd.addMessage( "Virtual: fast to display,\n"
@@ -956,34 +959,51 @@ public class BigWarp< T >
 		int defaultCores = (int)Math.ceil( Runtime.getRuntime().availableProcessors()/4);
 		gd.addNumericField( "threads", defaultCores, 0 );
 
+		gd.addMessage( "Writing options (leave empty to opena new image window)" );
+		gd.addDirectoryOrFileField( "File or n5 root", "" );
+		gd.addStringField( "n5 dataset", "" );
+		gd.addStringField( "n5 block size", "" );
+		gd.addStringField( "n5 compression", "" );
+
 		gd.showDialog();
 
 		if ( gd.wasCanceled() )
 			return;
 		
-		String resolutionOption = gd.getNextChoice();
-		String fieldOfViewOption = gd.getNextChoice();
-		String fieldOfViewPointFilter = gd.getNextString();
+		final String resolutionOption = gd.getNextChoice();
+		final String fieldOfViewOption = gd.getNextChoice();
+		final String fieldOfViewPointFilter = gd.getNextString();
 		
-		double[] resolutionSpec = new double[ 3 ];
+		final double[] resolutionSpec = new double[ 3 ];
 		resolutionSpec[ 0 ] = gd.getNextNumber();
 		resolutionSpec[ 1 ] = gd.getNextNumber();
 		resolutionSpec[ 2 ] = gd.getNextNumber();
 		
-		double[] offsetSpec = new double[ 3 ];
+		final double[] offsetSpec = new double[ 3 ];
 		offsetSpec[ 0 ] = gd.getNextNumber();
 		offsetSpec[ 1 ] = gd.getNextNumber();
 		offsetSpec[ 2 ] = gd.getNextNumber();
 		
-		double[] fovSpec = new double[ 3 ];
+		final double[] fovSpec = new double[ 3 ];
 		fovSpec[ 0 ] = gd.getNextNumber();
 		fovSpec[ 1 ] = gd.getNextNumber();
 		fovSpec[ 2 ] = gd.getNextNumber();
 
-		String interpType = gd.getNextChoice();
-		boolean isVirtual = gd.getNextBoolean();
-		int nThreads = (int)gd.getNextNumber();
-		
+
+		final String interpType = gd.getNextChoice();
+		final boolean isVirtual = gd.getNextBoolean();
+		final int nThreads = (int)gd.getNextNumber();
+
+		final String fileOrN5Root = gd.getNextString();
+		final String n5Dataset = gd.getNextString();
+		final String blockSizeString = gd.getNextString();
+		final String compressionString = gd.getNextString();
+
+		final int[] blockSize = ApplyBigwarpPlugin.parseBlockSize( blockSizeString, this.ndims );
+		final Compression compression = ApplyBigwarpPlugin.getCompression( compressionString );
+		final WriteDestinationOptions writeOpts = new ApplyBigwarpPlugin.WriteDestinationOptions( fileOrN5Root, n5Dataset,
+				blockSize, compression );
+
 		final Interpolation interp;
 		if( interpType.equals( "Nearest Neighbor" ))
 			interp = Interpolation.NEARESTNEIGHBOR;
@@ -998,6 +1018,8 @@ public class BigWarp< T >
 		if( outputIntervalList.size() > 1 )
 			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
 		
+		final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
+
 		// export has to be treated differently if we're doing fov's around
 		// landmark centers (because multiple images can be exported this way )
 		if( matchedPtNames.size() > 0 )
@@ -1005,16 +1027,29 @@ public class BigWarp< T >
 			BigwarpLandmarkSelectionPanel<T> selection = new BigwarpLandmarkSelectionPanel<>( 
 					data, sources, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
-					offsetSpec, res, isVirtual, nThreads, 
+					offsetSpec, res, isVirtual, nThreads,
 					progressWriter );
 		}
 		else
 		{
-			// export
-			ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
-					outputIntervalList, matchedPtNames, interp,
-					offsetSpec, res, isVirtual, nThreads, 
-					progressWriter, true );
+			if( writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
+			{
+				// export
+				ApplyBigwarpPlugin.runN5Export( data, sources, fieldOfViewOption,
+						outputIntervalList.get( 0 ), interp,
+						offsetSpec, res, unit, 
+						progressWriter, writeOpts, 
+						Executors.newFixedThreadPool( nThreads )  );
+			}
+			else 
+			{
+				// export
+				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
+						outputIntervalList, matchedPtNames, interp,
+						offsetSpec, res, isVirtual, nThreads, 
+						progressWriter, true );
+			}
+
 		}
 	}
 
@@ -2544,7 +2579,6 @@ public class BigWarp< T >
 				if ( !( impP == null || impQ == null ) )
 				{
 					bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
-					
 					bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 				}
 				else

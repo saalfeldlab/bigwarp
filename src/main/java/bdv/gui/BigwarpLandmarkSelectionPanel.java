@@ -21,6 +21,7 @@ import javax.swing.table.AbstractTableModel;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.ApplyBigwarpPlugin;
+import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
