@@ -54,6 +54,7 @@ import mpicbg.spim.data.registration.ViewTransformAffine;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -962,8 +963,14 @@ public class BigWarp< T >
 		gd.addMessage( "Writing options (leave empty to opena new image window)" );
 		gd.addDirectoryOrFileField( "File or n5 root", "" );
 		gd.addStringField( "n5 dataset", "" );
-		gd.addStringField( "n5 block size", "" );
-		gd.addStringField( "n5 compression", "" );
+		gd.addStringField( "n5 block size", "32" );
+		gd.addChoice( "n5 compression", new String[] {
+				N5Exporter.GZIP_COMPRESSION,
+				N5Exporter.RAW_COMPRESSION,
+				N5Exporter.LZ4_COMPRESSION,
+				N5Exporter.XZ_COMPRESSION,
+				N5Exporter.BLOSC_COMPRESSION },
+			N5Exporter.GZIP_COMPRESSION );
 
 		gd.showDialog();
 
@@ -1017,8 +1024,7 @@ public class BigWarp< T >
 		final List<String> matchedPtNames = new ArrayList<>();
 		if( outputIntervalList.size() > 1 )
 			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
-		
-		final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
+
 
 		// export has to be treated differently if we're doing fov's around
 		// landmark centers (because multiple images can be exported this way )
@@ -1034,6 +1040,7 @@ public class BigWarp< T >
 		{
 			if( writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 			{
+				final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
 				// export
 				ApplyBigwarpPlugin.runN5Export( data, sources, fieldOfViewOption,
 						outputIntervalList.get( 0 ), interp,
