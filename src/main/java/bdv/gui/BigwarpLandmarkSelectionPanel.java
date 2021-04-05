@@ -126,7 +126,7 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
 						offsetIn, resolution, isVirtual, nThreads, 
-						progressWriter, true );
+						progressWriter, true, false, null );
 
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}

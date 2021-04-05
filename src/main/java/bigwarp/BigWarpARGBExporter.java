@@ -31,6 +31,8 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.export.ProgressWriter;
+import bdv.tools.brightness.ConverterSetup;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
@@ -41,12 +43,13 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 	public BigWarpARGBExporter(
 			final List< SourceAndConverter< ARGBType >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
 	}
 
 	/**

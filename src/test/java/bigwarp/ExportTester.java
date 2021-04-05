@@ -43,25 +43,25 @@ public class ExportTester
 		/*******************************
 		 * fov_res
 		 *******************************/
-//		v_tgt_tgt( impm, impt, landmarks ); 
-		
+		v_tgt_tgt( impm, impt, landmarks ); 
+
 //		tgt_tgt( impm, impt, landmarks );
 //		tgt_spc( impm, impt, landmarks );
 //		tgt_mvg( impm, impt, landmarks );
-		
+//		
 //		mvg_tgt( impm, impt, landmarks );
 //		mvg_mvg( impm, impt, landmarks );
 //		mvg_spc( impm, impt, landmarks );
-		
+//		
 //		lmk_tgt( impm, impt, landmarks );
 //		lmk_mvg( impm, impt, landmarks );
 //		lmk_spc( impm, impt, landmarks );
-		
+//		
 //		v_spc_spc( impm, impt, landmarks );
 //		spc_spc( impm, impt, landmarks );
 //		pspc_pspc( impm, impt, landmarks );
 //		pix_spc( impm, impt, landmarks );
-	
+//	
 //		tgt_lmpix( impm, impt, landmarks );
 //		tgt_lmphy( impm, impt, landmarks );
 	}
@@ -92,6 +92,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 	
 		ImagePlus a = alist.get( 0 );
@@ -123,6 +124,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -154,6 +156,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -185,6 +188,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -216,6 +220,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -247,6 +252,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -278,6 +284,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -310,6 +317,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -341,6 +349,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -372,6 +381,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -403,6 +413,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -434,7 +445,10 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
+
+		System.out.println( "alist size: " + alist.size());
 
 		ImagePlus a = alist.get( 0 );
 		a.setTitle( "VIRT-TARGET-TARGET" );
@@ -465,6 +479,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -496,6 +511,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -527,6 +543,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );
@@ -558,6 +575,7 @@ public class ExportTester
 			offsetSpec,
 			interp,
 			isVirtual,
+			true,
 			nThreads );
 
 		ImagePlus a = alist.get( 0 );

@@ -1041,22 +1041,31 @@ public class BigWarp< T >
 			if( writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 			{
 				final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
-				// export
-				ApplyBigwarpPlugin.runN5Export( data, sources, fieldOfViewOption,
-						outputIntervalList.get( 0 ), interp,
-						offsetSpec, res, unit, 
-						progressWriter, writeOpts, 
-						Executors.newFixedThreadPool( nThreads )  );
+				// export async
+				new Thread()
+				{
+					public void run()
+					{
+						progressWriter.setProgress( 0.01 );
+						ApplyBigwarpPlugin.runN5Export( data, sources, fieldOfViewOption,
+								outputIntervalList.get( 0 ), interp,
+								offsetSpec, res, unit, 
+								progressWriter, writeOpts, 
+								Executors.newFixedThreadPool( nThreads )  );
+
+						progressWriter.setProgress( 1.00 );
+					}
+				}.start();
 			}
 			else 
 			{
 				// export
+				final boolean show = ( writeOpts.pathOrN5Root == null  || writeOpts.pathOrN5Root.isEmpty() );
 				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
 						offsetSpec, res, isVirtual, nThreads, 
-						progressWriter, true );
+						progressWriter, show, false, writeOpts );
 			}
-
 		}
 	}
 
@@ -2848,7 +2857,6 @@ public class BigWarp< T >
 			boolean isMovingLocal = isMoving;
 			if ( e.isShiftDown() && e.isControlDown() )
 			{ 
-				System.out.println( "shift-control release");
 				isMovingLocal = !isMoving;
 			}
 			else if( e.isShiftDown())

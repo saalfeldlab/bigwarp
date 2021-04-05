@@ -24,7 +24,6 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
 
 import bdv.export.ProgressWriter;
-import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
@@ -39,17 +38,13 @@ import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.gui.GenericDialog;
 import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.Converters;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform;
@@ -61,11 +56,8 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
-import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
@@ -680,12 +672,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] offsetSpec,
 			final Interpolation interp,
 			final boolean isVirtual,
+			final boolean wait,
 			final int nThreads )
 	{
 		return apply( movingIp, targetIp, landmarks, fieldOfViewOption,
 				fieldOfViewPointFilter, resolutionOption, 
 				resolutionSpec, fovSpec, offsetSpec, 
-				interp, isVirtual, nThreads, null );
+				interp, isVirtual, nThreads, wait, null );
 	}
 
 	public static List<ImagePlus> apply(
@@ -701,12 +694,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final Interpolation interp,
 			final boolean isVirtual,
 			final int nThreads,
+			final boolean wait,
 			final WriteDestinationOptions writeOpts )
 	{
 		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
 		return apply( bwData, landmarks, fieldOfViewOption, fieldOfViewPointFilter,
 				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
-				interp, isVirtual, nThreads, writeOpts );
+				interp, isVirtual, nThreads, wait, writeOpts );
 	}
 
 	public static <T> List<ImagePlus> apply(
@@ -721,6 +715,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final Interpolation interp,
 			final boolean isVirtual,
 			final int nThreads,
+			final boolean wait,
 			final WriteDestinationOptions writeOpts )
 	{
 		int numChannels = bwData.movingSourceIndices.length;
@@ -741,7 +736,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			System.out.println( "transforming source " + movingSourceIndexList[ i ] );
 			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
 			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
 		}
@@ -761,7 +755,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, landmarks, fieldOfViewPointFilter );
 
 		double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
-		
+
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final String unit = ApplyBigwarpPlugin.getUnit( bwData, resolutionOption );
@@ -777,7 +771,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			return runExport( bwData, sourcesxfm, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
 					offset, res, isVirtual, nThreads, 
-					progressWriter, false );
+					progressWriter, false, wait, writeOpts );
 		}
 	}
 
@@ -793,7 +787,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads,
 			final ProgressWriter progressWriter,
-			final boolean show )
+			final boolean show,
+			final boolean wait,
+			final WriteDestinationOptions writeOpts )
 	{
 		ArrayList<ImagePlus> ipList = new ArrayList<>();
 
@@ -805,28 +801,22 @@ public class ApplyBigwarpPlugin implements PlugIn
 			// need to declare the exporter in the loop since the actual work
 			// is done asynchronously, and changing variables in the loop would mess it up
 			BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
+			exporter.setOutputList( ipList );
 			exporter.setRenderResolution( resolution );
 			exporter.setOffset( offset );
 			exporter.setVirtual( isVirtual );
 			exporter.setNumThreads( nThreads );
+
+			if( writeOpts!= null && writeOpts.pathOrN5Root != null )
+				exporter.setExportPath( writeOpts.pathOrN5Root );
 
 			exporter.setInterval( outputInterval );
 
 			if( matchedPtNames.size() > 0 )
 				exporter.setNameSuffix( matchedPtNames.get( i ));
 
-			ImagePlus ip = exporter.exportAsynch( true );
-
-			// TODO observed weird behavior in rgb images when doing this 
-			// namely that it changes the values (permanently) instead of the numeric image LUT-like behaviour
-			// dont transfer settings 
-			if( !exporter.isRGB() )
-				BigWarpExporter.updateBrightnessContrast( ip, data, data.movingSourceIndices );
-
-			ipList.add( ip );
-
-			if( ip != null && show )
-				ip.show();
+			// never wait
+			exporter.exportAsynch( wait, show );
 
 			i++;
 		}
@@ -920,8 +910,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 			{
 				e.printStackTrace();
 			}
+
+			progressWriter.setProgress( (i+1) / ((double)N) );
 		}
 
+		progressWriter.setProgress( 1.0 );
 	}
 
 	@Override
@@ -1048,14 +1041,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		else
 			interp = Interpolation.NLINEAR;
 
-		List<ImagePlus> warpedIpList = apply( movingIp, targetIp, ltm,
+		apply( movingIp, targetIp, ltm,
 				fovOption, fovPointFilter, resOption,
 				resolutions, fov, offset,
-				interp, isVirtual, nThreads, writeOpts );
-
-		if( warpedIpList != null && warpedIpList.size() > 0 )
-			for( ImagePlus warpedIp : warpedIpList )
-				warpedIp.show();
+				interp, isVirtual, nThreads, false, writeOpts );
 	}
 	
 	public static int[] parseBlockSize( final String blockSizeArg, final int nd )

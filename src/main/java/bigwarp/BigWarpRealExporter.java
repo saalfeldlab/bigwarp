@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import bdv.export.ProgressWriter;
+import bdv.tools.brightness.ConverterSetup;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -48,6 +50,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
@@ -55,19 +58,20 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final boolean needConversion,
 			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
 		this.baseType = baseType;
 	}
 
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
 			final ProgressWriter progress )
 	{
-		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
+		this( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
 	}
 
 	/**
