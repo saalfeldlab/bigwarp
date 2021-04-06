@@ -65,28 +65,31 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 	{
 		if ( IJ.versionLessThan( "1.40" ) ) return;
 
+		// don't need any open windows if we're using N5
         final int[] ids = WindowManager.getIDList();
-        if ( ids == null || ids.length < 1 )
-        {
-            IJ.showMessage( "You should have at least one image open." );
-            return;
-        }
 
         // Find any open images
-        final int noneIndex = ids.length;
-        final String[] titles = new String[ ids.length + 1 ];
+        final int N = ids == null ? 0 : ids.length;
 
-        for ( int i = 0; i < ids.length; ++i )
+        final String[] titles = new String[ N + 1 ];
+        for ( int i = 0; i < N; ++i )
         {
             titles[ i ] = ( WindowManager.getImage( ids[ i ] ) ).getTitle();
         }
-        titles[ ids.length ] = "<None>";
+        titles[ N ] = "<None>";
 
         // Build a dialog to choose the moving and fixed images
         final GenericDialogPlus gd = new GenericDialogPlus( "Big Warp Setup" );
 
         gd.addMessage( "Image Selection:" );
-        final String current = WindowManager.getCurrentImage().getTitle();
+
+		ImagePlus currimg = WindowManager.getCurrentImage();
+        String current = titles[ N ];
+		if ( currimg != null )
+		{
+			current = currimg.getTitle();
+		}
+
         gd.addChoice( "moving_image", titles, current );
         if( titles.length > 1 )
         	gd.addChoice( "target_image", titles, current.equals( titles[ 0 ] ) ? titles[ 1 ] : titles[ 0 ] );
@@ -109,8 +112,8 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 		final int mvgImgIdx = gd.getNextChoiceIndex();
 		final int tgtImgIdx = gd.getNextChoiceIndex();
-		movingIp = mvgImgIdx < noneIndex ? WindowManager.getImage( ids[ mvgImgIdx ]) : null;
-		targetIp = tgtImgIdx < noneIndex ? WindowManager.getImage( ids[ tgtImgIdx ]) : null;
+		movingIp = mvgImgIdx < N ? WindowManager.getImage( ids[ mvgImgIdx ]) : null;
+		targetIp = tgtImgIdx < N ? WindowManager.getImage( ids[ tgtImgIdx ]) : null;
 
 		final String mvgRoot = gd.getNextString();
 		final String mvgDataset = gd.getNextString();
@@ -131,7 +134,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		SpimData movingSpimData = null;
 		if ( !mvgRoot.isEmpty() )
 		{
-			movingSpimData = addToData( bigwarpdata, true, id, mvgRoot, mvgDataset );
+			movingSpimData = BigWarpInit.addToData( bigwarpdata, true, id, mvgRoot, mvgDataset );
 			id++;
 		}
 
@@ -142,7 +145,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 		if ( !tgtRoot.isEmpty() )
 		{
-			addToData( bigwarpdata, false, id, tgtRoot, tgtDataset );
+			BigWarpInit.addToData( bigwarpdata, false, id, tgtRoot, tgtDataset );
 			id++;
 		}
 		bigwarpdata.wrapUp();
@@ -174,163 +177,6 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			return;
 		}
 
-	}
-
-	private static SpimData addToData( final BigWarpData<?> bwdata, 
-			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
-	{
-		if( rootPath.endsWith( "xml" ))
-		{
-			SpimData spimData;
-			try
-			{
-				spimData = new XmlIoSpimData().load( rootPath );
-				BigWarpInit.add( bwdata, spimData, setupId, 0, isMoving );
-
-				if( isMoving )
-					return spimData;
-			}
-			catch ( SpimDataException e ) { e.printStackTrace(); }
-			return null;
-		}
-		else
-		{
-			BigWarpInit.add( bwdata, loadN5Source( rootPath, dataset ), setupId, 0, isMoving );
-			return null;
-		}
-	}
-
-	public static Source<?> loadN5Source( final String n5Root, final String n5Dataset )
-	{
-		final N5Reader n5;
-		try
-		{
-			n5 = new N5Factory().openReader( n5Root );
-		}
-		catch ( IOException e ) { 
-			e.printStackTrace();
-			return null;
-		}
-
-		N5TreeNode node = new N5TreeNode( n5Dataset, false );
-		try
-		{
-			N5DatasetDiscoverer.parseMetadataRecursive( n5, node, N5Importer.PARSERS, N5Importer.GROUP_PARSERS );
-		}
-		catch ( IOException e )
-		{}
-
-		N5Metadata meta = node.getMetadata();
-		if( meta instanceof MultiscaleMetadata )
-		{
-			return openAsSourceMulti( n5, (MultiscaleMetadata<?>)meta, true );
-		}
-		else
-		{
-			return openAsSource( n5, meta, true );
-		}
-	}
-
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static <T extends N5Metadata > Source<?> openAsSource( final N5Reader n5, final T meta, final boolean isVolatile )
-	{
-
-		final RandomAccessibleInterval imageRaw;
-		final RandomAccessibleInterval image;
-		try
-		{
-			if( isVolatile )
-				imageRaw = to3d( N5Utils.openVolatile( n5, meta.getPath() ));
-			else
-				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ));
-
-			if( meta instanceof N5ImagePlusMetadata 
-					&& ((N5ImagePlusMetadata)meta).getType() == ImagePlus.COLOR_RGB
-					&& Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
-			{
-				image = toColor( imageRaw );
-			}
-			else
-				image = imageRaw;
-
-			if( meta instanceof PhysicalMetadata )
-			{
-				return new RandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
-						((PhysicalMetadata)meta).physicalTransform3d(), meta.getPath() );
-			}
-			else
-				return new RandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
-						new AffineTransform3D(), meta.getPath() );
-
-		}
-		catch ( IOException e )
-		{
-			e.printStackTrace();
-		}
-
-		return null;
-	}
-
-	public static Source<?> openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
-	{
-		final String[] paths = multiMeta.getPaths();
-		final AffineTransform3D[] transforms = multiMeta.getTransforms();
-		final String unit = multiMeta.units()[0];
-
-		@SuppressWarnings( "rawtypes" )
-		final RandomAccessibleInterval[] images = new RandomAccessibleInterval[paths.length];
-		final double[][] mipmapScales = new double[ images.length ][ 3 ];
-		for ( int s = 0; s < images.length; ++s )
-		{
-			try
-			{
-				if( isVolatile )
-					images[ s ] = to3d( N5Utils.openVolatile( n5, paths[s] ));
-				else
-					images[ s ] = to3d( N5Utils.open( n5, paths[s] ));
-			}
-			catch ( IOException e )
-			{
-				e.printStackTrace();
-			}
-
-			mipmapScales[ s ][ 0 ] = transforms[ s ].get( 0, 0 );
-			mipmapScales[ s ][ 1 ] = transforms[ s ].get( 1, 1 );
-			mipmapScales[ s ][ 2 ] = transforms[ s ].get( 2, 2 );
-		}
-
-		@SuppressWarnings( { "unchecked", "rawtypes" } )
-		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( 
-				images, 
-				Util.getTypeFromInterval(images[0]),
-				mipmapScales,
-				new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[0]),
-				new AffineTransform3D(),
-				multiMeta.getPaths()[0] + "_group" );
-
-		return source;
-	}
-
-	private static RandomAccessibleInterval<?> to3d( RandomAccessibleInterval<?> img )
-	{
-		if( img.numDimensions() == 2 )
-			return Views.addDimension( img, 0, 0 );
-		else
-			return img;
-	}
-
-	private static RandomAccessibleInterval<ARGBType> toColor( RandomAccessibleInterval<UnsignedIntType> img )
-	{
-		return Converters.convertRAI( img,
-				new Converter<UnsignedIntType,ARGBType>()
-				{
-					@Override
-					public void convert( UnsignedIntType input, ARGBType output )
-					{
-						output.set( input.getInt() );
-					}
-				},
-				new ARGBType() );
 	}
 
 }

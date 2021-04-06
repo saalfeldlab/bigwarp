@@ -7,6 +7,7 @@ import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
 import ij.ImagePlus;
@@ -102,19 +103,14 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	public RandomAccessibleInterval< T > exportRai()
 	{
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
-		
-		buildTotalRenderTransform();
-		//System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
-		
-		int numChannels = movingSourceIndexList.length;
-		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
-				resolutionTransform.get( 0, 0 ),
-				resolutionTransform.get( 1, 1 ),
-				resolutionTransform.get( 2, 2 ));
 
+		buildTotalRenderTransform();
+
+		final int numChannels = movingSourceIndexList.length;
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			final int movingSourceIndex = movingSourceIndexList[ i ];
+
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations

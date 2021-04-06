@@ -1,14 +1,29 @@
 package bigwarp;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
+import org.janelia.saalfeldlab.n5.N5Reader;
+import org.janelia.saalfeldlab.n5.N5TreeNode;
+import org.janelia.saalfeldlab.n5.ij.N5Factory;
+import org.janelia.saalfeldlab.n5.ij.N5Importer;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5ImagePlusMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
+import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
+
 import bdv.BigDataViewer;
+import bdv.img.BwRandomAccessibleIntervalSource;
 import bdv.img.RenamableSource;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.transformation.TransformedSource;
+import bdv.util.RandomAccessibleIntervalMipmapSource;
+import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
@@ -16,18 +31,28 @@ import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
 import ij.ImagePlus;
+import mpicbg.spim.data.SpimData;
+import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.Angle;
 import mpicbg.spim.data.sequence.Channel;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converter;
+import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
+import net.imglib2.util.Util;
+import net.imglib2.view.Views;
 
 public class BigWarpInit
 {
@@ -314,6 +339,166 @@ public class BigWarpInit
 			idxList.add( i );
 
 		return bwdata;
+	}
+
+	public static SpimData addToData( final BigWarpData<?> bwdata, 
+			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
+	{
+		if( rootPath.endsWith( "xml" ))
+		{
+			SpimData spimData;
+			try
+			{
+				spimData = new XmlIoSpimData().load( rootPath );
+				BigWarpInit.add( bwdata, spimData, setupId, 0, isMoving );
+
+				if( isMoving )
+					return spimData;
+			}
+			catch ( SpimDataException e ) { e.printStackTrace(); }
+			return null;
+		}
+		else
+		{
+			BigWarpInit.add( bwdata, loadN5Source( rootPath, dataset ), setupId, 0, isMoving );
+			return null;
+		}
+	}
+
+	public static Source<?> loadN5Source( final String n5Root, final String n5Dataset )
+	{
+		final N5Reader n5;
+		try
+		{
+			n5 = new N5Factory().openReader( n5Root );
+		}
+		catch ( IOException e ) { 
+			e.printStackTrace();
+			return null;
+		}
+
+		N5TreeNode node = new N5TreeNode( n5Dataset, false );
+		try
+		{
+			N5DatasetDiscoverer.parseMetadataRecursive( n5, node, N5Importer.PARSERS, N5Importer.GROUP_PARSERS );
+		}
+		catch ( IOException e )
+		{}
+
+		N5Metadata meta = node.getMetadata();
+		if( meta instanceof MultiscaleMetadata )
+		{
+			return openAsSourceMulti( n5, (MultiscaleMetadata<?>)meta, true );
+		}
+		else
+		{
+			return openAsSource( n5, meta, true );
+		}
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static <T extends N5Metadata > Source<?> openAsSource( final N5Reader n5, final T meta, final boolean isVolatile )
+	{
+		final RandomAccessibleInterval imageRaw;
+		final RandomAccessibleInterval image;
+		try
+		{
+			if( isVolatile )
+				imageRaw = to3d( N5Utils.openVolatile( n5, meta.getPath() ));
+			else
+				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ));
+
+			if( meta instanceof N5ImagePlusMetadata 
+					&& ((N5ImagePlusMetadata)meta).getType() == ImagePlus.COLOR_RGB
+					&& Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
+			{
+				image = toColor( imageRaw );
+			}
+			else
+				image = imageRaw;
+
+			if( meta instanceof PhysicalMetadata )
+			{
+				final String unit = ((PhysicalMetadata)meta).units()[0];
+				final AffineTransform3D srcXfm = ((PhysicalMetadata)meta).physicalTransform3d();
+				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, 
+						new double[]{ srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) });
+
+				return new BwRandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
+						srcXfm, meta.getPath(), voxelDims );
+			}
+			else
+				return new BwRandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
+						new AffineTransform3D(), meta.getPath() );
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+
+		return null;
+	}
+
+	public static Source<?> openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
+	{
+		final String[] paths = multiMeta.getPaths();
+		final AffineTransform3D[] transforms = multiMeta.getTransforms();
+		final String unit = multiMeta.units()[0];
+
+		@SuppressWarnings( "rawtypes" )
+		final RandomAccessibleInterval[] images = new RandomAccessibleInterval[paths.length];
+		final double[][] mipmapScales = new double[ images.length ][ 3 ];
+		for ( int s = 0; s < images.length; ++s )
+		{
+			try
+			{
+				if( isVolatile )
+					images[ s ] = to3d( N5Utils.openVolatile( n5, paths[s] ));
+				else
+					images[ s ] = to3d( N5Utils.open( n5, paths[s] ));
+			}
+			catch ( IOException e )
+			{
+				e.printStackTrace();
+			}
+
+			mipmapScales[ s ][ 0 ] = transforms[ s ].get( 0, 0 );
+			mipmapScales[ s ][ 1 ] = transforms[ s ].get( 1, 1 );
+			mipmapScales[ s ][ 2 ] = transforms[ s ].get( 2, 2 );
+		}
+
+		@SuppressWarnings( { "unchecked", "rawtypes" } )
+		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( 
+				images, 
+				Util.getTypeFromInterval(images[0]),
+				mipmapScales,
+				new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[0]),
+				new AffineTransform3D(),
+				multiMeta.getPaths()[0] + "_group" );
+
+		return source;
+	}
+
+	private static RandomAccessibleInterval<?> to3d( RandomAccessibleInterval<?> img )
+	{
+		if( img.numDimensions() == 2 )
+			return Views.addDimension( img, 0, 0 );
+		else
+			return img;
+	}
+
+	private static RandomAccessibleInterval<ARGBType> toColor( RandomAccessibleInterval<UnsignedIntType> img )
+	{
+		return Converters.convertRAI( img,
+				new Converter<UnsignedIntType,ARGBType>()
+				{
+					@Override
+					public void convert( UnsignedIntType input, ARGBType output )
+					{
+						output.set( input.getInt() );
+					}
+				},
+				new ARGBType() );
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
