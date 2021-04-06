@@ -160,7 +160,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		}
 		else
 		{
-			System.out.println( "render with " + nThreads + " threads.");
 			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( baseType );
 
 			if ( outputInterval.numDimensions() == 3 )

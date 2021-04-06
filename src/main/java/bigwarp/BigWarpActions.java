@@ -487,7 +487,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.transformToString();
+			bw.getBwTransform().transformToString();
 		}
 	}
 	public static class DebugAction extends AbstractNamedAction
@@ -1075,7 +1075,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.printAffine();
+			bw.getBwTransform().printAffine();
 		}
 	}
 

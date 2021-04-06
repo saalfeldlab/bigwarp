@@ -780,11 +780,13 @@ public abstract class BigWarpExporter <T>
 		public void run()
 		{
 			try {
-				long startTime = System.currentTimeMillis();
+				//long startTime = System.currentTimeMillis();
 				exporter.result = exporter.export();
-				long endTime = System.currentTimeMillis();
+				//long endTime = System.currentTimeMillis();
+				// System.out.println("export took " + (endTime - startTime) + "ms");
 
-				System.out.println("export took " + (endTime - startTime) + "ms");
+				if( show )
+					exporter.result.show();
 
 				if( exporter.outputList != null )
 					exporter.outputList.add( exporter.result );
@@ -794,10 +796,9 @@ public abstract class BigWarpExporter <T>
 					if( !exporter.isRGB() )
 						BigWarpExporter.updateBrightnessContrast( exporter.result, exporter.convSetups, exporter.movingSourceIndexList );
 
-					exporter.result.show();
 				}
 
-				if( exporter.exportPath != null )
+				if( exporter.exportPath != null && !exporter.exportPath.isEmpty())
 				{
 					try{
 						IJ.save( exporter.result, exporter.exportPath );

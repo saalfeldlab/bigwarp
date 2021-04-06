@@ -129,7 +129,6 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		}
 		else
 		{
-			System.out.println( "render with " + nThreads + " threads.");
 			final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >( new ARGBType() );
 
 			if ( outputInterval.numDimensions() == 3 )

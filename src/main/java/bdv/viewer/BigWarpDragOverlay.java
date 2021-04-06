@@ -135,11 +135,11 @@ public class BigWarpDragOverlay
 				BigWarpDragOverlay.this.movingPoint.localize( movingPtArray );
 
 				// add undoable point edit - moving point
-				bw.getLandmarkPanel().getTableModel().pointEdit( -1, movingPtArray, true, true, true, true, bw.getTransformation() );
+				bw.getLandmarkPanel().getTableModel().pointEdit( -1, movingPtArray, true, true, true, true, bw.getBwTransform().getTransformation() );
 				index = bw.getLandmarkPanel().getTableModel().getRowCount() - 1;
 				
 				// add point edit - fixed point, at the same place as the moving point but not undoable
-				bw.getLandmarkPanel().getTableModel().pointEdit( index, movingPtArray, false, false, false, false, bw.getTransformation() );
+				bw.getLandmarkPanel().getTableModel().pointEdit( index, movingPtArray, false, false, false, false, bw.getBwTransform().getTransformation() );
 
 				inProgress  = true;
 				completedOK = false;
@@ -163,7 +163,7 @@ public class BigWarpDragOverlay
 				// make an undo-able action for adding the fixed point
 				thisViewer.getGlobalMouseCoordinates( BigWarpDragOverlay.this.targetPoint );
 				targetPoint.localize( targetPtArray );
-				bw.getLandmarkPanel().getTableModel().pointEdit( index, targetPtArray, false, false, false, true, bw.getTransformation() );
+				bw.getLandmarkPanel().getTableModel().pointEdit( index, targetPtArray, false, false, false, true, bw.getBwTransform().getTransformation() );
 
 				if ( bw.isUpdateWarpOnChange() )
 					bw.restimateTransformation();

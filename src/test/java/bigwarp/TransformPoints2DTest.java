@@ -62,7 +62,7 @@ public class TransformPoints2DTest {
         pt3D.setPosition(yTest, 1);
         pt3D.setPosition(0, 2);
 
-        InvertibleRealTransform bwTransform = bigWarp.getTransformation();
+        InvertibleRealTransform bwTransform = bigWarp.getBwTransform().getTransformation();
         RealPoint fwdTransformedPt3D = new RealPoint(3);
         bwTransform.apply(pt3D, fwdTransformedPt3D);
 
@@ -80,7 +80,7 @@ public class TransformPoints2DTest {
 
         // But maybe the inputs need to be 3D... ?... let's try 3D input with Z = 0
         RealPoint bwdTransformedPt3D = new RealPoint(3);
-        bigWarp.getTransformation()
+        bigWarp.getBwTransform().getTransformation()
                 .inverse()
                 .apply(pt3D, bwdTransformedPt3D);
 
@@ -94,7 +94,8 @@ public class TransformPoints2DTest {
  
         // This works
 		RealPoint bwdTransformedPt2D = new RealPoint( 2 );
-		bigWarp.unwrap2d( bigWarp.getTransformation() )
+//		bigWarp.unwrap2d( bigWarp.getTransformation() )
+		bigWarp.getBwTransform().getTransformation()
 				.inverse()
 				.apply(pt2D, bwdTransformedPt2D); // uncomment to see the exception
 		System.out.println("Bwd unwrapped 2D \t x:"+bwdTransformedPt2D.getDoublePosition(0)+" \t y:"+bwdTransformedPt2D.getDoublePosition(1));

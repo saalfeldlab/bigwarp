@@ -24,6 +24,7 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
 
 import bdv.export.ProgressWriter;
+import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
@@ -35,6 +36,7 @@ import bigwarp.BigWarpExporter;
 import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
 import fiji.util.gui.GenericDialogPlus;
+import bigwarp.transforms.BigWarpTransform;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -53,7 +55,6 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.NumericType;
@@ -98,8 +99,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads )
 	{
-		// TODO finish this
-
 		// there's no target image
 		if( targetIp == movingIp )
 		{
@@ -664,6 +663,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
+			final String tranformTypeOption,
 			final String fieldOfViewOption,
 			final String fieldOfViewPointFilter,
 			final String resolutionOption,
@@ -675,7 +675,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final int nThreads )
 	{
-		return apply( movingIp, targetIp, landmarks, fieldOfViewOption,
+		return apply( movingIp, targetIp, landmarks, tranformTypeOption, fieldOfViewOption,
 				fieldOfViewPointFilter, resolutionOption, 
 				resolutionSpec, fovSpec, offsetSpec, 
 				interp, isVirtual, nThreads, wait, null );
@@ -685,6 +685,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
 			final LandmarkTableModel landmarks,
+			final String tranformTypeOption,
 			final String fieldOfViewOption,
 			final String fieldOfViewPointFilter,
 			final String resolutionOption,
@@ -698,7 +699,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final WriteDestinationOptions writeOpts )
 	{
 		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
-		return apply( bwData, landmarks, fieldOfViewOption, fieldOfViewPointFilter,
+		return apply( bwData, landmarks, tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter,
 				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
 				interp, isVirtual, nThreads, wait, writeOpts );
 	}
@@ -706,6 +707,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static <T> List<ImagePlus> apply(
 			final BigWarpData<T> bwData,
 			final LandmarkTableModel landmarks,
+			final String tranformTypeOption,
 			final String fieldOfViewOption,
 			final String fieldOfViewPointFilter,
 			final String resolutionOption,
@@ -725,15 +727,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				landmarks.getNumdims(),
 				bwData );
 
-		ThinPlateR2LogRSplineKernelTransform xfm = landmarks.getTransform();
-		InvertibleRealTransform invXfm = new WrappedIterativeInvertibleRealTransform<>( new ThinplateSplineTransform( xfm ) );
-
-		boolean is2d = bwData.sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 ).dimension( 2 ) < 2;
-		if( is2d )
-		{
-			invXfm = new Wrapped2DTransformAs3D( invXfm );
-		}
-
+		InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
@@ -744,8 +738,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
-		double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
-//		String unit = getUnit( bwData, resolutionOption );
+		final double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
 
 		List<Interval> outputIntervalList = getPixelInterval( bwData, landmarks, fieldOfViewOption, 
 				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
@@ -768,10 +761,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else
 		{
+			final boolean show = (writeOpts.pathOrN5Root == null || writeOpts.pathOrN5Root.isEmpty());
 			return runExport( bwData, sourcesxfm, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
 					offset, res, isVirtual, nThreads, 
-					progressWriter, false, wait, writeOpts );
+					progressWriter, show, wait, writeOpts );
 		}
 	}
 
@@ -930,6 +924,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addFileField( "moving_image_file", "" );
 		gd.addFileField( "target_space_file", "" );
 
+		gd.addChoice( "Transform type", 
+				new String[] {
+					TransformTypeSelectDialog.TPS,
+					TransformTypeSelectDialog.AFFINE,
+					TransformTypeSelectDialog.SIMILARITY,
+					TransformTypeSelectDialog.ROTATION,
+					TransformTypeSelectDialog.TRANSLATION },
+				TransformTypeSelectDialog.TPS);
+
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution", 
 				new String[]{ TARGET, MOVING, SPECIFIED },
@@ -981,21 +984,22 @@ public class ApplyBigwarpPlugin implements PlugIn
 		String landmarksPath = gd.getNextString();
 		String movingPath = gd.getNextString();
 		String targetPath = gd.getNextString();
-		
+
+		String transformTypeOption = gd.getNextChoice();
 		String resOption = gd.getNextChoice();
 		String fovOption = gd.getNextChoice();
 		String fovPointFilter = gd.getNextString();
-		
+
 		double[] resolutions = new double[ 3 ];
 		resolutions[ 0 ] = gd.getNextNumber();
 		resolutions[ 1 ] = gd.getNextNumber();
 		resolutions[ 2 ] = gd.getNextNumber();
-		
+
 		double[] offset = new double[ 3 ];
 		offset[ 0 ] = gd.getNextNumber();
 		offset[ 1 ] = gd.getNextNumber();
 		offset[ 2 ] = gd.getNextNumber();
-		
+
 		double[] fov = new double[ 3 ];
 		fov[ 0 ] = gd.getNextNumber();
 		fov[ 1 ] = gd.getNextNumber();
@@ -1041,7 +1045,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		else
 			interp = Interpolation.NLINEAR;
 
-		apply( movingIp, targetIp, ltm,
+		List<ImagePlus> warpedIpList = apply( movingIp, targetIp, ltm, transformTypeOption,
 				fovOption, fovPointFilter, resOption,
 				resolutions, fov, offset,
 				interp, isVirtual, nThreads, false, writeOpts );

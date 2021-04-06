@@ -269,8 +269,9 @@ public class ImagePlusLoader implements Loader
 		final SequenceDescriptionMinimal seq = new SequenceDescriptionMinimal( new TimePoints( timepoints ), setups, imgLoader, null );
 
 		SpimDataMinimal spimData = new SpimDataMinimal( basePath, seq, new ViewRegistrations( registrations ) );
-		if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
-			System.err.println( "WARNING:\nOpening <SpimData> dataset that is not suited for interactive browsing.\nConsider resaving as HDF5 for better performance." );
+		WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData );
+//		if ( WrapBasicImgLoader.wrapImgLoaderIfNecessary( spimData ) )
+//			System.err.println( "WARNING:\nOpening <SpimData> dataset that is not suited for interactive browsing.\nConsider resaving as HDF5 for better performance." );
 
 		return spimData;
 	}
