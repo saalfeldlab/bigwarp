@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import bdv.export.ProgressWriter;
+import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import ij.IJ;
@@ -18,9 +19,6 @@ import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.Converters;
-import net.imglib2.converter.RealFloatConverter;
 import net.imglib2.exception.ImgLibException;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImg;
@@ -29,16 +27,9 @@ import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.real.DoubleType;
-import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
-import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
 public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > extends BigWarpExporter<T>
@@ -48,6 +39,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
@@ -55,19 +47,20 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			final boolean needConversion,
 			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
 		this.baseType = baseType;
 	}
 
 	public BigWarpRealExporter(
 			final List< SourceAndConverter< T >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
 			final ProgressWriter progress )
 	{
-		this( sources, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
+		this( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
 	}
 
 	/**
@@ -89,28 +82,23 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 			if ( !baseType.getClass().equals( type.getClass() ) )
 				return false;
-
 		}
 
 		return true;
 	}
 	
+	@Override
 	public RandomAccessibleInterval< T > exportRai()
 	{
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
-		
-		buildTotalRenderTransform();
-		//System.out.println( "pixelRenderToPhysical : " + pixelRenderToPhysical );
-		
-		int numChannels = movingSourceIndexList.length;
-		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
-				resolutionTransform.get( 0, 0 ),
-				resolutionTransform.get( 1, 1 ),
-				resolutionTransform.get( 2, 2 ));
 
+		buildTotalRenderTransform();
+
+		final int numChannels = movingSourceIndexList.length;
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
+			final int movingSourceIndex = movingSourceIndexList[ i ];
+
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
@@ -156,7 +144,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		}
 		else
 		{
-			System.out.println( "render with " + nThreads + " threads.");
 			final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( baseType );
 
 			if ( outputInterval.numDimensions() == 3 )
@@ -278,7 +265,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		double k = 0;
 		final long N = dimensions[ 0 ] * dimensions[ 1 ] * dimensions[ 2 ];
 
-		final net.imglib2.Cursor< T > c = target.cursor();
+		final Cursor< T > c = target.cursor();
 		final RealRandomAccess< T > ra = rai.realRandomAccess();
 		while ( c.hasNext() )
 		{

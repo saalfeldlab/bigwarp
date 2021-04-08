@@ -7,11 +7,17 @@ import java.awt.Container;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
 import java.util.Enumeration;
 
 import javax.swing.AbstractButton;
@@ -22,13 +28,16 @@ import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JDialog;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
+import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
@@ -39,6 +48,7 @@ import bdv.tools.brightness.SliderPanelDouble;
 import bdv.util.BoundedValueDouble;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
+import ij.IJ;
 
 public class WarpVisFrame extends JDialog 
 {
@@ -75,7 +85,14 @@ public class WarpVisFrame extends JDialog
 	protected Component	 smallSpace;
 	protected JLabel gridSpacingLabel;
 	protected JLabel gridWidthLabel;
-	
+
+
+	// autosave
+	final SpinnerNumberModel savePeriodModel;
+	final JSpinner autoSavePeriodSpinner;
+	final JCheckBox doAutoSaveBox;
+	final JTextField autoSaveFolderText;
+
 	public static final int minGridSpacing = 5;
 	public static final int maxGridSpacing = 400;
 	public static final int defaultGridSpacing = 100;
@@ -84,7 +101,7 @@ public class WarpVisFrame extends JDialog
 	public static final int maxGridWidth = 50;
 	public static final int defaultGridWidth = 5;
 	
-	public WarpVisFrame( final Frame owner, final BigWarp bw )
+	public WarpVisFrame( final Frame owner, final BigWarp<?> bw )
 	{
 		super( owner, "big warp options", false );
 		this.bw = bw;
@@ -96,8 +113,7 @@ public class WarpVisFrame extends JDialog
 		
 		JPanel landmarkPointOptionsPanel = new JPanel();
 		landmarkPointOptionsPanel.setLayout( new BoxLayout( landmarkPointOptionsPanel, BoxLayout.X_AXIS ));
-		
-		
+
 		landmarkColorButton = new JButton( new ColorIcon( settings.getSpotColor() ) );
 		colorChooser = new JColorChooser();
 		
@@ -196,13 +212,132 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( smallSpace );
 		typeOptionPanel.add( gridWidthLabel );
 		typeOptionPanel.add( gridWidthSlider );
-		
 		typeOptionPanel.add( noOptionsLabel );
 
+		// autoSave Options panel
+		final JPanel autoSaveOptionsPanel = new JPanel();
+		autoSaveOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"Auto-save options" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+		autoSaveOptionsPanel.setLayout( new GridBagLayout() );
 
-		// TODO inverse opts panel
-		JPanel inverseOptionsPanel = new JPanel();
-		inverseOptionsPanel.setLayout(  new BorderLayout( 10, 10 ));
+		final JLabel autosaveLabel = new JLabel("Auto-save landmarks");
+		doAutoSaveBox = new JCheckBox();
+
+		final JLabel autoSavePeriodLabel = new JLabel("save frequency (minutes)");
+		autoSavePeriodSpinner = new JSpinner();
+		savePeriodModel = new SpinnerNumberModel( 5, 1, 5000, 1 );
+		autoSavePeriodSpinner.setModel( savePeriodModel );
+		autoSavePeriodSpinner.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				if( doAutoSaveBox.isSelected() )
+				{
+					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
+					BigWarpAutoSaver autoSaver = bw.getAutoSaver();
+					if ( autoSaver != null )
+						autoSaver.stop();
+
+					new BigWarpAutoSaver( bw, periodMillis );
+				}
+			}
+		} );
+
+		doAutoSaveBox.addItemListener( new ItemListener()
+		{
+			@Override
+			public void itemStateChanged( ItemEvent e )
+			{
+				bw.stopAutosave();
+
+				if ( doAutoSaveBox.isSelected() )
+				{
+					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
+					new BigWarpAutoSaver( bw, periodMillis );
+				}
+			}
+		});
+
+		final JLabel destDirLabel = new JLabel("Directory");
+		final File startingFolder = bw.getBigwarpSettingsFolder();
+		autoSaveFolderText = new JTextField();
+		autoSaveFolderText.setText( startingFolder.getAbsolutePath() );
+
+		final JButton browseBtn = new JButton( "Browse" );
+		browseBtn.addActionListener( e -> {
+
+			final JFileChooser fileChooser = new JFileChooser();
+			fileChooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
+			fileChooser.setCurrentDirectory( startingFolder );
+
+			final int ret = fileChooser.showOpenDialog(content); 
+			if (ret == JFileChooser.APPROVE_OPTION)
+			{
+				final File folder = fileChooser.getSelectedFile();
+				autoSaveFolderText.setText( folder.getAbsolutePath() );
+				bw.setAutosaveFolder( folder );
+			}
+		});
+
+		final GridBagConstraints gbcAutoSave = new GridBagConstraints();
+		gbcAutoSave.gridx = 0;
+		gbcAutoSave.gridy = 0;
+		gbcAutoSave.gridwidth = 2;
+		gbcAutoSave.gridheight = 1;
+		gbcAutoSave.weightx = 1.0;
+		gbcAutoSave.weighty = 0.0;
+		gbcAutoSave.anchor = GridBagConstraints.EAST;
+		gbcAutoSave.fill = GridBagConstraints.HORIZONTAL;
+		gbcAutoSave.insets = new Insets( 5, 5, 5, 5 );
+
+		autoSaveOptionsPanel.add( autosaveLabel, gbcAutoSave ); 
+
+		gbcAutoSave.gridx = 2;
+		gbcAutoSave.gridwidth = 1;
+		gbcAutoSave.weightx = 0.0;
+		gbcAutoSave.anchor = GridBagConstraints.WEST;
+		autoSaveOptionsPanel.add( doAutoSaveBox, gbcAutoSave );
+
+		gbcAutoSave.weightx = 1.0;
+		gbcAutoSave.gridx = 0;
+		gbcAutoSave.gridwidth = 2;
+		gbcAutoSave.gridy = 1;
+		gbcAutoSave.anchor = GridBagConstraints.EAST;
+		autoSaveOptionsPanel.add( autoSavePeriodLabel, gbcAutoSave );
+
+		gbcAutoSave.weightx = 0.0;
+		gbcAutoSave.gridx = 2;
+		gbcAutoSave.anchor = GridBagConstraints.WEST;
+		autoSaveOptionsPanel.add( autoSavePeriodSpinner, gbcAutoSave );
+
+		gbcAutoSave.gridy = 2;
+		gbcAutoSave.gridx = 0;
+		gbcAutoSave.gridwidth = 1;
+		gbcAutoSave.weightx = 0.0;
+		gbcAutoSave.anchor = GridBagConstraints.EAST;
+		autoSaveOptionsPanel.add( destDirLabel, gbcAutoSave );
+
+		gbcAutoSave.gridy = 2;
+		gbcAutoSave.gridx = 1;
+		gbcAutoSave.weightx = 1.0;
+		gbcAutoSave.anchor = GridBagConstraints.EAST;
+		autoSaveOptionsPanel.add( autoSaveFolderText, gbcAutoSave );
+
+		gbcAutoSave.gridx = 2;
+		gbcAutoSave.weightx = 0.0;
+		gbcAutoSave.anchor = GridBagConstraints.WEST;
+		autoSaveOptionsPanel.add( browseBtn, gbcAutoSave );
+
+
+
+		final JPanel inverseOptionsPanel = new JPanel();
+		inverseOptionsPanel.setLayout( new BorderLayout( 10, 10 ));
 
 		inverseOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
 				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
@@ -214,7 +349,7 @@ public class WarpVisFrame extends JDialog
 
 		final JPanel tolerancePanel = new JPanel();
 		final JSpinner toleranceSpinner = new JSpinner();
-		SpinnerNumberModel tolmodel = new SpinnerNumberModel( 0.5, 0.001, 200.0, 0.1 );
+		final SpinnerNumberModel tolmodel = new SpinnerNumberModel( 0.5, 0.001, 200.0, 0.1 );
 		toleranceSpinner.setModel( tolmodel );
 		toleranceSpinner.addChangeListener( new ChangeListener()
 		{
@@ -229,7 +364,7 @@ public class WarpVisFrame extends JDialog
 
 		final JPanel maxIterPanel = new JPanel();
 		final JSpinner maxIterSpinner = new JSpinner();
-		SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
+		final SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
 		maxIterSpinner.setModel( itermodel );
 		maxIterSpinner.addChangeListener( new ChangeListener()
 		{
@@ -245,18 +380,45 @@ public class WarpVisFrame extends JDialog
 		inverseOptionsPanel.add( tolerancePanel, BorderLayout.NORTH );
 		inverseOptionsPanel.add( maxIterPanel, BorderLayout.SOUTH );
 
+		content.setLayout( new GridBagLayout() );
 
-		content.add( landmarkPointOptionsPanel, BorderLayout.NORTH );
-		content.add( visTypePanel, BorderLayout.WEST );
-		content.add( typeOptionPanel, BorderLayout.EAST );
-		content.add( inverseOptionsPanel, BorderLayout.SOUTH );
+		final GridBagConstraints gbcContent = new GridBagConstraints();
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 0;
+		gbcContent.gridwidth = 3;
+		gbcContent.fill = GridBagConstraints.HORIZONTAL;
+		gbcContent.anchor = GridBagConstraints.CENTER;
+		gbcContent.weightx = 1.0;
+		gbcContent.weighty = 1.0;
+		gbcContent.insets = new Insets( 1, 1, 1, 1 );
+		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 1;
+		gbcContent.gridwidth = 1;
+		gbcContent.anchor = GridBagConstraints.WEST;
+		content.add( visTypePanel, gbcContent );
+
+		gbcContent.gridy = 1;
+		gbcContent.gridx = 1;
+		gbcContent.gridwidth = 2;
+		gbcContent.anchor = GridBagConstraints.EAST;
+		content.add( typeOptionPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 2;
+		gbcContent.gridwidth = 3;
+		content.add( inverseOptionsPanel, gbcContent );
+
+		gbcContent.gridy = 3;
+		content.add( autoSaveOptionsPanel , gbcContent );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
 		
 		addListeners();
 		updateOptions();
 	}
-	
+
 	public void setActions()
 	{
 		final ActionMap actionMap = bw.getViewerFrameP().getKeybindings().getConcatenatedActionMap();

@@ -63,11 +63,17 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	protected int nextRowP = 0;
 	protected int nextRowQ = 0;
-	
+
+	protected int numActive = 0;
+
 	protected ArrayList<String> 	names;
 	protected ArrayList<Boolean>	activeList;
 	protected ArrayList<Double[]>	movingPts;
 	protected ArrayList<Double[]>	targetPts;
+
+	// this list contains as many elemnts as the table, and
+	// contains a unique integer >= 0 if the row is active, or -1 otherwise 
+	protected ArrayList<Integer> tableIndexToActiveIndex;
 
 	protected boolean pointUpdatePending = false; //
 	protected boolean pointUpdatePendingMoving = false; //
@@ -108,6 +114,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	protected BigWarpMessageAnimator message;
 
+	protected boolean modifiedSinceLastSave;
+
 	final static String[] columnNames3d = new String[]
 			{
 			"Name", "Active",
@@ -134,8 +142,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		Arrays.fill( PENDING_PT, Double.POSITIVE_INFINITY );
 		lastPoint = PENDING_PT;
 		
-		names = new ArrayList<String>();
-		activeList = new ArrayList<Boolean>();
+		names = new ArrayList<>();
+		activeList = new ArrayList<>();
+		tableIndexToActiveIndex = new ArrayList<>();
 		
 		movingPts = new ArrayList<Double[]>();
 		targetPts = new ArrayList<Double[]>();
@@ -247,7 +256,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			}
 		});
 	}
-	
+
+	public boolean isModifiedSinceSave()
+	{
+		return modifiedSinceLastSave;
+	}
+
 	protected void importTransformation( File ffwd, File finv ) throws IOException
 	{
 		byte[] data = FileUtils.readFileToByteArray( ffwd );
@@ -290,6 +304,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			pts.get( i )[ d ] = pointToOverride[ d ];
 		
 		activeList.set( i, true );
+		buildTableToActiveIndex();
 		pointUpdatePending = false;
 		
 		fireTableRowsUpdated( i, i );
@@ -309,13 +324,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	public int getActiveRowCount()
 	{
-		//TODO consider keeping track of this actively instead of recomputing
-		int N = 0;
-		for( Boolean b : activeList )
-			if( b ) 
-				N++;
+		return numActive;
 
-		return N;
+//		//TODO consider keeping track of this actively instead of recomputing
+//		int N = 0;
+//		for( Boolean b : activeList )
+//			if( b ) 
+//				N++;
+//
+//		return N;
 	}
 
 	@Override 
@@ -355,12 +372,39 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			return;
 		}
 
-		activeList.set( row, isActive );
-
 		if( activeList.get( row ) != isActive )
+		{
 			fireTableCellUpdated( row, ACTIVECOLUMN );
+			modifiedSinceLastSave = true;
+		}
+
+		activeList.set( row, isActive );
+		buildTableToActiveIndex();
 	}
-	
+
+	private void buildTableToActiveIndex()
+	{
+		tableIndexToActiveIndex.clear();
+
+		int N = 0;
+		int j = 0;
+		for( int i = 0; i < getRowCount(); i++ )
+		{
+			if( isActive( i ))
+			{
+//				tableIndexToActiveIndex.set( i, j++ );
+				tableIndexToActiveIndex.add( j++ );
+				N++;
+			}
+		}
+		numActive = N;
+	}
+
+	public int getActiveIndex( int tableIndex )
+	{
+		return tableIndexToActiveIndex.get( tableIndex );
+	}
+
 	public Class<?> getColumnClass( int col ){
 		if( col == NAMECOLUMN ){
 			return String.class;
@@ -422,6 +466,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		nextRowQ = numRows;
 
 		fireTableRowsDeleted( i, i );
+		modifiedSinceLastSave = true;
+
+		buildTableToActiveIndex();
 	}
 
 	/**
@@ -590,6 +637,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	protected void firePointUpdated( int row, boolean isMoving )
 	{
+		modifiedSinceLastSave = true;
 		for( int d = 0; d < ndims; d++ )
 			fireTableCellUpdated( row, 2 + d );
 	}
@@ -610,10 +658,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		warpedPoints.add( index, new Double[ ndims ] );
 		doesPointHaveAndNeedWarp.add( index, false );
 		movingDisplayPointUnreliable.add( index, false );
+		tableIndexToActiveIndex.add( -1 );
 		
 		fireTableRowsInserted( index, index );
 		
 		numRows++;
+		modifiedSinceLastSave = true;
 	}
 	
 	public void clearPt( int row, boolean isMoving )
@@ -963,6 +1013,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		if ( changed )
 		{
 			activeList.set( index, activate );
+			buildTableToActiveIndex();
 			fireTableCellUpdated( index, ACTIVECOLUMN );
 		}
 	}
@@ -1057,12 +1108,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 		int ndims = 3;
 		int expectedRowLength = 8;
-		int numRowsTmp = 0;
-		
+
+		int i = 0;
 		for( String[] row : rows )
 		{
 			// detect a file with 2d landmarks
-			if( numRowsTmp == 0 && // only check for the first row
+			if( i == 0 && // only check for the first row
 					row.length == 6 )
 			{
 				ndims = 2;
@@ -1100,14 +1151,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			warpedPoints.add( new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( false );
 			movingDisplayPointUnreliable.add( false );
-			numRowsTmp++;
 			fireTableRowsInserted( numRows, numRows );
+			i++;
 		}
 
 		this.ndims = ndims;
-		numRows = numRowsTmp;
+		numRows = i;
 		updateNextRows( 0 );
 		initTransformation();
+		buildTableToActiveIndex();
 	}
 
 	public int numActive()
@@ -1119,6 +1171,24 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				numActive++;
 		}
 		return numActive;
+	}
+
+	public void copyLandmarks( int tableIndex, double[][] movingLandmarks, double[][] targetLandmarks )
+	{
+		if( numActive != movingLandmarks[0].length )
+		{
+			System.out.println( "copy landmarks INCONSISTENCY");
+		}
+
+		if ( activeList.get( tableIndex ) )
+		{
+			int activeIndex = getActiveIndex( tableIndex );
+			for ( int d = 0; d < ndims; d++ )
+			{
+				movingLandmarks[ d ][ activeIndex ] = movingPts.get( tableIndex )[ d ];
+				targetLandmarks[ d ][ activeIndex ] = targetPts.get( tableIndex )[ d ];
+			}
+		}
 	}
 
 	public void copyLandmarks( double[][] movingLandmarks, double[][] targetLandmarks )
@@ -1185,7 +1255,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 		csvWriter.writeAll( rows );
 		csvWriter.close();
-		
+
+		modifiedSinceLastSave = false;
 	}
 	
 	public static String print( Double[] d )

@@ -293,7 +293,7 @@ public class BigWarpBatchTransformFOV
 		exporter.setInterp( Interpolation.valueOf( interpType ));
 		exporter.showResult( false );
 
-		exporter.exportThread = new ExportThread( exporter );
+		exporter.exportThread = new ExportThread( exporter, true );
 		exporter.exportThread.run();
 		final ImagePlus ipout = exporter.getResult();
 

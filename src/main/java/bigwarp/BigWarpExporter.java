@@ -11,23 +11,26 @@ import java.util.concurrent.RejectedExecutionException;
 
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
+import org.janelia.saalfeldlab.n5.metadata.N5MetadataWriter;
 
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.img.WarpedSource;
 import bdv.tools.brightness.ConverterSetup;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
-import bigwarp.BigWarp.WrappedCoordinateTransform;
+import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
-import mpicbg.models.IllDefinedDataPointsException;
-import mpicbg.models.InvertibleCoordinateTransform;
 import mpicbg.models.Model;
-import mpicbg.models.NotEnoughDataPointsException;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -36,11 +39,16 @@ import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealInterval;
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.iterator.IntervalIterator;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.RealViews;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
@@ -52,6 +60,10 @@ import net.imglib2.view.Views;
 public abstract class BigWarpExporter <T>
 {
 	final protected List< SourceAndConverter< T >> sources;
+
+	private List< ConverterSetup > convSetups;
+
+	private List< ImagePlus > outputList;
 
 	final protected int[] movingSourceIndexList;
 
@@ -75,7 +87,7 @@ public abstract class BigWarpExporter <T>
 
 	protected String nameSuffix = "";
 
-	protected String unit = "um";
+	protected String unit = "pixel";
 
 	protected ProgressWriter progress;
 
@@ -91,14 +103,18 @@ public abstract class BigWarpExporter <T>
 
 	protected static Logger logger = LogManager.getLogger( BigWarpExporter.class.getName() );
 
+	private String exportPath;
+
 	public BigWarpExporter(
 			final List< SourceAndConverter< T >> sourcesIn,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
 		this.sources = new ArrayList<SourceAndConverter<T>>();
+		this.convSetups = convSetups;
 		for( SourceAndConverter<T> sac : sourcesIn )
 		{
 			Source<T> srcCopy = null;
@@ -135,7 +151,13 @@ public abstract class BigWarpExporter <T>
 		pixelRenderToPhysical = new AffineTransform3D();
 		resolutionTransform = new AffineTransform3D();
 		offsetTransform = new AffineTransform3D();
+
+		try {
+			unit = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+		} catch( Exception e ) {}
 	}
+
+	public abstract RandomAccessibleInterval<?> exportRai();
 
 	public abstract ImagePlus export();
 
@@ -144,6 +166,16 @@ public abstract class BigWarpExporter <T>
 	public void showResult( final boolean showResult )
 	{
 		this.showResult = showResult;
+	}
+
+	public void setExportPath( final String exportPath )
+	{
+		this.exportPath = exportPath;
+	}
+
+	public void setOutputList( final List<ImagePlus> outputList )
+	{
+		this.outputList = outputList;
 	}
 
 	public void setUnit( final String unit )
@@ -208,6 +240,36 @@ public abstract class BigWarpExporter <T>
 	public void setInterval( final Interval outputInterval )
 	{
 		this.outputInterval = outputInterval;
+	}
+
+	public <T> RandomAccessibleInterval<T> exportSource( SourceAndConverter<T> src )
+	{
+		final RealRandomAccessible< T > raiRaw = src.getSpimSource().getInterpolatedSource( 0, 0, interp );
+
+		// apply the transformations
+		final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
+				raiRaw, pixelRenderToPhysical.inverse() );
+
+		return Views.interval( Views.raster( rai ), outputInterval );	
+	}
+
+	public static void updateBrightnessContrast( 
+			final ImagePlus imp,
+			final List<ConverterSetup> convSetups,
+			final int[] indexList )
+	{
+		assert( imp.getNChannels() == indexList.length );
+
+		for( int i = 0; i < indexList.length; i++ )
+		{
+			ConverterSetup setup = convSetups.get( indexList[ i ] );
+			double rngmin = setup.getDisplayRangeMin();
+			double rngmax = setup.getDisplayRangeMax();
+
+			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
+			imp.setDisplayRange( rngmin, rngmax );
+			imp.updateAndDraw();
+		}
 	}
 
 	public static void updateBrightnessContrast( 
@@ -284,7 +346,6 @@ public abstract class BigWarpExporter <T>
 			return copyToImageStackIterOrder( raible, itvl, target, nThreads, progress );
 		else
 			return copyToImageStackBySlice( raible, itvl, target, nThreads, progress );
-		
 	}
 
 	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
@@ -678,7 +739,12 @@ public abstract class BigWarpExporter <T>
 
 	public ImagePlus exportAsynch( final boolean wait )
 	{
-		exportThread = new ExportThread( this );
+		return exportAsynch( wait, true );
+	}
+
+	public ImagePlus exportAsynch( final boolean wait, final boolean show )
+	{
+		exportThread = new ExportThread( this, show );
 		exportThread.start();
 		if( wait )
 			try
@@ -700,25 +766,48 @@ public abstract class BigWarpExporter <T>
 
 	public static class ExportThread extends Thread
 	{
-		BigWarpExporter<?> exporter;
+		final BigWarpExporter<?> exporter;
 
-		public ExportThread(BigWarpExporter<?> exporter)
+		final boolean show;
+
+		public ExportThread(BigWarpExporter<?> exporter, final boolean show )
 		{
 			this.exporter = exporter;
+			this.show = show;
 		}
 
 		@Override
 		public void run()
 		{
 			try {
-				long startTime = System.currentTimeMillis();
+				//long startTime = System.currentTimeMillis();
 				exporter.result = exporter.export();
-				long endTime = System.currentTimeMillis();
+				//long endTime = System.currentTimeMillis();
+				// System.out.println("export took " + (endTime - startTime) + "ms");
 
-				System.out.println("export took " + (endTime - startTime) + "ms");
-
-				if (exporter.result != null && exporter.showResult )
+				if( show )
 					exporter.result.show();
+
+				if( exporter.outputList != null )
+					exporter.outputList.add( exporter.result );
+
+				if (exporter.result != null && exporter.showResult && show )
+				{
+					if( !exporter.isRGB() )
+						BigWarpExporter.updateBrightnessContrast( exporter.result, exporter.convSetups, exporter.movingSourceIndexList );
+
+				}
+
+				if( exporter.exportPath != null && !exporter.exportPath.isEmpty())
+				{
+					try{
+						IJ.save( exporter.result, exporter.exportPath );
+					}
+					catch( Exception e )
+					{
+						IJ.showMessage( "Failed to write : " + exporter.exportPath );
+					}
+				}
 
 			}
 			catch (final RejectedExecutionException e)
@@ -743,9 +832,11 @@ public abstract class BigWarpExporter <T>
 		{
 			Object baseType = transformedSources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 			if( baseType instanceof RealType )
-				return new BigWarpRealExporter( transformedSources, movingSourceIndexList, targetSourceIndexList, interp, (RealType)baseType, progressWriter);
+				return new BigWarpRealExporter( transformedSources, bwData.converterSetups, movingSourceIndexList, targetSourceIndexList, interp, (RealType)baseType, progressWriter);
 			else if ( ARGBType.class.isInstance( baseType ) )
-				return new BigWarpARGBExporter( (List)transformedSources, movingSourceIndexList, targetSourceIndexList, interp, progressWriter );
+			{
+				return new BigWarpARGBExporter( (List)transformedSources, bwData.converterSetups, movingSourceIndexList, targetSourceIndexList, interp, progressWriter );
+			}
 			else
 			{
 				System.err.println( "Can't export type " + baseType.getClass() );

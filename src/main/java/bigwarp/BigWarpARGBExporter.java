@@ -8,6 +8,8 @@ import mpicbg.spim.data.sequence.VoxelDimensions;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.janelia.saalfeldlab.n5.ij.N5IJUtils;
+
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
@@ -29,6 +31,8 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.export.ProgressWriter;
+import bdv.tools.brightness.ConverterSetup;
+import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
@@ -39,12 +43,13 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 	public BigWarpARGBExporter(
 			final List< SourceAndConverter< ARGBType >> sources,
+			final List< ConverterSetup > convSetups,
 			final int[] movingSourceIndexList,
 			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
-		super( sources, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
 	}
 
 	/**
@@ -73,13 +78,13 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		return true;
 	}
 
-	public ImagePlus export()
+	@Override
+	public RandomAccessibleInterval< ARGBType > exportRai()
 	{
 		ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >(); 
-		ARGBType t = null;
-		
+
 		buildTotalRenderTransform();
-		
+
 		int numChannels = movingSourceIndexList.length;
 		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
@@ -89,23 +94,30 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			int movingSourceIndex = movingSourceIndexList[ i ];
-
-			RealRandomAccessible< ARGBType > convertedSource;
-			convertedSource = ( RealRandomAccessible< ARGBType > ) sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
-			
 			final RealRandomAccessible< ARGBType > raiRaw = ( RealRandomAccessible< ARGBType > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
-
 			// apply the transformations
-//			AffineTransform3D tmpAffine = new AffineTransform3D();
 			final AffineRandomAccessible< ARGBType, AffineGet > rai = RealViews.affine( 
 					raiRaw, pixelRenderToPhysical.inverse() );
-			
+
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
-		
 		RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );
-		
+
+		return raiStack;
+	}
+
+	public ImagePlus export()
+	{
+		buildTotalRenderTransform();
+
+		int numChannels = movingSourceIndexList.length;
+		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
+				resolutionTransform.get( 0, 0 ),
+				resolutionTransform.get( 1, 1 ),
+				resolutionTransform.get( 2, 2 ));
+
+		final RandomAccessibleInterval< ARGBType > raiStack = exportRai();
 		ImagePlus ip = null;
 		if ( isVirtual )
 		{
@@ -117,7 +129,6 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		}
 		else
 		{
-			System.out.println( "render with " + nThreads + " threads.");
 			final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >( new ARGBType() );
 
 			if ( outputInterval.numDimensions() == 3 )

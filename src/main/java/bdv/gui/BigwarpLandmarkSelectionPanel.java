@@ -21,6 +21,7 @@ import javax.swing.table.AbstractTableModel;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.ApplyBigwarpPlugin;
+import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
@@ -125,7 +126,7 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
 						offsetIn, resolution, isVirtual, nThreads, 
-						progressWriter, true );
+						progressWriter, true, false, null );
 
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
