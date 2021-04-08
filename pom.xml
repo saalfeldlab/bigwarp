@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>29.2.1</version>
+		<version>30.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -109,6 +109,7 @@
 		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 
+		<opencsv.version>3.9</opencsv.version>
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
 		<bigdataviewer-core.version>10.0.2</bigdataviewer-core.version>
@@ -116,6 +117,10 @@
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
+
+		<n5.version>2.5.0</n5.version>
+		<n5-ij.version>2.0.0</n5-ij.version>
+		<n5-imglib2.version>4.0.0</n5-imglib2.version>
 	</properties>
 
 	<repositories>
@@ -146,6 +151,7 @@
 		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
+			<version>${opencsv.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>mpicbg</groupId>
@@ -208,17 +214,17 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-ij</artifactId>
-			<version>1.2.1-SNAPSHOT</version>
+            <version>${n5-ij.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5</artifactId>
-			<version>2.4.1-SNAPSHOT</version>
+            <version>${n5.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-imglib2</artifactId>
-			<version>3.5.2-SNAPSHOT</version>
+            <version>${n5-imglib2.version}</version>
 		</dependency>
 	</dependencies>
 </project>
