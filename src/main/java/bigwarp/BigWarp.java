@@ -1004,8 +1004,9 @@ public class BigWarp< T >
 			interp = Interpolation.NLINEAR;
 
 		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
-		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, this.landmarkModel, fieldOfViewOption, 
-				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, 
+				this.landmarkModel, this.currentTransform,
+				fieldOfViewOption, fieldOfViewPointFilter, fovSpec, offsetSpec, res );
 
 		final List<String> matchedPtNames = new ArrayList<>();
 		if( outputIntervalList.size() > 1 )

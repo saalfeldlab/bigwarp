@@ -119,7 +119,7 @@ public class LandmarkGridGenerator
 
 		double[] res = ApplyBigwarpPlugin.getResolution( bw.getData(), ApplyBigwarpPlugin.TARGET, null );
 		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( 
-				bw.getData(), bw.getLandmarkPanel().getTableModel(), 
+				bw.getData(), bw.getLandmarkPanel().getTableModel(), null,
 				ApplyBigwarpPlugin.TARGET, 
 				null, null, null, res );
 
