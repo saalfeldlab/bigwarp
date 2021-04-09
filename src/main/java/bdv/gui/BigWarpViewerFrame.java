@@ -95,9 +95,10 @@ public class BigWarpViewerFrame extends JFrame
 				setups.put( source, setup );
 		}
 
-		// TODO this needs to change for multi-channel!
-		if( !isMoving )
-			viewer.state().setCurrentSource( viewer.state().getSources().get( 1 ) );
+		if ( !isMoving )
+		{
+			viewer.state().setCurrentSource( viewer.state().getSources().get( bw.getData().targetSourceIndices[ 0 ] ));
+		}
 
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();

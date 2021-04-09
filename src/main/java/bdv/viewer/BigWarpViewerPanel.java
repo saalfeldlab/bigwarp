@@ -137,7 +137,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 			// repaint
 			if ( null != overlay ) {
-				overlay.setViewerState( state.getState() );
+				overlay.setViewerState( state() );
 			}
 		}
 	}
@@ -150,7 +150,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	 */
 	public int updateGrouping()
 	{
-		final ViewerState state = this.state.getState();
+		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{
 			// TODO: work backwards to find out whether movingSourceIndexList
@@ -247,7 +247,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		boolean requiresRepaint = false;
 		if( boxOverlayVisible )
 		{
-			multiBoxOverlayRenderer.setViewerState( state.getState() );
+			multiBoxOverlayRenderer.setViewerState( state() );
 			multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
 			multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
 			requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
@@ -255,13 +255,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		if( textOverlayVisible )
 		{
-			sourceInfoOverlayRenderer.setViewerState( state.getState() );
+			sourceInfoOverlayRenderer.setViewerState( state() );
 			sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
 		}
 
 		if ( Prefs.showScaleBar() )
 		{
-			scaleBarOverlayRenderer.setViewerState( state.getState() );
+			scaleBarOverlayRenderer.setViewerState( state() );
 			scaleBarOverlayRenderer.paint( ( Graphics2D ) g );
 		}
 
@@ -302,7 +302,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			display.repaint();
 		
 		if ( null != overlay ) {
-			overlay.setViewerState( state.getState() );
+			overlay.setViewerState( state() );
 			overlay.paint( ( Graphics2D ) g );
 		}
 		

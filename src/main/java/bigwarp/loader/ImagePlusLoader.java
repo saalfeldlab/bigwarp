@@ -29,7 +29,6 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.ViewerState;
 import bigwarp.BigWarp.BigWarpData;
 import ij.ImagePlus;
 import ij.process.LUT;
