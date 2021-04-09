@@ -41,6 +41,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -512,28 +513,34 @@ public class BigWarp< T >
 		inLandmarkMode = false;
 		setupKeyListener();
 
-		// set initial transforms so data are visible
-		InitializeViewerState.initTransform( viewerP );
-		InitializeViewerState.initTransform( viewerQ );
-
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
 		viewerP.state().getViewerTransform( initialViewP );
 		viewerQ.state().getViewerTransform( initialViewQ );
 
 		// set colors and min/max ranges
-		data.transferChannelSettings( viewerFrameP );
-		data.transferChannelSettings( viewerFrameQ );
-
-		// set brightness contrast to appropriate values
-		InitializeViewerState.initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
-		InitializeViewerState.initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
-
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
 
 		landmarkFrame.pack();
 		landmarkFrame.setVisible( true );
+
+		SwingUtilities.invokeLater( new Runnable()
+		{
+			public void run()
+			{
+				data.transferChannelSettings( viewerFrameP );
+				data.transferChannelSettings( viewerFrameQ );
+			}
+		} );
+
+		// set brightness contrast to appropriate values
+		InitializeViewerState.initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
+		InitializeViewerState.initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
+
+		// set initial transforms so data are visible
+		InitializeViewerState.initTransform( viewerP );
+		InitializeViewerState.initTransform( viewerQ );
 
 		checkBoxInputMaps();
 
