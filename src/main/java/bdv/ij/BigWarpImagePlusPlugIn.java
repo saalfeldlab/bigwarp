@@ -134,7 +134,16 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		SpimData movingSpimData = null;
 		if ( !mvgRoot.isEmpty() )
 		{
-			movingSpimData = BigWarpInit.addToData( bigwarpdata, true, id, mvgRoot, mvgDataset );
+			if( openWithImageJ( mvgRoot ))
+			{
+				final ImagePlus mvgIpFromFile = IJ.openImage( mvgRoot );
+				mvgIpFromFile.show();
+				BigWarpInit.add( bigwarpdata, mvgIpFromFile, id, 0, true );
+			}
+			else
+			{
+				movingSpimData = BigWarpInit.addToData( bigwarpdata, true, id, mvgRoot, mvgDataset );
+			}
 			id++;
 		}
 
@@ -145,7 +154,16 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 		if ( !tgtRoot.isEmpty() )
 		{
-			BigWarpInit.addToData( bigwarpdata, false, id, tgtRoot, tgtDataset );
+			if( openWithImageJ( tgtRoot ))
+			{
+				final ImagePlus tgtIpFromFile = IJ.openImage( tgtRoot );
+				tgtIpFromFile.show();
+				BigWarpInit.add( bigwarpdata, tgtIpFromFile, id, 0, false );
+			}
+			else
+			{
+				BigWarpInit.addToData( bigwarpdata, false, id, tgtRoot, tgtDataset );
+			}
 			id++;
 		}
 		bigwarpdata.wrapUp();
@@ -177,6 +195,19 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 			return;
 		}
 
+	}
+
+	private static boolean openWithImageJ( final String rootPath )
+	{
+		if( rootPath.endsWith( ".n5" ) ||
+			rootPath.endsWith( ".zarr" ) ||
+			rootPath.endsWith( ".h5" ) ||
+			rootPath.endsWith( ".hdf5" ))
+		{
+			return false;
+		}
+		else
+			return true;
 	}
 
 }
