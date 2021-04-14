@@ -178,6 +178,8 @@ public class BigWarp< T >
 
 	protected final HelpDialog helpDialog;
 
+	protected final SourceInfoDialog sourceInfoDialog;
+
 	protected final VisibilityAndGroupingDialog activeSourcesDialogP;
 
 	protected final VisibilityAndGroupingDialog activeSourcesDialogQ;
@@ -477,6 +479,7 @@ public class BigWarp< T >
 
 		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
+		sourceInfoDialog = new SourceInfoDialog( landmarkFrame, data );
 
 		transformSelector = new TransformTypeSelectDialog( landmarkFrame, this );
 
@@ -764,6 +767,10 @@ public class BigWarp< T >
 		final JMenuItem miHelp = new JMenuItem( actionMap.get( BigWarpActions.SHOW_HELP ) );
 		miHelp.setText( "Show Help Menu" );
 		helpMenu.add( miHelp );
+
+		final JMenuItem miSrcInfo = new JMenuItem( actionMap.get( BigWarpActions.SHOW_SOURCE_INFO ) );
+		miSrcInfo.setText( "Show source information" );
+		helpMenu.add( miSrcInfo );
 	}
 
 	protected void setupImageJExportOption()
@@ -1380,7 +1387,7 @@ public class BigWarp< T >
 			radsq = viewerQ.getSettings().getSpotSize();
 		}
 		radsq = ( radsq * radsq );
-		final double scale = computeScaleAssumeRigid( viewerXfm );
+		final double scale = computeScaleAssumeScale( viewerXfm );
 
 		double dist = 0.0;
 		int bestIdx = -1;
@@ -1434,9 +1441,9 @@ public class BigWarp< T >
 		return bestIdx;
 	}
 
-	public static double computeScaleAssumeRigid( final AffineTransform3D xfm )
+	public static double computeScaleAssumeScale( final AffineTransform3D xfm )
 	{
-		return xfm.get( 0, 0 ) + xfm.get( 0, 1 ) + xfm.get( 0, 2 );
+		return xfm.get( 0, 0 ) * xfm.get( 1, 1 ) * xfm.get( 2, 2 );
 	}
 
 	protected void disableTransformHandlers()

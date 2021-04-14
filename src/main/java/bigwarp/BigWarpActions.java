@@ -52,6 +52,8 @@ public class BigWarpActions
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
 	public static final String SHOW_HELP = "help";
+	public static final String SHOW_SOURCE_INFO = "show source info";
+
 	public static final String CROP = "crop";
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String LOAD_SETTINGS = "load settings";
@@ -283,6 +285,7 @@ public class BigWarpActions
 
 		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
+		new ToggleDialogAction( SHOW_SOURCE_INFO, bw.sourceInfoDialog ).put( actionMap );
 
 		new SaveWarpedAction( bw ).put( actionMap );
 		new SaveWarpedXmlAction( bw ).put( actionMap );
