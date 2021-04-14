@@ -8,11 +8,16 @@ import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
-import org.janelia.saalfeldlab.n5.ij.N5Importer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.metadata.DefaultMetadata;
 import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5CosemMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5GroupParser;
 import org.janelia.saalfeldlab.n5.metadata.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
+import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
+import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
 
 import bdv.BigDataViewer;
@@ -23,13 +28,14 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
-import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
+import bigwarp.metadata.BwN5SingleScaleLegacyMetadata;
+import bigwarp.metadata.BwN5ViewerMultiscaleMetadataParser;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
@@ -377,15 +383,30 @@ public class BigWarpInit
 			return null;
 		}
 
-		N5TreeNode node = new N5TreeNode( n5Dataset, false );
+		final N5MetadataParser< ? >[] PARSERS = new N5MetadataParser[] { 
+				new N5ImagePlusMetadata( "" ),
+				new N5CosemMetadata( "", null, null ),
+				new N5SingleScaleMetadata(),
+				new BwN5SingleScaleLegacyMetadata(),
+				new DefaultMetadata( "", -1 )
+		};
+
+		final N5GroupParser< ? >[] GROUP_PARSERS = new N5GroupParser[] {
+				new N5CosemMultiScaleMetadata(),
+				new BwN5ViewerMultiscaleMetadataParser()
+		};
+
+		N5Metadata meta = null;
 		try
 		{
-			N5DatasetDiscoverer.parseMetadataRecursive( n5, node, N5Importer.PARSERS, N5Importer.GROUP_PARSERS );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( GROUP_PARSERS, PARSERS );
+			final N5TreeNode node = discoverer.discoverRecursive( n5, n5Dataset );
+			N5DatasetDiscoverer.parseMetadataRecursive( n5, node, PARSERS, GROUP_PARSERS );
+			meta = node.getMetadata();
 		}
 		catch ( IOException e )
 		{}
 
-		N5Metadata meta = node.getMetadata();
 		if( meta instanceof MultiscaleMetadata )
 		{
 			return openAsSourceMulti( n5, (MultiscaleMetadata<?>)meta, true );

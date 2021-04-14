@@ -3,22 +3,9 @@ package bdv.ij;
 import java.io.File;
 import java.io.IOException;
 
-import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.N5TreeNode;
-import org.janelia.saalfeldlab.n5.ij.N5Factory;
-import org.janelia.saalfeldlab.n5.ij.N5Importer;
-import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5ImagePlusMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
-import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ij.util.ProgressWriterIJ;
-import bdv.util.RandomAccessibleIntervalMipmapSource;
-import bdv.util.RandomAccessibleIntervalSource;
-import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.BigWarpInit;
@@ -30,15 +17,6 @@ import ij.WindowManager;
 import ij.plugin.PlugIn;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
-import mpicbg.spim.data.XmlIoSpimData;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.converter.Converter;
-import net.imglib2.converter.Converters;
-import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.UnsignedIntType;
-import net.imglib2.util.Util;
-import net.imglib2.view.Views;
 
 /**
  * ImageJ plugin to show the current image in BigDataViewer.
