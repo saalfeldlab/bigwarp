@@ -1387,7 +1387,7 @@ public class BigWarp< T >
 			radsq = viewerQ.getSettings().getSpotSize();
 		}
 		radsq = ( radsq * radsq );
-		final double scale = computeScaleAssumeScale( viewerXfm );
+		final double scale = computeScaleAssumeRigid( viewerXfm );
 
 		double dist = 0.0;
 		int bestIdx = -1;
@@ -1441,9 +1441,9 @@ public class BigWarp< T >
 		return bestIdx;
 	}
 
-	public static double computeScaleAssumeScale( final AffineTransform3D xfm )
+	public static double computeScaleAssumeRigid( final AffineTransform3D xfm )
 	{
-		return xfm.get( 0, 0 ) * xfm.get( 1, 1 ) * xfm.get( 2, 2 );
+		return xfm.get( 0, 0 ) + xfm.get( 0, 1 ) + xfm.get( 0, 2 );
 	}
 
 	protected void disableTransformHandlers()
