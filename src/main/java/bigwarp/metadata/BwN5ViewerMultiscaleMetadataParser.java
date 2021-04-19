@@ -25,7 +25,9 @@
  */
 package bigwarp.metadata;
 
+import java.text.Collator;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,10 +41,13 @@ import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
 
 import net.imglib2.realtransform.AffineTransform3D;
+import se.sawano.java.text.AlphanumericComparator;
 
 public class BwN5ViewerMultiscaleMetadataParser implements N5GroupParser< N5MultiScaleMetadata >
 {
     private static final Predicate<String> scaleLevelPredicate = Pattern.compile("^s\\d+$").asPredicate();
+
+    private static final AlphanumericComparator COMPARATOR = new AlphanumericComparator(Collator.getInstance());
 
     /**
      * Called by the {@link org.janelia.saalfeldlab.n5.N5DatasetDiscoverer}
@@ -56,7 +61,11 @@ public class BwN5ViewerMultiscaleMetadataParser implements N5GroupParser< N5Mult
 	{
 		final Map< String, N5TreeNode > scaleLevelNodes = new HashMap<>();
 		String[] units = null;
-		for ( final N5TreeNode childNode : node.childrenList() )
+
+		List< N5TreeNode > children = node.childrenList();
+		children.sort( Comparator.comparing( N5TreeNode::toString, COMPARATOR ) );
+
+		for ( final N5TreeNode childNode : children )
 		{
 			if ( scaleLevelPredicate.test( childNode.getNodeName() ) &&
 				 childNode.isDataset() &&
