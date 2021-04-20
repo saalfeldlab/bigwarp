@@ -36,6 +36,7 @@ import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
 import bigwarp.metadata.BwN5SingleScaleLegacyMetadata;
 import bigwarp.metadata.BwN5ViewerMultiscaleMetadataParser;
+import bigwarp.metadata.BwN5CosemMultiScaleMetadata;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
@@ -392,7 +393,7 @@ public class BigWarpInit
 		};
 
 		final N5GroupParser< ? >[] GROUP_PARSERS = new N5GroupParser[] {
-				new N5CosemMultiScaleMetadata(),
+				new BwN5CosemMultiScaleMetadata(),
 				new BwN5ViewerMultiscaleMetadataParser()
 		};
 
