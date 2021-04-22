@@ -68,7 +68,8 @@ public class BigWarpTransform
 	public InvertibleRealTransform getTransformation( final int index )
 	{
 		InvertibleRealTransform invXfm = null;
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TransformTypeSelectDialog.TPS ) ||
+			transformType.equals( "TPS" ))
 		{
 			invXfm = new TpsTransformSolver().solve( tableModel );
 		}
