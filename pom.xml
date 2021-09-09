@@ -109,12 +109,10 @@
 		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 
-		<opencsv.version>3.9</opencsv.version>
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
 		<bigdataviewer-core.version>10.2.0</bigdataviewer-core.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-28</bigdataviewer-vistools.version>
-		<opencsv.version>3.9</opencsv.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>deploy-to-scijava</releaseProfiles>
@@ -152,7 +150,6 @@
 		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
-			<version>${opencsv.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>mpicbg</groupId>

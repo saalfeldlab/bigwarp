@@ -35,6 +35,7 @@ import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform
 
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
+import com.opencsv.exceptions.CsvException;
 
 import bdv.gui.BigWarpMessageAnimator;
 
@@ -1098,8 +1099,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
 		List< String[] > rows = null;
-		rows = reader.readAll();
-		reader.close();
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch( CsvException e ){}
 		if( rows == null || rows.size() < 1 )
 		{
 			System.err.println("Error reading csv");
