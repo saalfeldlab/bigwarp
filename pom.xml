@@ -108,6 +108,7 @@
 		<license.licenseName>gpl_v2</license.licenseName>
 		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
+		<license.excludes>**/resources/*.xml</license.excludes>
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
