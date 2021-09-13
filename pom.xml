@@ -210,6 +210,13 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-ij</artifactId>
+			<exclusions>
+				<!-- NB: Until saalfeldlab/n5-ij#35 is merged and released. -->
+				<exclusion>
+					<groupId>net.imagej</groupId>
+					<artifactId>imagej</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
