@@ -124,30 +124,28 @@
 	</repositories>
 
 	<dependencies>
+		<!-- ImgLib2 dependencies -->
 		<dependency>
-			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
-			<artifactId>ejml</artifactId>
-			<version>${ejml.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>bigdataviewer-core</artifactId>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>net.imglib2</groupId>
 			<artifactId>imglib2-ij</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>jitk</groupId>
-			<artifactId>jitk-tps</artifactId>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-realtransform</artifactId>
+		</dependency>
+
+		<!-- BigDataViewer dependencies -->
+		<dependency>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-core</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.opencsv</groupId>
-			<artifactId>opencsv</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>mpicbg</groupId>
-			<artifactId>mpicbg</artifactId>
+			<groupId>sc.fiji</groupId>
+			<artifactId>bigdataviewer-vistools</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>sc.fiji</groupId>
@@ -159,28 +157,42 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<dependency>
-			<groupId>com.beust</groupId>
-			<artifactId>jcommander</artifactId>
-			<version>${jcommander.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>net.imglib2</groupId>
-			<artifactId>imglib2-realtransform</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<scope>test</scope>
-		</dependency>
+
+		<!-- Fiji dependencies -->
 		<dependency>
 			<groupId>sc.fiji</groupId>
-			<artifactId>bigdataviewer-vistools</artifactId>
+			<artifactId>fiji-lib</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>jitk</groupId>
+			<artifactId>jitk-tps</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>mpicbg</groupId>
+			<artifactId>mpicbg</artifactId>
+		</dependency>
+
+		<!-- SciJava dependencies -->
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>ui-behaviour</artifactId>
+		</dependency>
+
+		<!-- N5 dependencies -->
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-ij</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-imglib2</artifactId>
+		</dependency>
+
+		<!-- OME dependencies -->
 		<dependency>
 			<groupId>ome</groupId>
 			<artifactId>bio-formats_plugins</artifactId>
@@ -195,25 +207,28 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- Third-party dependencies -->
 		<dependency>
-			<groupId>org.scijava</groupId>
-			<artifactId>ui-behaviour</artifactId>
+			<groupId>com.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>sc.fiji</groupId>
-			<artifactId>fiji-lib</artifactId>
+			<groupId>com.beust</groupId>
+			<artifactId>jcommander</artifactId>
+			<version>${jcommander.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>org.janelia.saalfeldlab</groupId>
-			<artifactId>n5-ij</artifactId>
+			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
+			<artifactId>ejml</artifactId>
+			<version>${ejml.version}</version>
 		</dependency>
+
+		<!-- Test scope dependencies -->
 		<dependency>
-			<groupId>org.janelia.saalfeldlab</groupId>
-			<artifactId>n5</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.janelia.saalfeldlab</groupId>
-			<artifactId>n5-imglib2</artifactId>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
