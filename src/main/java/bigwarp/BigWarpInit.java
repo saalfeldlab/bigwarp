@@ -767,7 +767,7 @@ public class BigWarpInit
 	 *            moving image source loader
 	 * @param loaderQ
 	 *            fixed image source loader
-	 * @param names
+	 * @param namesIn
 	 *            list of names
 	 * @return BigWarpData
 	 */

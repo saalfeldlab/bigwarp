@@ -49,7 +49,8 @@ public class RealIntervalIterator extends AbstractRealInterval implements Iterat
 	 * Iterates an {@link Interval} of the given dimensions with <em>min</em>=
 	 * 0<sup><em>n</em></sup>
 	 *
-	 * @param dimensions
+	 * @param interval
+	 * @param step
 	 */
 	public RealIntervalIterator( final RealInterval interval, final double[] step )
 	{

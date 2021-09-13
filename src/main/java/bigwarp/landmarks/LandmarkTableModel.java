@@ -736,7 +736,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * @param isMoving is this point in the moving image space
 	 * @param warpedPt position of the warped point
 	 * @param isUndoable is this action undo-able
-	 * @param forceUpdateWarpedPts updated warped point positions
 	 * @return true if a new row was added
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )

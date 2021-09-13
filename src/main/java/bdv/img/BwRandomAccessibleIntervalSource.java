@@ -29,7 +29,7 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.NumericType;
 
 /**
- * A {@link RandomAccessibleIntervalSource} with set-able {@link VoxelDimension}. 
+ * A {@link RandomAccessibleIntervalSource} with set-able {@link VoxelDimensions}.
  * 
  * @author John Bogovic
  *

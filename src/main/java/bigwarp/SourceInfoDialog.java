@@ -50,7 +50,7 @@ public class SourceInfoDialog extends JDialog
 	 * the opened sources.
 	 * 
 	 * @param owner the parent frame
-	 * @param the bigwarp data
+	 * @param bwData the bigwarp data
 	 */
 	public SourceInfoDialog( final Frame owner, final BigWarpData< ? > bwData )
 	{
