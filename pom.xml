@@ -100,8 +100,8 @@
 		<url>https://github.com/saalfeldlab/bigwarp/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>Travis CI</system>
-		<url>https://travis-ci.org/saalfeldlab/bigwarp</url>
+		<system>GitHub Actions</system>
+		<url>https://github.com/saalfeldlab/bigwarp/actions</url>
 	</ciManagement>
 
 	<properties>

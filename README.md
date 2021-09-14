@@ -1,5 +1,5 @@
 # bigwarp
-[![Build Status](https://travis-ci.org/saalfeldlab/bigwarp.svg?branch=master)](https://travis-ci.org/saalfeldlab/bigwarp)
+[![Build Status](https://github.com/saalfeldlab/bigwarp/actions/workflows/build-main.yml/badge.svg)](https://github.com/saalfeldlab/bigwarp/actions/workflows/build-main.yml)
 
 A tool for manual pointwise deformable registration using bigdataviewer.
 
