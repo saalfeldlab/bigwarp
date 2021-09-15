@@ -385,7 +385,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return activeList.get( row );
 	}
 
-	public void setIsActive( int row, boolean isActive )
+	public synchronized void setIsActive( int row, boolean isActive )
 	{
 		if( isRowUnpaired( row ) && isActive )
 		{
@@ -404,7 +404,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		buildTableToActiveIndex();
 	}
 
-	private void buildTableToActiveIndex()
+	private synchronized void buildTableToActiveIndex()
 	{
 		tableIndexToActiveIndex.clear();
 
@@ -591,7 +591,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return doesPointHaveAndNeedWarp.get( i );
 	}
 
-	public void updateWarpedPoint( int i, double[] pt )
+	public synchronized void updateWarpedPoint( int i, double[] pt )
 	{
 		if( pt == null )
 			return;
@@ -664,7 +664,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			fireTableCellUpdated( row, 2 + d );
 	}
 
-	private void addEmptyRow( int index )
+	private synchronized void addEmptyRow( int index )
 	{
 		Double[] movingPt = new Double[ ndims ];
 		Double[] targetPt = new Double[ ndims ];
@@ -738,7 +738,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * @param isUndoable is this action undo-able
 	 * @return true if a new row was added
 	 */
-	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	public synchronized boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
 		// this means we should add a new point.  
 		// index of this point should be the next free row in the table
@@ -1012,7 +1012,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			return isFixedPoint( index );
 	}
 
-	public void activateRow( int index )
+	public synchronized void activateRow( int index )
 	{
 		boolean activate = true;
 		
@@ -1091,6 +1091,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		elementDeleted = false;
 	}
 	
+	@Deprecated
 	public void transferUpdatesToModel()
 	{
 		if (estimatedXfm == null)
@@ -1113,7 +1114,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * @param invert invert the moving and target point sets
 	 * @throws IOException an exception
 	 */
-	public void load( File f, boolean invert ) throws IOException
+	public synchronized void load( File f, boolean invert ) throws IOException
 	{
 		clear();
 
@@ -1183,22 +1184,23 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		this.ndims = ndims;
 		numRows = i;
 		updateNextRows( 0 );
-		initTransformation();
 		buildTableToActiveIndex();
+//		initTransformation();
 	}
 
 	public int numActive()
 	{
-		int numActive = 0;
-		for ( int i = 0; i < this.numRows; i++ )
-		{
-			if ( activeList.get( i ) )
-				numActive++;
-		}
 		return numActive;
+//		int numActive = 0;
+//		for ( int i = 0; i < this.numRows; i++ )
+//		{
+//			if ( activeList.get( i ) )
+//				numActive++;
+//		}
+//		return numActive;
 	}
 
-	public void copyLandmarks( int tableIndex, double[][] movingLandmarks, double[][] targetLandmarks )
+	public synchronized void copyLandmarks( int tableIndex, double[][] movingLandmarks, double[][] targetLandmarks )
 	{
 		if( numActive != movingLandmarks[0].length )
 		{
@@ -1216,8 +1218,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 	}
 
-	public void copyLandmarks( double[][] movingLandmarks, double[][] targetLandmarks )
+	public synchronized void copyLandmarks( double[][] movingLandmarks, double[][] targetLandmarks )
 	{
+		logger.trace(
+				String.format("copyLandmarks. nActive=%d.  sizes = %d x %d ; %d x %d ", numActive,
+						movingLandmarks.length, movingLandmarks[0].length,
+						targetLandmarks.length, targetLandmarks[0].length));
 		int k = 0;
 		for ( int i = 0; i < this.numRows; i++ )
 		{
@@ -1233,6 +1239,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 	}
 
+	@Deprecated
 	public void initTransformation()
 	{
 		int numActive = numActive();
@@ -1293,7 +1300,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return out;
 	}
 	
-	public void setValueAt(Object value, int row, int col)
+	public synchronized void setValueAt(Object value, int row, int col)
 	{
 		if( row < 0 || col < 0
 			|| row >= numRows || col >= numCols )

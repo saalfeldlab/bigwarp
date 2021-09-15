@@ -95,10 +95,16 @@ public class BigWarpTransform
 		}
 		else
 		{
-			Model<?> model = getModelType();
-			fitModel(model);
-			int nd = tableModel.getNumdims();
-			invXfm = new WrappedCoordinateTransform( (InvertibleCoordinateTransform) model, nd ).inverse();
+			final double[][] mvgPts;
+			final double[][] tgtPts;
+			synchronized( tableModel )
+			{
+				final int numActive = tableModel.numActive();
+				mvgPts = new double[ ndims ][ numActive ];
+				tgtPts = new double[ ndims ][ numActive ];
+				tableModel.copyLandmarks( mvgPts, tgtPts );
+			}
+			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
 		}
 
 		if( tableModel.getNumdims() == 2 )

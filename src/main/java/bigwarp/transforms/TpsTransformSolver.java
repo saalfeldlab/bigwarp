@@ -47,19 +47,21 @@ public class TpsTransformSolver implements TransformSolver< WrappedIterativeInve
 	public WrappedIterativeInvertibleRealTransform<?> solve( 
 			final LandmarkTableModel landmarkTable, final int indexChanged )
 	{
-		
-		int numActive = landmarkTable.numActive();
-		int ndims = landmarkTable.getNumdims();
+		synchronized( landmarkTable )
+		{
+			int numActive = landmarkTable.numActive();
+			int ndims = landmarkTable.getNumdims();
 
-		if( mvgPts == null || mvgPts[0].length != numActive )
-		{
-			mvgPts = new double[ ndims ][ numActive ];
-			tgtPts = new double[ ndims ][ numActive ];
-			landmarkTable.copyLandmarks( mvgPts, tgtPts );
-		}
-		else if( indexChanged >= 0 )
-		{
-			landmarkTable.copyLandmarks( indexChanged, mvgPts, tgtPts );
+			if( mvgPts == null || mvgPts[0].length != numActive )
+			{
+				mvgPts = new double[ ndims ][ numActive ];
+				tgtPts = new double[ ndims ][ numActive ];
+				landmarkTable.copyLandmarks( mvgPts, tgtPts );
+			}
+			else if( indexChanged >= 0 )
+			{
+				landmarkTable.copyLandmarks( indexChanged, mvgPts, tgtPts );
+			}
 		}
 
 		return solve( mvgPts, tgtPts );
