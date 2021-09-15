@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.animate.SimilarityModel3D;
+import bigwarp.BigWarp;
 import bigwarp.landmarks.LandmarkTableModel;
 import ij.IJ;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
@@ -38,6 +39,10 @@ public class BigWarpTransform
 	
 	private InvertibleRealTransform currentTransform;
 
+	private boolean fitSuccess;
+
+	private String fitFailMessage;
+
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
 		this( tableModel, TransformTypeSelectDialog.TPS );
@@ -68,16 +73,13 @@ public class BigWarpTransform
 	public InvertibleRealTransform getTransformation( final int index )
 	{
 		InvertibleRealTransform invXfm = null;
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
-		{
-			invXfm = new TpsTransformSolver().solve( tableModel );
+		if (transformType.equals(TransformTypeSelectDialog.TPS)) {
+			invXfm = new TpsTransformSolver().solve(tableModel, index);
 		}
-		else
-		{
+		else {
 			final double[][] mvgPts;
 			final double[][] tgtPts;
-			synchronized( tableModel )
-			{
+			synchronized( tableModel ) {
 				final int numActive = tableModel.numActive();
 				mvgPts = new double[ ndims ][ numActive ];
 				tgtPts = new double[ ndims ][ numActive ];
@@ -86,8 +88,7 @@ public class BigWarpTransform
 			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
 		}
 
-		if( tableModel.getNumdims() == 2 )
-		{
+		if( tableModel.getNumdims() == 2 ) {
 			invXfm = new Wrapped2DTransformAs3D( invXfm );
 		}
 
@@ -109,11 +110,13 @@ public class BigWarpTransform
 
 		try {
 			model.fit( mvgPts, tgtPts, w );
+			fitSuccess = true;
 		} catch (NotEnoughDataPointsException e) {
-			e.printStackTrace();
+			fitFailMessage = "Could not fit transform: not enough data points";
 		} catch (IllDefinedDataPointsException e) {
-			e.printStackTrace();
+			fitFailMessage = "Could not fit transform: data points ill-defined";
 		}
+		fitSuccess = false;
 	}
 
 	public Model<?> getModelType()

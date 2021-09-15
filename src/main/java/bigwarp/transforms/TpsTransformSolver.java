@@ -10,14 +10,21 @@ public class TpsTransformSolver implements TransformSolver< WrappedIterativeInve
 	private double[][] mvgPts;
 	private double[][] tgtPts;
 
+	private boolean success = false;
+
+	private String failureMessage = "";
+
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
-		return new WrappedIterativeInvertibleRealTransform<ThinplateSplineTransform>( 
+		WrappedIterativeInvertibleRealTransform<ThinplateSplineTransform> transform = new WrappedIterativeInvertibleRealTransform<ThinplateSplineTransform>( 
 				new ThinplateSplineTransform( 
 						new ThinPlateR2LogRSplineKernelTransform( tgtPts.length, tgtPts, mvgPts )));
+
+		success = true;
+		return transform;
 	}
 
-	public WrappedIterativeInvertibleRealTransform<?> solve( 
+	public WrappedIterativeInvertibleRealTransform<?> rtsolve( 
 			final LandmarkTableModel landmarkTable )
 	{
 		return solve( landmarkTable, -1 );
@@ -44,5 +51,15 @@ public class TpsTransformSolver implements TransformSolver< WrappedIterativeInve
 		}
 
 		return solve( mvgPts, tgtPts );
+	}
+
+	@Override
+	public boolean wasSuccessful() {
+		return success;
+	}
+
+	@Override
+	public String getFailureMessage() {
+		return failureMessage;
 	}
 }

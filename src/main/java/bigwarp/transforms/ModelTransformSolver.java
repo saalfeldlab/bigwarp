@@ -11,11 +11,15 @@ public class ModelTransformSolver implements TransformSolver< WrappedCoordinateT
 {
 	private Model< ? > model;
 
+	private boolean success = false;
+
+	private String failureMessage = "";
+
 	public ModelTransformSolver( Model< ? > model )
 	{
 		this.model = model;
 	}
-	
+
 	public WrappedCoordinateTransform solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
 		double[] w = new double[ mvgPts[ 0 ].length ];
@@ -23,11 +27,25 @@ public class ModelTransformSolver implements TransformSolver< WrappedCoordinateT
 
 		try {
 			model.fit( mvgPts, tgtPts, w );
+			return new WrappedCoordinateTransform( ( InvertibleCoordinateTransform ) model, mvgPts.length ).inverse();
 		} catch (NotEnoughDataPointsException e) {
-			e.printStackTrace();
+			failureMessage = "Not enough data points";
+			success = false;
 		} catch (IllDefinedDataPointsException e) {
-			e.printStackTrace();
+			failureMessage = "Ill-defined data points";
+			success = false;
 		}
-		return new WrappedCoordinateTransform( ( InvertibleCoordinateTransform ) model, mvgPts.length ).inverse();
+		return null;
 	}
+
+	@Override
+	public boolean wasSuccessful() {
+		return success;
+	}
+
+	@Override
+	public String getFailureMessage() {
+		return failureMessage;
+	}
+
 }
