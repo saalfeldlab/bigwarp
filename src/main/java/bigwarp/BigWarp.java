@@ -654,16 +654,6 @@ public class BigWarp< T >
 		}
 	}
 
-	public boolean isInLandmarkMode()
-	{
-		return inLandmarkMode;
-	}
-
-	public void toggleInLandmarkMode()
-	{
-		setInLandmarkMode( !inLandmarkMode );
-	}
-
 	public boolean isUpdateWarpOnChange()
 	{
 		return updateWarpOnPtChange;
@@ -1187,9 +1177,18 @@ public class BigWarp< T >
 		return landmarkPanel;
 	}
 
+	public synchronized boolean isInLandmarkMode()
+	{
+		return inLandmarkMode;
+	}
+
+	public void toggleInLandmarkMode()
+	{
+		setInLandmarkMode( !inLandmarkMode );
+	}
+
 	public synchronized void setInLandmarkMode( final boolean inLmMode )
 	{
-
 		if( inLandmarkMode == inLmMode )
 			return;
 
@@ -1207,7 +1206,6 @@ public class BigWarp< T >
 			viewerFrameP.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
 			viewerFrameQ.setCursor( Cursor.getPredefinedCursor( Cursor.DEFAULT_CURSOR ) );
 		}
-
 		inLandmarkMode = inLmMode;
 	}
 
@@ -2615,7 +2613,6 @@ public class BigWarp< T >
 				else
 					updateRowSelection( isMovingLocal, selectedPointIndex );
 			}
-
 			BigWarp.this.landmarkModel.resetLastPoint();
 			selectedPointIndex = -1;
 		}
