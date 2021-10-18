@@ -39,7 +39,6 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
-import org.janelia.saalfeldlab.n5.dataaccess.DataAccessException;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
@@ -162,10 +161,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				e.printStackTrace();
 			}
-			catch ( DataAccessException e )
-			{
-				e.printStackTrace();
-			}
 		}
 	}
 
@@ -201,10 +196,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				writeN5( params.n5Base, params.n5Dataset, ltm, params.size, params.spacing, params.blockSize, params.compression, params.nThreads );
 			}
 			catch ( IOException e )
-			{
-				e.printStackTrace();
-			}
-			catch ( DataAccessException e )
 			{
 				e.printStackTrace();
 			}
@@ -265,7 +256,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final double[] spacing,
 			final int[] spatialBlockSize,
 			final Compression compression,
-			final int nThreads ) throws IOException, DataAccessException
+			final int nThreads ) throws IOException 
 	{
 		writeN5( n5BasePath, "dfield", ltm, dims, spacing, spatialBlockSize, compression, nThreads );
 	}
@@ -276,7 +267,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final double[] spacing,
 			final int[] spatialBlockSize,
 			final Compression compression,
-			final int nThreads ) throws IOException, DataAccessException
+			final int nThreads ) throws IOException 
 	{
 		final ThinPlateR2LogRSplineKernelTransform tpsRaw = ltm.getTransform();
 		final AffineGet affine = toAffine( tpsRaw );

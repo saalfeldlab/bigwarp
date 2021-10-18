@@ -43,6 +43,7 @@ import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
 
 import bdv.export.ProgressWriter;
 import bdv.gui.TransformTypeSelectDialog;
@@ -887,7 +888,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// build metadata
 		final String[] axes = nd == 2 ? new String[] { "y", "x" } :new String[]{ "z", "y", "x" } ;
 		final String[] units = nd == 2 ? new String[]{ unit, unit } : new String[] { unit, unit, unit };
-		final N5CosemMetadata metadata = new N5CosemMetadata( new N5CosemMetadata.CosemTransform( axes, resolution, offset, units ));
+		final N5CosemMetadata metadata = new N5CosemMetadata( "", new N5CosemMetadata.CosemTransform( axes, resolution, offset, units ), null );
+		N5CosemMetadataParser parser = new N5CosemMetadataParser();
 
 		// setup physical to pixel transform
 		final AffineTransform3D resolutionTransform = new AffineTransform3D();
@@ -937,8 +939,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 			{
 				N5Utils.save( imgToWrite, n5, destDataset, blockSize, compression, exec );
 
-				if( metadata != null )
-					metadata.writeMetadata( metadata, n5, destDataset );
+				if( parser != null && metadata != null )
+					parser.writeMetadata( metadata, n5, destDataset );
 			}
 			catch ( Exception e )
 			{

@@ -59,107 +59,105 @@ import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
 import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5GroupParser;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
-import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
 
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
 import se.sawano.java.text.AlphanumericComparator;
 
-public class BwN5CosemMultiScaleMetadata extends MultiscaleMetadata<N5CosemMetadata> implements N5Metadata, 
-	N5GroupParser< BwN5CosemMultiScaleMetadata >, PhysicalMetadata
+public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMetadata> implements N5Metadata, 
+	//N5GroupParser< BwN5CosemMultiScaleMetadata >, PhysicalMetadata
 {
 
-    public final String basePath;
-
-    private static final Predicate<String> scaleLevelPredicate = Pattern.compile("^s\\d+$").asPredicate();
-
-    private static final AlphanumericComparator COMPARATOR = new AlphanumericComparator(Collator.getInstance());
-
-    public BwN5CosemMultiScaleMetadata( )
-    {
-    	super();
-        this.basePath = null;
-    }
-
-    public BwN5CosemMultiScaleMetadata( final String basePath, final String[] paths,
-    		final AffineTransform3D[] transforms,
-    		final String[] units )
-    {
-    	super( paths, transforms, units);
-        this.basePath = basePath;
-    }
-
-	@Override
-	public String getPath()
-	{
-		return basePath;
-	}
-
-	@Override
-	public DatasetAttributes getAttributes()
-	{
-		return null;
-	}
-
-	/**
-	*
-    * Called by the {@link org.janelia.saalfeldlab.n5.N5DatasetDiscoverer}
-    * while discovering the N5 tree and filling the metadata for datasets or groups.
-    *
-    * @param node the node
-    * @return the metadata
-    */
-	@Override
-	public BwN5CosemMultiScaleMetadata parseMetadataGroup( final N5TreeNode node )
-	{
-		final Map< String, N5TreeNode > scaleLevelNodes = new HashMap<>();
-		String[] units = null;
-
-        final List< N5TreeNode > children = node.childrenList();
-		children.sort( Comparator.comparing( N5TreeNode::toString, COMPARATOR ) );
-
-		for ( final N5TreeNode childNode : children )
-		{
-			if ( scaleLevelPredicate.test( childNode.getNodeName() ) &&
-				 childNode.isDataset() &&
-				 childNode.getMetadata() instanceof N5CosemMetadata )
-			{
-				scaleLevelNodes.put( childNode.getNodeName(), childNode );
-				if( units == null)
-					units = ((N5CosemMetadata)childNode.getMetadata()).units();
-			}
-		}
-
-		if ( scaleLevelNodes.isEmpty() )
-			return null;
-
-		final List<AffineTransform3D> transforms = new ArrayList<>();
-		final List<String> paths = new ArrayList<>();
-
-        children.forEach( c -> {
-//            System.out.println( c.getPath() );
-			if( scaleLevelNodes.containsKey( c.getNodeName() ))
-			{
-				paths.add( c .getPath());
-				transforms.add( ((N5CosemMetadata)c.getMetadata() ).getTransform().toAffineTransform3d() );
-			}
-		});
-
-		return new BwN5CosemMultiScaleMetadata(
-				node.getPath(),
-				paths.toArray( new String[ 0 ] ),
-				transforms.toArray( new AffineTransform3D[ 0 ] ),
-				units);
-	}
-	
-	@Override
-	public AffineGet physicalTransform()
-	{
-		// spatial transforms are specified by the individual scales 
-		return null;
-	}
-
+//    public final String basePath;
+//
+//    private static final Predicate<String> scaleLevelPredicate = Pattern.compile("^s\\d+$").asPredicate();
+//
+//    private static final AlphanumericComparator COMPARATOR = new AlphanumericComparator(Collator.getInstance());
+//
+//    public BwN5CosemMultiScaleMetadata( )
+//    {
+//    	super();
+//        this.basePath = null;
+//    }
+//
+//    public BwN5CosemMultiScaleMetadata( final String basePath, final String[] paths,
+//    		final AffineTransform3D[] transforms,
+//    		final String[] units )
+//    {
+//    	super( paths, transforms, units);
+//        this.basePath = basePath;
+//    }
+//
+//	@Override
+//	public String getPath()
+//	{
+//		return basePath;
+//	}
+//
+//	@Override
+//	public DatasetAttributes getAttributes()
+//	{
+//		return null;
+//	}
+//
+//	/**
+//	*
+//    * Called by the {@link org.janelia.saalfeldlab.n5.N5DatasetDiscoverer}
+//    * while discovering the N5 tree and filling the metadata for datasets or groups.
+//    *
+//    * @param node the node
+//    * @return the metadata
+//    */
+//	@Override
+//	public BwN5CosemMultiScaleMetadata parseMetadataGroup( final N5TreeNode node )
+//	{
+//		final Map< String, N5TreeNode > scaleLevelNodes = new HashMap<>();
+//		String[] units = null;
+//
+//        final List< N5TreeNode > children = node.childrenList();
+//		children.sort( Comparator.comparing( N5TreeNode::toString, COMPARATOR ) );
+//
+//		for ( final N5TreeNode childNode : children )
+//		{
+//			if ( scaleLevelPredicate.test( childNode.getNodeName() ) &&
+//				 childNode.isDataset() &&
+//				 childNode.getMetadata() instanceof N5CosemMetadata )
+//			{
+//				scaleLevelNodes.put( childNode.getNodeName(), childNode );
+//				if( units == null)
+//					units = ((N5CosemMetadata)childNode.getMetadata()).units();
+//			}
+//		}
+//
+//		if ( scaleLevelNodes.isEmpty() )
+//			return null;
+//
+//		final List<AffineTransform3D> transforms = new ArrayList<>();
+//		final List<String> paths = new ArrayList<>();
+//
+//        children.forEach( c -> {
+////            System.out.println( c.getPath() );
+//			if( scaleLevelNodes.containsKey( c.getNodeName() ))
+//			{
+//				paths.add( c .getPath());
+//				transforms.add( ((N5CosemMetadata)c.getMetadata() ).getTransform().toAffineTransform3d() );
+//			}
+//		});
+//
+//		return new BwN5CosemMultiScaleMetadata(
+//				node.getPath(),
+//				paths.toArray( new String[ 0 ] ),
+//				transforms.toArray( new AffineTransform3D[ 0 ] ),
+//				units);
+//	}
+//	
+//	@Override
+//	public AffineGet physicalTransform()
+//	{
+//		// spatial transforms are specified by the individual scales 
+//		return null;
+//	}
+//
 }
 

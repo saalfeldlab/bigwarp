@@ -57,69 +57,67 @@ import java.util.regex.Pattern;
 
 import org.janelia.saalfeldlab.n5.N5TreeNode;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5GroupParser;
 import org.janelia.saalfeldlab.n5.metadata.N5MultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
 
 import net.imglib2.realtransform.AffineTransform3D;
 import se.sawano.java.text.AlphanumericComparator;
 
-public class BwN5ViewerMultiscaleMetadataParser implements N5GroupParser< N5MultiScaleMetadata >
+public class BwN5ViewerMultiscaleMetadataParser //implements N5GroupParser< N5MultiScaleMetadata >
 {
-    private static final Predicate<String> scaleLevelPredicate = Pattern.compile("^s\\d+$").asPredicate();
-
-    private static final AlphanumericComparator COMPARATOR = new AlphanumericComparator(Collator.getInstance());
-
-    /**
-     * Called by the {@link org.janelia.saalfeldlab.n5.N5DatasetDiscoverer}
-     * while discovering the N5 tree and filling the metadata for datasets or groups.
-     *
-     * @param node the node
-     * @return the metadata
-     */
-	@Override
-	public N5MultiScaleMetadata parseMetadataGroup( final N5TreeNode node )
-	{
-		final Map< String, N5TreeNode > scaleLevelNodes = new HashMap<>();
-		String[] units = null;
-
-		final List< N5TreeNode > children = node.childrenList();
-		children.sort( Comparator.comparing( N5TreeNode::toString, COMPARATOR ) );
-
-		for ( final N5TreeNode childNode : children )
-		{
-			if ( scaleLevelPredicate.test( childNode.getNodeName() ) &&
-				 childNode.isDataset() &&
-				 ( childNode.getMetadata() instanceof N5SingleScaleMetadata ||
-				   childNode.getMetadata() instanceof BwN5SingleScaleLegacyMetadata ))
-			{
-				scaleLevelNodes.put( childNode.getNodeName(), childNode );
-				if( units == null )
-					units = ((PhysicalMetadata)childNode.getMetadata()).units();
-			}
-		}
-
-		if ( scaleLevelNodes.isEmpty() )
-			return null;
-
-		final List<AffineTransform3D> transforms = new ArrayList<>();
-		final List<String> paths = new ArrayList<>();
-
-        children.forEach( c -> {
-//            System.out.println( c.getPath() );
-			if( scaleLevelNodes.containsKey( c.getNodeName() ))
-			{
-				paths.add( c .getPath());
-				transforms.add( ((N5CosemMetadata)c.getMetadata() ).getTransform().toAffineTransform3d() );
-			}
-		});
-
-		return new N5MultiScaleMetadata(
-				node.getPath(),
-				paths.toArray( new String[ 0 ] ),
-				transforms.toArray( new AffineTransform3D[ 0 ] ),
-				units );
-	}
+//    private static final Predicate<String> scaleLevelPredicate = Pattern.compile("^s\\d+$").asPredicate();
+//
+//    private static final AlphanumericComparator COMPARATOR = new AlphanumericComparator(Collator.getInstance());
+//
+//    /**
+//     * Called by the {@link org.janelia.saalfeldlab.n5.N5DatasetDiscoverer}
+//     * while discovering the N5 tree and filling the metadata for datasets or groups.
+//     *
+//     * @param node the node
+//     * @return the metadata
+//     */
+//	@Override
+//	public N5MultiScaleMetadata parseMetadataGroup( final N5TreeNode node )
+//	{
+//		final Map< String, N5TreeNode > scaleLevelNodes = new HashMap<>();
+//		String[] units = null;
+//
+//		final List< N5TreeNode > children = node.childrenList();
+//		children.sort( Comparator.comparing( N5TreeNode::toString, COMPARATOR ) );
+//
+//		for ( final N5TreeNode childNode : children )
+//		{
+//			if ( scaleLevelPredicate.test( childNode.getNodeName() ) &&
+//				 childNode.isDataset() &&
+//				 ( childNode.getMetadata() instanceof N5SingleScaleMetadata ||
+//				   childNode.getMetadata() instanceof BwN5SingleScaleLegacyMetadata ))
+//			{
+//				scaleLevelNodes.put( childNode.getNodeName(), childNode );
+//				if( units == null )
+//					units = ((PhysicalMetadata)childNode.getMetadata()).units();
+//			}
+//		}
+//
+//		if ( scaleLevelNodes.isEmpty() )
+//			return null;
+//
+//		final List<AffineTransform3D> transforms = new ArrayList<>();
+//		final List<String> paths = new ArrayList<>();
+//
+//        children.forEach( c -> {
+////            System.out.println( c.getPath() );
+//			if( scaleLevelNodes.containsKey( c.getNodeName() ))
+//			{
+//				paths.add( c .getPath());
+//				transforms.add( ((N5CosemMetadata)c.getMetadata() ).getTransform().toAffineTransform3d() );
+//			}
+//		});
+//
+//		return new N5MultiScaleMetadata(
+//				node.getPath(),
+//				paths.toArray( new String[ 0 ] ),
+//				transforms.toArray( new AffineTransform3D[ 0 ] ),
+//				units );
+//	}
 
 }

@@ -30,16 +30,18 @@ import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.janelia.saalfeldlab.n5.metadata.DefaultMetadata;
 import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMultiScaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5GroupParser;
-import org.janelia.saalfeldlab.n5.metadata.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.PhysicalMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadataParser;
+import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultiscaleMetadataParser;
+import org.janelia.saalfeldlab.n5.metadata.SpatialMetadata;
+import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
+import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 
 import bdv.BigDataViewer;
 import bdv.img.BwRandomAccessibleIntervalSource;
@@ -406,24 +408,25 @@ public class BigWarpInit
 		}
 
 		final N5MetadataParser< ? >[] PARSERS = new N5MetadataParser[] { 
-				new N5ImagePlusMetadata( "" ),
-				new N5CosemMetadata( "", null, null ),
-				new N5SingleScaleMetadata(),
-				new BwN5SingleScaleLegacyMetadata(),
-				new DefaultMetadata( "", -1 )
+				  new ImagePlusLegacyMetadataParser(),
+				  new N5CosemMetadataParser(),
+				  new N5SingleScaleMetadataParser()
 		};
 
-		final N5GroupParser< ? >[] GROUP_PARSERS = new N5GroupParser[] {
-				new BwN5CosemMultiScaleMetadata(),
-				new BwN5ViewerMultiscaleMetadataParser()
+		final N5MetadataParser< ? >[] GROUP_PARSERS = new N5MetadataParser[] {
+				new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
+				new N5ViewerMultiscaleMetadataParser()
 		};
 
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( GROUP_PARSERS, PARSERS );
-			final N5TreeNode node = discoverer.discoverRecursive( n5, n5Dataset );
-			N5DatasetDiscoverer.parseMetadataRecursive( n5, node, PARSERS, GROUP_PARSERS );
+//			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( GROUP_PARSERS, PARSERS );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, 
+					N5DatasetDiscoverer.fromParsers(PARSERS), 
+					N5DatasetDiscoverer.fromParsers(GROUP_PARSERS) );
+
+			final N5TreeNode node = discoverer.discoverAndParseRecursive( n5Dataset );
 			meta = node.getMetadata();
 		}
 		catch ( IOException e )
@@ -460,10 +463,10 @@ public class BigWarpInit
 			else
 				image = imageRaw;
 
-			if( meta instanceof PhysicalMetadata )
+			if( meta instanceof SpatialMetadata )
 			{
-				final String unit = ((PhysicalMetadata)meta).units()[0];
-				final AffineTransform3D srcXfm = ((PhysicalMetadata)meta).physicalTransform3d();
+				final String unit = ((SpatialMetadata)meta).unit();
+				final AffineTransform3D srcXfm = ((SpatialMetadata)meta).spatialTransform3d();
 				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, 
 						new double[]{ srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) });
 
@@ -485,7 +488,7 @@ public class BigWarpInit
 	public static Source<?> openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
-		final AffineTransform3D[] transforms = multiMeta.getTransforms();
+		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
 		final String unit = multiMeta.units()[0];
 
 		@SuppressWarnings( "rawtypes" )
