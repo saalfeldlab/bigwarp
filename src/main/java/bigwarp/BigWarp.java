@@ -1198,7 +1198,7 @@ public class BigWarp< T >
 		return landmarkPanel;
 	}
 
-	public synchronized boolean isInLandmarkMode()
+	public boolean isInLandmarkMode()
 	{
 		return inLandmarkMode;
 	}
@@ -1208,7 +1208,7 @@ public class BigWarp< T >
 		setInLandmarkMode( !inLandmarkMode );
 	}
 
-	public synchronized void setInLandmarkMode( final boolean inLmMode )
+	public void setInLandmarkMode( final boolean inLmMode )
 	{
 		if( inLandmarkMode == inLmMode )
 			return;
@@ -2178,7 +2178,7 @@ public class BigWarp< T >
 		return true;
 	}
 
-	public void setIsMovingDisplayTransformed( final boolean isTransformed )
+	public synchronized void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
 		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
 		{
@@ -3010,7 +3010,9 @@ public class BigWarp< T >
 						// and update warped point
 						// both for rendering purposes
 						if ( !isMoving )
+						{
 							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false, bw.currentTransform );
+						}
 
 						/*
 						 * repaint both panels so that: 

@@ -718,7 +718,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		//TODO point edit
 		if( isWarped )
 		{
-			//a
 			xfm.apply( pt, tmp );
 			return pointEdit( index, tmp, forceAdd, isMoving, pt, isUndoable );
 		}
@@ -738,8 +737,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * @param isUndoable is this action undo-able
 	 * @return true if a new row was added
 	 */
-	public synchronized boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
+	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
+		final boolean isAdd = forceAdd || (index == getRowCount());
+
+		synchronized ( this ) {
+
 		// this means we should add a new point.  
 		// index of this point should be the next free row in the table
 		if( index == -1 )
@@ -749,8 +752,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			else
 				index = nextRowQ;
 		}
-
-		boolean isAdd = forceAdd || (index == getRowCount());
 
 		if( isAdd )
 			addEmptyRow( index );
@@ -772,7 +773,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 		
 		ArrayList< Double[] > pts;
-		
 
 		/********************
 		 * Update the point *
@@ -828,6 +828,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		updateNextRows( index );
 
 		activateRow( index );
+		}
 
 		firePointUpdated( index, isMoving );
 

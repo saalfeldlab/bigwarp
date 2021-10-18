@@ -97,13 +97,12 @@ public class BigWarpTransform
 		{
 			final double[][] mvgPts;
 			final double[][] tgtPts;
-			synchronized( tableModel )
-			{
-				final int numActive = tableModel.numActive();
-				mvgPts = new double[ ndims ][ numActive ];
-				tgtPts = new double[ ndims ][ numActive ];
-				tableModel.copyLandmarks( mvgPts, tgtPts );
-			}
+
+			final int numActive = tableModel.numActive();
+			mvgPts = new double[ ndims ][ numActive ];
+			tgtPts = new double[ ndims ][ numActive ];
+			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
+
 			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
 		}
 
