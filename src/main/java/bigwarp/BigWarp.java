@@ -558,10 +558,6 @@ public class BigWarp< T >
 			}
 		} );
 
-		// set brightness contrast to appropriate values
-		InitializeViewerState.initBrightness( 0.001, 0.999, viewerP.state(), viewerFrameP.getConverterSetups() );
-		InitializeViewerState.initBrightness( 0.001, 0.999, viewerQ.state(), viewerFrameQ.getConverterSetups() );
-
 		// set initial transforms so data are visible
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
@@ -2464,6 +2460,7 @@ public class BigWarp< T >
 			synchronized ( state )
 			{
 				for ( SourceAndConverter< ? > sac : state.getSources() )
+				{
 					if ( sourceColorSettings.containsKey( sac ) )
 					{
 						if ( sourceColorSettings.get( sac ) == null )
@@ -2471,6 +2468,15 @@ public class BigWarp< T >
 
 						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
 					}
+					else
+					{
+						final int timepoint = state.getCurrentTimepoint();	
+						final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
+						ConverterSetup cs = setups.getConverterSetup(sac);
+						if( cs != null )
+							cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
+					}
+				}
 			}
 		}
 	}

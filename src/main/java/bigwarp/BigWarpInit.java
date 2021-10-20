@@ -329,12 +329,13 @@ public class BigWarpInit
 	public static < T > int add( BigWarpData bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
 		ImagePlusLoader loader = new ImagePlusLoader( ip );
-		SpimDataMinimal[] dataList = loader.loadAll( 0 );
+		SpimDataMinimal[] dataList = loader.loadAll( setupId );
 		for ( SpimDataMinimal data : dataList )
 		{
 			add( bwdata, data, setupId, numTimepoints, isMoving );
 			setupId++;
 		}
+		loader.update(bwdata);
 		return loader.numSources();
 	}
 
