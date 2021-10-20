@@ -756,8 +756,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public boolean pointEdit( int index, double[] pt, boolean forceAdd, boolean isMoving, double[] warpedPt, boolean isUndoable )
 	{
-		final boolean isAdd = forceAdd || (index == getRowCount());
-
+		boolean isAdd;
 		synchronized ( this ) {
 
 			// this means we should add a new point.  
@@ -769,6 +768,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				else
 					index = nextRowQ;
 			}
+
+			isAdd = forceAdd || (index == getRowCount());
 
 			if( isAdd )
 				addEmptyRow( index );
