@@ -187,7 +187,7 @@ public class LandmarkPointMenu extends JPopupMenu
 		{
 			int j = landmarkPanel.getJTable().rowAtPoint( clickPt );
 			LandmarkTableModel model = landmarkPanel.getTableModel();
-			model .deleteRow( j );
+			model.deleteRow( j );
 
 			updateBigwarp( bw, landmarkPanel.getTableModel() );
 

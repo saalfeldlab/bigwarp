@@ -735,7 +735,7 @@ public class BigWarp< T >
 		{
 			fileMenu.addSeparator();
 			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
-			exportToImagePlus.setText( "Export as ImagePlus" );
+			exportToImagePlus.setText( "Export moving image" );
 			fileMenu.add( exportToImagePlus );
 			
 			final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
@@ -789,13 +789,12 @@ public class BigWarp< T >
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
 
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
-		exportToImagePlus.setText( "Export as ImagePlus" );
+		exportToImagePlus.setText( "Export moving image" );
 		fileMenu.add( exportToImagePlus );
 		
 		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
 		exportWarpField.setText( "Export warp field" );
 		fileMenu.add( exportWarpField );
-
 	}
 
 	public void exportAsImagePlus( boolean virtual )
