@@ -1,6 +1,7 @@
 #@ File (label="Landmark file") landmarksPath
 #@ File (label="Moving image file") movingPath
 #@ File (label="Target image file") targetPath
+#@ String (label="Transform type", choices={"Thin Plate Spline", "Affine", "Similarity", "Rotation", "Translation" }) transformType
 #@ String (label="Interpolation", choices={"Linear", "Nearest Neighbor"}) interpType
 #@ Integer (label="Number of threads", min=1, max=64, value=1) nThreads
 #@ Boolean (label="Virtual stack?") isVirtual
@@ -35,10 +36,11 @@ Interpolation interp = Interpolation.NLINEAR;
 if( interpType.equals( "Nearest Neighbor" ))
 	interp = Interpolation.NEARESTNEIGHBOR;
 
-ImagePlus warpedIp = ApplyBigwarpPlugin.apply( 
-		movingIp, targetIp, ltm,
+emptyWriteOpts = new ApplyBigwarpPlugin.WriteDestinationOptions( "", "", null, null );
+warpedIpList = ApplyBigwarpPlugin.apply(
+		movingIp, targetIp, ltm, transformType,
 		"Target", "", "Target",
 		null, null, null,
-		interp, isVirtual, nThreads );
+		interp, isVirtual, nThreads, true, emptyWriteOpts );
 
-warpedIp.show();
+warpedIpList.get(0).show();
