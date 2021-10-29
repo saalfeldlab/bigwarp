@@ -44,6 +44,8 @@ import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
+import org.scijava.command.Command;
+import org.scijava.plugin.Plugin;
 
 import bdv.export.ProgressWriter;
 import bdv.gui.TransformTypeSelectDialog;
@@ -63,7 +65,6 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.plugin.PlugIn;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
@@ -87,7 +88,10 @@ import net.imglib2.view.Views;
  * Apply a bigwarp transform to a 2d or 3d ImagePlus
  *
  */
-public class ApplyBigwarpPlugin implements PlugIn
+@Plugin(type= Command.class,
+	menuPath = "Plugins>BigDataViewer>Big Warp Apply"
+)
+public class ApplyBigwarpPlugin implements Command
 {
 	public static final String TARGET = "Target";
 	public static final String MOVING = "Moving";
@@ -103,7 +107,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static void main( String[] args ) throws IOException
 	{
 		new ImageJ();
-		new ApplyBigwarpPlugin().run( "" );
+		new ApplyBigwarpPlugin().run();
 	}
 
 	public static boolean validateInput(
@@ -954,7 +958,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	}
 
 	@Override
-	public void run( String arg )
+	public void run()
 	{
 		if ( IJ.versionLessThan( "1.40" ) )
 			return;

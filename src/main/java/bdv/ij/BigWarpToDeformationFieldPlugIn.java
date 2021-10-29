@@ -42,6 +42,8 @@ import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.scijava.command.Command;
+import org.scijava.plugin.Plugin;
 
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarpExporter;
@@ -51,7 +53,6 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.plugin.PlugIn;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
@@ -85,7 +86,10 @@ import net.imglib2.view.composite.GenericComposite;
  * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class BigWarpToDeformationFieldPlugIn implements PlugIn
+@Plugin(type= Command.class,
+	menuPath = "Plugins>BigDataViewer>Big Warp to Displacement field"
+)
+public class BigWarpToDeformationFieldPlugIn implements Command
 {
 	public static final String[] compressionOptions = new String[] {
 				N5Exporter.RAW_COMPRESSION,
@@ -103,7 +107,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 //		imp.show();
 		
 		WindowManager.getActiveWindow();
-		new BigWarpToDeformationFieldPlugIn().run( null );
+		new BigWarpToDeformationFieldPlugIn().run();
 	}
 
 	public <T> void runFromBigWarpInstance(
@@ -165,7 +169,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	}
 
 	@Override
-	public void run( final String arg )
+	public void run()
 	{
 		if ( IJ.versionLessThan( "1.40" ) )
 			return;
