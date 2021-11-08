@@ -90,7 +90,7 @@
 	</mailingLists>
 
 	<scm>
-		<connection>scm:git:git://github.com/saalfeldlab/bigwarp</connection>
+		<connection>scm:git:https://github.com/saalfeldlab/bigwarp</connection>
 		<developerConnection>scm:git:git@github.com:saalfeldlab/bigwarp</developerConnection>
 		<tag>HEAD</tag>
 		<url>https://github.com/saalfeldlab/bigwarp</url>
