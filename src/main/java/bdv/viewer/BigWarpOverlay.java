@@ -42,7 +42,7 @@ public class BigWarpOverlay {
 	protected JTable table;
 
 	protected LandmarkTableModel landmarkModel;
-	
+
 	protected RealTransform estimatedXfm;
 	
 	protected boolean isTransformed = false;
@@ -52,6 +52,9 @@ public class BigWarpOverlay {
 	protected final boolean isMoving;
 	protected final boolean is3d;
 	
+	protected final double[] spot;
+	protected final double[] viewerCoords;
+
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
 	
@@ -67,6 +70,9 @@ public class BigWarpOverlay {
 			is3d = false;
 
 		isMoving = viewer.getIsMoving();
+
+		spot = new double[ 3 ];
+		viewerCoords = new double[ 3 ];
 	}
 
 
@@ -82,7 +88,7 @@ public class BigWarpOverlay {
 	}
 
 
-	public void paint( final Graphics2D g ) 
+	public void paint( final Graphics2D g )
 	{
 		// Save graphic device original settings
 		final Composite originalComposite = g.getComposite();
@@ -120,10 +126,10 @@ public class BigWarpOverlay {
 				fonthgt = fm.getHeight();
 				textBoxColor = Color.BLACK;
 			}
-			
-			for( int index = 0; index < landmarkModel.getRowCount(); index++ )
+
+			final int nRows = landmarkModel.getRowCount();
+			for( int index = 0; index < nRows; index++ )
 			{
-				Double[] spot; // = landmarkModel.getPoints().get( index );
 
 				if ( landmarkModel.isActive( index ) )
 					color = viewer.getSettings().getSpotColor();
@@ -134,33 +140,41 @@ public class BigWarpOverlay {
 				g.setStroke( stroke );
 
 				double x = 0.0, y = 0.0, z = 0.0;
-				spot = landmarkModel.getPoints( isMoving ).get( index );
-
-				// if this point is not set, don't render it.
-				if ( Double.isInfinite( spot[ 0 ] ) )
-					continue;
+//				spot = landmarkModel.getPoints( isMoving ).get( index );
+				landmarkModel.copyPointSafe(spot, index, isMoving);
 
 				// if the viewer is moving but transformed, render the points
 				// at the location of the warped point ( if it exists ),
 				// otherwise, take the fixed point
-				if ( isMoving && viewer.isInFixedImageSpace() )
-				{
-					if ( landmarkModel.isWarped( index ) )
-						spot = landmarkModel.getWarpedPoints().get( index );
+//				if ( isMoving && viewer.isInFixedImageSpace() )
+//				{
+//					if ( landmarkModel.isWarped( index ) )
+//						spot = landmarkModel.getWarpedPoints().get( index );
+//					else
+//						spot = landmarkModel.getPoints( false ).get( index );
+//				}
+
+				boolean copySuccess = false;
+				if( isMoving ) {
+					if( viewer.isInFixedImageSpace() ) {
+						if( landmarkModel.isWarped(index))
+							copySuccess = landmarkModel.copyWarpedPointSafe(spot, index);
+						else
+							copySuccess = landmarkModel.copyTargetPointSafe(spot, index);
+					}
 					else
-						spot = landmarkModel.getPoints( false ).get( index );
+						copySuccess = landmarkModel.copyMovingPointSafe(spot, index);
+				}
+				else {
+					// fixed space
+					copySuccess = landmarkModel.copyTargetPointSafe(spot, index);
 				}
 
-				// have to do this song and dance because globalCoords should be a length-3 array
-				// all the time with z=0 if we're in a 2d
-				x = spot[ 0 ];
-				y = spot[ 1 ];
-				if ( is3d )
-					z = spot[ 2 ];
+				// if this point is not set, don't render it.
+				if ( !copySuccess || Double.isInfinite( spot[ 0 ] ) )
+					continue;
 
-				final double[] globalCoords = new double[] { x, y, z };
-				final double[] viewerCoords = new double[ 3 ];
-				transform.apply( globalCoords, viewerCoords );
+				transform.apply( spot, viewerCoords );
 
 				// final double rad = radius * transformScale * radiusRatio;
 				final double rad = radius * radiusRatio;
