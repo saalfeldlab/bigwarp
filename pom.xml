@@ -112,8 +112,8 @@
 
 		<ejml.version>0.24</ejml.version>
 		<jcommander.version>1.48</jcommander.version>
-		<log4j.version>1.2.17</log4j.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
+		<jitk-tps.version>3.0.2</jitk-tps.version>
 
 		<n5.version>2.5.1</n5.version>
 		<n5-ij.version>3.0.0</n5-ij.version>
@@ -285,9 +285,8 @@
 			<version>${ejml.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>log4j</groupId>
-			<artifactId>log4j</artifactId>
-			<version>${log4j.version}</version>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>se.sawano.java</groupId>

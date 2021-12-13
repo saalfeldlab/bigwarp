@@ -73,8 +73,6 @@ import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.registration.ViewTransformAffine;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -85,6 +83,8 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import bdv.BigDataViewer;
 import bdv.cache.CacheControl;
@@ -318,7 +318,7 @@ public class BigWarp< T >
 
 	private static ImageJ ij;
 
-	protected static Logger logger = LogManager.getLogger( BigWarp.class.getName() );
+	protected static Logger logger = LoggerFactory.getLogger( BigWarp.class );
 
 	private SpimData movingSpimData;
 

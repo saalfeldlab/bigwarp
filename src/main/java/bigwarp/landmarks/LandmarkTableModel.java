@@ -41,8 +41,8 @@ import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.SerializationUtils;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import bigwarp.landmarks.actions.AddPointEdit;
 import bigwarp.landmarks.actions.DeleteRowEdit;
@@ -155,7 +155,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	
 	final String[] columnNames;
 	
-	public final Logger logger = LogManager.getLogger( LandmarkTableModel.class.getName() );
+	public final Logger logger = LoggerFactory.getLogger( LandmarkTableModel.class );
 
 	public LandmarkTableModel( int ndims )
 	{
