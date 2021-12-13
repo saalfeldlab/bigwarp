@@ -28,15 +28,12 @@ import java.io.IOException;
 
 import javax.swing.JTable;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
-import bigwarp.landmarks.LandmarkTableModel;
 
 public class LandmarkModelTest
 {
@@ -45,8 +42,6 @@ public class LandmarkModelTest
 	private JTable table;
 
 	private LandmarkTableModel ltm;
-
-	public final Logger logger = LogManager.getLogger( LandmarkModelTest.class.getName() );
 
 	@Before
 	public void before()
@@ -69,9 +64,6 @@ public class LandmarkModelTest
 	@Test
 	public void testNextRowsAndSelection()
 	{
-		logger.info( ltm.getNextRow( true ) );
-		logger.info( ltm.getNextRow( false ) );
-
 		// if we have a complete table
 		int nr = ltm.getRowCount(); // num rows ( and the index to append )
 		assertEquals(" init table size " , 5, nr );
@@ -132,10 +124,8 @@ public class LandmarkModelTest
 
 		// test wrapping
 		k = ltm.getNextRow( true );
-		logger.info( "k: " + k );
 		ltm.pointEdit( k, new double[]{ 3.0, 3.0 }, false, true, false, true, null );
 		ltm.updateNextRows( k );
-		logger.info( ltm.getNextRow( true ) );
 		assertEquals(" nextRowP inc wrap ", 5, ltm.getNextRow( true ));
 
 	}

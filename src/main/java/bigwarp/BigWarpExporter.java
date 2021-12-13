@@ -30,13 +30,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.metadata.N5MetadataWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -122,7 +122,7 @@ public abstract class BigWarpExporter <T>
 
 	private boolean showResult = true;
 
-	protected static Logger logger = LogManager.getLogger( BigWarpExporter.class.getName() );
+	protected static Logger logger = LoggerFactory.getLogger( BigWarpExporter.class );
 
 	private String exportPath;
 

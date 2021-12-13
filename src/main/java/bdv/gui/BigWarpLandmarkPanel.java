@@ -38,8 +38,8 @@ import javax.swing.KeyStroke;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import bigwarp.landmarks.LandmarkTableModel;
 
@@ -50,7 +50,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 	protected LandmarkTableModel tableModel;
 	protected JTable table;
 	
-	public final Logger logger = LogManager.getLogger( BigWarpLandmarkPanel.class.getName() );
+	public final Logger logger = LoggerFactory.getLogger( BigWarpLandmarkPanel.class );
 
     public BigWarpLandmarkPanel( LandmarkTableModel tableModel ) {
         
