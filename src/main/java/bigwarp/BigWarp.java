@@ -568,7 +568,7 @@ public class BigWarp< T >
 		fileFrame = new JFrame( "Select File" );
 		fileDialog = new FileDialog( fileFrame );
 
-		if ( ij == null )
+		if ( ij == null || (IJ.getDirectory( "current" ) == null) )
 			lastDirectory = new File( System.getProperty( "user.home" ));
 		else
 			lastDirectory = new File( IJ.getDirectory( "current" ));
