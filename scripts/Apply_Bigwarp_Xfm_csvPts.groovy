@@ -92,11 +92,14 @@ def buildTransform( File landmarksPath, String transformType, int nd, boolean ne
 
 	bwTransform = new BigWarpTransform( ltm, transformType );
 	xfm = bwTransform.getTransformation();
-	if( needInverse )
-		return xfm.inverse();
-	else
-		return xfm;
 
+    if( xfm instanceof Wrapped2DTransformAs3D )
+        xfm = ((Wrapped2DTransformAs3D)xfm).getTransform();
+
+	if( needInverse )
+		xfm = xfm.inverse();
+
+    return xfm;
 }
 
 needInverseTransform = inverseOrForward.equals("Moving to target")
@@ -154,3 +157,4 @@ catch ( IOException e )
 {
 	e.printStackTrace();
 }
+
