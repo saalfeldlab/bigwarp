@@ -14,7 +14,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import bigwarp.landmarks.*;
-import bigwarp.BigWarp.WrappedCoordinateTransform;
+import bigwarp.transforms.*;
 import net.imglib2.realtransform.*;
 import net.imglib2.realtransform.inverse.*;
 
@@ -89,50 +89,14 @@ def buildTransform( File landmarksPath, String transformType, int nd, boolean ne
 		e.printStackTrace();
 		return;
 	}
-		
-	if( transformType.equals( TransformTypeSelectDialog.TPS ))
-	{
-		xfm = ltm.getTransform();
-		if( needInverse )
-		{
-			invertibleTransform = new WrappedIterativeInvertibleRealTransform( new ThinplateSplineTransform( xfm ));
-			invopt = invertibleTransform.getOptimzer();
-			invopt.setTolerance( invTolerance );
-			invopt.setMaxIters( maxIters );
-			return invertibleTransform.inverse();
-		}
-		else
-			return xfm;
-	}
+
+	bwTransform = new BigWarpTransform( ltm, transformType );
+	xfm = bwTransform.getTransformation();
+	if( needInverse )
+		return xfm.inverse();
 	else
-	{
-		// get the appropriate transformation model
-		model = null;
-		if( nd == 2 )
-		{
-			model = getModel2D( transformType );
-		}
-		else if( nd == 3 )
-		{
-			model = getModel3D( transformType );
-		}
-		else
-		{
-			return null;
-		}
-		fitTransform( model, ltm );
-		println( 'model' )
-		println( model )
-		
-		
-		if( needInverse )
-			ct = model;
-		else
-			ct = ((InvertibleCoordinateTransform) model).createInverse()
-		
-		xfm = new WrappedCoordinateTransform( ct, nd )
 		return xfm;
-	}
+
 }
 
 needInverseTransform = inverseOrForward.equals("Moving to target")
@@ -152,7 +116,6 @@ catch ( IOException e )
 // get the transformation to apply
 int nd = lines.get( 0 ).split(",").length;
 transform = buildTransform( landmarksPath, transformType, nd, needInverseTransform, invTolerance, invMaxIters );
-println( transform )
 
 // transform all points
 outputLines = []
@@ -171,6 +134,7 @@ for( l in lines )
 	// parse line
 	pt = l.split(",").collect { s -> Double.parseDouble(s) }
 	scale = [ sx, sy, sz ] as double[]
+
 
 	// elementwise multiplication of pt and scale
 	scaledpt = [pt, scale].transpose().collect{ it[0] * it[1]}

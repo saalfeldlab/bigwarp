@@ -25,7 +25,7 @@ try {
 
 // duplicate variable for clarity of code
 mvgToTarget = inverseOrForward.equals("Moving to target")
-needInverseTransform = mvgToTarget;
+needInverse = mvgToTarget;
 
 if( mvgToTarget ) {
 	srcImg = mvgImg;
@@ -52,7 +52,12 @@ xpts = floatPolygon.xpoints
 ypts = floatPolygon.ypoints
 
 // transform all points of the polygon
-transform = ltm.getTransform();
+
+bwTransform = new BigWarpTransform( ltm, transformType );
+transform = bwTransform.getTransformation();
+if( needInverse )
+    transform = transform.inverse();
+
 result = new double[ 2 ];
 
 xpointsWarped = new float[ N ]
