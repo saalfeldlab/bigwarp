@@ -59,6 +59,10 @@ public class BigWarpTransform
 	
 	private InvertibleRealTransform currentTransform;
 
+	private double inverseTolerance = 0.5;
+
+	private int maxIterations = 200;
+
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
 		this( tableModel, TransformTypeSelectDialog.TPS );
@@ -76,6 +80,16 @@ public class BigWarpTransform
 		this.transformType = transformType;
 	}
 
+	public void setInverseTolerance( double inverseTolerance )
+	{
+		this.inverseTolerance = inverseTolerance;
+	}
+
+	public void setInverseMaxIterations( int maxIterations )
+	{
+		this.maxIterations = maxIterations;
+	}
+
 	public String getTransformType()
 	{
 		return transformType;
@@ -91,7 +105,10 @@ public class BigWarpTransform
 		InvertibleRealTransform invXfm = null;
 		if( transformType.equals( TransformTypeSelectDialog.TPS ))
 		{
-			invXfm = new TpsTransformSolver().solve( tableModel );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
+			tpsXfm.getOptimzer().setMaxIters(maxIterations);
+			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
+			invXfm = tpsXfm;
 		}
 		else
 		{

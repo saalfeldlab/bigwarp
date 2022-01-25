@@ -378,6 +378,7 @@ public class WarpVisFrame extends JDialog
 			public void stateChanged( ChangeEvent e )
 			{
 				bw.getLandmarkPanel().getTableModel().setInverseThreshold( (Double)toleranceSpinner.getValue() );
+				bw.getBwTransform().setInverseTolerance((Double)toleranceSpinner.getValue());
 			}
 		} );
 		tolerancePanel.add( new JLabel( "Inverse error", SwingConstants.CENTER ), BorderLayout.WEST );
@@ -393,6 +394,7 @@ public class WarpVisFrame extends JDialog
 			public void stateChanged( ChangeEvent e )
 			{
 				bw.getLandmarkPanel().getTableModel().setMaxInverseIterations( (Integer)maxIterSpinner.getValue() );
+				bw.getBwTransform().setInverseMaxIterations((Integer)maxIterSpinner.getValue());
 			}
 		} );
 		maxIterPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
