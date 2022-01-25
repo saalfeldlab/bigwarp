@@ -160,6 +160,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
@@ -280,6 +281,8 @@ public class BigWarp< T >
 	private SolveThread solverThread;
 
 	private BigWarpTransform bwTransform;
+
+	private BoundingBoxEstimation bboxOptions;
 
 	private long keyClickMaxLength = 250;
 	
@@ -487,7 +490,10 @@ public class BigWarp< T >
 		bwTransform = new BigWarpTransform( landmarkModel );
 		solverThread = new SolveThread( this );
 		solverThread.start();
-		
+
+		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
+		updateSourceBoundingBoxEstimators();
+
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
 		viewerP.addDragOverlay( dragOverlayP );
@@ -1047,10 +1053,11 @@ public class BigWarp< T >
 		else
 			interp = Interpolation.NLINEAR;
 
-		double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
-		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, 
+		final double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
+
+		final List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, 
 				this.landmarkModel, this.currentTransform,
-				fieldOfViewOption, fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+				fieldOfViewOption, fieldOfViewPointFilter, bboxOptions, fovSpec, offsetSpec, res );
 
 		final List<String> matchedPtNames = new ArrayList<>();
 		if( outputIntervalList.size() > 1 )
@@ -2109,6 +2116,23 @@ public class BigWarp< T >
 		}
 	}
 
+	public void updateSourceBoundingBoxEstimators()
+	{
+		for ( int i = 0; i < movingSourceIndexList.length; i++ )
+		{
+			int idx = movingSourceIndexList [ i ];
+
+			// the xfm must always be 3d for bdv to be happy.
+			// when bigwarp has 2d images though, the z- component will be left unchanged
+			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
+
+			// the updateTransform method creates a copy of the transform
+			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
+			if ( sources.get( 0 ).asVolatile() != null )
+				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
+		}
+	}
+
 	private synchronized void notifyTransformListeners( )
 	{
 		for ( final TransformListener< InvertibleRealTransform > l : transformListeners )
@@ -2889,6 +2913,11 @@ public class BigWarp< T >
 	public BigWarpTransform getBwTransform()
 	{
 		return bwTransform;
+	}
+
+	public BoundingBoxEstimation getBoxEstimation()
+	{
+		return bboxOptions;
 	}
 
 	/**
