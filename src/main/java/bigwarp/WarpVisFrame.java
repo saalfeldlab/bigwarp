@@ -104,6 +104,13 @@ public class WarpVisFrame extends JDialog
 	protected JLabel gridSpacingLabel;
 	protected JLabel gridWidthLabel;
 
+	// inverse
+	final JSpinner toleranceSpinner;
+	final JSpinner maxIterSpinner;
+
+	// bounding box
+	final JComboBox bboxMethodDropdown;
+	final JSpinner samplesPerDimSpinner;
 
 	// autosave
 	final SpinnerNumberModel savePeriodModel;
@@ -366,7 +373,7 @@ public class WarpVisFrame extends JDialog
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
 		final JPanel tolerancePanel = new JPanel();
-		final JSpinner toleranceSpinner = new JSpinner();
+		toleranceSpinner = new JSpinner();
 		final SpinnerNumberModel tolmodel = new SpinnerNumberModel( 0.5, 0.001, 200.0, 0.1 );
 		toleranceSpinner.setModel( tolmodel );
 		toleranceSpinner.addChangeListener( new ChangeListener()
@@ -382,7 +389,7 @@ public class WarpVisFrame extends JDialog
 		tolerancePanel.add( toleranceSpinner, BorderLayout.EAST );
 
 		final JPanel maxIterPanel = new JPanel();
-		final JSpinner maxIterSpinner = new JSpinner();
+		maxIterSpinner = new JSpinner();
 		final SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
 		maxIterSpinner.setModel( itermodel );
 		maxIterSpinner.addChangeListener( new ChangeListener()
@@ -401,7 +408,7 @@ public class WarpVisFrame extends JDialog
 		inverseOptionsPanel.add( maxIterPanel, BorderLayout.SOUTH );
 
 
-//		// bounding box options
+		// bounding box options
 		final JPanel bboxPanel = new JPanel();
 		bboxPanel.setLayout( new BorderLayout( 10, 10 ));
 
@@ -419,7 +426,7 @@ public class WarpVisFrame extends JDialog
 				BoundingBoxEstimation.Method.FACES.toString(),
 				BoundingBoxEstimation.Method.VOLUME.toString() };
 
-		final JComboBox bboxMethodDropdown = new JComboBox<>( methodStrings );
+		bboxMethodDropdown = new JComboBox<>( methodStrings );
 		bboxMethodDropdown.setSelectedIndex(1);
 		bboxMethodDropdown.addActionListener( new ActionListener() {
 			@Override
@@ -433,7 +440,7 @@ public class WarpVisFrame extends JDialog
 		bboxMethodPanel.add( bboxMethodDropdown, BorderLayout.EAST );
 
 		final JPanel samplerPerDimPanel = new JPanel();
-		final JSpinner samplesPerDimSpinner = new JSpinner();
+		samplesPerDimSpinner = new JSpinner();
 		final SpinnerNumberModel samplesmodel = new SpinnerNumberModel( 3, 1, 1000, 1 );
 		samplesPerDimSpinner.setModel( samplesmodel );
 		samplesPerDimSpinner.addChangeListener( new ChangeListener()

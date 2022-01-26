@@ -488,6 +488,8 @@ public class BigWarp< T >
 		viewerQ.addOverlay( overlayQ );
 
 		bwTransform = new BigWarpTransform( landmarkModel );
+		bwTransform.initializeInverseParameters(data);
+
 		solverThread = new SolveThread( this );
 		solverThread.start();
 
@@ -523,6 +525,7 @@ public class BigWarp< T >
 
 		// this call has to come after the actions are set
 		warpVisDialog.setActions();
+		warpVisDialog.toleranceSpinner.setValue( bwTransform.getInverseTolerance() );
 
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
