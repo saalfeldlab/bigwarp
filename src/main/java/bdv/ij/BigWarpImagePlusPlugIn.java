@@ -25,6 +25,8 @@ import java.io.File;
 import java.io.IOException;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
+import org.scijava.command.Command;
+import org.scijava.plugin.Plugin;
 
 import bdv.ij.util.ProgressWriterIJ;
 import bigwarp.BigWarp;
@@ -35,7 +37,6 @@ import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import ij.plugin.PlugIn;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
 
@@ -46,7 +47,10 @@ import mpicbg.spim.data.SpimDataException;
  * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */
-public class BigWarpImagePlusPlugIn implements PlugIn
+@Plugin(type = Command.class,
+	menuPath = "Plugins>BigDataViewer>Big Warp"
+)
+public class BigWarpImagePlusPlugIn implements Command
 {
 
     private ImagePlus movingIp;
@@ -56,11 +60,11 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 	{
 		new ImageJ();
 		IJ.run("Boats (356K)");
-		new BigWarpImagePlusPlugIn().run( null );
+		new BigWarpImagePlusPlugIn().run();
 	}
 
 	@Override
-	public void run( final String arg )
+	public void run()
 	{
 		if ( IJ.versionLessThan( "1.40" ) ) return;
 
