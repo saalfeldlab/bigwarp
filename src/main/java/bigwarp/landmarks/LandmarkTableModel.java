@@ -369,7 +369,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		else 
 			return targetPts;
 	}
-	
+
+
 	public ArrayList<String> getNames() 
 	{
 		return names;
@@ -599,9 +600,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 	}
 
-	public Boolean isWarped( int i )
-	{
-		return doesPointHaveAndNeedWarp.get( i );
+	public Boolean isWarped(int i) {
+		synchronized (this) {
+			return doesPointHaveAndNeedWarp.get(i);
+		}
 	}
 
 	public void updateWarpedPoint( int i, double[] pt )
@@ -1236,6 +1238,118 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 //				numActive++;
 //		}
 //		return numActive;
+	}
+
+	/**
+	 * Copies point values from this table into a destination array.
+	 * Checks whether the provided index exists, returns false if no 
+	 * point exists for the requested index.
+	 *
+	 * @param point the destination array
+	 * @param index the row index
+	 * @param moving copies the moving point if true
+	 * @return true if the point was copied
+	 */
+	public boolean copyPointSafe(double[] point, int index, boolean moving) {
+		synchronized (this) {
+			if (index >= getRowCount())
+				return false;
+
+			for (int d = 0; (d < point.length) && d < ndims; d++)
+				if (moving)
+					point[d] = movingPts.get(index)[d];
+				else
+					point[d] = targetPts.get(index)[d];
+
+			return true;
+		}
+	}
+
+	/**
+	 * Copies moving point values from this table into a destination array.
+	 * Checks whether the provided index exists, returns false if no 
+	 * point exists for the requested index.
+	 *
+	 * @param point the destination array
+	 * @param index the row index
+	 * @return true if the point was copied
+	 */
+	public boolean copyMovingPointSafe(double[] point, int index) {
+		synchronized (this) {
+			if (index >= movingPts.size())
+				return false;
+
+			for (int d = 0; (d < point.length) && d < ndims; d++)
+					point[d] = movingPts.get(index)[d];
+
+			return true;
+		}
+	}
+
+	/**
+	 * Copies warped moving point values from this table into a destination array.
+	 * Checks whether the provided index exists, returns false if no 
+	 * point exists for the requested index.
+	 *
+	 * @param point the destination array
+	 * @param index the row index
+	 * @return true if the point was copied
+	 */
+	public boolean copyWarpedPointSafe(double[] point, int index) {
+		synchronized (this) {
+			if (index >= warpedPoints.size())
+				return false;
+
+			for (int d = 0; (d < point.length) && d < ndims; d++)
+					point[d] = warpedPoints.get(index)[d];
+
+			return true;
+		}
+	}
+
+	/**
+	 * Copies target point values from this table into a destination array.
+	 * Checks whether the provided index exists, returns false if no 
+	 * point exists for the requested index.
+	 *
+	 * @param point the destination array
+	 * @param index the row index
+	 * @return true if the point was copied
+	 */
+	public boolean copyTargetPointSafe(double[] point, int index) {
+		synchronized (this) {
+			if (index >= targetPts.size())
+				return false;
+
+			for (int d = 0; (d < point.length) && d < ndims; d++)
+					point[d] = targetPts.get(index)[d];
+
+			return true;
+		}
+	}
+
+	public void copyMovingLandmarks(int tableIndex, double[][] destination) {
+		synchronized (this) {
+			for (int i = 0; i < this.numRows && i < destination.length; i++)
+				for (int d = 0; d < ndims && d < destination[i].length; d++)
+					destination[i][d] = movingPts.get(i)[d];
+		}
+	}
+
+	public void copyWarpedMovingLandmarks(int tableIndex, double[][] destination) {
+		synchronized (this) {
+			for (int i = 0; i < this.numRows && i < destination.length; i++)
+				for (int d = 0; d < ndims && d < destination[i].length; d++)
+					destination[i][d] = warpedPoints.get(i)[d];
+		}
+	}
+
+	public void copyTargetLandmarks(double[][] destination) {
+		synchronized (this) {
+			for (int i = 0; i < this.numRows && i < destination.length; i++)
+				for (int d = 0; d < ndims && d < destination[i].length; d++)
+					destination[i][d] = targetPts.get(i)[d];
+		}
 	}
 
 	public void copyLandmarks( int tableIndex, double[][] movingLandmarks, double[][] targetLandmarks )

@@ -27,7 +27,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import bigwarp.BigWarp;
@@ -35,11 +34,11 @@ import bigwarp.BigWarp.SolveThread;
 
 public class BigWarpDragOverlay
 {
-	private BigWarp bw;
+	private BigWarp<?> bw;
 	private BigWarpViewerPanel viewer;
 	
-	private boolean  inProgress  = false;
-	private boolean  completedOK = false;
+	private boolean inProgress  = false;
+	private boolean completedOK = false;
 	
 	private final RealPoint movingPoint;
 	private final RealPoint targetPoint;
@@ -56,7 +55,7 @@ public class BigWarpDragOverlay
 	
 	private Color baseColor;
 	
-	public BigWarpDragOverlay( final BigWarp bw, final BigWarpViewerPanel viewer, final SolveThread solveThread )
+	public BigWarpDragOverlay( final BigWarp<?> bw, final BigWarpViewerPanel viewer, final SolveThread solveThread )
 	{
 		this.bw = bw;
 		this.viewer = viewer;
