@@ -34,12 +34,14 @@ import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.metadata.N5GenericSingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultiscaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.SpatialMetadata;
+import org.janelia.saalfeldlab.n5.metadata.canonical.CanonicalMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 
@@ -408,21 +410,23 @@ public class BigWarpInit
 			return null;
 		}
 
-		final N5MetadataParser< ? >[] PARSERS = new N5MetadataParser[] { 
-				  new ImagePlusLegacyMetadataParser(),
-				  new N5CosemMetadataParser(),
-				  new N5SingleScaleMetadataParser()
+		final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
+			new ImagePlusLegacyMetadataParser(),
+			new N5CosemMetadataParser(),
+			new N5SingleScaleMetadataParser(),
+			new CanonicalMetadataParser(),
+			new N5GenericSingleScaleMetadataParser()
 		};
 
-		final N5MetadataParser< ? >[] GROUP_PARSERS = new N5MetadataParser[] {
-				new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
-				new N5ViewerMultiscaleMetadataParser()
+		final N5MetadataParser<?>[] GROUP_PARSERS = new N5MetadataParser[]{
+			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
+			new N5ViewerMultiscaleMetadataParser(),
+			new CanonicalMetadataParser(),
 		};
 
 		N5Metadata meta = null;
 		try
 		{
-//			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( GROUP_PARSERS, PARSERS );
 			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, 
 					N5DatasetDiscoverer.fromParsers(PARSERS), 
 					N5DatasetDiscoverer.fromParsers(GROUP_PARSERS) );
