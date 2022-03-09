@@ -31,13 +31,11 @@ import org.janelia.saalfeldlab.n5.N5TreeNode;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5CosemMultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5GenericSingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
 import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultiscaleMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.SpatialMetadata;
@@ -59,9 +57,6 @@ import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
-import bigwarp.metadata.BwN5SingleScaleLegacyMetadata;
-import bigwarp.metadata.BwN5ViewerMultiscaleMetadataParser;
-import bigwarp.metadata.BwN5CosemMultiScaleMetadata;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
@@ -356,21 +351,26 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, AbstractSpimData< ? > data, int setupId, int numTimepoints, boolean isMoving )
+	public static < T > BigWarpData< ? > add( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, int numTimepoints, boolean isMoving )
 	{
-		int startSize = bwdata.sources.size();
-		BigDataViewer.initSetups( data, bwdata.converterSetups, bwdata.sources );
+		final List<SourceAndConverter<?>> tmpSources = new ArrayList<>();
+		final List<ConverterSetup> tmpConverterSetups = new ArrayList<>();
+		initSetups( data, tmpConverterSetups, tmpSources );
 
-		int N = bwdata.sources.size();
-		final ArrayList<Integer > idxList;
-		if ( isMoving )
-			idxList = bwdata.movingSourceIndexList;
-		else
-			idxList = bwdata.targetSourceIndexList;
+		int setupId = baseId;
+		for( SourceAndConverter sac : tmpSources )
+			add( bwdata, sac.getSpimSource(), setupId++, numTimepoints, isMoving );
 
-		for( int i = startSize; i < N; i++ )
-			idxList.add( i );
-
+//		int N = bwdata.sources.size();
+//		final ArrayList<Integer > idxList;
+//		if ( isMoving )
+//			idxList = bwdata.movingSourceIndexList;
+//		else
+//			idxList = bwdata.targetSourceIndexList;
+//
+//		for( int i = startSize; i < N; i++ )
+//			idxList.add( i );
+//
 		return bwdata;
 	}
 
@@ -383,7 +383,7 @@ public class BigWarpInit
 			try
 			{
 				spimData = new XmlIoSpimData().load( rootPath );
-				BigWarpInit.add( bwdata, spimData, setupId, 0, isMoving );
+				add( bwdata, spimData, setupId, 0, isMoving );
 
 				if( isMoving )
 					return spimData;

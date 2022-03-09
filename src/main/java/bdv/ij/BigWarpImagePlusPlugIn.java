@@ -201,6 +201,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 		if( rootPath.endsWith( ".n5" ) ||
 			rootPath.endsWith( ".zarr" ) ||
 			rootPath.endsWith( ".h5" ) ||
+			rootPath.endsWith( ".xml" ) ||
 			rootPath.endsWith( ".hdf5" ))
 		{
 			return false;
