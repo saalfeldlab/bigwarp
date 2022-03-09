@@ -114,6 +114,7 @@
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 		<jitk-tps.version>3.0.2</jitk-tps.version>
+		<imglib2-realtransform.version>3.1.2</imglib2-realtransform.version>
 
 		<n5.version>2.5.1</n5.version>
 		<n5-ij.version>3.2.1</n5-ij.version>
