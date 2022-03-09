@@ -271,11 +271,11 @@ public class BigWarpActions
 
 		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
-		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F9" );
+		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
 		map.put( GARBAGE_COLLECTION, "F9" );
 		map.put( PRINT_TRANSFORM, "control shift T" );
 		map.put( DEBUG, "F11" );
-		
+
 		return inputMap;
 	}
 
@@ -1156,5 +1156,4 @@ public class BigWarpActions
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}
-
 }
