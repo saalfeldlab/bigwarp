@@ -26,6 +26,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import bdv.cache.CacheControl;
@@ -40,6 +41,7 @@ import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bigwarp.util.Rotation2DHelpers;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.Translation3D;
 
 public class BigWarpViewerPanel extends ViewerPanel
 {
@@ -415,13 +417,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 			centerY = getHeight() / 2.0;
 			centerX = getWidth() / 2.0;
 		}
- 
-		// TODO fixes to transform handlers mean the 3d animator works.
-		// 2d similar animator is still broken though.
-//		if( ndims == 2 )
-//			currentAnimator = new SimilarityTransformAnimator2D( startXfm, destinationXfm, centerX, centerY, millis );
-//		else
-//			currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
+
+		if( ndims == 2 )
+		{
+			// if 2d, make sure the viewer transform change doesn't change the z-slice shown
+			final double[] tmp = new double[3];
+			startXfm.applyInverse(tmp, tmp);
+			final double zstart = tmp[2];
+
+			Arrays.fill(tmp, 0);
+			destinationXfm.applyInverse(tmp, tmp);
+			final Translation3D t = new Translation3D( 0, 0, (tmp[2] - zstart) );
+			destinationXfm.concatenate(t);
+		}
 
 		currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
 

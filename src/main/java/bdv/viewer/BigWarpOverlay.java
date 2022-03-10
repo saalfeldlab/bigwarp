@@ -139,8 +139,6 @@ public class BigWarpOverlay {
 				g.setColor( color );
 				g.setStroke( stroke );
 
-				double x = 0.0, y = 0.0, z = 0.0;
-//				spot = landmarkModel.getPoints( isMoving ).get( index );
 				landmarkModel.copyPointSafe(spot, index, isMoving);
 
 				// if the viewer is moving but transformed, render the points
@@ -176,15 +174,18 @@ public class BigWarpOverlay {
 
 				transform.apply( spot, viewerCoords );
 
-				// final double rad = radius * transformScale * radiusRatio;
 				final double rad = radius * radiusRatio;
 				final double zv = viewerCoords[ 2 ];
 				final double dz2 = zv * zv;
 
-				if ( dz2 < rad * rad )
+				if ( !is3d || dz2 < rad * rad )
 				{
-					final double arad = Math.sqrt( rad * rad - dz2 );
-					
+					final double arad;
+					if( is3d )
+						arad = Math.sqrt( rad * rad - dz2 );
+					else
+						arad = rad;
+
 					// vary size
 					g.fillOval( ( int ) ( viewerCoords[ 0 ] - arad ), 
 								( int ) ( viewerCoords[ 1 ] - arad ), 
