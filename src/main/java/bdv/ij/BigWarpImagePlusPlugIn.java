@@ -55,7 +55,9 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 	public static void main( final String[] args ) throws IOException
 	{
 		new ImageJ();
-		IJ.run("Boats (356K)");
+//		IJ.run("Boats (356K)");
+		IJ.openImage("/home/john/tmp/t1-head.tif").show();
+		IJ.openImage("/home/john/tmp/mri-stack.tif").show();
 		new BigWarpImagePlusPlugIn().run( null );
 	}
 

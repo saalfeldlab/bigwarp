@@ -220,4 +220,16 @@ public class BigWarpViewerFrame extends JFrame
 		else
 			triggerbindings.addInputTriggerMap( "block_transform", new InputTriggerMap(), "transform" );
 	}
+
+	@Override
+	public void dispose()
+	{
+		super.dispose();
+		keybindings.removeActionMap("bw");
+		keybindings.removeInputMap("bw");
+		keybindings.removeActionMap("bwv");
+		keybindings.removeInputMap("bwv");
+		keybindings.removeActionMap("navigation");
+		keybindings.removeInputMap("navigation");
+	}
 }

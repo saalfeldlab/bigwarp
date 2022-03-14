@@ -23,9 +23,9 @@ package bigwarp.source;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
-import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import mpicbg.spim.data.sequence.VoxelDimensions;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
@@ -36,14 +36,15 @@ import net.imglib2.view.Views;
 
 public class GridSource< T extends RealType< T >> implements Source< T >
 {
-	
 	public enum GRID_TYPE { MOD, LINE };
 	
 	protected final String name;
 	
-	protected final BigWarpData<?> sourceData;
-	
 	protected final Interval interval;
+	
+	protected final AffineTransform3D sourceTransform;
+
+	protected final VoxelDimensions voxDims;
 
 	protected final GridRealRandomAccessibleRealInterval<T> gridImg;
 	
@@ -53,9 +54,12 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	{
 		this.name = name;
 		this.type = t.copy();
-		sourceData = data;
-		
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		interval = new FinalInterval( data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+
+		sourceTransform = new AffineTransform3D();
+		data.sources.get( 0 ).getSpimSource().getSourceTransform( 0, 0, sourceTransform );
+
+		voxDims = data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
 	
@@ -102,7 +106,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public void getSourceTransform( int t, int level, AffineTransform3D transform )
 	{
-		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+		transform.set(sourceTransform);
 	}
 
 	@Override
@@ -120,7 +124,7 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		return voxDims;
 	}
 
 	@Override

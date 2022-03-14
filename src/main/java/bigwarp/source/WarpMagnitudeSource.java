@@ -27,11 +27,10 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
@@ -44,8 +43,6 @@ import net.imglib2.view.Views;
 public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T >
 {
 	protected final String name;
-	
-	protected final BigWarpData<?> sourceData;
 	
 	protected final Interval interval;
 	
@@ -60,10 +57,8 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 		this.name = name;
 		this.type = t;
 
-		sourceData = data;
-
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		interval = new FinalInterval( data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+		VoxelDimensions srcVoxDims = data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 		String unit = "pix";
 		if( srcVoxDims != null )
 			unit = srcVoxDims.unit();
@@ -152,22 +147,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	{
 		return ( t == 0 );
 	}
-	
-	/*
-	public Interval estimateBoundingInterval( final int t, final int level )
-	{
-		final Interval interval = getSource( t, level );
-		
-		System.out.println( "source Interval:  [ " + interval.min( 0 ) + ", " + interval.max( 0 ) +
-				" ]  x  [ " + interval.min( 1 ) + ", " + interval.max( 1 ) +" ] ");
-		
-		long[] delta = new long[ interval.numDimensions() ];
-		Arrays.fill( delta, 1 );
-		
-		return ((ThinPlateR2LogRSplineKernelTransform)warpMagImg.ra.warp).estimateBoundingBox( interval, delta );
-	}
-	 */
-	
+
 	@Override
 	public RandomAccessibleInterval<T> getSource( int t, int level ) 
 	{

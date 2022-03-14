@@ -169,7 +169,6 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarp< T >
 {
-
 	protected static final int DEFAULT_WIDTH = 600;
 
 	protected static final int DEFAULT_HEIGHT = 400;
@@ -266,6 +265,8 @@ public class BigWarp< T >
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
 
 	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
+
+	private LandmarkKeyboardProcessor keyboardProc;
 
 	protected final SourceAndConverter< FloatType > gridSource;
 
@@ -382,6 +383,7 @@ public class BigWarp< T >
 		warpMagSource = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
 		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
 		gridSource = addGridSource( data, "GridSource" );
+		setGridType( GridSource.GRID_TYPE.LINE );
 
 		this.sources = this.data.sources;
 		final List< ConverterSetup > converterSetups = data.converterSetups;
@@ -391,8 +393,6 @@ public class BigWarp< T >
 		Arrays.sort( targetSourceIndexList );
 
 		sources = wrapSourcesAsTransformed( data.sources, ndims, data );
-
-		setGridType( GridSource.GRID_TYPE.LINE );
 
 		viewerSettings = new BigWarpViewerSettings();
 
@@ -535,7 +535,9 @@ public class BigWarp< T >
 		// have to be safe here and use 3dim point for both 3d and 2d
 		currentLandmark = new RealPoint( 3 );
 		inLandmarkMode = false;
-		setupKeyListener();
+
+		System.out.println( "no keyboard proc" );
+		keyboardProc = setupKeyListener();
 
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
@@ -628,9 +630,14 @@ public class BigWarp< T >
 
 	public void closeAll()
 	{
+		System.out.println( "BigWarp closeAll" );
 		final ArrayList< KeyEventPostProcessor > ks = new ArrayList< KeyEventPostProcessor >( keyEventPostProcessorSet );
 		for ( final KeyEventPostProcessor ke : ks )
 			removeKeyEventPostProcessor( ke );
+
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventPostProcessor(keyboardProc);
+		keyboardProc.dispose();
+		keyboardProc = null;
 
 		repeatedKeyEventsFixer.remove();
 
@@ -644,6 +651,10 @@ public class BigWarp< T >
 		viewerFrameP.dispose();
 		viewerFrameQ.dispose();
 		landmarkFrame.dispose();
+
+		solverThread.interrupt();
+		solverThread = null;
+
 	}
 
 	public void setUpdateWarpOnChange( final boolean updateWarpOnPtChange )
@@ -1085,6 +1096,7 @@ public class BigWarp< T >
 								Executors.newFixedThreadPool( nThreads )  );
 
 						progressWriter.setProgress( 1.00 );
+						return;
 					}
 				}.start();
 			}
@@ -1820,9 +1832,11 @@ public class BigWarp< T >
 		}
 	}
 
-	public void setupKeyListener()
+	public LandmarkKeyboardProcessor setupKeyListener()
 	{
-		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor( new LandmarkKeyboardProcessor( this ) );
+		keyboardProc = new LandmarkKeyboardProcessor( this ) ;
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor( keyboardProc );
+		return keyboardProc;
 	}
 
 	public void setWarpVisGridType( final GridSource.GRID_TYPE type )
@@ -3050,6 +3064,10 @@ public class BigWarp< T >
 					}
 				}
 			}
+			System.out.println("interrupted");
+			bw = null;
+
+			return;
 		}
 
 		public void requestResolve( final boolean isMoving, final int index, final double[] newpt )

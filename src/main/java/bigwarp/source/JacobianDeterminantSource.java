@@ -27,8 +27,6 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
@@ -37,7 +35,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
@@ -45,8 +42,6 @@ import net.imglib2.view.Views;
 public class JacobianDeterminantSource< T extends RealType< T >> implements Source< T >
 {
 	protected final String name;
-	
-	protected final BigWarpData<?> sourceData;
 	
 	protected final Interval interval;
 	
@@ -61,12 +56,10 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 		this.name = name;
 		this.type = t;
 
-		sourceData = data;
 
 		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-
-		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		interval = data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		VoxelDimensions srcVoxDims = data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 		String unit = "pix";
 		if( srcVoxDims != null )
 			unit = srcVoxDims.unit();
@@ -116,7 +109,6 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 //
 //		System.out.println( "base res: " + baseRes[0] + " " + baseRes[1]);
 //		System.out.println( "warp res: " + warpRes[0] + " " + warpRes[1]);
-		
 	}
 
 	public double[] minMax()
