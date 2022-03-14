@@ -93,9 +93,7 @@ public class RealIntervalIterator extends AbstractRealInterval implements Iterat
 	@Override
 	public String toString()
 	{
-		final double[] l = new double[ numDimensions() ];
-		localize( l );
-		return Util.printCoordinates( l );
+		return Util.printCoordinates( this );
 	}
 
 	@Override

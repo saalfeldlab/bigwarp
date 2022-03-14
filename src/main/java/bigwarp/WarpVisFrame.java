@@ -36,8 +36,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.Enumeration;
 
@@ -51,6 +49,7 @@ import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
@@ -65,17 +64,15 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
-import bdv.tools.brightness.SliderPanelDouble;
-import bdv.util.BoundedValueDouble;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
-import ij.IJ;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 
 public class WarpVisFrame extends JDialog 
 {
 	private static final long serialVersionUID = 7561228647761694686L;
 
-	private final BigWarp bw;
+	private final BigWarp<?> bw;
 	private final BigWarpViewerSettings settings;
 	
 	protected ButtonGroup visTypeGroup;
@@ -107,6 +104,13 @@ public class WarpVisFrame extends JDialog
 	protected JLabel gridSpacingLabel;
 	protected JLabel gridWidthLabel;
 
+	// inverse
+	final JSpinner toleranceSpinner;
+	final JSpinner maxIterSpinner;
+
+	// bounding box
+	final JComboBox bboxMethodDropdown;
+	final JSpinner samplesPerDimSpinner;
 
 	// autosave
 	final SpinnerNumberModel savePeriodModel;
@@ -369,7 +373,7 @@ public class WarpVisFrame extends JDialog
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
 		final JPanel tolerancePanel = new JPanel();
-		final JSpinner toleranceSpinner = new JSpinner();
+		toleranceSpinner = new JSpinner();
 		final SpinnerNumberModel tolmodel = new SpinnerNumberModel( 0.5, 0.001, 200.0, 0.1 );
 		toleranceSpinner.setModel( tolmodel );
 		toleranceSpinner.addChangeListener( new ChangeListener()
@@ -378,13 +382,14 @@ public class WarpVisFrame extends JDialog
 			public void stateChanged( ChangeEvent e )
 			{
 				bw.getLandmarkPanel().getTableModel().setInverseThreshold( (Double)toleranceSpinner.getValue() );
+				bw.getBwTransform().setInverseTolerance((Double)toleranceSpinner.getValue());
 			}
 		} );
 		tolerancePanel.add( new JLabel( "Inverse error", SwingConstants.CENTER ), BorderLayout.WEST );
 		tolerancePanel.add( toleranceSpinner, BorderLayout.EAST );
 
 		final JPanel maxIterPanel = new JPanel();
-		final JSpinner maxIterSpinner = new JSpinner();
+		maxIterSpinner = new JSpinner();
 		final SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
 		maxIterSpinner.setModel( itermodel );
 		maxIterSpinner.addChangeListener( new ChangeListener()
@@ -393,6 +398,7 @@ public class WarpVisFrame extends JDialog
 			public void stateChanged( ChangeEvent e )
 			{
 				bw.getLandmarkPanel().getTableModel().setMaxInverseIterations( (Integer)maxIterSpinner.getValue() );
+				bw.getBwTransform().setInverseMaxIterations((Integer)maxIterSpinner.getValue());
 			}
 		} );
 		maxIterPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
@@ -401,8 +407,59 @@ public class WarpVisFrame extends JDialog
 		inverseOptionsPanel.add( tolerancePanel, BorderLayout.NORTH );
 		inverseOptionsPanel.add( maxIterPanel, BorderLayout.SOUTH );
 
-		content.setLayout( new GridBagLayout() );
 
+		// bounding box options
+		final JPanel bboxPanel = new JPanel();
+		bboxPanel.setLayout( new BorderLayout( 10, 10 ));
+
+		bboxPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"Bounding box options" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
+		final JPanel bboxMethodPanel = new JPanel();
+		final String[] methodStrings = {
+				BoundingBoxEstimation.Method.CORNERS.toString(),
+				BoundingBoxEstimation.Method.FACES.toString(),
+				BoundingBoxEstimation.Method.VOLUME.toString() };
+
+		bboxMethodDropdown = new JComboBox<>( methodStrings );
+		bboxMethodDropdown.setSelectedIndex(1);
+		bboxMethodDropdown.addActionListener( new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String methodString = (String)(bboxMethodDropdown.getSelectedItem());
+				bw.getBoxEstimation().setMethod( methodString );
+				bw.updateSourceBoundingBoxEstimators();
+			}
+		});
+		bboxMethodPanel.add( new JLabel( "Estimation method", SwingConstants.CENTER ), BorderLayout.WEST );
+		bboxMethodPanel.add( bboxMethodDropdown, BorderLayout.EAST );
+
+		final JPanel samplerPerDimPanel = new JPanel();
+		samplesPerDimSpinner = new JSpinner();
+		final SpinnerNumberModel samplesmodel = new SpinnerNumberModel( 3, 1, 1000, 1 );
+		samplesPerDimSpinner.setModel( samplesmodel );
+		samplesPerDimSpinner.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				bw.getBoxEstimation().setSamplesPerDim( (Integer)samplesPerDimSpinner.getValue() );
+				bw.updateSourceBoundingBoxEstimators();
+			}
+		} );
+		samplerPerDimPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
+		samplerPerDimPanel.add( samplesPerDimSpinner, BorderLayout.EAST );
+
+		bboxPanel.add( bboxMethodPanel, BorderLayout.NORTH );
+		bboxPanel.add( samplerPerDimPanel, BorderLayout.SOUTH );
+
+
+		content.setLayout( new GridBagLayout() );
 		final GridBagConstraints gbcContent = new GridBagConstraints();
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 0;
@@ -431,7 +488,12 @@ public class WarpVisFrame extends JDialog
 		gbcContent.gridwidth = 3;
 		content.add( inverseOptionsPanel, gbcContent );
 
+		gbcContent.gridx = 0;
 		gbcContent.gridy = 3;
+		gbcContent.gridwidth = 3;
+		content.add( bboxPanel, gbcContent );
+
+		gbcContent.gridy = 4;
 		content.add( autoSaveOptionsPanel , gbcContent );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );

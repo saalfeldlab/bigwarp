@@ -34,6 +34,7 @@ import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealViews;
@@ -68,6 +69,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	private boolean isTransformed;
 	
 	private final Supplier< Boolean > boundingBoxCullingSupplier;
+
+	private BoundingBoxEstimation bboxEst;
 
 	public WarpedSource( final Source< T > source, final String name )
 	{
@@ -113,6 +116,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		this.isTransformed = isTransformed;
 	}
 	
+	public void setBoundingBoxEstimator( final BoundingBoxEstimation bboxEst )
+	{
+		this.bboxEst = bboxEst;
+	}
+
 	public boolean isTransformed( )
 	{
 		return isTransformed;
@@ -137,16 +145,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private Interval estimateBoundingInterval( final int t, final int level )
 	{
-		final Interval wrappedInterval = source.getSource( t, level );
-		AffineTransform3D affine = new AffineTransform3D();
-
-		if( xfm != null )
-			BigWarpExporter.estimateAffineFromCorners( affine, xfm, wrappedInterval );
-
-//		System.out.println("affine " + affine );
-//		source.getSourceTransform( t, level, affine );
-
-		return BigWarpExporter.estimateBounds( affine, wrappedInterval );
+		return bboxEst.estimatePixelInterval( xfm, source.getSource( t, level ) );
 	}
 
 	@Override

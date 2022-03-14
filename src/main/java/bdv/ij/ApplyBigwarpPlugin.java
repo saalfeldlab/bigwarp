@@ -73,6 +73,7 @@ import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
 import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.RealViews;
@@ -283,7 +284,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		System.err.println("Invalid resolution option: " + resolutionOption );
 		return null;
 	}
-	
+
 	public static List<Interval> getPixelInterval(
 			final ImagePlus movingIp,
 			final ImagePlus targetIp,
@@ -293,11 +294,29 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final String fieldOfViewPointFilter,
 			final double[] fovSpec,
 			final double[] offsetSpec,
-			final double[] outputResolution )
-	{
-		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
-		return getPixelInterval( bwData, landmarks, transform, fieldOfViewOption,
-				fieldOfViewPointFilter, fovSpec, offsetSpec, outputResolution );
+			final double[] outputResolution) {
+
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation();
+		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(movingIp, targetIp);
+		return getPixelInterval(bwData, landmarks, transform, fieldOfViewOption,
+				fieldOfViewPointFilter, bboxEst, fovSpec, offsetSpec, outputResolution);
+	}
+
+	public static List<Interval> getPixelInterval(
+			final ImagePlus movingIp,
+			final ImagePlus targetIp,
+			final LandmarkTableModel landmarks,
+			final InvertibleRealTransform transform,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final double[] outputResolution) {
+
+		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(movingIp, targetIp);
+		return getPixelInterval(bwData, landmarks, transform, fieldOfViewOption,
+				fieldOfViewPointFilter, bboxEst, fovSpec, offsetSpec, outputResolution);
 	}
 
 	public static Interval getPixelInterval(
@@ -305,6 +324,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final LandmarkTableModel landmarks,
 			final InvertibleRealTransform transform,
 			final String fieldOfViewOption,
+			final double[] outputResolution )
+	{
+		return getPixelInterval( source, landmarks, transform, fieldOfViewOption, new BoundingBoxEstimation(), outputResolution );
+	}
+
+	public static Interval getPixelInterval(
+			final Source< ? > source,
+			final LandmarkTableModel landmarks,
+			final InvertibleRealTransform transform,
+			final String fieldOfViewOption,
+			final BoundingBoxEstimation bboxEst,
 			final double[] outputResolution )
 	{
 		RandomAccessibleInterval< ? > rai = source.getSource( 0, 0 );
@@ -346,12 +376,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 					Intervals.minAsLongArray( rai ),
 					Intervals.maxAsLongArray( rai ));
 
-			return BigWarpExporter.estimateBounds( seq, interval );
+			return bboxEst.estimatePixelInterval(seq, interval);
+			//			return BigWarpExporter.estimateBounds( seq, interval );
 		}
 		else if( fieldOfViewOption.equals( UNION_TARGET_MOVING ))
 		{
-			final Interval movingWarpedInterval = getPixelInterval( source, landmarks, transform, MOVING_WARPED, outputResolution );
-			final Interval targetInterval = getPixelInterval( source, landmarks, transform, TARGET, outputResolution );
+			final Interval movingWarpedInterval = getPixelInterval( source, landmarks, transform, MOVING_WARPED, bboxEst, outputResolution );
+			final Interval targetInterval = getPixelInterval( source, landmarks, transform, TARGET, bboxEst, outputResolution );
 			return Intervals.union( movingWarpedInterval, targetInterval );
 		}
 
@@ -371,18 +402,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return res;
 	}
 
-	/**
-	 * Returns the interval in pixels of the output given input options
-	 * 
-	 * @param bwData the BigWarpData
-	 * @param landmarks the landmarks
-	 * @param fieldOfViewOption the field of view option
-     * @param fieldOfViewPointFilter the regexp for filtering landmarks points by name
-	 * @param fovSpec the field of view specification
-	 * @param offsetSpec the offset specification 
-	 * @param outputResolution the resolution of the output image
-	 * @return the output interval 
-	 */
 	public static List<Interval> getPixelInterval(
 			final BigWarpData<?> bwData,
 			final LandmarkTableModel landmarks,
@@ -391,208 +410,207 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final String fieldOfViewPointFilter,
 			final double[] fovSpec,
 			final double[] offsetSpec,
-			final double[] outputResolution )
+			final double[] outputResolution)
 	{
-		if( fieldOfViewOption.equals( TARGET ))
-		{
-			if ( bwData.targetSourceIndices.length <= 0 )
-			{
+		return getPixelInterval( bwData, landmarks, transform, fieldOfViewOption,
+				fieldOfViewPointFilter, new BoundingBoxEstimation(),
+				fovSpec, offsetSpec, outputResolution );
+	}
+
+	/**
+	 * Returns the interval in pixels of the output given input options
+	 * 
+	 * @param bwData
+	 *            the BigWarpData
+	 * @param landmarks
+	 *            the landmarks
+	 * @param fieldOfViewOption
+	 *            the field of view option
+	 * @param fieldOfViewPointFilter
+	 *            the regexp for filtering landmarks points by name
+	 * @param bboxEst
+	 *            the bounding box estimator
+	 * @param fovSpec
+	 *            the field of view specification
+	 * @param offsetSpec
+	 *            the offset specification
+	 * @param outputResolution
+	 *            the resolution of the output image
+	 * @return the output interval
+	 */
+	public static List<Interval> getPixelInterval(
+			final BigWarpData<?> bwData,
+			final LandmarkTableModel landmarks,
+			final InvertibleRealTransform transform,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final double[] outputResolution) {
+
+		if (fieldOfViewOption.equals(TARGET)) {
+			if (bwData.targetSourceIndices.length <= 0) {
 				System.err.println("Requested target fov but target image is missing.");
 				return null;
 			}
 
-			return Stream.of( 
-				getPixelInterval(
-					bwData.sources.get( bwData.targetSourceIndices[ 0 ]).getSpimSource(),
-					landmarks, transform, fieldOfViewOption, outputResolution )
-				).collect(Collectors.toList());
-		}
-		else if( fieldOfViewOption.equals( MOVING_WARPED ))
-		{
-			return Stream.of( 
-				getPixelInterval(
-					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
-					landmarks, transform, fieldOfViewOption, outputResolution )
-				).collect(Collectors.toList());
-		}
-		else if( fieldOfViewOption.equals( UNION_TARGET_MOVING ))
-		{
-
 			return Stream.of(
-				getPixelInterval(
-					bwData.sources.get( bwData.movingSourceIndices[ 0 ]).getSpimSource(),
-					landmarks, transform, fieldOfViewOption, outputResolution )
-				).collect(Collectors.toList());
-		}
-		else if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
-		{
-			if( fovSpec.length == 2 )
-			{
-				long[] min = new long[]{ 
-						(long)Math.floor( offsetSpec[ 0 ] ),
-						(long)Math.floor( offsetSpec[ 1 ] ) };
+					getPixelInterval(
+							bwData.sources.get(bwData.targetSourceIndices[0]).getSpimSource(),
+							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
+					.collect(Collectors.toList());
+		} else if (fieldOfViewOption.equals(MOVING_WARPED)) {
+			return Stream.of(
+					getPixelInterval(
+							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
+					.collect(Collectors.toList());
+		} else if (fieldOfViewOption.equals(UNION_TARGET_MOVING)) {
+			return Stream.of(
+					getPixelInterval(
+							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
+					.collect(Collectors.toList());
+		} else if (fieldOfViewOption.equals(SPECIFIED_PIXEL)) {
+			if (fovSpec.length == 2) {
+				long[] min = new long[]{
+						(long)Math.floor(offsetSpec[0]),
+						(long)Math.floor(offsetSpec[1])};
 
 				long[] max = new long[]{
-					(long)Math.ceil( offsetSpec[ 0 ] + fovSpec[ 0 ] ),
-					(long)Math.ceil( offsetSpec[ 0 ] + fovSpec[ 1 ] ) };
-				
+						(long)Math.ceil(offsetSpec[0] + fovSpec[0]),
+						(long)Math.ceil(offsetSpec[0] + fovSpec[1])};
+
 				ArrayList<Interval> out = new ArrayList<>();
-				out.add( new FinalInterval( min, max ));
+				out.add(new FinalInterval(min, max));
 				return out;
-			}
-			else if( fovSpec.length == 3 )
-			{
-				long[] min = new long[]{ 
-						(long)Math.floor( offsetSpec[ 0 ] ),
-						(long)Math.floor( offsetSpec[ 1 ] ),
-						(long)Math.floor( offsetSpec[ 2 ] ) };
+			} else if (fovSpec.length == 3) {
+				long[] min = new long[]{
+						(long)Math.floor(offsetSpec[0]),
+						(long)Math.floor(offsetSpec[1]),
+						(long)Math.floor(offsetSpec[2])};
 
 				long[] max = new long[]{
-						(long) Math.ceil(offsetSpec[0] + fovSpec[0]),
-						(long) Math.ceil(offsetSpec[1] + fovSpec[1]),
-						(long) Math.ceil(offsetSpec[2] + fovSpec[2]) };
+						(long)Math.ceil(offsetSpec[0] + fovSpec[0]),
+						(long)Math.ceil(offsetSpec[1] + fovSpec[1]),
+						(long)Math.ceil(offsetSpec[2] + fovSpec[2])};
 
 				ArrayList<Interval> out = new ArrayList<>();
-				out.add( new FinalInterval( min, max ));
+				out.add(new FinalInterval(min, max));
 				return out;
-			}
-			else
-			{
-				System.out.println("Invalid fov spec, length : " + fovSpec.length );
+			} else {
+				System.out.println("Invalid fov spec, length : " + fovSpec.length);
 				return null;
 			}
-		}
-		else if( fieldOfViewOption.equals( SPECIFIED_PHYSICAL ) )
-		{
-			if( fovSpec.length == 2 )
-			{
-				long[] min = new long[]{ 
-						(long)Math.floor( offsetSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]) };
+		} else if (fieldOfViewOption.equals(SPECIFIED_PHYSICAL)) {
+			if (fovSpec.length == 2) {
+				long[] min = new long[]{
+						(long)Math.floor(offsetSpec[0] / outputResolution[0]),
+						(long)Math.floor(offsetSpec[1] / outputResolution[1])};
 
-				long[] max = new long[]{ 
-						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 0 ] ) / outputResolution[ 0 ]),
-						(long)Math.floor( (offsetSpec[ 1 ] + fovSpec[ 1 ] ) / outputResolution[ 1 ]) };
+				long[] max = new long[]{
+						(long)Math.floor((offsetSpec[0] + fovSpec[0]) / outputResolution[0]),
+						(long)Math.floor((offsetSpec[1] + fovSpec[1]) / outputResolution[1])};
 
 				ArrayList<Interval> out = new ArrayList<>();
-				out.add( new FinalInterval( min, max ));
+				out.add(new FinalInterval(min, max));
 				return out;
-			}
-			else if( fovSpec.length == 3 )
-			{
-				long[] min = new long[]{ 
-						(long)Math.floor( offsetSpec[ 0 ] / outputResolution[ 0 ]),
-						(long)Math.floor( offsetSpec[ 1 ] / outputResolution[ 1 ]),
-						(long)Math.floor( offsetSpec[ 2 ] / outputResolution[ 2 ]) };
+			} else if (fovSpec.length == 3) {
+				long[] min = new long[]{
+						(long)Math.floor(offsetSpec[0] / outputResolution[0]),
+						(long)Math.floor(offsetSpec[1] / outputResolution[1]),
+						(long)Math.floor(offsetSpec[2] / outputResolution[2])};
 
-				long[] max = new long[]{ 
-						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 0 ] ) / outputResolution[ 0 ]),
-						(long)Math.floor( (offsetSpec[ 0 ] + fovSpec[ 1 ] ) / outputResolution[ 1 ]),
-						(long)Math.floor( (offsetSpec[ 2 ] + fovSpec[ 2 ] ) / outputResolution[ 2 ]) };
-
+				long[] max = new long[]{
+						(long)Math.floor((offsetSpec[0] + fovSpec[0]) / outputResolution[0]),
+						(long)Math.floor((offsetSpec[0] + fovSpec[1]) / outputResolution[1]),
+						(long)Math.floor((offsetSpec[2] + fovSpec[2]) / outputResolution[2])};
 
 				ArrayList<Interval> out = new ArrayList<>();
-				out.add( new FinalInterval( min, max ));
+				out.add(new FinalInterval(min, max));
 				return out;
-			}
-			else
-			{
-				System.out.println("Invalid fov spec, length : " + fovSpec.length );
+			} else {
+				System.out.println("Invalid fov spec, length : " + fovSpec.length);
 				return null;
 			}
-		}
-		else if( fieldOfViewOption.equals( LANDMARK_POINTS ) )
-		{
-			List< Double[] > matchedLandmarks = getMatchedPoints( landmarks, fieldOfViewPointFilter );
+		} else if (fieldOfViewOption.equals(LANDMARK_POINTS)) {
+			List<Double[]> matchedLandmarks = getMatchedPoints(landmarks, fieldOfViewPointFilter);
 
-			long[] min = new long[ landmarks.getNumdims() ];
-			long[] max = new long[ landmarks.getNumdims() ];
+			long[] min = new long[landmarks.getNumdims()];
+			long[] max = new long[landmarks.getNumdims()];
 
-			Arrays.fill( min, Long.MAX_VALUE );
-			Arrays.fill( max, Long.MIN_VALUE );
+			Arrays.fill(min, Long.MAX_VALUE);
+			Arrays.fill(max, Long.MIN_VALUE);
 
 			int numPoints = 0;
-			for ( int i = 0; i < matchedLandmarks.size(); i++ )
-			{
-				Double[] pt = matchedLandmarks.get( i );
-				for ( int d = 0; d < pt.length; d++ )
-				{
-					long lo = (long) (Math.floor( pt[ d ] / outputResolution[ d ] ));
-					long hi = (long) (Math.ceil( pt[ d ] / outputResolution[ d ] ));
+			for (int i = 0; i < matchedLandmarks.size(); i++) {
+				Double[] pt = matchedLandmarks.get(i);
+				for (int d = 0; d < pt.length; d++) {
+					long lo = (long)(Math.floor(pt[d] / outputResolution[d]));
+					long hi = (long)(Math.ceil(pt[d] / outputResolution[d]));
 
-					if ( lo < min[ d ] )
-						min[ d ] = lo;
+					if (lo < min[d])
+						min[d] = lo;
 
-					if ( hi > max[ d ] )
-						max[ d ] = hi;
+					if (hi > max[d])
+						max[d] = hi;
 
 				}
 				numPoints++;
 			}
 
-			System.out.println( "Estimated field of view using " + numPoints + " landmarks." );
+			System.out.println("Estimated field of view using " + numPoints + " landmarks.");
 
 			// Make sure something naughty didn't happen
-			for ( int d = 0; d < min.length; d++ )
-			{
-				if ( min[ d ] == Long.MAX_VALUE )
-				{
-					System.err.println( "Problem generating field of view from landmarks" );
+			for (int d = 0; d < min.length; d++) {
+				if (min[d] == Long.MAX_VALUE) {
+					System.err.println("Problem generating field of view from landmarks");
 					return null;
 				}
 
-				if ( max[ d ] == Long.MIN_VALUE )
-				{
-					System.err.println( "Problem generating field of view from landmarks" );
+				if (max[d] == Long.MIN_VALUE) {
+					System.err.println("Problem generating field of view from landmarks");
 					return null;
 				}
 			}
 
 			ArrayList<Interval> out = new ArrayList<>();
-			out.add( new FinalInterval( min, max ));
+			out.add(new FinalInterval(min, max));
 			return out;
-		}
-		else if( fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PHYSICAL ) 
-		  || fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PIXEL ) )
-		{
-			List< Double[] > matchedLandmarks = getMatchedPoints( landmarks, fieldOfViewPointFilter );
-			if( matchedLandmarks.isEmpty() )
-			{
-				System.err.println( "No matching point found" );
+		} else if (fieldOfViewOption.equals(LANDMARK_POINT_CUBE_PHYSICAL)
+				|| fieldOfViewOption.equals(LANDMARK_POINT_CUBE_PIXEL)) {
+			List<Double[]> matchedLandmarks = getMatchedPoints(landmarks, fieldOfViewPointFilter);
+			if (matchedLandmarks.isEmpty()) {
+				System.err.println("No matching point found");
 				return null;
 			}
 
 			final int nd = landmarks.getNumdims();
 			ArrayList<Interval> out = new ArrayList<>();
 
-			for( int i = 0; i < matchedLandmarks.size(); i++ )
-			{
-				final Double[] pt = matchedLandmarks.get( i );
-				long[] min = new long[ nd ];
-				long[] max = new long[ nd ];
-				if( fieldOfViewOption.equals( LANDMARK_POINT_CUBE_PHYSICAL ) )
-				{
-					for ( int d = 0; d < nd; d++ )
-					{
-						min[ d ] = ( long ) Math.floor( (pt[ d ] / outputResolution[ d ]) - ( fovSpec[ d ] / outputResolution[ d ] ) );
-						max[ d ] = ( long ) Math.ceil( (pt[ d ] / outputResolution[ d ]) + ( fovSpec[ d ] / outputResolution[ d ] ) );
+			for (int i = 0; i < matchedLandmarks.size(); i++) {
+				final Double[] pt = matchedLandmarks.get(i);
+				long[] min = new long[nd];
+				long[] max = new long[nd];
+				if (fieldOfViewOption.equals(LANDMARK_POINT_CUBE_PHYSICAL)) {
+					for (int d = 0; d < nd; d++) {
+						min[d] = (long)Math.floor((pt[d] / outputResolution[d]) - (fovSpec[d] / outputResolution[d]));
+						max[d] = (long)Math.ceil((pt[d] / outputResolution[d]) + (fovSpec[d] / outputResolution[d]));
 					}
-				}
-				else
-				{
-					for ( int d = 0; d < nd; d++ )
-					{
-						min[ d ] = ( long ) Math.floor( (pt[ d ] / outputResolution[ d ]) - ( fovSpec[ d ] ) ) + 1;
-						max[ d ] = ( long ) Math.ceil( (pt[ d ] / outputResolution[ d ]) + ( fovSpec[ d ] ) ) - 1;
+				} else {
+					for (int d = 0; d < nd; d++) {
+						min[d] = (long)Math.floor((pt[d] / outputResolution[d]) - (fovSpec[d])) + 1;
+						max[d] = (long)Math.ceil((pt[d] / outputResolution[d]) + (fovSpec[d])) - 1;
 					}
 				}
 
-				out.add( new FinalInterval( min, max ) );
+				out.add(new FinalInterval(min, max));
 			}
 			return out;
 		}
 
-		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )" );
+		System.err.println("Invalid field of view option: ( " + fieldOfViewOption + " )");
 		return null;
 	}
 
@@ -707,12 +725,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final Interpolation interp,
 			final boolean isVirtual,
 			final boolean wait,
-			final int nThreads )
-	{
-		return apply( movingIp, targetIp, landmarks, tranformTypeOption, fieldOfViewOption,
-				fieldOfViewPointFilter, resolutionOption, 
-				resolutionSpec, fovSpec, offsetSpec, 
-				interp, isVirtual, nThreads, wait, null );
+			final int nThreads) {
+
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		return apply(movingIp, targetIp, landmarks, tranformTypeOption, fieldOfViewOption,
+				fieldOfViewPointFilter, bboxEst,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec,
+				interp, isVirtual, nThreads, wait, null);
 	}
 
 	public static List<ImagePlus> apply(
@@ -722,6 +741,30 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final String tranformTypeOption,
 			final String fieldOfViewOption,
 			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final String resolutionOption,
+			final double[] resolutionSpec,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final Interpolation interp,
+			final boolean isVirtual,
+			final boolean wait,
+			final int nThreads) {
+
+		return apply(movingIp, targetIp, landmarks, tranformTypeOption, fieldOfViewOption,
+				fieldOfViewPointFilter, bboxEst,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec,
+				interp, isVirtual, nThreads, wait, null);
+	}
+
+	public static List<ImagePlus> apply(
+			final ImagePlus movingIp,
+			final ImagePlus targetIp,
+			final LandmarkTableModel landmarks,
+			final String tranformTypeOption,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
 			final String resolutionOption,
 			final double[] resolutionSpec,
 			final double[] fovSpec,
@@ -730,12 +773,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads,
 			final boolean wait,
-			final WriteDestinationOptions writeOpts )
-	{
-		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( movingIp, targetIp );
-		return apply( bwData, landmarks, tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter,
-				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
-				interp, isVirtual, nThreads, wait, writeOpts );
+			final WriteDestinationOptions writeOpts) {
+
+		BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(movingIp, targetIp);
+		return apply(bwData, landmarks, tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter, bboxEst,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec,
+				interp, isVirtual, nThreads, wait, writeOpts);
 	}
 
 	public static <T> List<ImagePlus> apply(
@@ -752,8 +795,31 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean isVirtual,
 			final int nThreads,
 			final boolean wait,
-			final WriteDestinationOptions writeOpts )
-	{
+			final WriteDestinationOptions writeOpts) {
+
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		return apply(bwData, landmarks, tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter, bboxEst,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec, interp, isVirtual,
+				nThreads, wait, writeOpts);
+	}
+
+	public static <T> List<ImagePlus> apply(
+			final BigWarpData<T> bwData,
+			final LandmarkTableModel landmarks,
+			final String tranformTypeOption,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final String resolutionOption,
+			final double[] resolutionSpec,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final Interpolation interp,
+			final boolean isVirtual,
+			final int nThreads,
+			final boolean wait,
+			final WriteDestinationOptions writeOpts) {
+
 		int numChannels = bwData.movingSourceIndices.length;
 		int[] movingSourceIndexList = bwData.movingSourceIndices;
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
@@ -774,8 +840,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// to physical space
 		final double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
 
-		List<Interval> outputIntervalList = getPixelInterval( bwData, landmarks, invXfm, fieldOfViewOption, 
-				fieldOfViewPointFilter, fovSpec, offsetSpec, res );
+		List<Interval> outputIntervalList = getPixelInterval(bwData, landmarks, invXfm, fieldOfViewOption,
+				fieldOfViewPointFilter, bboxEst, fovSpec, offsetSpec, res);
 
 		final List<String> matchedPtNames = new ArrayList<>();
 		if( outputIntervalList.size() > 1 )
@@ -805,7 +871,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 	public static <T> List<ImagePlus> runExport(
 			final BigWarpData<T> data,
-			final List< SourceAndConverter< T >> sources,
+			final List<SourceAndConverter<T>> sources,
 			final String fieldOfViewOption,
 			final List<Interval> outputIntervalList,
 			final List<String> matchedPtNames,
@@ -1011,6 +1077,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 				new String[]{ TARGET, MOVING_WARPED, LANDMARK_POINTS, SPECIFIED_PIXEL, SPECIFIED_PHYSICAL },
 				TARGET );
 
+		gd.addChoice("Bounding box estimation",
+				new String[]{
+						BoundingBoxEstimation.Method.CORNERS.toString(),
+						BoundingBoxEstimation.Method.FACES.toString(),
+						BoundingBoxEstimation.Method.VOLUME.toString()},
+			BoundingBoxEstimation.Method.FACES.toString());
+
+		gd.addNumericField( "samples per dimension", 5, 0 );
+
 		gd.addStringField( "point filter", "" );
 		
 		gd.addMessage( "Resolution");
@@ -1067,6 +1142,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final String transformTypeOption = gd.getNextChoice();
 		final String resOption = gd.getNextChoice();
 		final String fovOption = gd.getNextChoice();
+
+		final String bboxOption = gd.getNextChoice();
+		final int bboxSamples = (int)gd.getNextNumber();
+
 		final String fovPointFilter = gd.getNextString();
 
 		final double[] resolutions = new double[ 3 ];
@@ -1164,11 +1243,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		else
 			interp = Interpolation.NLINEAR;
 
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.valueOf(bboxOption), bboxSamples );
 
-		List<ImagePlus> warpedIpList = apply( bigwarpdata, ltm, transformTypeOption,
-				fovOption, fovPointFilter, resOption,
-				resolutions, fov, offset,
-				interp, isVirtual, nThreads, false, writeOpts );
+		List<ImagePlus> warpedIpList = apply(bigwarpdata, ltm, transformTypeOption,
+				fovOption, fovPointFilter, bboxEst,
+				resOption, resolutions, fov, offset,
+				interp, isVirtual, nThreads, false, writeOpts);
 	}
 
 	public static int[] parseBlockSize( final String blockSizeArg, final int nd )

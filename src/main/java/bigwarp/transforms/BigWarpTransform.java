@@ -23,9 +23,13 @@ package bigwarp.transforms;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Optional;
 
 import bdv.gui.TransformTypeSelectDialog;
+import bdv.util.RandomAccessibleIntervalMipmapSource;
+import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
+import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import ij.IJ;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
@@ -59,6 +63,10 @@ public class BigWarpTransform
 	
 	private InvertibleRealTransform currentTransform;
 
+	private double inverseTolerance = 0.5;
+
+	private int maxIterations = 200;
+
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
 		this( tableModel, TransformTypeSelectDialog.TPS );
@@ -76,6 +84,26 @@ public class BigWarpTransform
 		this.transformType = transformType;
 	}
 
+	public void setInverseTolerance( double inverseTolerance )
+	{
+		this.inverseTolerance = inverseTolerance;
+	}
+
+	public void setInverseMaxIterations( int maxIterations )
+	{
+		this.maxIterations = maxIterations;
+	}
+
+	public double getInverseTolerance()
+	{
+		return inverseTolerance;
+	}
+
+	public int getInverseMaxIterations()
+	{
+		return maxIterations;
+	}
+
 	public String getTransformType()
 	{
 		return transformType;
@@ -91,7 +119,10 @@ public class BigWarpTransform
 		InvertibleRealTransform invXfm = null;
 		if( transformType.equals( TransformTypeSelectDialog.TPS ))
 		{
-			invXfm = new TpsTransformSolver().solve( tableModel );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
+			tpsXfm.getOptimzer().setMaxIters(maxIterations);
+			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
+			invXfm = tpsXfm;
 		}
 		else
 		{
@@ -451,6 +482,38 @@ public class BigWarpTransform
 				}
 			}
 		return mtx;
+	}
+
+	public void initializeInverseParameters( BigWarpData<?> bwData )
+	{
+		int N = bwData.targetSourceIndices.length;
+
+		double val;
+		double highestResDim = 0;
+
+		for( int i = 0; i < N; i++ )
+		{
+			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);	
+
+			final String name =  src.getSpimSource().getName();
+			if( name.equals( "WarpMagnitudeSource" ) ||
+					name.equals( "JacobianDeterminantSource" ) ||
+					name.equals( "GridSource" ) )
+			{
+					continue;
+			}
+			final AffineTransform3D xfm = new AffineTransform3D();
+			src.getSpimSource().getSourceTransform( 0, 0, xfm );
+
+			val = xfm.get( 0, 0 );
+			highestResDim = val > highestResDim ?  val : highestResDim;
+			val = xfm.get( 1, 1 );
+			highestResDim = val > highestResDim ?  val : highestResDim;
+			val = xfm.get( 2, 2 );
+			highestResDim = val > highestResDim ?  val : highestResDim;
+		}
+
+		setInverseTolerance( 0.5 * highestResDim);
 	}
 
 }
