@@ -28,16 +28,16 @@ import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
-import bigwarp.BigWarpExporter;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
-import net.imglib2.realtransform.RealViews;
+import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.view.Views;
 
 public class WarpedSource < T > implements Source< T >, MipmapOrdering
@@ -56,7 +56,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	 */
 	private final Source< T > source;
 
-	private final String name;
+	private final String suffix;
 
 	/**
 	 * This is either the {@link #source} itself, if it implements
@@ -64,7 +64,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	 */
 	private final MipmapOrdering sourceMipmapOrdering;
 
-	private RealTransform xfm;
+	private InvertibleRealTransform xfm;
 
 	private boolean isTransformed;
 	
@@ -77,11 +77,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		this( source, name, null );
 	}
 
-	public WarpedSource( final Source< T > source, final String name,
+	public WarpedSource( final Source< T > source, final String suffix,
 			final Supplier< Boolean > doBoundingBoxCulling )
 	{
 		this.source = source;
-		this.name = name;
+		this.suffix = suffix;
 		this.isTransformed = false;
 		this.boundingBoxCullingSupplier = doBoundingBoxCulling;
 
@@ -106,7 +106,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			return ( !isTransformed ) && ( source.doBoundingBoxCulling() );
 	}
 
-	public void updateTransform( RealTransform xfm )
+	public void updateTransform( InvertibleRealTransform xfm )
 	{
 		this.xfm = xfm;
 	}
@@ -134,74 +134,82 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )
 	{
-		if( isTransformed )
+		if( isTransformed && xfm != null )
 		{
-			return Views.interval(
-					Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
-					estimateBoundingInterval( t, level ));
+			// TODO expose interp method - it probably matters
+			@SuppressWarnings("unchecked")
+			final RealTransformRealRandomAccessible<T,?> interpSrc = (RealTransformRealRandomAccessible<T,?>)getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR );
+
+			final AffineTransform3D transform = new AffineTransform3D();
+			source.getSourceTransform( t, level, transform );
+			final RealTransformSequence totalInverseTransform = new RealTransformSequence();
+			totalInverseTransform.add( transform.inverse() );
+			totalInverseTransform.add( xfm.inverse() );
+			totalInverseTransform.add( transform );
+
+			final Interval boundingInterval = bboxEst.estimatePixelInterval( totalInverseTransform, source.getSource( t, level ) );
+
+			return Views.interval( Views.raster(interpSrc), boundingInterval );
 		}
 		return source.getSource( t, level );
 	}
 
 	private Interval estimateBoundingInterval( final int t, final int level )
 	{
-		return bboxEst.estimatePixelInterval( xfm, source.getSource( t, level ) );
+		Interval itvl = bboxEst.estimatePixelInterval( xfm, source.getSource( t, level ) );
+		return itvl;
 	}
 
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
 
-//		RealRandomAccessible<T> realSrc = source.getInterpolatedSource( t, level, method );
-//		if( isTransformed && xfm != null )
-//		{
-//			final AffineTransform3D transform = new AffineTransform3D();
-//			source.getSourceTransform( t, level, transform );
-//
-//			RealTransformSequence totalTransform = new RealTransformSequence();
-////			totalTransform.add( transform );
-////			totalTransform.add( xfm );
-////			totalTransform.add( transform.inverse() );
-//
-//			totalTransform.add( transform.inverse() );
-//			totalTransform.add( xfm );
-//			totalTransform.add( transform );
-//
-//			return new RealTransformRealRandomAccessible< T, RealTransform >( realSrc, xfm );
-//		}
-//		else
-//		{
-//			return realSrc;
-//		}
-
-		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
-		if( isTransformed )
+		RealRandomAccessible<T> realSrc = source.getInterpolatedSource( t, level, method );
+		if( isTransformed && xfm != null )
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
-			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 
-			if( xfm == null )
-				return srcRaTransformed;
-			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm );
+			final RealTransformSequence totalTransform = new RealTransformSequence();
+			totalTransform.add( transform );
+			totalTransform.add( xfm );
+			totalTransform.add( transform.inverse() );
+
+			return new RealTransformRealRandomAccessible< T, RealTransform >( realSrc, totalTransform );
 		}
 		else
 		{
-			return sourceRealAccessible;
+			return realSrc;
 		}
+
+//		final RealRandomAccessible< T > sourceRealAccessible = source.getInterpolatedSource( t, level, method );
+//		if( isTransformed )
+//		{
+//			final AffineTransform3D transform = new AffineTransform3D();
+//			source.getSourceTransform( t, level, transform );
+//			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+//
+//			if( xfm == null )
+//				return srcRaTransformed;
+//			else
+//				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm );
+//		}
+//		else
+//		{
+//			return sourceRealAccessible;
+//		}
 	}
 
 	@Override
 	public synchronized void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-		if( isTransformed )
-			transform.identity();
-		else
+//		if( isTransformed )
+//			transform.identity();
+//		else
 			source.getSourceTransform( t, level, transform );
 	}
 
-	public RealTransform getTransform()
+	public InvertibleRealTransform getTransform()
 	{
 		return xfm;
 	}
@@ -215,7 +223,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public String getName()
 	{
-		return source.getName() + "_" + name;
+		return source.getName() + "_" + suffix;
 	}
 
 	@Override
