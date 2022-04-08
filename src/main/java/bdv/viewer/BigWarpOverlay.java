@@ -21,8 +21,10 @@
  */
 package bdv.viewer;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Stroke;
@@ -102,41 +104,56 @@ public class BigWarpOverlay {
 		for( int i : selectedRows )
 			isSelected[ i ] = true;
 
+
 		/*
 		 * Draw spots.
 		 */
 		if ( viewer.getSettings().areLandmarksVisible() )
 		{
 
+			final BasicStroke hlStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight );
+			final BasicStroke selStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight / 2 );
+
 			final double radiusRatio = ( Double ) viewer.getSettings().get( 
 					BigWarpViewerSettings.KEY_SPOT_RADIUS_RATIO );
 			
 			final double radius = viewer.getSettings().getSpotSize();
 
-			Color color;
 			Stroke stroke;
 			stroke = BigWarpViewerSettings.NORMAL_STROKE;
 			
 			FontMetrics fm = null;
+			Font font = null;
 			int fonthgt = 0;
+			Color textBoxColorHl = null;
 			Color textBoxColor = null;
+
+			final double strokeW = viewer.getSettings().strokeWeight;
+			final Color color  = viewer.getSettings().getSpotColor();
+			final Color inactiveColor  = viewer.getSettings().getSpotColor();
+
 			if ( viewer.getSettings().areNamesVisible() )
 			{
+				font = g.getFont().deriveFont( viewer.getSettings().fontSize );
+				g.setFont( font );
 				fm = g.getFontMetrics( g.getFont() );
 				fonthgt = fm.getHeight();
+
 				textBoxColor = Color.BLACK;
-			}
+				textBoxColorHl = new Color( color.getRed(), color.getGreen(), color.getBlue(), 255 );
+				textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
+
+			}		final Color desaturatedColor = null;
 
 			final int nRows = landmarkModel.getRowCount();
 			for( int index = 0; index < nRows; index++ )
 			{
 
 				if ( landmarkModel.isActive( index ) )
-					color = viewer.getSettings().getSpotColor();
+					g.setColor( color );
 				else
-					color = viewer.getSettings().getInactiveSpotColor();
+					g.setColor( inactiveColor );
 
-				g.setColor( color );
 				g.setStroke( stroke );
 
 				landmarkModel.copyPointSafe(spot, index, isMoving);
@@ -144,14 +161,6 @@ public class BigWarpOverlay {
 				// if the viewer is moving but transformed, render the points
 				// at the location of the warped point ( if it exists ),
 				// otherwise, take the fixed point
-//				if ( isMoving && viewer.isInFixedImageSpace() )
-//				{
-//					if ( landmarkModel.isWarped( index ) )
-//						spot = landmarkModel.getWarpedPoints().get( index );
-//					else
-//						spot = landmarkModel.getPoints( false ).get( index );
-//				}
-
 				boolean copySuccess = false;
 				if( isMoving ) {
 					if( viewer.isInFixedImageSpace() ) {
@@ -186,6 +195,8 @@ public class BigWarpOverlay {
 					else
 						arad = rad;
 
+					double srad = arad + strokeW;
+
 					// vary size
 					g.fillOval( ( int ) ( viewerCoords[ 0 ] - arad ), 
 								( int ) ( viewerCoords[ 1 ] - arad ), 
@@ -193,17 +204,24 @@ public class BigWarpOverlay {
 					
 					if( isSelected[ index ] )
 					{
-						g.drawOval( ( int ) ( viewerCoords[ 0 ] - arad - 2 ),
-									( int ) ( viewerCoords[ 1 ] - arad - 2 ),
-									( int ) ( 2 * arad + 4 ), ( int ) ( 2 * arad + 4 ) );
-					}
-					else if( hoveredIndex == index )
-					{
-						g.setColor( new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 ));
-						g.drawOval( ( int ) ( viewerCoords[ 0 ] - arad - 2 ),
+						g.setStroke( hlStroke );
+						g.setColor( Color.WHITE );
+						g.drawOval( ( int ) ( viewerCoords[ 0 ] - arad - 2),
 								( int ) ( viewerCoords[ 1 ] - arad - 2 ),
 								( int ) ( 2 * arad + 4 ), ( int ) ( 2 * arad + 4 ) );
+
+					}
+
+					if( hoveredIndex == index )
+					{
+						g.setStroke( hlStroke );
+						g.setColor( new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 ));
+						g.drawOval( ( int ) ( viewerCoords[ 0 ] - srad - 2 ),
+								( int ) ( viewerCoords[ 1 ] - srad - 2 ),
+								( int ) ( 2 * srad + 4 ), ( int ) ( 2 * srad + 4 ) );
+
 						g.setColor( color );
+						g.setStroke( stroke );
 					}
 
 					if ( viewer.getSettings().areNamesVisible() )
@@ -214,15 +232,15 @@ public class BigWarpOverlay {
 						String name = landmarkModel.getNames().get(index);
 						int strwidth = fm.stringWidth( name );
 						
-						if( isSelected[ index ] || hoveredIndex == index )
-							textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 255 );
+						if( hoveredIndex == index )
+							g.setColor( textBoxColorHl );
 						else
-							textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
+							g.setColor( textBoxColor );
 						
-						g.setColor( textBoxColor );
 						g.fillRect( tx - 1, ty - fonthgt + 2, strwidth + 2, fonthgt);
 						
 						g.setColor( Color.BLACK );
+						g.setFont( font );
 						g.drawString( name, tx, ty );
 						
 					}

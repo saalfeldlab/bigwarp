@@ -145,7 +145,7 @@ public class WarpVisFrame extends JDialog
 		landmarkSizeSlider = new JSlider();
 		landmarkSizeSlider.setValue( (int)settings.getSpotSize() );
 		landmarkSizeSlider.setMinimum( 1 );
-		landmarkSizeSlider.setMaximum( 20 );
+		landmarkSizeSlider.setMaximum( 96 );
 		
 		landmarkPointOptionsPanel.add( landmarkColorButton );
 		landmarkPointOptionsPanel.add( landmarkSizeSlider );
@@ -452,7 +452,7 @@ public class WarpVisFrame extends JDialog
 				bw.updateSourceBoundingBoxEstimators();
 			}
 		} );
-		samplerPerDimPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
+		samplerPerDimPanel.add( new JLabel( "Num samples", SwingConstants.CENTER ), BorderLayout.WEST );
 		samplerPerDimPanel.add( samplesPerDimSpinner, BorderLayout.EAST );
 
 		bboxPanel.add( bboxMethodPanel, BorderLayout.NORTH );

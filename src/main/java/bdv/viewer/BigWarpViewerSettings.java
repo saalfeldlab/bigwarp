@@ -76,7 +76,7 @@ public class BigWarpViewerSettings  {
 	 */
 	public static final Color DEFAULT_HIGHLIGHT_COLOR = new Color( 1f, 0.5f, 1f );
 
-	public static final double DEFAULT_SPOT_SIZE = 4;
+	public static final double DEFAULT_SPOT_SIZE = 8;
 	
 	protected Map< String, Object > displaySettings;
 	
@@ -85,7 +85,9 @@ public class BigWarpViewerSettings  {
 	protected Color currentInactiveSpotColor;
 	public double currentSpotSize;
 	
-	
+	public float fontSize = 12f;
+	public double strokeWeight = 3;
+
 	public BigWarpViewerSettings(){
 		createDisplaySettings();
 		
@@ -142,9 +144,17 @@ public class BigWarpViewerSettings  {
 		return currentInactiveSpotColor;
 	}
 	
+	/**
+	 * Also updates stroke weight and font size
+	 *
+	 * @param size point spot size for overlay
+	 */
 	public void setSpotSize( double size )
 	{
+		double r = size / currentSpotSize;
 		this.currentSpotSize = size;
+		strokeWeight = Math.ceil( currentSpotSize * 0.375 );
+		fontSize = (int)(8 + (currentSpotSize * 0.5 ));
 	}
 	
 	public double getSpotSize()
