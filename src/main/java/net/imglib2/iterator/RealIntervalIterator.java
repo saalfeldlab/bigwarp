@@ -24,7 +24,6 @@ package net.imglib2.iterator;
 
 import net.imglib2.AbstractRealInterval;
 import net.imglib2.FinalRealInterval;
-import net.imglib2.Interval;
 import net.imglib2.Iterator;
 import net.imglib2.RealInterval;
 import net.imglib2.RealLocalizable;
@@ -46,7 +45,7 @@ public class RealIntervalIterator extends AbstractRealInterval implements Iterat
 	final protected double[] location;
 
 	/**
-	 * Iterates an {@link Interval} of the given dimensions with <em>min</em>=
+	 * Iterates a {@link RealInterval} of the given dimensions with <em>min</em>=
 	 * 0<sup><em>n</em></sup>
 	 *
 	 * @param interval
@@ -61,7 +60,7 @@ public class RealIntervalIterator extends AbstractRealInterval implements Iterat
 	}
 
 	/**
-	 * Iterates an {@link Interval} with given <em>min</em> and <em>max</em>.
+	 * Iterates a {@link RealInterval} with given <em>min</em> and <em>max</em>.
 	 *
 	 * @param min
 	 * @param max
