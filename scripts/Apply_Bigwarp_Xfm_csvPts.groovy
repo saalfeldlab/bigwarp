@@ -18,62 +18,6 @@ import bigwarp.transforms.*;
 import net.imglib2.realtransform.*;
 import net.imglib2.realtransform.inverse.*;
 
-import mpicbg.models.*;
-import bdv.gui.TransformTypeSelectDialog;
-
-
-def getModel3D( final String transformType )
-{
-	switch( transformType ){
-	case TransformTypeSelectDialog.AFFINE:
-		return new AffineModel3D();
-	case TransformTypeSelectDialog.SIMILARITY:
-		return new SimilarityModel3D();
-	case TransformTypeSelectDialog.ROTATION:
-		return new RigidModel3D();
-	case TransformTypeSelectDialog.TRANSLATION:
-		return new TranslationModel3D();
-	}
-	return null;
-}
-
-def AbstractAffineModel2D getModel2D( final String transformType)
-{
-	switch( transformType ){
-	case TransformTypeSelectDialog.AFFINE:
-		return new AffineModel2D();
-	case TransformTypeSelectDialog.SIMILARITY:
-		return new SimilarityModel2D();
-	case TransformTypeSelectDialog.ROTATION:
-		return new RigidModel2D();
-	case TransformTypeSelectDialog.TRANSLATION:
-		return new TranslationModel2D();
-	}
-	return null;
-}
-
-def fitTransform( Model model, LandmarkTableModel tableModel)
-{
-
-	int numActive = tableModel.numActive();
-	int ndims = tableModel.getNumdims();
-	
-	double[][] mvgPts = new double[ ndims ][ numActive ];
-	double[][] tgtPts = new double[ ndims ][ numActive ];
-	
-	tableModel.copyLandmarks( mvgPts, tgtPts );
-	
-	double[] w = new double[ numActive ];
-	Arrays.fill( w, 1.0 );
-	
-	try {
-		model.fit( mvgPts, tgtPts, w );
-	} catch (NotEnoughDataPointsException e) {
-		e.printStackTrace();
-	} catch (IllDefinedDataPointsException e) {
-		e.printStackTrace();
-	}
-}
 
 def buildTransform( File landmarksPath, String transformType, int nd, boolean needInverse, double invTolerance, int maxIters )
 {
@@ -97,7 +41,14 @@ def buildTransform( File landmarksPath, String transformType, int nd, boolean ne
         xfm = ((Wrapped2DTransformAs3D)xfm).getTransform();
 
 	if( needInverse )
+    {
+        if( transformType.equals( "Thin Plate Spline" ))
+        {
+            xfm.getOptimzer().setMaxIters( maxIters );
+            xfm.getOptimzer().setTolerance( invTolerance );
+        }
 		xfm = xfm.inverse();
+    }
 
     return xfm;
 }
@@ -121,31 +72,31 @@ int nd = lines.get( 0 ).split(",").length;
 transform = buildTransform( landmarksPath, transformType, nd, needInverseTransform, invTolerance, invMaxIters );
 
 // transform all points
-outputLines = []
+outputLines = [];
 result = new double[ nd ];
-boolean firstLine = true
+boolean firstLine = true;
 for( l in lines )
 {
 	// add the first line to the output if it's a header
 	if( firstLine && csvHasHeader )
 	{
-		outputLines.add( l )
-		firstLine = false
-		continue
+		outputLines.add( l );
+		firstLine = false;
+		continue;
 	}
 	
 	// parse line
-	pt = l.split(",").collect { s -> Double.parseDouble(s) }
-	scale = [ sx, sy, sz ] as double[]
+	pt = l.split(",").collect { s -> Double.parseDouble(s) };
+	scale = [ sx, sy, sz ] as double[];
 
 
 	// elementwise multiplication of pt and scale
-	scaledpt = [pt, scale].transpose().collect{ it[0] * it[1]}
+	scaledpt = [pt, scale].transpose().collect{ it[0] * it[1]};
 
 	// transform point
-	transform.apply( scaledpt as double[], result )
+	transform.apply( scaledpt as double[], result );
 
-	outputLines.add( result.collect{ x -> Double.toString(x)}.join(","))
+	outputLines.add( result.collect{ x -> Double.toString(x)}.join(","));
 }
 
 // write output
