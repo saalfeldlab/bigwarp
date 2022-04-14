@@ -852,7 +852,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final String unit = ApplyBigwarpPlugin.getUnit( bwData, resolutionOption );
-			ApplyBigwarpPlugin.runN5Export( bwData, sourcesxfm, fieldOfViewOption,
+			runN5Export( bwData, sourcesxfm, fieldOfViewOption,
 					outputIntervalList.get( 0 ), interp,
 					offset, res, unit, 
 					progressWriter, writeOpts, 
@@ -861,7 +861,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else
 		{
-			final boolean show = (writeOpts.pathOrN5Root == null || writeOpts.pathOrN5Root.isEmpty());
+			final boolean show;
+			if( writeOpts == null || writeOpts.pathOrN5Root == null )
+				show = true;
+			else
+				show = false;
+
 			return runExport( bwData, sourcesxfm, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
 					offset, res, isVirtual, nThreads, 
@@ -1004,9 +1009,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 			try
 			{
 				N5Utils.save( imgToWrite, n5, destDataset, blockSize, compression, exec );
-
 				if( parser != null && metadata != null )
 					parser.writeMetadata( metadata, n5, destDataset );
+
+				n5.close();
 			}
 			catch ( Exception e )
 			{
