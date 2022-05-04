@@ -2200,6 +2200,12 @@ public class BigWarp< T >
 		return true;
 	}
 
+	public void setBoundingBoxUpdates( final boolean doUpdates )
+	{
+		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
+			( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ i ] ).getSpimSource() ) ).setUpdateBoundingIntervals( doUpdates );
+	}
+
 	public synchronized void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
 		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
@@ -2587,6 +2593,7 @@ public class BigWarp< T >
 		public void mousePressed( final MouseEvent e )
 		{
 			pressTime = System.currentTimeMillis();
+			setBoundingBoxUpdates( false );
 
 			// shift down is reserved for drag overlay
 			if ( e.isShiftDown() ) { return; }
@@ -2611,6 +2618,7 @@ public class BigWarp< T >
 		public void mouseReleased( final MouseEvent e )
 		{
 			long clickLength = System.currentTimeMillis() - pressTime;
+			setBoundingBoxUpdates( true );
 
 			if( clickLength < keyClickMaxLength && selectedPointIndex != -1 )
 				return;

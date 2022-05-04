@@ -21,6 +21,7 @@
  */
 package bdv.img;
 
+import java.util.ArrayList;
 import java.util.function.Supplier;
 
 import bdv.viewer.Interpolation;
@@ -29,6 +30,7 @@ import bdv.viewer.SourceAndConverter;
 import bdv.viewer.render.DefaultMipmapOrdering;
 import bdv.viewer.render.MipmapOrdering;
 import mpicbg.spim.data.sequence.VoxelDimensions;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
@@ -72,6 +74,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private BoundingBoxEstimation bboxEst;
 
+	private ArrayList<Interval> boundingIntervals;
+
+	private boolean updateBoundingIntervals;
+
 	public WarpedSource( final Source< T > source, final String name )
 	{
 		this( source, name, null );
@@ -86,6 +92,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		this.boundingBoxCullingSupplier = doBoundingBoxCulling;
 
 		this.xfm = null;
+
+		updateBoundingIntervals = true;
+		boundingIntervals = new ArrayList<>( source.getNumMipmapLevels() );
+		for( int i = 0; i < getNumMipmapLevels(); i++ )
+			boundingIntervals.add( i, new FinalInterval( source.getSource( 0, i ) ));
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
@@ -109,6 +120,38 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	public void updateTransform( InvertibleRealTransform xfm )
 	{
 		this.xfm = xfm;
+		if( updateBoundingIntervals)
+			updateBoundingIntervals();
+	}
+
+	public void setUpdateBoundingIntervals( boolean doUpdate )
+	{
+		updateBoundingIntervals = doUpdate;
+		updateBoundingIntervals();
+	}
+
+	public void updateBoundingIntervals()
+	{
+		if( xfm == null )
+		{
+			for( int i = 0; i < getNumMipmapLevels(); i++ )
+				boundingIntervals.set( i, new FinalInterval( source.getSource( 0, i ) ));
+
+			return;
+		}
+
+		final AffineTransform3D transform = new AffineTransform3D();
+		for( int i = 0; i < getNumMipmapLevels(); i++ )
+		{
+			source.getSourceTransform( 0, i, transform );
+			final RealTransformSequence totalInverseTransform = new RealTransformSequence();
+			totalInverseTransform.add( transform.inverse() );
+			totalInverseTransform.add( xfm.inverse() );
+			totalInverseTransform.add( transform );
+
+			final Interval boundingInterval = bboxEst.estimatePixelInterval( totalInverseTransform, source.getSource( 0, i ) );
+			boundingIntervals.set( i, boundingInterval );
+		}
 	}
 	
 	public void setIsTransformed( boolean isTransformed )
@@ -140,16 +183,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			@SuppressWarnings("unchecked")
 			final RealTransformRealRandomAccessible<T,?> interpSrc = (RealTransformRealRandomAccessible<T,?>)getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR );
 
-			final AffineTransform3D transform = new AffineTransform3D();
-			source.getSourceTransform( t, level, transform );
-			final RealTransformSequence totalInverseTransform = new RealTransformSequence();
-			totalInverseTransform.add( transform.inverse() );
-			totalInverseTransform.add( xfm.inverse() );
-			totalInverseTransform.add( transform );
-
-			final Interval boundingInterval = bboxEst.estimatePixelInterval( totalInverseTransform, source.getSource( t, level ) );
-
-			return Views.interval( Views.raster(interpSrc), boundingInterval );
+			return Views.interval( Views.raster(interpSrc), boundingIntervals.get( level ) );
 		}
 		return source.getSource( t, level );
 	}
