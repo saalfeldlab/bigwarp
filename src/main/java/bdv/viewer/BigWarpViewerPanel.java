@@ -37,6 +37,7 @@ import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
+import bdv.viewer.overlay.BigWarpGenericOverlay;
 import bigwarp.util.Rotation2DHelpers;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
@@ -56,7 +57,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpOverlay overlay;
 
 	protected BigWarpDragOverlay dragOverlay;
-	
+
+	protected ArrayList<BigWarpGenericOverlay<?>> otherOverlays;
+
 	protected final MessageOverlayAnimator message;
 
 	protected boolean isMoving;
@@ -106,6 +109,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 		else
 			message = optional.getValues().getMsgOverlay();
 
+		otherOverlays = new ArrayList<>();  
 		overlayAnimators.add( message );
 		updateGrouping();
 	}
@@ -319,6 +323,14 @@ public class BigWarpViewerPanel extends ViewerPanel
 		}
 		overlayAnimators.removeAll( overlayAnimatorsToRemove );
 
+        for( final BigWarpGenericOverlay< ? >  thisoverlay : otherOverlays )                                                                                                                    
+        {
+            if( thisoverlay.isVisible() )
+            {
+                thisoverlay.paint( ( Graphics2D ) g );
+            }
+        }
+
 		if ( requiresRepaint )
 			display.repaint();
 		
@@ -443,4 +455,10 @@ public class BigWarpViewerPanel extends ViewerPanel
     {
     	return transformEnabled;
     }
+
+    public void addGenericOverlay( final BigWarpGenericOverlay< ? > overlay )
+    {
+        otherOverlays.add( overlay );                                                                                                                                                           
+    }
+
 }
