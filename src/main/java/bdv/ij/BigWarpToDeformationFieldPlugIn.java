@@ -43,9 +43,11 @@ import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 
+import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.transforms.BigWarpTransform;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
@@ -66,7 +68,6 @@ import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.Scale2D;
 import net.imglib2.realtransform.Scale3D;
 import net.imglib2.realtransform.ThinplateSplineTransform;
@@ -97,12 +98,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static void main( final String[] args )
 	{
 		new ImageJ();
-		IJ.run("Boats (356K)");
-//		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
+//		IJ.run("Boats (356K)");
+		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
 //		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
-//		imp.show();
 		
-		WindowManager.getActiveWindow();
+//		WindowManager.getActiveWindow();
+		imp.show();
+
 		new BigWarpToDeformationFieldPlugIn().run( null );
 	}
 
@@ -209,12 +211,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final double[] spacing,
 			final int nThreads )
 	{
-		ThinPlateR2LogRSplineKernelTransform tpsRaw = ltm.getTransform();
-		ThinPlateR2LogRSplineKernelTransform tpsUseMe = tpsRaw;
-		if ( ignoreAffine )
-			tpsUseMe = new ThinPlateR2LogRSplineKernelTransform( tpsRaw.getSourceLandmarks(), null, null, tpsRaw.getKnotWeights() );
-
-		ThinplateSplineTransform tps = new ThinplateSplineTransform( tpsUseMe );
+		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
+		final RealTransform tps = getTpsAffineToggle( bwXfm, ignoreAffine );
 
 		AffineGet pixelToPhysical = null;
 		if( spacing.length == 2)
@@ -269,17 +267,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final Compression compression,
 			final int nThreads ) throws IOException 
 	{
-		final ThinPlateR2LogRSplineKernelTransform tpsRaw = ltm.getTransform();
-		final AffineGet affine = toAffine( tpsRaw );
-
-		/*
-		 * "remove the affine" from the total transform
-		 * by concatenating the inverse of the affine to be removed
-		 */
-		final ThinplateSplineTransform tpsTotal = new ThinplateSplineTransform( tpsRaw );
-		final RealTransformSequence seq = new RealTransformSequence();
-		seq.add( tpsTotal );
-		seq.add( affine.inverse() );
+		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
+		final RealTransform tpsTotal = getTpsAffineToggle( bwXfm, false );
 
 		AffineGet pixelToPhysical = null;
 		if( spacing.length == 2 )
@@ -288,7 +277,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			pixelToPhysical = new Scale3D( spacing );
 
 		FloatImagePlus< FloatType > dfieldRaw = convertToDeformationField(
-				dims, seq, pixelToPhysical, nThreads );
+				dims, tpsTotal, pixelToPhysical, nThreads );
 
 		// this works for both 2d and 3d, it turn out
 		RandomAccessibleInterval< FloatType > dfield =
@@ -305,8 +294,20 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 		final N5Writer n5 = new N5Factory().openWriter( n5BasePath );
-		N5DisplacementField.save( n5, n5Dataset, affine, dfield, spacing, blockSize, compression );
-		N5DisplacementField.saveAffine( affine, n5, n5Dataset );
+		N5DisplacementField.save( n5, n5Dataset, null, dfield, spacing, blockSize, compression );
+		n5.close();
+	}
+
+	private static RealTransform getTpsAffineToggle( BigWarpTransform bwXfm, boolean ignoreAffine )
+	{
+		if( ignoreAffine )
+		{
+			final ThinPlateR2LogRSplineKernelTransform tps = bwXfm.getTpsBase();
+			return new ThinplateSplineTransform(
+						new ThinPlateR2LogRSplineKernelTransform( tps.getSourceLandmarks(), null, null, tps.getKnotWeights() ));
+		}
+		else
+			return bwXfm.getTransformation();
 	}
 
 	public static AffineGet toAffine( final ThinPlateR2LogRSplineKernelTransform tps )
