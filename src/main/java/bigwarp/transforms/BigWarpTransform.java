@@ -124,6 +124,13 @@ public class BigWarpTransform
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 			invXfm = tpsXfm;
 		}
+		else if( transformType.equals( TransformTypeSelectDialog.REGTPS ))
+		{
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new RegTpsTransformSolver().solve( tableModel );
+			tpsXfm.getOptimzer().setMaxIters(maxIterations);
+			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
+			invXfm = tpsXfm;
+		}
 		else
 		{
 			final double[][] mvgPts;
