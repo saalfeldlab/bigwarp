@@ -40,15 +40,17 @@ public class TransformTypeSelectDialog extends JDialog
 	private static final long serialVersionUID = 1L;
 	
 	public static final String TPS = "Thin Plate Spline";
+	public static final String REGTPS = "Regularized Thin Plate Spline";
 	public static final String AFFINE = "Affine";
 	public static final String SIMILARITY = "Similarity";
 	public static final String ROTATION = "Rotation";
 	public static final String TRANSLATION = "Translation";
-	
+
 	private final BigWarp< ? > bw;
 	private String transformType;
 
 	private final JRadioButton tpsButton;
+	private final JRadioButton regTpsButton;
 	private final JRadioButton affineButton;
 	private final JRadioButton similarityButton;
 	private final JRadioButton rotationButton;
@@ -70,6 +72,7 @@ public class TransformTypeSelectDialog extends JDialog
 		transformType = bw.getTransformType();
 
 		tpsButton = new JRadioButton( TPS );
+		regTpsButton = new JRadioButton( REGTPS );
 		affineButton = new JRadioButton( AFFINE );
 		similarityButton = new JRadioButton( SIMILARITY );
 		rotationButton = new JRadioButton( ROTATION );
@@ -77,6 +80,7 @@ public class TransformTypeSelectDialog extends JDialog
 		
 		ButtonGroup group = new ButtonGroup();
 		group.add( tpsButton );
+		group.add( regTpsButton );
 		group.add( affineButton );
 		group.add( similarityButton );
 		group.add( rotationButton );
@@ -85,6 +89,7 @@ public class TransformTypeSelectDialog extends JDialog
 		updateButtonGroup();
 
 		addActionListender( tpsButton );
+		addActionListender( regTpsButton );
 		addActionListender( affineButton );
 		addActionListender( similarityButton );
 		addActionListender( rotationButton );
@@ -92,6 +97,7 @@ public class TransformTypeSelectDialog extends JDialog
 		
 		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
+		radioPanel.add( regTpsButton );
 		radioPanel.add( affineButton );
 		radioPanel.add( similarityButton );
 		radioPanel.add( rotationButton );
@@ -114,6 +120,9 @@ public class TransformTypeSelectDialog extends JDialog
 		switch( transformType )
 		{
 		case TPS:
+			tpsButton.setSelected( true );
+			break;
+		case REGTPS:
 			tpsButton.setSelected( true );
 			break;
 		case AFFINE:
