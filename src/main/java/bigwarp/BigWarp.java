@@ -351,7 +351,7 @@ public class BigWarp< T >
 		this.options = options;
 
 		ptBack = new double[ 3 ];
-		if( options.is2d )
+		if( options.values.is2D() )
 			ndims = 2;
 		else
 			ndims = 3;
@@ -422,7 +422,7 @@ public class BigWarp< T >
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
-		if ( options.is2d )
+		if ( options.values.is2D() )
 		{
 
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;

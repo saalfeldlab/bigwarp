@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -21,25 +21,19 @@
  */
 package bdv.viewer;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import bdv.cache.CacheControl;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
-import bdv.viewer.animate.MessageOverlayAnimator;
-import bdv.viewer.animate.OverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bigwarp.util.Rotation2DHelpers;
-import net.imglib2.RealPoint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.Translation3D;
 
@@ -51,15 +45,11 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final int TARGET_GROUP_INDEX = 1;
 
-	protected List< SourceAndConverter< ? > > sources;
-
 	protected BigWarpViewerSettings viewerSettings;
 
 	protected BigWarpOverlay overlay;
 
 	protected BigWarpDragOverlay dragOverlay;
-	
-	protected final MessageOverlayAnimator message;
 
 	protected boolean isMoving;
 
@@ -76,7 +66,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected boolean boxOverlayVisible = true;
 
 	protected boolean textOverlayVisible = true;
-	
+
 	protected ArrayList< AffineTransform3D > orthoTransforms;
 
 	// root two over two
@@ -89,26 +79,29 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
-	
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving, 
+
+	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving,
 			int[] movingSourceIndexList, int[] targetSourceIndexList  )
 	{
-		super( sources, 1, cache, optional );
-		this.sources = sources;
+		super( sources, 1, cache, optional.getViewerOptions( isMoving ) );
 		this.viewerSettings = viewerSettings;
-		options = optional;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed
 										// image by default
 		this.movingSourceIndexList = movingSourceIndexList;
 		this.targetSourceIndexList = targetSourceIndexList;
 
-		if( isMoving )
-			message = optional.getValues().getMsgOverlayMoving();
-		else
-			message = optional.getValues().getMsgOverlay();
+		getDisplay().overlays().add( g -> {
+			if ( null != overlay ) {
+				overlay.setViewerState( state() );
+				overlay.paint( ( Graphics2D ) g );
+			}
+			if ( dragOverlay != null ) {
+				//dragOverlay.setViewerState( state );
+				dragOverlay.paint( ( Graphics2D ) g );
+			}
+		} );
 
-		overlayAnimators.add( message );
 		updateGrouping();
 	}
 
@@ -144,13 +137,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		boxOverlayVisible = !boxOverlayVisible;
 	}
-	
-	@Override
-	public void showMessage( final String msg )
-	{
-		message.add( msg );
-		display.repaint();
-	}
 
 	public void setHoveredIndex( int index )
 	{
@@ -168,7 +154,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	/**
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
-	 * 
+	 *
 	 * @return the number sources in the moving group
 	 */
 	public int updateGrouping()
@@ -216,7 +202,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()
@@ -241,7 +227,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public void addOverlay( BigWarpOverlay overlay ){
 		this.overlay = overlay;
 	}
-	
+
 	public BigWarpOverlay getOverlay( ){
 		return overlay;
 	}
@@ -253,88 +239,17 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public BigWarpDragOverlay getDragOverlay(){
 		return dragOverlay;
 	}
-	
+
 	public boolean getIsMoving()
 	{
 		return isMoving;
 	}
-	
+
 	public void setNumDim( int ndim )
 	{
 		this.ndims = ndim;
 	}
 
-	@Override
-	public void drawOverlays( final Graphics g )
-	{
-		boolean requiresRepaint = false;
-		if( boxOverlayVisible )
-		{
-			multiBoxOverlayRenderer.setViewerState( state() );
-			multiBoxOverlayRenderer.updateVirtualScreenSize( display.getWidth(), display.getHeight() );
-			multiBoxOverlayRenderer.paint( ( Graphics2D ) g );
-			requiresRepaint = multiBoxOverlayRenderer.isHighlightInProgress();
-		}
-
-		if( textOverlayVisible )
-		{
-			sourceInfoOverlayRenderer.setViewerState( state() );
-			sourceInfoOverlayRenderer.paint( ( Graphics2D ) g );
-		}
-
-		if ( Prefs.showScaleBar() )
-		{
-			scaleBarOverlayRenderer.setViewerState( state() );
-			scaleBarOverlayRenderer.paint( ( Graphics2D ) g );
-		}
-
-		if( textOverlayVisible )
-		{
-			final RealPoint gPos = new RealPoint( 3 );
-			getGlobalMouseCoordinates( gPos );
-
-			final String mousePosGlobalString;
-			if ( ndims == 2 )
-				mousePosGlobalString = String.format( "(%6.1f,%6.1f)",
-						gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ) );
-			else
-				mousePosGlobalString = String.format( "(%6.1f,%6.1f,%6.1f)",
-						gPos.getDoublePosition( 0 ), gPos.getDoublePosition( 1 ),
-						gPos.getDoublePosition( 2 ) );
-
-			g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-			g.setColor( Color.white );
-			int actual_width = g.getFontMetrics().stringWidth( mousePosGlobalString );
-			g.drawString( 
-					mousePosGlobalString,
-					(int) g.getClipBounds().getWidth() - actual_width - 10, 28 );
-		}
-
-		final long currentTimeMillis = System.currentTimeMillis();
-		final ArrayList< OverlayAnimator > overlayAnimatorsToRemove = new ArrayList< OverlayAnimator >();
-		for ( final OverlayAnimator animator : overlayAnimators )
-		{
-			animator.paint( ( Graphics2D ) g, currentTimeMillis );
-			requiresRepaint |= animator.requiresRepaint();
-			if ( animator.isComplete() )
-				overlayAnimatorsToRemove.add( animator );
-		}
-		overlayAnimators.removeAll( overlayAnimatorsToRemove );
-
-		if ( requiresRepaint )
-			display.repaint();
-		
-		if ( null != overlay ) {
-			overlay.setViewerState( state() );
-			overlay.paint( ( Graphics2D ) g );
-		}
-		
-		if ( dragOverlay != null ) {
-			//dragOverlay.setViewerState( state );
-			dragOverlay.paint( ( Graphics2D ) g );
-		}
-	}
-	
 	public BigWarpViewerSettings getSettings()
 	{
 		return viewerSettings;
@@ -384,9 +299,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 		double[] qNew = new double[ 4 ];
 		Affine3DHelpers.extractRotation( newTransform, qNew );
-		currentAnimator = new RotationAnimator(transform, centerX, centerY, qNew, 300 );
-		currentAnimator.setTime( System.currentTimeMillis() );
-		requestRepaint();
+		setTransformAnimator( new RotationAnimator(transform, centerX, centerY, qNew, 300 ) );
 	}
 
 	@Override
@@ -431,24 +344,37 @@ public class BigWarpViewerPanel extends ViewerPanel
 			destinationXfm.concatenate(t);
 		}
 
-		currentAnimator = new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 );
-
-		currentAnimator.setTime( System.currentTimeMillis() );
-		requestRepaint();
+		setTransformAnimator( new SimilarityTransformAnimator3D( startXfm, destinationXfm, centerX, centerY, millis/2 ) );
     }
-    
+
     public void animateTransformation( AffineTransform3D destinationXfm )
     {
     	animateTransformation( destinationXfm, 300 );
     }
-    
+
     public synchronized void setTransformEnabled( boolean enabled )
     {
     	transformEnabled = enabled;
     }
-    
+
     public boolean getTransformEnabled()
     {
     	return transformEnabled;
     }
+
+	@Override
+	public void drawOverlays( final Graphics g )
+	{
+		// remember Prefs settings
+		final boolean prefsShowTextOverlay = Prefs.showTextOverlay();
+		final boolean prefsShowMultibox = Prefs.showMultibox();
+
+		Prefs.showTextOverlay( textOverlayVisible );
+		Prefs.showMultibox( boxOverlayVisible );
+		super.drawOverlays( g );
+
+		// restore Prefs settings
+		Prefs.showTextOverlay( prefsShowTextOverlay );
+		Prefs.showMultibox( prefsShowMultibox );
+	}
 }
