@@ -21,26 +21,14 @@
  */
 package bdv.gui;
 
-import bdv.TransformEventHandler2D;
-import bdv.TransformEventHandler3D;
-
-import bdv.TransformEventHandlerFactory;
-import org.scijava.ui.behaviour.io.InputTriggerConfig;
-
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.MessageOverlayAnimator;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 public class BigWarpViewerOptions extends ViewerOptions
 {
-	public final boolean is2d;
-
 	private final BwValues bwValues = new BwValues();
-
-	public BigWarpViewerOptions( final boolean is2d )
-	{
-		this.is2d = is2d;
-	}
 
 	public BigWarpMessageAnimator getMessageAnimator()
 	{
@@ -49,7 +37,7 @@ public class BigWarpViewerOptions extends ViewerOptions
 
 	public static BigWarpViewerOptions options()
 	{
-		return options( false );
+		return new BigWarpViewerOptions();
 	}
 
 	@Override
@@ -60,9 +48,9 @@ public class BigWarpViewerOptions extends ViewerOptions
 	}
 
 	@Override
-	public ViewerOptions transformEventHandlerFactory( final TransformEventHandlerFactory f )
+	public BigWarpViewerOptions is2D( final boolean is2D )
 	{
-		super.transformEventHandlerFactory( f );
+		super.is2D( is2D );
 		return this;
 	}
 
@@ -107,18 +95,15 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return out;
 	}
 
+	public ViewerOptions getViewerOptions( final boolean isMoving )
+	{
+		return copy().msgOverlay( isMoving
+				? getMessageAnimator().getAnimatorMoving()
+				: getMessageAnimator().getAnimatorFixed() );
+	}
+
 	public static class BwValues
 	{
 		private BigWarpMessageAnimator messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
-
-		public MessageOverlayAnimator getMsgOverlay()
-		{
-			return messageAnimator.getAnimatorFixed();
-		}
-
-		public MessageOverlayAnimator getMsgOverlayMoving()
-		{
-			return messageAnimator.getAnimatorMoving();
-		}
 	}
 }
