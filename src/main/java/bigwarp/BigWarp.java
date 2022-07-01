@@ -333,7 +333,7 @@ public class BigWarp< T >
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
+		this( data, windowTitle, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
 	}
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
@@ -1359,7 +1359,7 @@ public class BigWarp< T >
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 
 		InvertibleRealTransform transform; 
-		if( options.is2d  && currentTransform != null )
+		if( options.values.is2D()  && currentTransform != null )
 			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
 		else
 			transform = currentTransform;

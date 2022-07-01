@@ -85,18 +85,9 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return this;
 	}
 
-	public static BigWarpViewerOptions options( final boolean is2d )
-	{
-		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
-		out.transformEventHandlerFactory( is2d
-				? TransformEventHandler2D::new
-				: TransformEventHandler3D::new );
-		return out;
-	}
-
 	public BigWarpViewerOptions copy()
 	{
-		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
+		BigWarpViewerOptions out = new BigWarpViewerOptions();
 		out.
 				width( values.getWidth() ).
 				height( values.getHeight() ).
@@ -106,36 +97,28 @@ public class BigWarpViewerOptions extends ViewerOptions
 				numSourceGroups( values.getNumSourceGroups() ).
 				useVolatileIfAvailable( values.isUseVolatileIfAvailable() ).
 				msgOverlay( values.getMsgOverlay() ).
+				is2D( values.is2D() ).
 				transformEventHandlerFactory( values.getTransformEventHandlerFactory() ).
 				accumulateProjectorFactory( values.getAccumulateProjectorFactory() ).
-				inputTriggerConfig( values.getInputTriggerConfig() );
+				inputTriggerConfig( values.getInputTriggerConfig() ).
+				shareKeyPressedEvents( values.getKeyPressedManager() ).
+				keymapManager( values.getKeymapManager() ).
+				appearanceManager( values.getAppearanceManager() );
 		return out;
 	}
 
 	public static class BwValues
 	{
-		private BigWarpMessageAnimator messageAnimator;
-
-		private MessageOverlayAnimator msgOverlayP;
-
-		private MessageOverlayAnimator msgOverlayQ;
-
-		public BwValues()
-		{
-			super();
-			messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
-			msgOverlayP = messageAnimator.msgAnimatorP;
-			msgOverlayQ = messageAnimator.msgAnimatorQ;
-		}
+		private BigWarpMessageAnimator messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
 
 		public MessageOverlayAnimator getMsgOverlay()
 		{
-			return msgOverlayQ;
+			return messageAnimator.getAnimatorFixed();
 		}
 
 		public MessageOverlayAnimator getMsgOverlayMoving()
 		{
-			return msgOverlayP;
+			return messageAnimator.getAnimatorMoving();
 		}
 	}
 }

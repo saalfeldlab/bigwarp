@@ -58,7 +58,7 @@ public class TransformTests
 		ImagePlus imp = ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32 ) ), "img" );
 
 		//BigWarpViewerOptions opts = BigWarpViewerOptions.options( false, true );
-		BigWarpViewerOptions opts = BigWarpViewerOptions.options( true );
+		BigWarpViewerOptions opts = BigWarpViewerOptions.options().is2D( true );
 
 		BigWarpData<?> data = BigWarpInit.createBigWarpDataFromImages( imp, imp );
 
