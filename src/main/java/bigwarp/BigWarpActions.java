@@ -84,6 +84,8 @@ public class BigWarpActions
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
+	public static final String MASK_SIZE_EDIT = "mask edit";
+
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
 
@@ -253,6 +255,8 @@ public class BigWarpActions
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( ESTIMATE_WARP, "C" );
 
+		map.put( MASK_SIZE_EDIT, "M" );
+
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
 		map.put( REDO, "control shift Z" );
@@ -325,6 +329,9 @@ public class BigWarpActions
 		new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ).put( actionMap );
 		new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ).put( actionMap );
 		new EstimateWarpAction( ESTIMATE_WARP, bw ).put( actionMap );
+
+		// MASK
+		new MaskSizeEdit( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -1156,4 +1163,23 @@ public class BigWarpActions
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}
+
+	public static class MaskSizeEdit extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -7918625162439713732L;
+		private final BigWarp< ? > bw;
+
+		public MaskSizeEdit( final BigWarp< ? > bw )
+		{
+			super( MASK_SIZE_EDIT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.maskSourceMouseListener.toggleActive();
+		}
+	}
+
 }

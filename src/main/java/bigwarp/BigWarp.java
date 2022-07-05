@@ -96,6 +96,7 @@ import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
@@ -132,6 +133,8 @@ import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.PlateauSphericalMaskSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
@@ -155,6 +158,7 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
 import mpicbg.spim.data.SpimDataException;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -162,10 +166,13 @@ import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.inverse.RealTransformFiniteDerivatives;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarp< T >
@@ -180,6 +187,8 @@ public class BigWarp< T >
 	public static final int WARPMAG_SOURCE_ID = 956736363;
 
 	public static final int JACDET_SOURCE_ID = 1006827158;
+
+	public static final int TPSMASK_SOURCE_ID = 33872301;
 
 	protected BigWarpViewerOptions options;
 
@@ -262,6 +271,8 @@ public class BigWarp< T >
 
 	protected MouseLandmarkTableListener landmarkTableListener;
 
+	protected MaskedSourceEditorMouseListener maskSourceMouseListener;
+
 	protected BigWarpMessageAnimator message;
 
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
@@ -273,6 +284,10 @@ public class BigWarp< T >
 	protected final SourceAndConverter< FloatType > warpMagSource;
 
 	protected final SourceAndConverter< FloatType > jacDetSource;
+
+	protected final SourceAndConverter< DoubleType > tpsMaskSource;
+
+	protected PlateauSphericalMaskSource tpsMask;
 
 	protected final AbstractModel< ? >[] baseXfmList;
 
@@ -385,6 +400,7 @@ public class BigWarp< T >
 		warpMagSource = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
 		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
 		gridSource = addGridSource( data, "GridSource" );
+		tpsMaskSource = addTpsMaskSource( data, ndims, "TPS Mask Source" );
 
 		this.sources = this.data.sources;
 		final List< ConverterSetup > converterSetups = data.converterSetups;
@@ -489,6 +505,7 @@ public class BigWarp< T >
 
 		bwTransform = new BigWarpTransform( landmarkModel );
 		bwTransform.initializeInverseParameters(data);
+		bwTransform.setLambda( tpsMask.getRandomAccessible() );
 
 		solverThread = new SolveThread( this );
 		solverThread.start();
@@ -540,6 +557,7 @@ public class BigWarp< T >
 
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
+		addMaskMouseListener();
 
 		// have to be safe here and use 3dim point for both 3d and 2d
 		currentLandmark = new RealPoint( 3 );
@@ -1739,6 +1757,13 @@ public class BigWarp< T >
 		landmarkPanel.getJTable().addMouseListener( landmarkTableListener );
 	}
 
+	protected void addMaskMouseListener()
+	{
+		maskSourceMouseListener = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
+		maskSourceMouseListener.setActive( false );
+		maskSourceMouseListener.setMask( tpsMask.getRandomAccessible() );
+	}
+
 	public void setGridType( final GridSource.GRID_TYPE method )
 	{
 		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( method );
@@ -1816,6 +1841,27 @@ public class BigWarp< T >
 		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, GRID_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
 		return soc;
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	private SourceAndConverter< DoubleType > addTpsMaskSource( final BigWarpData< T > data, final int ndims, final String name )
+	{
+		// TODO think about whether its worth it to pass a type parameter.
+		// or should we just stick with Floats?
+		FinalInterval itvl = new FinalInterval( data.sources.get( data.targetSourceIndices[0] ).getSpimSource().getSource( 0, 0 ));
+		tpsMask = PlateauSphericalMaskSource.build( ndims, new RealPoint( ndims ), itvl );
+
+		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( tpsMask, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TPSMASK_SOURCE_ID ) );
+		data.sources.add( ( SourceAndConverter ) soc );
+		return soc;
+	}
+
+	public PlateauSphericalMaskSource getTpsMaskSource()
+	{
+		return tpsMask;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -2159,7 +2205,11 @@ public class BigWarp< T >
 		}
 		else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
 		{
-			jdSrc.setTransform( (ThinplateSplineTransform)((WrappedIterativeInvertibleRealTransform)transform).getTransform() );
+			RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
+			if( xfm instanceof ThinplateSplineTransform )
+				jdSrc.setTransform( (ThinplateSplineTransform) xfm );
+			else
+				jdSrc.setTransform( new RealTransformFiniteDerivatives( xfm ));
 		}
 		else
 			jdSrc.setTransform( null );

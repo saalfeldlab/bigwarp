@@ -123,7 +123,7 @@ public class TransformTypeSelectDialog extends JDialog
 			tpsButton.setSelected( true );
 			break;
 		case REGTPS:
-			tpsButton.setSelected( true );
+			regTpsButton.setSelected( true );
 			break;
 		case AFFINE:
 			affineButton.setSelected( true );
