@@ -2,10 +2,10 @@ package bigwarp.source;
 
 import java.util.function.BiConsumer;
 
+import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
-import bdv.util.RealRandomAccessibleIntervalSource;
 import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.RealLocalizable;
@@ -21,14 +21,24 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	private PlateauFunction pfun;
 	private FunctionRealRandomAccessible< DoubleType > rra;
 	
-	private double plateauR = 8;
+	private double plateauR;
+	private double plateauR2;
 
-	private double outerSigma = 1;
+	private double sqrSigma;
+	private double invSqrSigma;
 
-	public PlateauSphericalMaskRealRandomAccessible( int n, RealPoint pt )
+	private RealPoint center;
+
+	private static final double EPS = 1e-6;
+
+	public PlateauSphericalMaskRealRandomAccessible( int n, RealPoint center )
 	{
-		pfun = new PlateauFunction( pt );
+		this.center = center;
+		pfun = new PlateauFunction();
 		rra = new FunctionRealRandomAccessible<>( 3, pfun, DoubleType::new );
+
+		setRadius( 8.0 );
+		setSigma ( 10.0 );
 	}
 	
 	public static void main( String[] args )
@@ -39,44 +49,92 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( 3, pt );
 		Interval interval = Intervals.createMinSize( 0, 0, 0, 2*S, 2*S, 2*S );
 
-		BdvOptions options = BdvOptions.options().screenScales( new double[] { 1 } );
+//		BdvOptions options = BdvOptions.options().screenScales( new double[] { 1 } );
+		BdvOptions options = BdvOptions.options();
 		BdvStackSource< DoubleType > bdv = BdvFunctions.show( img.rra, interval, "img", options );
 		bdv.getBdvHandle().getSetupAssignments().getMinMaxGroups().get( 0 ).setRange( 0, 1 );
 		
+//		InputActionBindings kb = bdv.getBdvHandle().getKeybindings();
+//		System.out.println( kb );
+//		kb.removeActionMap( "navigation" );
+//		kb.removeInputMap( "navigation" );
+
+//		bdv.getBdvHandle().getTriggerbindings().removeInputTriggerMap( "block_transform" );
+
+		final MaskedSourceEditorMouseListener ml = new MaskedSourceEditorMouseListener( 3, null, bdv.getBdvHandle().getViewerPanel() );
+		ml.setMask( img );
+//		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
+
+	}
+
+	public void setRadius( double r )
+	{
+		plateauR = r;
+		plateauR2 = plateauR * plateauR ;
+	}
+
+	public void setSquaredRadius( double r2 )
+	{
+		plateauR2 = r2;
+	}
+
+	public void setSigma( double sigma )
+	{
+		sqrSigma = sigma * sigma;
+
+		if( sqrSigma <= 0  )
+			sqrSigma = EPS;
+
+		invSqrSigma = 1.0 / sqrSigma;
+	}
+
+	public void setSquaredSigma( double squaredSigma )
+	{
+		sqrSigma = squaredSigma;
+		if( sqrSigma <= 0  )
+			sqrSigma = EPS;
+
+		invSqrSigma = 1.0 / squaredSigma;
+	}
+
+	public void incSquaredSigma( double increment )
+	{
+		sqrSigma += increment;
+
+		if( sqrSigma <= 0  )
+			sqrSigma = EPS;
+
+		invSqrSigma = 1.0 / sqrSigma;
+	}
+
+	public void setCenter( RealLocalizable p )
+	{
+		center.setPosition( p );
+	}
+
+	public RealPoint getCenter()
+	{
+		return center;
 	}
 
 	public class PlateauFunction implements BiConsumer< RealLocalizable, DoubleType > {
-
-		public RealPoint point;
-
-		public double plateauR = 8;
-		public double plateauR2 = plateauR*plateauR;
-
-		public double outerSigma = 1;
-		
-		public double invSqrSigma = 1 / outerSigma / outerSigma;
-	
-		public PlateauFunction( RealPoint point ) {
-			this.point = point;
-		}
 
 		@Override
 		public void accept( RealLocalizable x, DoubleType v )
 		{
 			v.setZero();
-			double r2 = squaredDistance( x, point );
-			if( r2 <= plateauR )
+			double r2 = squaredDistance( x, center );
+			if( r2 <= plateauR2 )
 				v.setOne();
 			else
 			{
-				double t = (r2 - plateauR);
+				double t = (r2 - plateauR2);
 				// TODO sample exp function and interpolate to speed up
 				v.set( Math.exp( -0.5 * t * invSqrSigma ) );
 //				v.set( Math.cos( t * 0.5  + 0.5 ));
 //				v.set( 1 / t );
 			}
 		}
-		
 	}
 	
 	final public static double squaredDistance( final RealLocalizable position1, final RealLocalizable position2 )
