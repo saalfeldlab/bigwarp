@@ -3378,8 +3378,9 @@ public class BigWarp< T >
 
 		autoSaveNode.addContent( autoSaveLocation );
 		autoSaveNode.addContent( autoSavePeriod );
-		root.addContent( autoSaveNode );
 
+		root.addContent( autoSaveNode );
+		root.addContent( tpsMask.getRandomAccessible().toXml() );
 
 		final Document doc = new Document( root );
 		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
@@ -3425,6 +3426,10 @@ public class BigWarp< T >
 		final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText());
 		setAutosaveFolder( new File( autoSavePath ));
 		BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
+
+		final Element maskSettings = root.getChild( "transform-mask" );
+		if( maskSettings != null )
+			tpsMask.getRandomAccessible().fromXml( maskSettings );
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();
