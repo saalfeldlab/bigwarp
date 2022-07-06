@@ -2,10 +2,15 @@ package bigwarp.source;
 
 import java.util.function.BiConsumer;
 
+import org.apache.commons.io.input.XmlStreamReader;
+import org.jdom2.DataConversionException;
+import org.jdom2.Element;
+
 import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
+import mpicbg.spim.data.XmlHelpers;
 import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.RealLocalizable;
@@ -112,6 +117,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		center.setPosition( p );
 	}
 
+	public void setCenter( double[] p )
+	{
+		center.setPosition( p );
+	}
+
 	public RealPoint getCenter()
 	{
 		return center;
@@ -168,6 +178,35 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	public RealRandomAccess< DoubleType > realRandomAccess( RealInterval interval )
 	{
 		return rra.realRandomAccess( interval );
+	}
+
+	public Element toXml()
+	{
+		final Element maskSettings = new Element( "transform-mask" );
+
+		final Element type = new Element( "type" );
+		type.setText( "plateau-spherical" );
+		maskSettings.addContent( type );
+
+		final Element c = XmlHelpers.doubleArrayElement( "center", center.positionAsDoubleArray() );
+		maskSettings.addContent( c );
+
+		final Element p = new Element( "parameters" );
+		p.addContent( XmlHelpers.doubleElement( "squaredRadius", plateauR2 ) );
+		p.addContent( XmlHelpers.doubleElement( "squaredSigma", sqrSigma ) );
+
+		maskSettings.addContent( p );
+
+		return maskSettings;
+	}
+
+	public void fromXml( Element elem )
+	{
+		setCenter( XmlHelpers.getDoubleArray( elem, "center" ) );
+
+		final Element p = elem.getChild( "parameters" );
+		setSquaredRadius( XmlHelpers.getDouble( p, "squaredRadius" ));
+		setSquaredSigma( XmlHelpers.getDouble( p, "squaredSigma" ));
 	}
 
 }
