@@ -32,13 +32,13 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.RealType;
 
-public class RegTpsTransformSolver<T extends RealType<T>> implements TransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
+public class MaskedTpsTransformSolver<T extends RealType<T>> implements TransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
 {
 	// TODO make regularization transform of a more general type
 	private final TpsTransformSolver tpsSolver;
 	private final RealRandomAccessible<T> lambda;
 
-	public RegTpsTransformSolver( RealRandomAccessible<T> lambda )
+	public MaskedTpsTransformSolver( RealRandomAccessible<T> lambda )
 	{
 		this.lambda = lambda;
 		tpsSolver = new TpsTransformSolver();

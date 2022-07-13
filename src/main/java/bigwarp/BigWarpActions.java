@@ -50,6 +50,7 @@ public class BigWarpActions
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
+	public static final String TRANSFORM_TYPE = "transform type";
 
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
@@ -162,7 +163,7 @@ public class BigWarpActions
 		
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F3" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F4" );
-		map.put( "transform type", "F2" );
+		map.put( TRANSFORM_TYPE, "F2" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
@@ -190,7 +191,7 @@ public class BigWarpActions
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
-		new ToggleDialogAction( "transform type", bw.transformSelector ).put( actionMap );
+		new ToggleDialogAction( TRANSFORM_TYPE, bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
