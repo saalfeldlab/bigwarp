@@ -1023,6 +1023,44 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return targetPts.get( index );
 	}
 
+	public ArrayList< Double[] > getMovingPoints()
+	{
+		return movingPts;
+	}
+
+	public ArrayList< Double[] > getFixedPoints()
+	{
+		return targetPts;
+	}
+
+	public ArrayList<double[]> getMovingPointsCopy()
+	{
+		final ArrayList< double[] > out = new ArrayList<double[]>();
+		for( Double[] p : movingPts )
+		{
+			double[] q = new double[ ndims ];
+			for( int d = 0; d < ndims; d++ )
+				q[d] = p[d];
+
+			out.add( q );
+		}
+		return out;
+	}
+
+	public ArrayList<double[]> getFixedPointsCopy()
+	{
+		final ArrayList< double[] > out = new ArrayList<double[]>();
+		for( Double[] p : targetPts )
+		{
+			double[] q = new double[ ndims ];
+			for( int d = 0; d < ndims; d++ )
+				q[d] = p[d];
+
+			out.add( q );
+		}
+		return out;
+	}
+
 	public boolean isMovingPoint( int index )
 	{
 		return !Double.isInfinite( movingPts.get( index )[ 0 ] );

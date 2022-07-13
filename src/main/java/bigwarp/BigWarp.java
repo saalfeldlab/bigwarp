@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.stream.Collectors;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -75,6 +76,9 @@ import mpicbg.spim.data.registration.ViewTransformAffine;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.utility.geom.BoundingSphereRitter;
+import org.janelia.utility.geom.GeomUtils;
+import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -174,6 +178,7 @@ import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
 
 public class BigWarp< T >
 {
@@ -2826,6 +2831,12 @@ public class BigWarp< T >
 			{
 				BigWarp.this.restimateTransformation();
 				BigWarp.this.landmarkPanel.repaint();
+			}
+
+			if( transformSelector.autoEstimateMask() && bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS )) {
+				Sphere sph = BoundingSphereRitter.boundingSphere( landmarkModel.getFixedPointsCopy() );
+				tpsMask.getRandomAccessible().setCenter( sph.getCenter() );
+				tpsMask.getRandomAccessible().setRadius( sph.getRadius() );
 			}
 		}
 	}
