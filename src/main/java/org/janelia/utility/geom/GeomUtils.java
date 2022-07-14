@@ -63,5 +63,18 @@ public class GeomUtils {
 		return dist;
 	}	
 
+	final public static double squaredDistance( final double[] position1, final double[] position2 )
+	{
+		double dist = 0;
+
+		final int n = position1.length;
+		for ( int d = 0; d < n; ++d )
+		{
+			final double pos = position2[d] - position1[d];
+			dist += pos * pos;
+		}
+
+		return dist;
+	}
 
 }
