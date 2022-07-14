@@ -46,12 +46,14 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
+import net.imglib2.type.numeric.RealType;
 
 public class BigWarpTransform
 {
@@ -66,6 +68,8 @@ public class BigWarpTransform
 	private double inverseTolerance = 0.5;
 
 	private int maxIterations = 200;
+
+	private RealRandomAccessible<? extends RealType<?>> lambda;
 
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
@@ -109,6 +113,11 @@ public class BigWarpTransform
 		return transformType;
 	}
 
+	public void setLambda( final RealRandomAccessible< ? extends RealType< ? > > lambda )
+	{
+		this.lambda = lambda;
+	}
+
 	public InvertibleRealTransform getTransformation()
 	{
 		return getTransformation( -1 );
@@ -124,9 +133,9 @@ public class BigWarpTransform
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 			invXfm = tpsXfm;
 		}
-		else if( transformType.equals( TransformTypeSelectDialog.REGTPS ))
+		else if( transformType.equals( TransformTypeSelectDialog.MASKEDTPS ))
 		{
-			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new RegTpsTransformSolver().solve( tableModel );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new MaskedTpsTransformSolver( lambda ).solve( tableModel );
 			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 			invXfm = tpsXfm;

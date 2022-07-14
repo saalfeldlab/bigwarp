@@ -11,20 +11,24 @@ public class PlateauSphericalMaskSource extends RealRandomAccessibleIntervalSour
 
 	private PlateauSphericalMaskSource( int n, RealPoint pt, Interval interval )
 	{
-		super( new PlateauSphericalMaskRealRandomAccessible( n, pt ), interval, new DoubleType(), "plateau-mask" );
+		super( new PlateauSphericalMaskRealRandomAccessible( n, pt ), interval, new DoubleType(), "transform mask" );
 	}
 
 	private PlateauSphericalMaskSource( PlateauSphericalMaskRealRandomAccessible mask, Interval interval )
 	{
-		super( mask, interval, new DoubleType(), "plateau-mask" );
+		super( mask, interval, new DoubleType(), "transform mask" );
 		this.plateauMask = mask;
 	}
-	
-	public 
-	
+
+	public PlateauSphericalMaskRealRandomAccessible getRandomAccessible()
+	{
+		return plateauMask;
+	}
+
 	public static PlateauSphericalMaskSource build( int n, RealPoint pt, Interval interval )
 	{
 		PlateauSphericalMaskRealRandomAccessible mask = new PlateauSphericalMaskRealRandomAccessible( n, pt );
 		return new PlateauSphericalMaskSource( mask, interval );
 	}
+
 }

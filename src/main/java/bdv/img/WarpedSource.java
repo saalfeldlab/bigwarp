@@ -184,7 +184,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			if( xfm == null )
 				return srcRaTransformed;
 			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm );
+				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm.copy() );
 		}
 		else
 		{

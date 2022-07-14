@@ -28,19 +28,27 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
+import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import bigwarp.BigWarp;
+import bigwarp.WarpVisFrame;
+import bigwarp.WarpVisFrame.MyChangeListener;
 
 public class TransformTypeSelectDialog extends JDialog
 {
 	private static final long serialVersionUID = 1L;
 	
 	public static final String TPS = "Thin Plate Spline";
-	public static final String REGTPS = "Regularized Thin Plate Spline";
+	public static final String MASKEDTPS = "Masked Thin Plate Spline";
 	public static final String AFFINE = "Affine";
 	public static final String SIMILARITY = "Similarity";
 	public static final String ROTATION = "Rotation";
@@ -49,12 +57,15 @@ public class TransformTypeSelectDialog extends JDialog
 	private final BigWarp< ? > bw;
 	private String transformType;
 
+	private final ButtonGroup group;
 	private final JRadioButton tpsButton;
-	private final JRadioButton regTpsButton;
+	private final JRadioButton maskedTpsButton;
 	private final JRadioButton affineButton;
 	private final JRadioButton similarityButton;
 	private final JRadioButton rotationButton;
 	private final JRadioButton translationButton;
+
+	private final JCheckBox autoEstimateMaskButton;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
@@ -72,15 +83,15 @@ public class TransformTypeSelectDialog extends JDialog
 		transformType = bw.getTransformType();
 
 		tpsButton = new JRadioButton( TPS );
-		regTpsButton = new JRadioButton( REGTPS );
+		maskedTpsButton = new JRadioButton( MASKEDTPS );
 		affineButton = new JRadioButton( AFFINE );
 		similarityButton = new JRadioButton( SIMILARITY );
 		rotationButton = new JRadioButton( ROTATION );
 		translationButton = new JRadioButton( TRANSLATION );
 		
-		ButtonGroup group = new ButtonGroup();
+		group = new ButtonGroup();
 		group.add( tpsButton );
-		group.add( regTpsButton );
+		group.add( maskedTpsButton );
 		group.add( affineButton );
 		group.add( similarityButton );
 		group.add( rotationButton );
@@ -89,15 +100,15 @@ public class TransformTypeSelectDialog extends JDialog
 		updateButtonGroup();
 
 		addActionListender( tpsButton );
-		addActionListender( regTpsButton );
+		addActionListender( maskedTpsButton );
 		addActionListender( affineButton );
 		addActionListender( similarityButton );
 		addActionListender( rotationButton );
 		addActionListender( translationButton );
-		
+
 		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
-		radioPanel.add( regTpsButton );
+		radioPanel.add( maskedTpsButton );
 		radioPanel.add( affineButton );
 		radioPanel.add( similarityButton );
 		radioPanel.add( rotationButton );
@@ -112,6 +123,30 @@ public class TransformTypeSelectDialog extends JDialog
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
 		add( radioPanel, BorderLayout.LINE_START );
+
+		autoEstimateMaskButton = new JCheckBox( "Auto-estimate transform mask");
+		radioPanel.add( autoEstimateMaskButton );
+
+		add( radioPanel, BorderLayout.LINE_END );
+
+		pack();
+		addListeners();
+		updateOptions();
+	}
+
+	private void addListeners()
+	{
+		maskedTpsButton.addChangeListener( new ChangeListener() {
+			@Override
+			public void stateChanged( ChangeEvent e ) { updateOptions(); }
+		});
+
+	}
+
+	private synchronized void updateOptions()
+	{
+		System.out.println( "update options");
+		autoEstimateMaskButton.setVisible( maskedTpsButton.isSelected() );
 		pack();
 	}
 
@@ -122,8 +157,8 @@ public class TransformTypeSelectDialog extends JDialog
 		case TPS:
 			tpsButton.setSelected( true );
 			break;
-		case REGTPS:
-			tpsButton.setSelected( true );
+		case MASKEDTPS:
+			maskedTpsButton.setSelected( true );
 			break;
 		case AFFINE:
 			affineButton.setSelected( true );
@@ -156,5 +191,10 @@ public class TransformTypeSelectDialog extends JDialog
 		updateButtonGroup();
 		this.validate();
 		this.repaint();
+	}
+
+	public boolean autoEstimateMask()
+	{
+		return autoEstimateMaskButton.isSelected();
 	}
 }
