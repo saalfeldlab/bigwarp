@@ -23,10 +23,8 @@ package bigwarp.transforms;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Optional;
 
 import bdv.gui.TransformTypeSelectDialog;
-import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
 import bigwarp.BigWarp.BigWarpData;
@@ -111,6 +109,11 @@ public class BigWarpTransform
 	public String getTransformType()
 	{
 		return transformType;
+	}
+
+	public RealRandomAccessible<? extends RealType<?>> getLambda( )
+	{
+		return lambda;
 	}
 
 	public void setLambda( final RealRandomAccessible< ? extends RealType< ? > > lambda )
