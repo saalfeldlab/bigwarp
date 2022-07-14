@@ -6,10 +6,12 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 
+import bdv.util.Affine3DHelpers;
 import bdv.viewer.ViewerPanel;
 import bigwarp.BigWarp;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import net.imglib2.RealPoint;
+import net.imglib2.realtransform.AffineTransform3D;
 
 public class MaskedSourceEditorMouseListener implements MouseListener, MouseMotionListener, MouseWheelListener
 {
@@ -20,6 +22,9 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 
 	private BigWarp<?> bw;
 	private ViewerPanel viewer;
+
+	private static final double fastSpeed = 10.0;
+	private static final double slowSpeed = 0.1;
 
 	public MaskedSourceEditorMouseListener( int nd, BigWarp<?> bw, ViewerPanel viewer )
 	{
@@ -113,14 +118,15 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !active )
 			return;
 
-		// TODO vary based on screen scale
+		final AffineTransform3D transform = viewer.state().getViewerTransform();
+		final double scale = (1 / Affine3DHelpers.extractScale(transform, 0)) + 0.05;
 		final int sign = e.getWheelRotation();
 		if( e.isShiftDown() )
-			mask.incSquaredSigma( sign * 10 );
+			mask.incSquaredSigma( sign * scale * fastSpeed );
 		else if ( e.isControlDown() )
-			mask.incSquaredSigma( sign * 0.1 );
+			mask.incSquaredSigma( sign * scale * slowSpeed);
 		else
-			mask.incSquaredSigma( sign * 1.0 );
+			mask.incSquaredSigma( sign * scale );
 
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
