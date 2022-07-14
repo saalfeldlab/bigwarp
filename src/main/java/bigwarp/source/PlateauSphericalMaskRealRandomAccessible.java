@@ -72,6 +72,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	}
 
+	public double getSquaredRadius()
+	{
+		return plateauR2;
+	}
+
 	public void setRadius( double r )
 	{
 		plateauR = r;
@@ -81,6 +86,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	public void setSquaredRadius( double r2 )
 	{
 		plateauR2 = r2;
+	}
+
+	public double getSquaredSigma()
+	{
+		return sqrSigma;
 	}
 
 	public void setSigma( double sigma )

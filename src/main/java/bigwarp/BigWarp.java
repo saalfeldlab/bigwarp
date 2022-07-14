@@ -139,6 +139,7 @@ import bigwarp.source.PlateauSphericalMaskSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
+import bigwarp.transforms.io.TransformWriterJson;
 import bigwarp.util.BigWarpUtils;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
@@ -3287,7 +3288,10 @@ public class BigWarp< T >
 
 	protected void saveLandmarks( final String filename ) throws IOException
 	{
-		landmarkModel.save(new File( filename ));
+		if( filename.endsWith("csv"))
+			landmarkModel.save(new File( filename ));
+		else if( filename.endsWith("json"))
+			new TransformWriterJson().write(landmarkModel, bwTransform, new File( filename ));
 	}
 
 	protected void loadLandmarks()

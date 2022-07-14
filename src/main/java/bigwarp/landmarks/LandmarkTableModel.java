@@ -30,6 +30,15 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -55,6 +64,12 @@ import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvException;
@@ -211,7 +226,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		return PENDING_PT;
 	}
-	
+
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
 	{
 		return estimatedXfm;
@@ -1176,12 +1191,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		resetUpdated(); // not strictly necessary
 
 	}
-	
+
 	public void load( File f ) throws IOException
 	{
 		load( f, false );
 	}
-	
+
 	/**
 	 * Loads this table from a file
 	 * @param f the file
@@ -1189,6 +1204,20 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * @throws IOException an exception
 	 */
 	public void load( File f, boolean invert ) throws IOException
+	{
+		if( f.getCanonicalPath().endsWith("csv"))
+			loadCsv(f, invert);
+		else if( f.getCanonicalPath().endsWith("json"))
+			fromJson( f );
+	}
+
+	/**
+	 * Loads this table from a file
+	 * @param f the file
+	 * @param invert invert the moving and target point sets
+	 * @throws IOException an exception
+	 */
+	public void loadCsv( File f, boolean invert ) throws IOException
 	{
 		synchronized(this) {
 			clear();
@@ -1485,6 +1514,90 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		}
 	}
 	
+	public JsonElement toJson()
+	{
+		final Gson gson = new Gson();
+		final JsonObject out = new JsonObject();
+		JsonElement mvgPtsObj = gson.toJsonTree(getMovingPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		JsonElement fixedPtsObj = gson.toJsonTree(getFixedPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		JsonElement activeObj = gson.toJsonTree( activeList );
+		JsonElement namesObj = gson.toJsonTree( names );
+
+		out.add("type", new JsonPrimitive("BigWarpLandmarks"));
+		out.add("numDimensions", new JsonPrimitive( ndims ));
+		out.add("movingPoints", mvgPtsObj );
+		out.add("fixedPoints", fixedPtsObj );
+		out.add("active", activeObj );
+		out.add("names", namesObj );
+
+		return out;
+	}
+
+	public void fromJson( File f )
+	{
+		final Gson gson = new Gson();
+		final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
+		try {
+			final Reader reader = Channels.newReader(FileChannel.open(Paths.get( f.getCanonicalPath()), options), StandardCharsets.UTF_8.name());
+			fromJson( gson.fromJson(reader, JsonObject.class ));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void fromJson( JsonElement json )
+	{
+		if( !json.isJsonObject())
+			return;
+
+		final JsonObject obj = json.getAsJsonObject();
+		final JsonObject landmarks = obj.get("landmarks").getAsJsonObject();
+
+		synchronized(this) {
+			clear();
+
+			JsonArray namesArr = landmarks.get("names").getAsJsonArray();
+			JsonArray activeArr = landmarks.get("active").getAsJsonArray();
+			JsonArray mvgArr = landmarks.get("movingPoints").getAsJsonArray();
+			JsonArray fixedArr = landmarks.get("fixedPoints").getAsJsonArray();
+
+			numRows = namesArr.size();
+			final int ndims = landmarks.get("numDimensions").getAsInt();
+
+			for( int i = 0; i < numRows; i++ )
+			{
+
+				names.add( namesArr.get(i).getAsString() );
+				activeList.add( activeArr.get(i).getAsBoolean() );
+
+				final JsonElement mvg = mvgArr.get( i );
+				JsonElement fixed = fixedArr.get( i );
+				final Double[] movingPt = new Double[ ndims ];
+				final Double[] targetPt = new Double[ ndims ];
+
+				for( int d = 0; d < ndims; d++ )
+				{
+					movingPt[ d ] = mvg.getAsJsonArray().get(d).getAsDouble();
+					targetPt[ d ] = fixed.getAsJsonArray().get(d).getAsDouble();
+				}
+
+				movingPts.add( movingPt );
+				targetPts.add( targetPt );
+
+				warpedPoints.add( new Double[ ndims ] );
+				doesPointHaveAndNeedWarp.add( false );
+				movingDisplayPointUnreliable.add( false );
+			}
+
+			this.ndims = ndims;
+			updateNextRows( 0 );
+			buildTableToActiveIndex();
+		}
+
+		for( int i = 0; i < numRows; i++ )
+			fireTableRowsInserted( i, i );
+	}
+
 	public static String print( Double[] d )
 	{
 		String out = "";
