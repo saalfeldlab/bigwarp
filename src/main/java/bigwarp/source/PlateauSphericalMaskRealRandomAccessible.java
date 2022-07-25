@@ -2,8 +2,6 @@ package bigwarp.source;
 
 import java.util.function.BiConsumer;
 
-import org.apache.commons.io.input.XmlStreamReader;
-import org.jdom2.DataConversionException;
 import org.jdom2.Element;
 
 import bdv.gui.MaskedSourceEditorMouseListener;
@@ -40,7 +38,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	{
 		this.center = center;
 		pfun = new PlateauFunction();
-		rra = new FunctionRealRandomAccessible<>( 3, pfun, DoubleType::new );
+		rra = new FunctionRealRandomAccessible<>( n, pfun, DoubleType::new );
 
 		setRadius( 8.0 );
 		setSigma ( 10.0 );
@@ -49,7 +47,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	public static void main( String[] args )
 	{
 		long S = 50;
-		RealPoint pt = new RealPoint( new double[]{ S, S, S } );
+		double[] center = new double[] { S, S, S };
+		RealPoint pt = RealPoint.wrap( center );
 
 		PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( 3, pt );
 		Interval interval = Intervals.createMinSize( 0, 0, 0, 2*S, 2*S, 2*S );
@@ -70,6 +69,18 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		ml.setMask( img );
 //		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
 
+		double x = 50;
+		RealRandomAccess< DoubleType > access = img.realRandomAccess();
+		access.setPosition( center );
+		while( x < 100 )
+		{
+			access.move( 1, 0 );
+			System.out.println( x + "," + access.get().getRealDouble());
+
+
+			x = access.getDoublePosition( 0 );
+		}
+
 	}
 
 	public double getSquaredRadius()
@@ -86,6 +97,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	public void setSquaredRadius( double r2 )
 	{
 		plateauR2 = r2;
+		plateauR = Math.sqrt( plateauR2 );
 	}
 
 	public double getSquaredSigma()
@@ -144,13 +156,15 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		{
 			v.setZero();
 			double r2 = squaredDistance( x, center );
+			double r = Math.sqrt( r2 );
 			if( r2 <= plateauR2 )
 				v.setOne();
 			else
 			{
-				double t = (r2 - plateauR2);
+//				double t = (r2 - plateauR2);
+				double t = (r - plateauR);
 				// TODO sample exp function and interpolate to speed up
-				v.set( Math.exp( -0.5 * t * invSqrSigma ) );
+				v.set( Math.exp( -0.5 * t * t * invSqrSigma ) );
 //				v.set( Math.cos( t * 0.5  + 0.5 ));
 //				v.set( 1 / t );
 			}
