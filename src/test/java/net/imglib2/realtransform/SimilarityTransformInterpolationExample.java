@@ -1,55 +1,57 @@
 package net.imglib2.realtransform;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.Reader;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import bdv.gui.TransformTypeSelectDialog; 
-import bdv.img.remote.AffineTransform3DJsonSerializer;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
 import bdv.util.Affine3DHelpers;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
 import bdv.util.BdvStackSource;
-import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.animate.AbstractTransformAnimator;
+import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.SimilarityTransformAnimator;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.PlateauSphericalMaskSource;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.ModelTransformSolver;
+import bigwarp.transforms.TpsTransformSolver;
+import bigwarp.transforms.WrappedCoordinateTransform;
 import ij.IJ;
 import ij.ImagePlus;
+import mpicbg.models.AbstractAffineModel3D;
 import net.imglib2.FinalInterval;
-import net.imglib2.FinalRealInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
-import net.imglib2.RealRandomAccess;
-import net.imglib2.RealRandomAccessible; 
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
-import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
-import net.imglib2.iterator.RealIntervalIterator;
-import net.imglib2.position.FunctionRandomAccessible;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.NumericType;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.real.DoubleType;
-import net.imglib2.util.ConstantUtils;
 import net.imglib2.util.Intervals;
-import net.imglib2.util.LinAlgHelpers;
 import net.imglib2.view.Views;
 
 
 public class SimilarityTransformInterpolationExample {
 
 	public static void main(String[] args) {
-		show( args[0] );
+//		show( args[0] );
+		showSeq( args[0], args[1] );
 //		exp();
 	}
 
@@ -79,6 +81,95 @@ public class SimilarityTransformInterpolationExample {
 		System.out.println(  "" );
 		System.out.println( Affine3DHelpers.toString( o ));
 		
+	}
+	
+	public static void showSeq( String imgFile, String jsonFile ) {
+		ImagePlus imp = IJ.openImage( imgFile );
+		Img<UnsignedByteType> imgBase = ImageJFunctions.wrapByte(imp);
+		Scale3D toPhysical = new Scale3D(
+				imp.getCalibration().pixelWidth,
+				imp.getCalibration().pixelHeight,
+				imp.getCalibration().pixelDepth);
+
+		Img<UnsignedByteType> img = imgBase;
+		// RandomAccessibleInterval<UnsignedByteType> img = Views.translateInverse( imgBase, 252, 76, 70 );
+
+		AffineTransform3D identity = new AffineTransform3D();
+		FinalInterval bigItvl = Intervals.createMinMax(0, -200, 0, 1000, 1000, 150);
+		
+		Gson gson = new Gson();
+		final Path path = Paths.get( jsonFile );
+		final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
+		Reader reader;
+		JsonObject json = null;
+		try
+		{
+			reader = Channels.newReader(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
+			json = gson.fromJson( reader, JsonObject.class );
+		} catch ( IOException e )
+		{
+			e.printStackTrace();
+			return;
+		}
+		
+		LandmarkTableModel ltm = new LandmarkTableModel( 3 );
+		if( json.has( "landmarks" ))
+			ltm.fromJson( json );
+
+
+		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( 3, new RealPoint( 3 ), bigItvl );
+		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
+		tpsMask.getRandomAccessible().fromJson( json.getAsJsonObject( "mask" ) );
+		
+		
+		// build transformations
+		final double[][] mvgPts;
+		final double[][] tgtPts;
+
+		final int numActive = ltm.numActive();
+		mvgPts = new double[ 3 ][ numActive ];
+		tgtPts = new double[ 3 ][ numActive ];
+		ltm.copyLandmarks( mvgPts, tgtPts ); // synchronized
+
+		WrappedCoordinateTransform sim = new ModelTransformSolver( new SimilarityModel3D() ).solve(mvgPts, tgtPts);
+		final AffineTransform3D transform = new AffineTransform3D();
+		BigWarpTransform.affine3d( (AbstractAffineModel3D)sim.getTransform(), transform );
+
+		final double[] center = new double[3];
+		lambda.getCenter().localize( center );
+		System.out.println( "center: " + Arrays.toString( center ));
+
+		// masked similarity
+//		final MaskedSimilarityTransform xfm = new MaskedSimilarityTransform( transform, lambda, center );
+		final WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( ltm );
+
+		final Scale3D id = new Scale3D(1,1,1);
+		final SpatiallyInterpolatedRealTransform first = new SpatiallyInterpolatedRealTransform( tpsXfm, transform.inverse(), lambda );
+		final SpatiallyInterpolatedRealTransform second = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
+		
+		
+
+//		final RealTransformSequence xfm = new RealTransformSequence();
+//		xfm.add( first );
+//		xfm.add( second );
+
+		final InterpolatedTimeVaryingTransformation sim2tps = new InterpolatedTimeVaryingTransformation( tpsXfm, transform );
+//		final InterpolatedTimeVaryingTransformation id2simi = new InterpolatedTimeVaryingTransformation( id, transform.inverse() );
+		SimilarityTransformInterpolator id2simi = new SimilarityTransformInterpolator( transform, center );
+
+//		SimilarityTransformAnimator intebcwrpolator = new SimilarityTransformAnimator( new AffineTransform3D(), transform, 0, 0, 1); 
+//		SimilarityTransformInterpolator interpolatorC = new SimilarityTransformInterpolator( transform, center ); 
+//		SimilarityTransformInterpolator interpolatorOtherC = new SimilarityTransformInterpolator( transform, centerOfRotation ); 
+
+
+		RealRandomAccessible< UnsignedByteType > rimg = RealViews.affine(
+				Views.interpolate(Views.extendZero(img), new NearestNeighborInterpolatorFactory<>()),
+				toPhysical);
+
+		BdvOptions opts = BdvOptions.options();
+		BdvStackSource<UnsignedByteType> bdv = makeTimeStack( rimg, bigItvl, sim2tps, "sim 2 tps", opts );
+		opts = opts.addTo(bdv);
+		makeTimeStack( rimg, bigItvl, id2simi, "id 2 simi", opts );
 	}
 	
 	public static void show( String imgFile ) {
@@ -115,27 +206,33 @@ public class SimilarityTransformInterpolationExample {
 		SimilarityTransformAnimator interpolator = new SimilarityTransformAnimator( new AffineTransform3D(), transform, 0, 0, 1); 
 		SimilarityTransformInterpolator interpolatorC = new SimilarityTransformInterpolator( transform, center ); 
 		SimilarityTransformInterpolator interpolatorOtherC = new SimilarityTransformInterpolator( transform, centerOfRotation ); 
+
+		RealRandomAccessible< UnsignedByteType > rimg = Views.interpolate(Views.extendZero(img), new NearestNeighborInterpolatorFactory<>());
 		
 		BdvOptions opts = BdvOptions.options();
-		BdvStackSource<UnsignedByteType> bdv = makeTimeStack( img, bigItvl, interpolator, "orig", opts );
+		BdvStackSource<UnsignedByteType> bdv = makeTimeStack( rimg, bigItvl, interpolator, "orig", opts );
 		opts = opts.addTo(bdv);
-		makeTimeStack( img, bigItvl, interpolatorC, "center", opts );
-		makeTimeStack( img, bigItvl, interpolatorOtherC, "other C", opts );
+		makeTimeStack( rimg, bigItvl, interpolatorC, "center", opts );
+		makeTimeStack( rimg, bigItvl, interpolatorOtherC, "other C", opts );
 
 	}
 	
-	public static BdvStackSource<UnsignedByteType> makeTimeStack( RandomAccessibleInterval<UnsignedByteType> img, Interval interval, AbstractTransformAnimator interpolator, String name, BdvOptions opts )
+	public static BdvStackSource<UnsignedByteType> makeTimeStack( RealRandomAccessible<UnsignedByteType> img, Interval interval, AbstractTransformAnimator interpolator, String name, BdvOptions opts )
+	{
+		return makeTimeStack( img, interval, new AnimatorTimeVaryingTransformation( interpolator ), name, opts );
+	}
+
+	public static BdvStackSource<UnsignedByteType> makeTimeStack( RealRandomAccessible<UnsignedByteType> rimg, Interval interval, TimeVaryingTransformation interpolator, String name, BdvOptions opts )
 	{
 
 		double del = 0.01;
 		List<RandomAccessibleInterval<UnsignedByteType>> stack = new ArrayList<>();
 		for (double t = 0.0; t < (1.0 + del); t += del)
 		{
-			AffineRandomAccessible<UnsignedByteType, AffineGet> rimg = RealViews.affine(
-					Views.interpolate(Views.extendZero(img), new NearestNeighborInterpolatorFactory<>()),
-					interpolator.get(t));
+			RealRandomAccessible<UnsignedByteType> xfmimg = new RealTransformRandomAccessible< >( 
+					rimg, interpolator.get(t));
 
-			stack.add(Views.interval(Views.raster(rimg), interval));
+			stack.add(Views.interval(Views.raster(xfmimg), interval));
 		}
 
 		RandomAccessibleInterval<UnsignedByteType> stackImg = Views.stack(stack);
