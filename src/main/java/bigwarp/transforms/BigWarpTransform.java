@@ -50,6 +50,9 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.MaskedSimilarityTransform;
+import net.imglib2.realtransform.RealTransformSequence;
+import net.imglib2.realtransform.Scale3D;
+import net.imglib2.realtransform.SpatiallyInterpolatedRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
@@ -140,11 +143,18 @@ public class BigWarpTransform
 		}
 		else if( transformType.equals( TransformTypeSelectDialog.MASKEDTPS ))
 		{
+			/*
+			 * TPS ONLY
+			 */
 //			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new MaskedTpsTransformSolver( lambda ).solve( tableModel );
 //			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 //			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 //			invXfm = tpsXfm;
 
+
+			/*
+			 * SIMILARITY ONLY
+			 */
 			final double[][] mvgPts;
 			final double[][] tgtPts;
 
@@ -164,6 +174,40 @@ public class BigWarpTransform
 			}
 
 			final MaskedSimilarityTransform xfm = new MaskedSimilarityTransform( transform, lambda, center );
+
+			/*
+			 * SIMILARITY AND TPS
+			 */
+//			final double[][] mvgPts;
+//			final double[][] tgtPts;
+//
+//			final int numActive = tableModel.numActive();
+//			mvgPts = new double[ ndims ][ numActive ];
+//			tgtPts = new double[ ndims ][ numActive ];
+//			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
+//
+//			WrappedCoordinateTransform sim = new ModelTransformSolver( new SimilarityModel3D() ).solve(mvgPts, tgtPts);
+//			final AffineTransform3D transform = new AffineTransform3D();
+//			affine3d( (AbstractAffineModel3D)sim.getTransform(), transform );
+//
+//			double[] center = new double[3];
+//			if( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
+//			{
+//				((PlateauSphericalMaskRealRandomAccessible)lambda).getCenter().localize( center );
+//			}
+//
+//			// masked similarity
+////			final MaskedSimilarityTransform xfm = new MaskedSimilarityTransform( transform, lambda, center );
+//			final WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
+//
+//			final Scale3D id = new Scale3D(1,1,1);
+//			final SpatiallyInterpolatedRealTransform first = new SpatiallyInterpolatedRealTransform( tpsXfm, transform.inverse(), lambda );
+//			final SpatiallyInterpolatedRealTransform second = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
+//
+//			final RealTransformSequence xfm = new RealTransformSequence();
+//			xfm.add( first );
+//			xfm.add( second );
+
 			invXfm = new WrappedIterativeInvertibleRealTransform( xfm );
 		}
 		else
