@@ -17,7 +17,7 @@ import net.imglib2.type.numeric.RealType;
  *
  * @param <T> lambda's type
  */
-public class InterpolatedRealTransform<T extends RealType<T>> implements RealTransform {
+public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implements RealTransform {
 
 	private RealRandomAccessible<T> lambda;
 
@@ -35,7 +35,7 @@ public class InterpolatedRealTransform<T extends RealType<T>> implements RealTra
 
 	private final double[] arrB;
 
-	public InterpolatedRealTransform(RealTransform a, RealTransform b, RealRandomAccessible<T> lambda) {
+	public SpatiallyInterpolatedRealTransform(RealTransform a, RealTransform b, RealRandomAccessible<T> lambda) {
 
 		assert (a.numTargetDimensions() == b.numTargetDimensions() &&
 				a.numSourceDimensions() == b.numSourceDimensions());
@@ -94,7 +94,7 @@ public class InterpolatedRealTransform<T extends RealType<T>> implements RealTra
 	@Override
 	public RealTransform copy() {
 
-		return new InterpolatedRealTransform<T>(a.copy(), b.copy(), lambda);
+		return new SpatiallyInterpolatedRealTransform<T>(a.copy(), b.copy(), lambda);
 	}
 
 }

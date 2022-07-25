@@ -24,9 +24,9 @@ public class InterpolatedTransformTest
 		final RealRandomAccessible< DoubleType > l5 = ConstantUtils.constantRealRandomAccessible( new DoubleType(0.5), 2 );
 		final RealRandomAccessible< DoubleType > l9 = ConstantUtils.constantRealRandomAccessible( new DoubleType(0.9), 2 );
 
-		final InterpolatedRealTransform<?> t1 = new InterpolatedRealTransform<>( a, b, l1 );
-		final InterpolatedRealTransform<?> t5 = new InterpolatedRealTransform<>( a, b, l5 );
-		final InterpolatedRealTransform<?> t9 = new InterpolatedRealTransform<>( a, b, l9 );
+		final SpatiallyInterpolatedRealTransform<?> t1 = new SpatiallyInterpolatedRealTransform<>( a, b, l1 );
+		final SpatiallyInterpolatedRealTransform<?> t5 = new SpatiallyInterpolatedRealTransform<>( a, b, l5 );
+		final SpatiallyInterpolatedRealTransform<?> t9 = new SpatiallyInterpolatedRealTransform<>( a, b, l9 );
 		
 		RealPoint src = new RealPoint( 2 );
 		RealPoint dst = new RealPoint( 2 );

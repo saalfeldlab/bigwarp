@@ -25,7 +25,7 @@ import bigwarp.landmarks.LandmarkTableModel;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RealRandomAccessible;
-import net.imglib2.realtransform.InterpolatedRealTransform;
+import net.imglib2.realtransform.SpatiallyInterpolatedRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
@@ -64,6 +64,6 @@ public class MaskedTpsTransformSolver<T extends RealType<T>> implements Transfor
 	public static <T extends RealType<T>> WrappedIterativeInvertibleRealTransform<?> wrap( RealTransform base, RealRandomAccessible<T> lambda )
 	{
 		final RealTransformSequence identity = new RealTransformSequence();
-		return new WrappedIterativeInvertibleRealTransform<>( new InterpolatedRealTransform<T>( base, identity, lambda ));
+		return new WrappedIterativeInvertibleRealTransform<>( new SpatiallyInterpolatedRealTransform<T>( base, identity, lambda ));
 	}
 }
