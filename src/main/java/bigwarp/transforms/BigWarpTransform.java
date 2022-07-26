@@ -49,10 +49,6 @@ import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
-import net.imglib2.realtransform.MaskedSimilarityTransform;
-import net.imglib2.realtransform.RealTransformSequence;
-import net.imglib2.realtransform.Scale3D;
-import net.imglib2.realtransform.SpatiallyInterpolatedRealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
@@ -150,33 +146,10 @@ public class BigWarpTransform
 //			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 //			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 //			invXfm = tpsXfm;
-
-
-//			/*
-//			 * SIMILARITY ONLY
-//			 */
-//			final double[][] mvgPts;
-//			final double[][] tgtPts;
-//
-//			final int numActive = tableModel.numActive();
-//			mvgPts = new double[ ndims ][ numActive ];
-//			tgtPts = new double[ ndims ][ numActive ];
-//			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
-//
-//			WrappedCoordinateTransform sim = new ModelTransformSolver( new SimilarityModel3D() ).solve(mvgPts, tgtPts);
-//			final AffineTransform3D transform = new AffineTransform3D();
-//			affine3d( (AbstractAffineModel3D)sim.getTransform(), transform );
-//
-//			double[] center = new double[3];
-//			if( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
-//			{
-//				((PlateauSphericalMaskRealRandomAccessible)lambda).getCenter().localize( center );
-//			}
-//
-//			final MaskedSimilarityTransform xfm = new MaskedSimilarityTransform( transform, lambda, center );
+//			invXfm = new WrappedIterativeInvertibleRealTransform( xfm );
 
 			/*
-			 * SIMILARITY AND TPS
+			 * SIMILARITY AND TPS - resolving tps with transformed points
 			 */
 			final double[][] mvgPts;
 			final double[][] tgtPts;
@@ -186,29 +159,15 @@ public class BigWarpTransform
 			tgtPts = new double[ ndims ][ numActive ];
 			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
 
-			WrappedCoordinateTransform sim = new ModelTransformSolver( new SimilarityModel3D() ).solve(mvgPts, tgtPts);
-			final AffineTransform3D transform = new AffineTransform3D();
-			affine3d( (AbstractAffineModel3D)sim.getTransform(), transform );
-
-			double[] center = new double[3];
+			final double[] center = new double[3];
 			if( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
 			{
 				((PlateauSphericalMaskRealRandomAccessible)lambda).getCenter().localize( center );
 			}
 
-			// masked similarity
-//			final MaskedSimilarityTransform xfm = new MaskedSimilarityTransform( transform, lambda, center );
-			final WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
-
-			final Scale3D id = new Scale3D(1,1,1);
-			final SpatiallyInterpolatedRealTransform first = new SpatiallyInterpolatedRealTransform( tpsXfm, transform, lambda );
-			final SpatiallyInterpolatedRealTransform second = new SpatiallyInterpolatedRealTransform( id, transform.inverse(), lambda );
-
-			final RealTransformSequence xfm = new RealTransformSequence();
-			xfm.add( second );
-			xfm.add( first );
-
-			invXfm = new WrappedIterativeInvertibleRealTransform( xfm );
+			@SuppressWarnings({ "rawtypes", "unchecked" })
+			MaskedTpsSimTransformSolver<? extends RealType<?>> solver = new MaskedTpsSimTransformSolver( lambda, center );
+			invXfm = solver.solve( mvgPts, tgtPts );
 		}
 		else
 		{
