@@ -15,7 +15,6 @@ import java.nio.file.StandardOpenOption;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import com.google.gson.stream.JsonReader;
 
 import bdv.gui.TransformTypeSelectDialog;
 import bigwarp.BigWarp;
@@ -70,7 +69,7 @@ public class TransformWriterJson {
 			JsonObject json = gson.fromJson( reader, JsonObject.class );
 			
 			if( json.has( "landmarks" ))
-				bw.getLandmarkPanel().getTableModel().fromJson( json.get("landmarks"));
+				bw.getLandmarkPanel().getTableModel().fromJson( json );
 
 			if( json.has( "mask" ))
 			{

@@ -4,6 +4,9 @@ import java.util.function.BiConsumer;
 
 import org.jdom2.Element;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
 import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvOptions;
@@ -231,6 +234,18 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		final Element p = elem.getChild( "parameters" );
 		setSquaredRadius( XmlHelpers.getDouble( p, "squaredRadius" ));
 		setSquaredSigma( XmlHelpers.getDouble( p, "squaredSigma" ));
+	}
+
+	public void fromJson( JsonObject json )
+	{
+		final JsonArray c = json.get("center").getAsJsonArray();
+		final double[] center = new double[ c.size() ];
+		for( int i = 0; i < c.size(); i++ )
+			center[i] = c.get( i ).getAsDouble();
+
+		setCenter( center );
+		setSquaredRadius(  json.get("squaredRadius").getAsDouble() );
+		setSquaredSigma(  json.get("squaredSigma").getAsDouble() );
 	}
 
 }
