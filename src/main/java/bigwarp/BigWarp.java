@@ -2410,7 +2410,7 @@ public class BigWarp< T >
 
 			
 			if ( !fnLandmarks.isEmpty() )
-				bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
+				bw.loadLandmarks( fnLandmarks );
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
@@ -3318,13 +3318,21 @@ public class BigWarp< T >
 	{
 		File file = new File( filename );
 		setLastDirectory( file.getParentFile() );
-		try
+
+		if( filename.endsWith( "csv" ))
 		{
-			landmarkModel.load( file );
+			try
+			{
+				landmarkModel.load( file );
+			}
+			catch ( final IOException e1 )
+			{
+				e1.printStackTrace();
+			}
 		}
-		catch ( final IOException e1 )
+		else if( filename.endsWith( "json" ))
 		{
-			e1.printStackTrace();
+			new TransformWriterJson().read( file, this );
 		}
 
 		boolean didCompute = restimateTransformation();
