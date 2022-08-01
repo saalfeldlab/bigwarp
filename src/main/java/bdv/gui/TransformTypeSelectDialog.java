@@ -49,6 +49,7 @@ public class TransformTypeSelectDialog extends JDialog
 	
 	public static final String TPS = "Thin Plate Spline";
 	public static final String MASKEDTPS = "Masked Thin Plate Spline";
+	public static final String MASKEDSIMTPS = "Masked Similarity + Thin Plate Spline";
 	public static final String AFFINE = "Affine";
 	public static final String SIMILARITY = "Similarity";
 	public static final String ROTATION = "Rotation";
@@ -60,6 +61,7 @@ public class TransformTypeSelectDialog extends JDialog
 	private final ButtonGroup group;
 	private final JRadioButton tpsButton;
 	private final JRadioButton maskedTpsButton;
+	private final JRadioButton maskedSimTpsButton;
 	private final JRadioButton affineButton;
 	private final JRadioButton similarityButton;
 	private final JRadioButton rotationButton;
@@ -84,6 +86,7 @@ public class TransformTypeSelectDialog extends JDialog
 
 		tpsButton = new JRadioButton( TPS );
 		maskedTpsButton = new JRadioButton( MASKEDTPS );
+		maskedSimTpsButton = new JRadioButton( MASKEDSIMTPS );
 		affineButton = new JRadioButton( AFFINE );
 		similarityButton = new JRadioButton( SIMILARITY );
 		rotationButton = new JRadioButton( ROTATION );
@@ -92,6 +95,7 @@ public class TransformTypeSelectDialog extends JDialog
 		group = new ButtonGroup();
 		group.add( tpsButton );
 		group.add( maskedTpsButton );
+		group.add( maskedSimTpsButton );
 		group.add( affineButton );
 		group.add( similarityButton );
 		group.add( rotationButton );
@@ -101,6 +105,7 @@ public class TransformTypeSelectDialog extends JDialog
 
 		addActionListender( tpsButton );
 		addActionListender( maskedTpsButton );
+		addActionListender( maskedSimTpsButton );
 		addActionListender( affineButton );
 		addActionListender( similarityButton );
 		addActionListender( rotationButton );
@@ -109,6 +114,7 @@ public class TransformTypeSelectDialog extends JDialog
 		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
 		radioPanel.add( maskedTpsButton );
+		radioPanel.add( maskedSimTpsButton );
 		radioPanel.add( affineButton );
 		radioPanel.add( similarityButton );
 		radioPanel.add( rotationButton );
@@ -159,6 +165,9 @@ public class TransformTypeSelectDialog extends JDialog
 			break;
 		case MASKEDTPS:
 			maskedTpsButton.setSelected( true );
+			break;
+		case MASKEDSIMTPS:
+			maskedSimTpsButton.setSelected( true );
 			break;
 		case AFFINE:
 			affineButton.setSelected( true );

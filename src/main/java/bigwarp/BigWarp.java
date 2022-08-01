@@ -129,6 +129,7 @@ import bdv.viewer.VisibilityAndGrouping;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -273,7 +274,9 @@ public class BigWarp< T >
 
 	protected MouseLandmarkTableListener landmarkTableListener;
 
-	protected MaskedSourceEditorMouseListener maskSourceMouseListener;
+	protected MaskedSourceEditorMouseListener maskSourceMouseListenerP;
+
+	protected MaskedSourceEditorMouseListener maskSourceMouseListenerQ;
 
 	protected BigWarpMessageAnimator message;
 
@@ -1761,9 +1764,20 @@ public class BigWarp< T >
 
 	protected void addMaskMouseListener()
 	{
-		maskSourceMouseListener = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
-		maskSourceMouseListener.setActive( false );
-		maskSourceMouseListener.setMask( tpsMask.getRandomAccessible() );
+		final Color[] maskColors = new Color[]{ Color.ORANGE, Color.YELLOW };
+		viewerP.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerP, maskColors, numDimensions() == 3 ));
+		viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
+
+		maskSourceMouseListenerP = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerP );
+		maskSourceMouseListenerP.setActive( false );
+		maskSourceMouseListenerP.setMask( tpsMask.getRandomAccessible() );
+
+		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
+		maskSourceMouseListenerQ.setActive( false );
+		maskSourceMouseListenerQ.setMask( tpsMask.getRandomAccessible() );
+
+		viewerP.getMaskOverlay().setVisible( true );
+		viewerQ.getMaskOverlay().setVisible( true );
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )
