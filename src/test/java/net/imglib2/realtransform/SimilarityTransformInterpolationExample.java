@@ -148,8 +148,8 @@ public class SimilarityTransformInterpolationExample {
 
 		final Scale3D id = new Scale3D(1,1,1);
 		final SpatiallyInterpolatedRealTransform tpsLmsim = new SpatiallyInterpolatedRealTransform( tpsXfm, transform.inverse(), lambda );
-//		final SpatiallyInterpolatedRealTransform idLmsimI = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
-//		final SpatiallyInterpolatedRealTransform msimILid = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
+		final SpatiallyInterpolatedRealTransform idLmsimI = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
+		final SpatiallyInterpolatedRealTransform msimILid = new SpatiallyInterpolatedRealTransform( id, transform, lambda );
 		
 		final double[] x = new double[]{358.1, 171.0, 85.7 };
 

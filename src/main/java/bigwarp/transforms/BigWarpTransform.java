@@ -142,11 +142,14 @@ public class BigWarpTransform
 			/*
 			 * TPS ONLY
 			 */
-//			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new MaskedTpsTransformSolver( lambda ).solve( tableModel );
-//			tpsXfm.getOptimzer().setMaxIters(maxIterations);
-//			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
-//			invXfm = tpsXfm;
-//			invXfm = new WrappedIterativeInvertibleRealTransform( xfm );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new MaskedTpsTransformSolver( lambda ).solve( tableModel );
+			tpsXfm.getOptimzer().setMaxIters(maxIterations);
+			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
+			invXfm = new WrappedIterativeInvertibleRealTransform( tpsXfm );
+
+		}
+		else if( transformType.equals( TransformTypeSelectDialog.MASKEDSIMTPS ))
+		{
 
 			/*
 			 * SIMILARITY AND TPS - resolving tps with transformed points
