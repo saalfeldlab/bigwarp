@@ -21,26 +21,14 @@
  */
 package bdv.gui;
 
-import bdv.TransformEventHandler2D;
-import bdv.TransformEventHandler3D;
-
-import bdv.TransformEventHandlerFactory;
-import org.scijava.ui.behaviour.io.InputTriggerConfig;
-
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.animate.MessageOverlayAnimator;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 public class BigWarpViewerOptions extends ViewerOptions
 {
-	public final boolean is2d;
-
 	private final BwValues bwValues = new BwValues();
-
-	public BigWarpViewerOptions( final boolean is2d )
-	{
-		this.is2d = is2d;
-	}
 
 	public BigWarpMessageAnimator getMessageAnimator()
 	{
@@ -49,7 +37,7 @@ public class BigWarpViewerOptions extends ViewerOptions
 
 	public static BigWarpViewerOptions options()
 	{
-		return options( false );
+		return new BigWarpViewerOptions();
 	}
 
 	@Override
@@ -60,9 +48,9 @@ public class BigWarpViewerOptions extends ViewerOptions
 	}
 
 	@Override
-	public ViewerOptions transformEventHandlerFactory( final TransformEventHandlerFactory f )
+	public BigWarpViewerOptions is2D( final boolean is2D )
 	{
-		super.transformEventHandlerFactory( f );
+		super.is2D( is2D );
 		return this;
 	}
 
@@ -85,18 +73,9 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return this;
 	}
 
-	public static BigWarpViewerOptions options( final boolean is2d )
-	{
-		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
-		out.transformEventHandlerFactory( is2d
-				? TransformEventHandler2D::new
-				: TransformEventHandler3D::new );
-		return out;
-	}
-
 	public BigWarpViewerOptions copy()
 	{
-		BigWarpViewerOptions out = new BigWarpViewerOptions( is2d );
+		BigWarpViewerOptions out = new BigWarpViewerOptions();
 		out.
 				width( values.getWidth() ).
 				height( values.getHeight() ).
@@ -106,36 +85,25 @@ public class BigWarpViewerOptions extends ViewerOptions
 				numSourceGroups( values.getNumSourceGroups() ).
 				useVolatileIfAvailable( values.isUseVolatileIfAvailable() ).
 				msgOverlay( values.getMsgOverlay() ).
+				is2D( values.is2D() ).
 				transformEventHandlerFactory( values.getTransformEventHandlerFactory() ).
 				accumulateProjectorFactory( values.getAccumulateProjectorFactory() ).
-				inputTriggerConfig( values.getInputTriggerConfig() );
+				inputTriggerConfig( values.getInputTriggerConfig() ).
+				shareKeyPressedEvents( values.getKeyPressedManager() ).
+				keymapManager( values.getKeymapManager() ).
+				appearanceManager( values.getAppearanceManager() );
 		return out;
+	}
+
+	public ViewerOptions getViewerOptions( final boolean isMoving )
+	{
+		return copy().msgOverlay( isMoving
+				? getMessageAnimator().getAnimatorMoving()
+				: getMessageAnimator().getAnimatorFixed() );
 	}
 
 	public static class BwValues
 	{
-		private BigWarpMessageAnimator messageAnimator;
-
-		private MessageOverlayAnimator msgOverlayP;
-
-		private MessageOverlayAnimator msgOverlayQ;
-
-		public BwValues()
-		{
-			super();
-			messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
-			msgOverlayP = messageAnimator.msgAnimatorP;
-			msgOverlayQ = messageAnimator.msgAnimatorQ;
-		}
-
-		public MessageOverlayAnimator getMsgOverlay()
-		{
-			return msgOverlayQ;
-		}
-
-		public MessageOverlayAnimator getMsgOverlayMoving()
-		{
-			return msgOverlayP;
-		}
+		private BigWarpMessageAnimator messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
 	}
 }

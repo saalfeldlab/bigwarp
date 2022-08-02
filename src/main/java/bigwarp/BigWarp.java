@@ -333,7 +333,7 @@ public class BigWarp< T >
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		this( data, windowTitle, BigWarpViewerOptions.options( ( detectNumDims( data.sources ) == 2 ) ), progressWriter );
+		this( data, windowTitle, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
 	}
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
@@ -351,7 +351,7 @@ public class BigWarp< T >
 		this.options = options;
 
 		ptBack = new double[ 3 ];
-		if( options.is2d )
+		if( options.values.is2D() )
 			ndims = 2;
 		else
 			ndims = 3;
@@ -422,7 +422,7 @@ public class BigWarp< T >
 
 		// If the images are 2d, use a transform handler that limits
 		// transformations to rotations and scalings of the 2d plane ( z = 0 )
-		if ( options.is2d )
+		if ( options.values.is2D() )
 		{
 
 			final Class< ViewerPanel > c_vp = ViewerPanel.class;
@@ -1359,7 +1359,7 @@ public class BigWarp< T >
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 
 		InvertibleRealTransform transform; 
-		if( options.is2d  && currentTransform != null )
+		if( options.values.is2D()  && currentTransform != null )
 			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
 		else
 			transform = currentTransform;

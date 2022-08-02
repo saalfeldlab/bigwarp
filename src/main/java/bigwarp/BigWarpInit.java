@@ -475,11 +475,11 @@ public class BigWarpInit
 				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, 
 						new double[]{ srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) });
 
-				return new BwRandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
+				return new BwRandomAccessibleIntervalSource( image, (NumericType ) Util.getTypeFromInterval( image ),
 						srcXfm, meta.getPath(), voxelDims );
 			}
 			else
-				return new BwRandomAccessibleIntervalSource( image, Util.getTypeFromInterval( image ), 
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ),
 						new AffineTransform3D(), meta.getPath() );
 		}
 		catch ( IOException e )
@@ -521,7 +521,7 @@ public class BigWarpInit
 		@SuppressWarnings( { "unchecked", "rawtypes" } )
 		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( 
 				images, 
-				Util.getTypeFromInterval(images[0]),
+				(NumericType ) Util.getTypeFromInterval(images[0]),
 				mipmapScales,
 				new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[0]),
 				new AffineTransform3D(),

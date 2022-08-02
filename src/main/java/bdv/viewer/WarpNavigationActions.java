@@ -34,7 +34,7 @@ import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
-import bdv.viewer.ViewerPanel.AlignPlane;
+import bdv.viewer.AbstractViewerPanel.AlignPlane;
 
 public class WarpNavigationActions extends Actions
 {
@@ -353,7 +353,7 @@ public class WarpNavigationActions extends Actions
 
 		public AlignPlaneAction( final ViewerPanel viewer, final AlignPlane plane )
 		{
-			super( String.format( ALIGN_PLANE, plane.getName() ), viewer );
+			super( String.format( ALIGN_PLANE, plane.name() ), viewer );
 			this.plane = plane;
 		}
 
