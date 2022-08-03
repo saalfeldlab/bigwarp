@@ -86,6 +86,7 @@ public class BigWarpActions
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
 	public static final String MASK_SIZE_EDIT = "mask edit";
+	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
 
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
@@ -257,6 +258,7 @@ public class BigWarpActions
 		map.put( ESTIMATE_WARP, "C" );
 
 		map.put( MASK_SIZE_EDIT, "M" );
+		map.put( MASK_VIS_TOGGLE, "control M" );
 
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
@@ -333,6 +335,7 @@ public class BigWarpActions
 
 		// MASK
 		new MaskSizeEdit( bw ).put(actionMap);
+		new MaskVisToggle( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -1181,6 +1184,25 @@ public class BigWarpActions
 		{
 			bw.maskSourceMouseListenerP.toggleActive();
 			bw.maskSourceMouseListenerQ.toggleActive();
+		}
+	}
+
+	public static class MaskVisToggle extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 493457851797644046L;
+		private final BigWarp< ? > bw;
+
+		public MaskVisToggle( final BigWarp< ? > bw )
+		{
+			super( MASK_VIS_TOGGLE );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
+			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
 		}
 	}
 

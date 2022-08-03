@@ -92,6 +92,12 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 	public void setVisible( final boolean visible )
 	{
 		this.visible = visible;
+		viewer.requestRepaint();
+	}
+
+	public void toggleVisible()
+	{
+		setVisible( !visible );
 	}
 
 	@Override
