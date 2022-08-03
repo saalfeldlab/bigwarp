@@ -22,6 +22,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 {
 	private BiConsumer< RealLocalizable, DoubleType > pfun;
 	private FunctionRealRandomAccessible< DoubleType > rra;
+
+	private int nd;
 	
 	private double plateauR;
 	private double plateauR2;
@@ -40,10 +42,10 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public PlateauSphericalMaskRealRandomAccessible( int n, RealPoint center )
 	{
+		this.nd = n;
 		this.center = center;
-//		pfun = new GaussianFalloff();
 		pfun = new CosineFalloff();
-		rra = new FunctionRealRandomAccessible<>( n, pfun, DoubleType::new );
+		update();
 
 		setRadius( 8.0 );
 		setSigma ( 10.0 );
@@ -92,6 +94,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 //		System.out.println( x + "," + access.get().getRealDouble());
 	}
 
+	private void update()
+	{
+		rra = new FunctionRealRandomAccessible<>( nd, pfun, DoubleType::new );
+	}
+
 	public void setType( String type )
 	{
 		setType( FalloffType.valueOf( type ));
@@ -102,9 +109,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		switch (type) {
 		case GAUSSIAN:
 			pfun = new GaussianFalloff();
+			update();
 			break;
 		case COSINE:
 			pfun = new CosineFalloff();
+			update();
 			break;
 		default:
 			break;

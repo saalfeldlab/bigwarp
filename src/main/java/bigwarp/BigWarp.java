@@ -1775,9 +1775,6 @@ public class BigWarp< T >
 		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
 		maskSourceMouseListenerQ.setActive( false );
 		maskSourceMouseListenerQ.setMask( tpsMask.getRandomAccessible() );
-
-		viewerP.getMaskOverlay().setVisible( true );
-		viewerQ.getMaskOverlay().setVisible( true );
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )

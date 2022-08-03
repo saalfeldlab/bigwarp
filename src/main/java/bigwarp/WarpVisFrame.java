@@ -128,7 +128,7 @@ public class WarpVisFrame extends JDialog
 	
 	public WarpVisFrame( final Frame owner, final BigWarp<?> bw )
 	{
-		super( owner, "big warp options", false );
+		super( owner, "Bigwarp options", false );
 		this.bw = bw;
 		this.settings = bw.viewerSettings;
 		

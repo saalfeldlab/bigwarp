@@ -28,9 +28,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -40,8 +38,8 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import bigwarp.BigWarp;
-import bigwarp.WarpVisFrame;
-import bigwarp.WarpVisFrame.MyChangeListener;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;;
 
 public class TransformTypeSelectDialog extends JDialog
 {
@@ -68,6 +66,10 @@ public class TransformTypeSelectDialog extends JDialog
 	private final JRadioButton translationButton;
 
 	private final JCheckBox autoEstimateMaskButton;
+
+	private final ButtonGroup falloffGroup;
+	private final JRadioButton gaussFalloffButton;
+	private final JRadioButton cosFalloffButton;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
@@ -128,12 +130,39 @@ public class TransformTypeSelectDialog extends JDialog
 								"Transform type" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
-		add( radioPanel, BorderLayout.LINE_START );
+		add( radioPanel, BorderLayout.PAGE_START );
 
-		autoEstimateMaskButton = new JCheckBox( "Auto-estimate transform mask");
-		radioPanel.add( autoEstimateMaskButton );
 
-		add( radioPanel, BorderLayout.LINE_END );
+		// panel containing options for transforms and mask
+		JPanel optionsPanel = new JPanel( new GridLayout(0, 1));
+
+		optionsPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"options" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
+		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask");
+		optionsPanel.add( autoEstimateMaskButton );
+
+		cosFalloffButton = new JRadioButton( FalloffType.COSINE.toString() );
+		gaussFalloffButton = new JRadioButton( FalloffType.GAUSSIAN.toString() );
+		cosFalloffButton.setSelected( true );
+
+		addFalloffActionListender( cosFalloffButton );
+		addFalloffActionListender( gaussFalloffButton );
+
+		falloffGroup = new ButtonGroup();
+		falloffGroup.add( cosFalloffButton );
+		falloffGroup.add( gaussFalloffButton );
+
+		optionsPanel.add( new JLabel( "Mask falloff shape" ) );
+		optionsPanel.add( cosFalloffButton );
+		optionsPanel.add( gaussFalloffButton );
+
+		add( optionsPanel, BorderLayout.PAGE_END );
 
 		pack();
 		addListeners();
@@ -151,8 +180,9 @@ public class TransformTypeSelectDialog extends JDialog
 
 	private synchronized void updateOptions()
 	{
-		System.out.println( "update options");
 		autoEstimateMaskButton.setVisible( maskedTpsButton.isSelected() );
+		cosFalloffButton.setVisible( maskedTpsButton.isSelected() );
+		gaussFalloffButton.setVisible( maskedTpsButton.isSelected() );
 		pack();
 	}
 
@@ -192,6 +222,20 @@ public class TransformTypeSelectDialog extends JDialog
 				bw.setTransformType( button.getText() );
 			}
 		});
+	}
+
+	public void addFalloffActionListender( final JRadioButton button )
+	{
+		button.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				bw.getTpsMaskSource().getRandomAccessible().setType( button.getText() );
+				bw.getViewerFrameP().getViewerPanel().requestRepaint();
+				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+			}
+		} );
 	}
 
 	public void setTransformType( String transformType )
