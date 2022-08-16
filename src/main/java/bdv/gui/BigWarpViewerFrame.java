@@ -101,7 +101,7 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		super( title, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width,  height ), isMoving, movingIndexList, targetIndexList );
 		setups = new ConverterSetups( viewer.state() );
 		setups.listeners().add( s -> viewer.requestRepaint() );
 
