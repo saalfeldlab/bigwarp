@@ -554,11 +554,11 @@ public class BigWarp< T >
 		setUpLandmarkMenus();
 
 		/* Set the locations of frames */
-		final Point viewerFramePloc = getViewerFrameP().getLocation();
-		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
-		getViewerFrameQ().setLocation( viewerFramePloc );
-		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
-		landmarkFrame.setLocation( viewerFramePloc );
+		viewerFrameP.setLocation( 0, 0 );
+		viewerFrameP.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+		viewerFrameQ.setLocation( DEFAULT_WIDTH, 0 );
+		viewerFrameQ.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+		landmarkFrame.setLocation( 2 * DEFAULT_WIDTH, 0 );
 
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
