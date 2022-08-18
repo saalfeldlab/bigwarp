@@ -55,6 +55,7 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -83,6 +84,8 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.scijava.ui.behaviour.util.Actions;
+import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,6 +112,9 @@ import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.ui.appearance.AppearanceManager;
+import bdv.ui.keymap.Keymap;
+import bdv.ui.keymap.KeymapManager;
 import bdv.util.Bounds;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -118,6 +124,7 @@ import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
+import bdv.viewer.NavigationActions;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
@@ -136,6 +143,7 @@ import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.util.BigWarpUtils;
+import dev.dirs.ProjectDirectories;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
@@ -170,6 +178,7 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarp< T >
 {
+	public static String configDir = ProjectDirectories.from( "sc", "fiji", "bigwarp" ).configDir;
 
 	protected static final int DEFAULT_WIDTH = 600;
 
@@ -199,6 +208,10 @@ public class BigWarp< T >
 	protected final WarpVisFrame warpVisDialog;
 
 	protected final HelpDialog helpDialog;
+
+	private final KeymapManager keymapManager;
+
+	private final AppearanceManager appearanceManager;
 
 	protected final SourceInfoDialog sourceInfoDialog;
 
@@ -338,6 +351,17 @@ public class BigWarp< T >
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
+		System.out.println( "BigWarp actions");
+		final KeymapManager optionsKeymapManager = options.values.getKeymapManager();
+		final AppearanceManager optionsAppearanceManager = options.values.getAppearanceManager();
+		keymapManager = optionsKeymapManager != null ? optionsKeymapManager : new KeymapManager( configDir );
+		appearanceManager = optionsAppearanceManager != null ? optionsAppearanceManager : new AppearanceManager( configDir );
+		
+		InputTriggerConfig inputTriggerConfig = options.values.getInputTriggerConfig();
+		final Keymap keymap = this.keymapManager.getForwardSelectedKeymap();
+		if ( inputTriggerConfig == null )
+			inputTriggerConfig = keymap.getConfig();
+
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
 		ij = IJ.getInstance();
@@ -399,19 +423,15 @@ public class BigWarp< T >
 
 		viewerSettings = new BigWarpViewerSettings();
 
-		// key properties
-		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
-		options = options.inputTriggerConfig( keyProperties );
-
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
-				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+				data.cache, keymapManager, appearanceManager, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
-				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, viewerSettings,
+				data.cache, keymapManager, appearanceManager, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -515,13 +535,32 @@ public class BigWarp< T >
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
 
-		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
-		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
+//		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, inputTriggerConfig, ( ndims == 2 ) );
+//		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, inputTriggerConfig );
+//
+//		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerFrameQ, inputTriggerConfig, ( ndims == 2 ) );
+//		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, inputTriggerConfig );
+//
+//		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, inputTriggerConfig );
 
-		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerFrameQ, keyProperties, ( ndims == 2 ) );
-		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, keyProperties );
 
-		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, keyProperties );
+//		System.out.println( "install actions" );
+		BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-general" );
+		BigWarpActions.installViewerActions( bwActions, getViewerFrameP().getKeybindings(), this );
+		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ().getKeybindings(), this );
+
+
+//		bwActions.installViewerActions( getViewerFrameQ().getKeybindings(), this );
+//		BigWarpActions.install( bwActions, )
+
+
+//		BigWarpActions.installViewerActions( getViewerFrameP().getKeybindings(), this, inputTriggerConfig );
+//		BigWarpActions.installViewerActions( getViewerFrameQ().getKeybindings(), this, inputTriggerConfig );
+
+
+//		final Actions navigationActions = new Actions( inputTriggerConfig, "bw-bdv", "navigation" );
+//		navigationActions.install( viewerFrameP.getKeybindings(), "navigation" );
+//		NavigationActions.install( navigationActions, viewerP, options.values.is2D() );
 
 		// this call has to come after the actions are set
 		warpVisDialog.setActions();
@@ -1581,6 +1620,59 @@ public class BigWarp< T >
 
 		matchWindowTransforms( panelToChange, panelToMatch );
 	}
+	
+	/**
+	 * Centers the active viewer at a landmark whose index is an increment from the currently 
+	 * selected landmark. 
+	 * 
+	 * @param inc the increment
+	 */
+	public void warpToLandmarkRelative( int inc )
+	{
+		int[] selectedRows =  getLandmarkPanel().getJTable().getSelectedRows();
+
+		int row = 0;
+		if( selectedRows.length > 0 )
+			row = selectedRows[ selectedRows.length - 1 ];
+
+		row = row + inc; // increment to get the *next* row
+
+		// wrap to start if necessary
+		if( row >= getLandmarkPanel().getTableModel().getRowCount() )
+			row = 0;
+		else if( row < 0 )
+			row = getLandmarkPanel().getTableModel().getRowCount() - 1;
+
+		// select new row
+		getLandmarkPanel().getJTable().setRowSelectionInterval( row, row );
+
+		if( getViewerFrameP().isActive() )
+		{
+			warpToLandmark( row, getViewerFrameP().getViewerPanel() );
+		}
+		else
+		{
+			warpToLandmark( row, getViewerFrameQ().getViewerPanel() );
+		}	
+	}
+
+	public void warpToNextLandmark()
+	{
+		warpToLandmarkRelative( 1 );
+	}
+
+	public void warpToPrevLandmark()
+	{
+		warpToLandmarkRelative( -1 );
+	}
+
+	public void warpToNearestLandmark()
+	{
+		if( getViewerFrameP().isActive() )
+			warpToNearest( getViewerFrameP().getViewerPanel() );
+		else
+			warpToNearest( getViewerFrameQ().getViewerPanel() );
+	}
 
 	public void warpToNearest( BigWarpViewerPanel viewer )
 	{
@@ -1595,8 +1687,23 @@ public class BigWarp< T >
 		warpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
 	}
 
+	public void warpToSelectedLandmark()
+	{
+		final int[] selectedRows = getLandmarkPanel().getJTable().getSelectedRows();
+
+		int row = 0;
+		if( selectedRows.length > 0 )
+			row = selectedRows[ 0 ];
+
+		if( getViewerFrameP().isActive() )
+			warpToLandmark( row, getViewerFrameP().getViewerPanel() );
+		else
+			warpToLandmark( row, getViewerFrameQ().getViewerPanel() );	
+	}
+
 	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
 	{
+		System.out.println( "warp to landmark " + row );
 		if( inLandmarkMode )
 		{
 			message.showMessage( "Can't move viewer in landmark mode." );
@@ -2482,29 +2589,29 @@ public class BigWarp< T >
 
 		public void transferChannelSettings( final BigWarpViewerFrame viewer )
 		{
-			SynchronizedViewerState state = viewer.getViewerPanel().state();
-			ConverterSetups setups = viewer.getConverterSetups();
-			synchronized ( state )
-			{
-				for ( SourceAndConverter< ? > sac : state.getSources() )
-				{
-					if ( sourceColorSettings.containsKey( sac ) )
-					{
-						if ( sourceColorSettings.get( sac ) == null )
-							continue;
-
-						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
-					}
-					else
-					{
-						final int timepoint = state.getCurrentTimepoint();	
-						final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
-						ConverterSetup cs = setups.getConverterSetup(sac);
-						if( cs != null )
-							cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
-					}
-				}
-			}
+//			SynchronizedViewerState state = viewer.getViewerPanel().state();
+//			ConverterSetups setups = viewer.getConverterSetups();
+//			synchronized ( state )
+//			{
+//				for ( SourceAndConverter< ? > sac : state.getSources() )
+//				{
+//					if ( sourceColorSettings.containsKey( sac ) )
+//					{
+//						if ( sourceColorSettings.get( sac ) == null )
+//							continue;
+//
+//						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
+//					}
+//					else
+//					{
+//						final int timepoint = state.getCurrentTimepoint();	
+//						final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
+//						ConverterSetup cs = setups.getConverterSetup(sac);
+//						if( cs != null )
+//							cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
+//					}
+//				}
+//			}
 		}
 	}
 

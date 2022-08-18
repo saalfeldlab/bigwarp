@@ -33,8 +33,10 @@ import javax.swing.table.TableCellEditor;
 
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
+import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
+import bdv.BigDataViewerActions;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.viewer.SourceAndConverter;
@@ -45,67 +47,156 @@ import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
 import net.imglib2.realtransform.AffineTransform3D;
 
-public class BigWarpActions
+public class BigWarpActions extends Actions
 {
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
-	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
 
-	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
+	// General options
+
+	// Display options
+	public static final String   TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
+	public static final String[] TOGGLE_LANDMARK_MODE_KEYS  = new String[]{ "SPACE" };
+
+	public static final String   TOGGLE_POINTS_VISIBLE  = "toggle points visible";
+	public static final String[] TOGGLE_POINTS_VISIBLE_KEYS  = new String[]{ "V" };
+
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
-	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
-	public static final String TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE  = "toggle box and text overlay visible";
-	public static final String ESTIMATE_WARP = "estimate warp";
-	public static final String PRINT_TRANSFORM = "print transform";
-	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
+	public static final String[] TOGGLE_POINT_NAMES_VISIBLE_KEYS  = new String[]{ "N" };
 
+	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
+	public static final String[] TOGGLE_MOVING_IMAGE_DISPLAY_KEYS = new String[]{ "T" };
+
+	public static final String TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE  = "toggle box and text overlay visible";
+	public static final String[] TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE_KEYS  = new String[]{ "F8" };
+
+	public static final String ESTIMATE_WARP = "estimate warp";
+	public static final String[] ESTIMATE_WARP_KEYS = new String[] { "C" };
+
+	public static final String PRINT_TRANSFORM = "print transform";
+	public static final String[] PRINT_TRANSFORM_KEYS = new String[]{ "control shift T" };
+
+	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
+	public static final String[] TOGGLE_ESTIMATE_WARP_ONDRAG_KEYS = new String[]{};
+
+//	public static final String CROP = "crop";
+
+	public static final String SAVE_SETTINGS = "save settings";
+	public static final String LOAD_SETTINGS = "load settings";
+
+	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
+	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
+	public static final String SHOW_HELP = "help";
+	public static final String SHOW_SOURCE_INFO = "show source info";
+
+	// Warp visualization options
 	public static final String SHOW_WARPTYPE_DIALOG = "show warp vis dialog" ;
+
 	public static final String SET_WARPTYPE_VIS = "set warp vis type %s" ;
+
 	public static final String SET_WARPTYPE_VIS_P = "p " + SET_WARPTYPE_VIS;
+
 	public static final String SET_WARPTYPE_VIS_Q = "q " + SET_WARPTYPE_VIS;
 
 	public static final String WARPMAG_BASE = "set warpmag base %s";
 	public static final String WARPVISGRID = "set warp vis grid %s";
 	public static final String WARPVISDIALOG = "warp vis dialog";
 
-	public static final String RESET_VIEWER = "reset active viewer";
-	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
-	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
-	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
-	public static final String SHOW_HELP = "help";
-	public static final String SHOW_SOURCE_INFO = "show source info";
+	// Navigation options
+	public static final String   RESET_VIEWER = "reset active viewer";
+	public static final String[] RESET_VIEWER_KEYS = new String[]{"R"};
 
-	public static final String CROP = "crop";
-	public static final String SAVE_SETTINGS = "save settings";
-	public static final String LOAD_SETTINGS = "load settings";
+	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
+	public static final String ALIGN_OTHER_TO_ACTIVE = String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE );
+	public static final String[] ALIGN_OTHER_TO_ACTIVE_KEYS = new String[] { "Q" };
+
+	public static final String ALIGN_ACTIVE_TO_OTHER = String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER );
+	public static final String[] ALIGN_ACTIVE_TO_OTHER_KEYS = new String[] { "W" };
+
+
+	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
+	public static final String[] WARP_TO_SELECTED_POINT_KEYS = new String[]{ "D" };
+
+	public static final String WARP_TO_NEXT_POINT = "warp to next landmark";
+	public static final String[] WARP_TO_NEXT_POINT_KEYS = new String[]{ "ctrl D"};
+
+	public static final String WARP_TO_PREV_POINT = "warp to prev landmark";
+	public static final String[] WARP_TO_PREV_POINT_KEYS = new String[]{ "ctrl shift D"};
+
+	public static final String WARP_TO_NEAREST_POINT = "warp to nearest landmark";
+	public static final String[] WARP_TO_NEAREST_POINT_KEYS = new String[]{ "E" };
+
+	// landmark options
 	public static final String LOAD_LANDMARKS = "load landmarks";
+	public static final String[] LOAD_LANDMARKS_KEYS = new String[]{ "control O" };
+
 	public static final String SAVE_LANDMARKS = "save landmarks";
+	public static final String[] SAVE_LANDMARKS_KEYS = new String[]{ "control S" };
+
 	public static final String QUICK_SAVE_LANDMARKS = "quick save landmarks";
+	public static final String[] QUICK_SAVE_LANDMARKS_KEYS = new String[]{ "control Q" };
+
+	public static final String SET_BOOKMARK = "set bookmark";
+	public static final String[] SET_BOOKMARK_KEYS = new String[]{ "shift B" };
+
+	public static final String GO_TO_BOOKMARK = "go to bookmark";
+	public static final String[] GO_TO_BOOKMARK_KEYS = new String[]{ "B" };
+
+	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
+	public static final String[] GO_TO_BOOKMARK_ROTATION_KEYS = new String[]{ "O" };
+
+	public static final String UNDO = "undo";
+	public static final String[] UNDO_KEYS = new String[]{ "control Z" };
+
+	public static final String REDO = "redo";
+	public static final String[] REDO_KEYS = new String[]{ "control shift Z", "control Y" };
+
+	public static final String SELECT_TABLE_ROWS = "select table row %d";
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
+	// export options
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
 
 	public static final String EXPORT_IP = "export imageplus";
-	public static final String EXPORT_WARP = "export warp field"; 
-	public static final String EXPORT_AFFINE = "export affine"; 
+	public static final String EXPORT_WARP = "export warp field";
+	public static final String EXPORT_AFFINE = "export affine";
 
-	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
-	public static final String WARP_TO_NEXT_POINT = "warp to next landmark %s";
-	public static final String WARP_TO_NEAREST_POINT = "warp to nearest landmark";
-
-	public static final String SET_BOOKMARK = "set bookmark";
-	public static final String GO_TO_BOOKMARK = "go to bookmark";
-	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
-
-	public static final String UNDO = "undo";
-	public static final String REDO = "redo";
-
-	public static final String SELECT_TABLE_ROWS = "select table row %d";
 
 	public static final String DEBUG = "debug";
 	public static final String GARBAGE_COLLECTION = "garbage collection";
+
+	public BigWarpActions( final KeyStrokeAdder.Factory keyConfig, String name )
+	{
+		this( keyConfig, "bw", name );
+	}
+
+	public BigWarpActions( final KeyStrokeAdder.Factory keyConfig, String context, String name )
+	{
+		super( keyConfig, context, name );
+	}
+
+	public static void installViewerActions(
+			Actions actions,
+			final InputActionBindings inputActionBindings,
+			final BigWarp< ? > bw )
+	{
+		System.out.println( "install viewer actions" );
+		actions.install( inputActionBindings, "bw" );
+
+		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
+		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
+
+		// navigation
+		actions.runnableAction( bw::resetView, RESET_VIEWER, RESET_VIEWER_KEYS);
+		actions.runnableAction( bw::matchOtherViewerPanelToActive, ALIGN_OTHER_TO_ACTIVE, ALIGN_OTHER_TO_ACTIVE_KEYS );
+		actions.runnableAction( bw::matchActiveViewerPanelToOther, ALIGN_ACTIVE_TO_OTHER, ALIGN_ACTIVE_TO_OTHER_KEYS );
+		actions.runnableAction( bw::warpToSelectedLandmark, WARP_TO_SELECTED_POINT, WARP_TO_SELECTED_POINT_KEYS );
+		actions.runnableAction( bw::warpToNearestLandmark, WARP_TO_NEAREST_POINT, WARP_TO_NEAREST_POINT_KEYS );
+		actions.runnableAction( bw::warpToNextLandmark, WARP_TO_NEXT_POINT, WARP_TO_NEXT_POINT_KEYS );
+		actions.runnableAction( bw::warpToPrevLandmark, WARP_TO_PREV_POINT, WARP_TO_PREV_POINT_KEYS );
+	}
 
 	/**
 	 * Create BigWarp actions and install them in the specified
@@ -226,26 +317,6 @@ public class BigWarpActions
 		map.put( SHOW_WARPTYPE_DIALOG, "U" );
 		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 
-//		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
-//		// the few lines below are super ugly, but are necessary for robustness
-//		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
-//		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
-//
-//		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
-//		// the few lines below are super ugly, but are necessary for robustness
-//		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
-//		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
-
 		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
@@ -342,8 +413,6 @@ public class BigWarpActions
 
 		return actionMap;
 	}
-
-	private BigWarpActions(){}
 
 	public static class UndoRedoAction extends AbstractNamedAction
 	{
