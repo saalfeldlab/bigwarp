@@ -536,6 +536,7 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
+		warpVisDialog.maskOptionsPanel.setMask( tpsMask );
 
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
@@ -1756,6 +1757,18 @@ public class BigWarp< T >
 		return success;
 	}
 
+	public void toggleMaskOverlayVisibility()
+	{
+		getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
+		getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
+	}
+
+	public void setMaskOverlayVisibility( final boolean visible )
+	{
+		getViewerFrameP().getViewerPanel().getMaskOverlay().setVisible( visible );
+		getViewerFrameQ().getViewerPanel().getMaskOverlay().setVisible( visible );
+	}
+
 	protected void addDefaultTableMouseListener()
 	{
 		landmarkTableListener = new MouseLandmarkTableListener();
@@ -2841,7 +2854,7 @@ public class BigWarp< T >
 				BigWarp.this.landmarkPanel.repaint();
 			}
 
-			if( transformSelector.autoEstimateMask() && bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS )) {
+			if( warpVisDialog.autoEstimateMask() && bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS )) {
 				Sphere sph = BoundingSphereRitter.boundingSphere( landmarkModel.getFixedPointsCopy() );
 				tpsMask.getRandomAccessible().setCenter( sph.getCenter() );
 				tpsMask.getRandomAccessible().setRadius( sph.getRadius() );
@@ -3183,7 +3196,8 @@ public class BigWarp< T >
 		if( exists && autoSaveFolder.isDirectory() )
 		{
 			this.autoSaveDirectory = autoSaveFolder;
-			warpVisDialog.autoSaveFolderText.setText( autoSaveFolder.getAbsolutePath() );
+			warpVisDialog.getAutoSaveOptionsPanel().getAutoSaveFolderText()
+				.setText( autoSaveFolder.getAbsolutePath() );
 			warpVisDialog.repaint();
 		}
 	}
