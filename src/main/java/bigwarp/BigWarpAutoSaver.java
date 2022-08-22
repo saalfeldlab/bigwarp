@@ -91,9 +91,9 @@ public class BigWarpAutoSaver
 
 		if( period > 0 )
 		{
-			bw.warpVisDialog.doAutoSaveBox.setSelected( true );
+			bw.warpVisDialog.getAutoSaveOptionsPanel().getDoAutoSaveBox().setSelected( true );
 			int periodMinutes = ( int ) ( period / 60000 );
-			bw.warpVisDialog.autoSavePeriodSpinner.setValue( periodMinutes );
+			bw.warpVisDialog.getAutoSaveOptionsPanel().getAutoSavePeriodSpinner().setValue( periodMinutes );
 			if( bw.autoSaver != null )
 				bw.autoSaver.stop();
 
@@ -102,7 +102,7 @@ public class BigWarpAutoSaver
 		}
 		else
 		{
-			bw.warpVisDialog.doAutoSaveBox.setSelected( false );
+			bw.warpVisDialog.getAutoSaveOptionsPanel().getDoAutoSaveBox().setSelected( false );
 			bw.warpVisDialog.repaint();
 		}
 	}
