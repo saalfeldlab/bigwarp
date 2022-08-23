@@ -794,6 +794,11 @@ public class BigWarp< T >
 		miBrightness.setText( "Brightness & Color" );
 		settingsMenu.add( miBrightness );
 
+		/* */
+		final JMenuItem transformTypeMenu = new JMenuItem( actionMap.get( BigWarpActions.TRANSFORM_TYPE ) );
+		transformTypeMenu.setText( "Transformation Options" );
+		settingsMenu.add( transformTypeMenu );
+
 		/* Warp Visualization */
 		final JMenuItem warpVisMenu = new JMenuItem( actionMap.get( BigWarpActions.SHOW_WARPTYPE_DIALOG ) );
 		warpVisMenu.setText( "BigWarp Options" );
@@ -2848,13 +2853,14 @@ public class BigWarp< T >
 		{
 			// re-estimate if a a point was set to or from active
 			// note - this covers "resetting" points as well
-			if( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
+			if ( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
 			{
 				BigWarp.this.restimateTransformation();
 				BigWarp.this.landmarkPanel.repaint();
 			}
 
-			if( warpVisDialog.autoEstimateMask() && bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS )) {
+			if ( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
+			{
 				Sphere sph = BoundingSphereRitter.boundingSphere( landmarkModel.getFixedPointsCopy() );
 				tpsMask.getRandomAccessible().setCenter( sph.getCenter() );
 				tpsMask.getRandomAccessible().setRadius( sph.getRadius() );

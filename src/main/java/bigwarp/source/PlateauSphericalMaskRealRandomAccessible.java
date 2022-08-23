@@ -38,7 +38,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	private static final double PIon2 = Math.PI / 2.0;
 	private static final double PI = Math.PI;
 
-	public static enum FalloffType { GAUSSIAN, COSINE };
+	public static enum FalloffType { COSINE, GAUSSIAN, LINEAR };
 
 	public PlateauSphericalMaskRealRandomAccessible( int n, RealPoint center )
 	{
@@ -113,6 +113,10 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			break;
 		case COSINE:
 			pfun = new CosineFalloff();
+			update();
+			break;
+		case LINEAR:
+			pfun = new LinearFalloff();
 			update();
 			break;
 		default:
@@ -306,7 +310,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			final double r = Math.sqrt( r2 );
 			if( r2 <= plateauR2 )
 				v.setOne();
-			else if ( r > plateauR + 2 * sigma )
+			else if ( r >= plateauR + 2 * sigma )
 				v.setZero();
 			else
 			{
@@ -315,6 +319,26 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 				final double t = (r - plateauR);
 				double val = 0.5 + 0.5 * Math.cos( t * PIon2 / sigma );
 				v.set( val );
+			}
+		}
+	}
+
+	public class LinearFalloff implements BiConsumer< RealLocalizable, DoubleType > {
+
+		@Override
+		public void accept( RealLocalizable x, DoubleType v )
+		{
+			v.setZero();
+			final double r2 = squaredDistance( x, center );
+			final double d2 = plateauR + sigma;
+			if( r2 <= plateauR2 )
+				v.setOne();
+			else if( r2 >= d2 * d2 )
+				v.setZero();
+			else
+			{
+				final double r = Math.sqrt( r2 );
+				v.set( 1 - (r - plateauR) /  sigma );
 			}
 		}
 	}

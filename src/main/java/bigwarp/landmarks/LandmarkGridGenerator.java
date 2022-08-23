@@ -84,8 +84,6 @@ public class LandmarkGridGenerator
 			it.fwd();
 			it.localize( p );
 
-			//System.out.println( "Adding: " + Arrays.toString( p ));
-
 			// ltm makes a copy, so can re-use p
 			ltm.add( p, true );
 			ltm.setPoint( ltm.getNextRow( false ), false, p, null );
@@ -164,7 +162,6 @@ public class LandmarkGridGenerator
 		}
 		
 		double N = gen.approxNumberOfPoints();
-		System.out.println("N : " + N );
 		if( N > 1 )
 		{
 			final GenericDialog warningDialog = new GenericDialog( "Warning" );

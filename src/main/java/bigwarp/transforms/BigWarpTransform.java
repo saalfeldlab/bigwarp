@@ -49,6 +49,7 @@ import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
@@ -56,12 +57,24 @@ import net.imglib2.type.numeric.RealType;
 
 public class BigWarpTransform
 {
+	public static final String TPS = "Thin Plate Spline";
+	public static final String AFFINE = "Affine";
+	public static final String SIMILARITY = "Similarity";
+	public static final String ROTATION = "Rotation";
+	public static final String TRANSLATION = "Translation";
+
+	public static final String MASK_INTERP = "LINEAR";
+	public static final String SIM_MASK_INTERP = "SIMILARITY";
+	public static final String ROT_MASK_INTERP = "ROTATION";
+
 	private final int ndims;
 
 	private final LandmarkTableModel tableModel;
 
 	private String transformType;
-	
+
+	private String maskType;
+
 	private InvertibleRealTransform currentTransform;
 
 	private double inverseTolerance = 0.5;
@@ -70,9 +83,11 @@ public class BigWarpTransform
 
 	private RealRandomAccessible<? extends RealType<?>> lambda;
 
+	private AbstractTransformSolver<?> solver;
+
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
-		this( tableModel, TransformTypeSelectDialog.TPS );
+		this( tableModel, TPS );
 	}
 
 	public BigWarpTransform( final LandmarkTableModel tableModel, final String transformType )
@@ -80,11 +95,57 @@ public class BigWarpTransform
 		this.tableModel = tableModel;
 		this.ndims = tableModel.getNumdims();
 		this.transformType = transformType;
+		this.maskType = "NONE";
+		updateSolver();
 	}
 
 	public void setTransformType( final String transformType )
 	{
 		this.transformType = transformType;
+		updateSolver();
+	}
+
+	public void setMask( String maskType )
+	{
+		this.maskType = maskType;
+		updateSolver();
+	}
+
+	public String getMask()
+	{
+		return maskType;
+	}
+
+	public boolean isMasked()
+	{
+		return maskType.equals( MASK_INTERP ) || maskType.equals( ROT_MASK_INTERP ) || maskType.equals( SIM_MASK_INTERP );
+	}
+
+	public void updateSolver()
+	{
+		if ( transformType.equals( TPS ) )
+		{
+			solver = new TpsTransformSolver();
+		}
+		else
+		{
+			solver = new ModelTransformSolver( getModelType() );
+		}
+
+		if ( maskType.equals( MASK_INTERP ) )
+		{
+			solver = new MaskedTransformSolver( solver, lambda );
+		}
+		else if ( maskType.equals( ROT_MASK_INTERP ) || maskType.equals( SIM_MASK_INTERP ) )
+		{
+			final double[] center = new double[ 3 ];
+			if ( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
+			{
+				((PlateauSphericalMaskRealRandomAccessible) lambda).getCenter()
+						.localize( center );
+			}
+			solver = new MaskedSimRotTransformSolver( solver, lambda, center, Interpolators.valueOf( maskType ) );
+		}
 	}
 
 	public void setInverseTolerance( double inverseTolerance )
@@ -130,59 +191,16 @@ public class BigWarpTransform
 	public InvertibleRealTransform getTransformation( final int index )
 	{
 		InvertibleRealTransform invXfm = null;
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TPS ))
 		{
-			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = (WrappedIterativeInvertibleRealTransform< ? >) solver.solve( tableModel, index );
 			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 			invXfm = tpsXfm;
 		}
-		else if( transformType.equals( TransformTypeSelectDialog.MASKEDTPS ))
-		{
-			/*
-			 * TPS ONLY
-			 */
-			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new MaskedTpsTransformSolver( lambda ).solve( tableModel );
-			tpsXfm.getOptimzer().setMaxIters(maxIterations);
-			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
-			invXfm = new WrappedIterativeInvertibleRealTransform( tpsXfm );
-
-		}
-		else if( transformType.equals( TransformTypeSelectDialog.MASKEDSIMTPS ))
-		{
-
-			/*
-			 * SIMILARITY AND TPS - resolving tps with transformed points
-			 */
-			final double[][] mvgPts;
-			final double[][] tgtPts;
-
-			final int numActive = tableModel.numActive();
-			mvgPts = new double[ ndims ][ numActive ];
-			tgtPts = new double[ ndims ][ numActive ];
-			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
-
-			final double[] center = new double[3];
-			if( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
-			{
-				((PlateauSphericalMaskRealRandomAccessible)lambda).getCenter().localize( center );
-			}
-
-			@SuppressWarnings({ "rawtypes", "unchecked" })
-			MaskedTpsSimTransformSolver<? extends RealType<?>> solver = new MaskedTpsSimTransformSolver( lambda, center );
-			invXfm = solver.solve( mvgPts, tgtPts );
-		}
 		else
 		{
-			final double[][] mvgPts;
-			final double[][] tgtPts;
-
-			final int numActive = tableModel.numActive();
-			mvgPts = new double[ ndims ][ numActive ];
-			tgtPts = new double[ ndims ][ numActive ];
-			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
-
-			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
+			invXfm = solver.solve(tableModel, index);
 		}
 
 		if( tableModel.getNumdims() == 2 )
@@ -226,13 +244,13 @@ public class BigWarpTransform
 	public AbstractAffineModel3D<?> getModel3D()
 	{
 		switch( transformType ){
-		case TransformTypeSelectDialog.AFFINE:
+		case AFFINE:
 			return new AffineModel3D();
-		case TransformTypeSelectDialog.SIMILARITY:
+		case SIMILARITY:
 			return new SimilarityModel3D();
-		case TransformTypeSelectDialog.ROTATION:
+		case ROTATION:
 			return new RigidModel3D();
-		case TransformTypeSelectDialog.TRANSLATION:
+		case TRANSLATION:
 			return new TranslationModel3D();
 		}
 		return null;
@@ -241,13 +259,13 @@ public class BigWarpTransform
 	public AbstractAffineModel2D<?> getModel2D()
 	{
 		switch( transformType ){
-		case TransformTypeSelectDialog.AFFINE:
+		case AFFINE:
 			return new AffineModel2D();
-		case TransformTypeSelectDialog.SIMILARITY:
+		case SIMILARITY:
 			return new SimilarityModel2D();
-		case TransformTypeSelectDialog.ROTATION:
+		case ROTATION:
 			return new RigidModel2D();
-		case TransformTypeSelectDialog.TRANSLATION:
+		case TRANSLATION:
 			return new TranslationModel2D();
 		}
 		return null;
@@ -255,7 +273,7 @@ public class BigWarpTransform
 
 	public InvertibleCoordinateTransform getCoordinateTransform()
 	{
-		if( !transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( !transformType.equals( TPS ))
 		{
 			WrappedCoordinateTransform wct = (WrappedCoordinateTransform)( unwrap2d( getTransformation() ));
 			return wct.getTransform();
@@ -335,7 +353,7 @@ public class BigWarpTransform
 
 	public ThinplateSplineTransform getTps()
 	{
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TPS ))
 		{
 			WrappedIterativeInvertibleRealTransform<?> wiirt = (WrappedIterativeInvertibleRealTransform<?>)( unwrap2d( getTransformation()) );
 			return ((ThinplateSplineTransform)wiirt.getTransform());
@@ -388,7 +406,7 @@ public class BigWarpTransform
 	public String affineToString()
 	{
 		String s = "";
-		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		if( getTransformType().equals( TPS ))
 		{
 			double[][] affine = affinePartOfTpsHC();
 			for( int r = 0; r < affine.length; r++ )

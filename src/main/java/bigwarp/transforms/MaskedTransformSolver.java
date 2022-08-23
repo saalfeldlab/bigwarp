@@ -32,38 +32,42 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.RealType;
 
-public class MaskedTpsTransformSolver<T extends RealType<T>> implements TransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
+public class MaskedTransformSolver<T extends RealType<T>, S extends AbstractTransformSolver<?> > extends AbstractTransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
 {
-	// TODO make regularization transform of a more general type
-	private final TpsTransformSolver tpsSolver;
+	private final S solver;
+
 	private final RealRandomAccessible<T> lambda;
 
-	public MaskedTpsTransformSolver( RealRandomAccessible<T> lambda )
+	public MaskedTransformSolver( final S solver, final RealRandomAccessible<T> lambda )
 	{
 		this.lambda = lambda;
-		tpsSolver = new TpsTransformSolver();
+		this.solver = solver;
+	}
+
+	public S getSolver()
+	{
+		return solver;
 	}
 
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
-		return wrap( tpsSolver.solve( mvgPts, tgtPts ), lambda );
+		return wrap( solver.solve( mvgPts, tgtPts ), lambda );
 	}
 
-	public WrappedIterativeInvertibleRealTransform<?> solve( 
-			final LandmarkTableModel landmarkTable )
+	public WrappedIterativeInvertibleRealTransform< ? > solve( final LandmarkTableModel landmarkTable )
 	{
-		return wrap( tpsSolver.solve( landmarkTable ), lambda );
+		return wrap( solver.solve( landmarkTable ), lambda );
 	}
 
-	public WrappedIterativeInvertibleRealTransform<?> solve( 
-			final LandmarkTableModel landmarkTable, final int indexChanged )
+	public WrappedIterativeInvertibleRealTransform< ? > solve( final LandmarkTableModel landmarkTable, final int indexChanged )
 	{
-		return wrap( tpsSolver.solve( landmarkTable, indexChanged ), lambda );
+		return wrap( solver.solve( landmarkTable, indexChanged ), lambda );
 	}
 
-	public static <T extends RealType<T>> WrappedIterativeInvertibleRealTransform<?> wrap( RealTransform base, RealRandomAccessible<T> lambda )
+	public static <T extends RealType< T >> WrappedIterativeInvertibleRealTransform< ? > wrap( RealTransform base, RealRandomAccessible< T > lambda )
 	{
 		final RealTransformSequence identity = new RealTransformSequence();
-		return new WrappedIterativeInvertibleRealTransform<>( new SpatiallyInterpolatedRealTransform<T>( base, identity, lambda ));
+		return new WrappedIterativeInvertibleRealTransform<>(
+				new SpatiallyInterpolatedRealTransform< T >( base, identity, lambda ) );
 	}
 }

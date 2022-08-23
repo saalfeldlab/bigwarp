@@ -42,6 +42,7 @@ import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.interpolation.randomaccess.NearestNeighborInterpolatorFactory;
+import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
@@ -143,7 +144,7 @@ public class SimilarityTransformInterpolationExample {
 
 		// masked similarity
 		final MaskedSimilarityTransform msim = new MaskedSimilarityTransform( transform, lambda, center );
-		final MaskedSimilarityTransform msimInv = new MaskedSimilarityTransform( transform.inverse(), lambda, center, true );
+		final MaskedSimilarityTransform msimInv = new MaskedSimilarityTransform( transform.inverse(), lambda, center, Interpolators.SIMILARITY, true );
 		final WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( ltm );
 
 		final Scale3D id = new Scale3D(1,1,1);

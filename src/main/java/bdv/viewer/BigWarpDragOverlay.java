@@ -81,13 +81,11 @@ public class BigWarpDragOverlay
 	{
 		arad = viewer.getSettings().getSpotSize();
 		baseColor = viewer.getSettings().getSpotColor();
-		
-		// System.out.println("BigWarpDragOverlay - PAINT" );
+
 		if( inProgress )
 		{
 			viewer.state().getViewerTransform( transform );
 
-			//System.out.println("BigWarpDragOverlay - PAINT IN PROGRESS" );
 			transform.apply( movingPoint, movingPointScreen );
 			transform.apply( targetPoint, targetPointScreen );
 			

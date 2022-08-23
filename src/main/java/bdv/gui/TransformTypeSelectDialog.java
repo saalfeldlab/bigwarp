@@ -38,19 +38,26 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import bigwarp.BigWarp;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;
+import bigwarp.transforms.BigWarpTransform;;
 
 public class TransformTypeSelectDialog extends JDialog
 {
 	private static final long serialVersionUID = 1L;
 	
+	@Deprecated
 	public static final String TPS = "Thin Plate Spline";
+	@Deprecated
 	public static final String MASKEDTPS = "Masked Thin Plate Spline";
+	@Deprecated
 	public static final String MASKEDSIMTPS = "Masked Similarity + Thin Plate Spline";
+	@Deprecated
 	public static final String AFFINE = "Affine";
+	@Deprecated
 	public static final String SIMILARITY = "Similarity";
+	@Deprecated
 	public static final String ROTATION = "Rotation";
+	@Deprecated
 	public static final String TRANSLATION = "Translation";
 
 	private final BigWarp< ? > bw;
@@ -58,18 +65,10 @@ public class TransformTypeSelectDialog extends JDialog
 
 	private final ButtonGroup group;
 	private final JRadioButton tpsButton;
-	private final JRadioButton maskedTpsButton;
-	private final JRadioButton maskedSimTpsButton;
 	private final JRadioButton affineButton;
 	private final JRadioButton similarityButton;
 	private final JRadioButton rotationButton;
 	private final JRadioButton translationButton;
-
-	private final JCheckBox autoEstimateMaskButton;
-
-	private final ButtonGroup falloffGroup;
-	private final JRadioButton gaussFalloffButton;
-	private final JRadioButton cosFalloffButton;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
@@ -86,18 +85,14 @@ public class TransformTypeSelectDialog extends JDialog
 		this.setLayout( new BorderLayout() );
 		transformType = bw.getTransformType();
 
-		tpsButton = new JRadioButton( TPS );
-		maskedTpsButton = new JRadioButton( MASKEDTPS );
-		maskedSimTpsButton = new JRadioButton( MASKEDSIMTPS );
-		affineButton = new JRadioButton( AFFINE );
-		similarityButton = new JRadioButton( SIMILARITY );
-		rotationButton = new JRadioButton( ROTATION );
-		translationButton = new JRadioButton( TRANSLATION );
+		tpsButton = new JRadioButton( BigWarpTransform.TPS );
+		affineButton = new JRadioButton( BigWarpTransform.AFFINE );
+		similarityButton = new JRadioButton( BigWarpTransform.SIMILARITY );
+		rotationButton = new JRadioButton( BigWarpTransform.ROTATION );
+		translationButton = new JRadioButton( BigWarpTransform.TRANSLATION );
 		
 		group = new ButtonGroup();
 		group.add( tpsButton );
-		group.add( maskedTpsButton );
-		group.add( maskedSimTpsButton );
 		group.add( affineButton );
 		group.add( similarityButton );
 		group.add( rotationButton );
@@ -106,8 +101,6 @@ public class TransformTypeSelectDialog extends JDialog
 		updateButtonGroup();
 
 		addActionListender( tpsButton );
-		addActionListender( maskedTpsButton );
-		addActionListender( maskedSimTpsButton );
 		addActionListender( affineButton );
 		addActionListender( similarityButton );
 		addActionListender( rotationButton );
@@ -115,8 +108,6 @@ public class TransformTypeSelectDialog extends JDialog
 
 		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
-		radioPanel.add( maskedTpsButton );
-		radioPanel.add( maskedSimTpsButton );
 		radioPanel.add( affineButton );
 		radioPanel.add( similarityButton );
 		radioPanel.add( rotationButton );
@@ -132,57 +123,6 @@ public class TransformTypeSelectDialog extends JDialog
 
 		add( radioPanel, BorderLayout.PAGE_START );
 
-
-		// panel containing options for transforms and mask
-		JPanel optionsPanel = new JPanel( new GridLayout(0, 1));
-
-		optionsPanel.setBorder( BorderFactory.createCompoundBorder(
-				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
-				BorderFactory.createCompoundBorder(
-						BorderFactory.createTitledBorder(
-								BorderFactory.createEtchedBorder(),
-								"options" ),
-						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-
-		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask");
-		optionsPanel.add( autoEstimateMaskButton );
-
-		cosFalloffButton = new JRadioButton( FalloffType.COSINE.toString() );
-		gaussFalloffButton = new JRadioButton( FalloffType.GAUSSIAN.toString() );
-		cosFalloffButton.setSelected( true );
-
-		addFalloffActionListender( cosFalloffButton );
-		addFalloffActionListender( gaussFalloffButton );
-
-		falloffGroup = new ButtonGroup();
-		falloffGroup.add( cosFalloffButton );
-		falloffGroup.add( gaussFalloffButton );
-
-		optionsPanel.add( new JLabel( "Mask falloff shape" ) );
-		optionsPanel.add( cosFalloffButton );
-		optionsPanel.add( gaussFalloffButton );
-
-		add( optionsPanel, BorderLayout.PAGE_END );
-
-		pack();
-		addListeners();
-		updateOptions();
-	}
-
-	private void addListeners()
-	{
-		maskedTpsButton.addChangeListener( new ChangeListener() {
-			@Override
-			public void stateChanged( ChangeEvent e ) { updateOptions(); }
-		});
-
-	}
-
-	private synchronized void updateOptions()
-	{
-		autoEstimateMaskButton.setVisible( maskedTpsButton.isSelected() );
-		cosFalloffButton.setVisible( maskedTpsButton.isSelected() );
-		gaussFalloffButton.setVisible( maskedTpsButton.isSelected() );
 		pack();
 	}
 
@@ -190,25 +130,19 @@ public class TransformTypeSelectDialog extends JDialog
 	{
 		switch( transformType )
 		{
-		case TPS:
+		case BigWarpTransform.TPS:
 			tpsButton.setSelected( true );
 			break;
-		case MASKEDTPS:
-			maskedTpsButton.setSelected( true );
-			break;
-		case MASKEDSIMTPS:
-			maskedSimTpsButton.setSelected( true );
-			break;
-		case AFFINE:
+		case BigWarpTransform.AFFINE:
 			affineButton.setSelected( true );
 			break;
-		case SIMILARITY:
+		case BigWarpTransform.SIMILARITY:
 			similarityButton.setSelected( true );
 			break;
-		case ROTATION:
+		case BigWarpTransform.ROTATION:
 			rotationButton.setSelected( true );
 			break;
-		case TRANSLATION:
+		case BigWarpTransform.TRANSLATION:
 			translationButton.setSelected( true );
 			break;
 		}
@@ -246,8 +180,4 @@ public class TransformTypeSelectDialog extends JDialog
 		this.repaint();
 	}
 
-	public boolean autoEstimateMask()
-	{
-		return autoEstimateMaskButton.isSelected();
-	}
 }
