@@ -19,6 +19,7 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpAutoSaver;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;
 import bigwarp.source.PlateauSphericalMaskSource;
+import bigwarp.transforms.BigWarpTransform;
 
 public class MaskOptionsPanel extends JPanel
 {
@@ -33,9 +34,9 @@ public class MaskOptionsPanel extends JPanel
 
 	public static final String[] maskTypes = new String[] { 
 			"NONE",
-			"LINEAR",
-			"SIMILARITY",
-			"ROTATION"
+			BigWarpTransform.MASK_INTERP,
+			BigWarpTransform.ROT_MASK_INTERP,
+			BigWarpTransform.SIM_MASK_INTERP,
 	};
 
 	private final BigWarp< ? > bw;
@@ -66,7 +67,15 @@ public class MaskOptionsPanel extends JPanel
 		
 		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask");
 		autoEstimateMaskButton.setToolTipText( AUTO_ESTIMATE_HELP_TEXT );
-		
+		autoEstimateMaskButton.addChangeListener( new ChangeListener()
+		{
+			@Override
+			public void stateChanged( ChangeEvent e )
+			{
+				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() );
+			}
+		} );
+
 
 		showMaskOverlayButton = new JCheckBox( "Show mask overlay");
 		showMaskOverlayButton.setToolTipText( SHOW_MASK_OVERLAY_HELP_TEXT );
@@ -80,15 +89,25 @@ public class MaskOptionsPanel extends JPanel
 		} );
 
 		falloffTypeLabel = new JLabel( "Mask falloff");
-		falloffTypeLabel .setToolTipText( FALLOFF_HELP_TEXT );
+		falloffTypeLabel.setToolTipText( FALLOFF_HELP_TEXT );
 		falloffTypeDropdown = new JComboBox<>( FalloffType.values() );
-		falloffTypeDropdown .setToolTipText( FALLOFF_HELP_TEXT );
+		falloffTypeDropdown.setToolTipText( FALLOFF_HELP_TEXT );
 
 		maskTypeLabel = new JLabel( "Mask interpolation");
 		maskTypeLabel.setToolTipText( INTERPOLATION_HELP_TEXT );
 		maskTypeDropdown = new JComboBox<>( maskTypes );
 		maskTypeDropdown.setToolTipText( INTERPOLATION_HELP_TEXT );
-		
+		maskTypeDropdown.addActionListener( new ActionListener() {
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				bw.getBwTransform().setMask( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
+				bw.restimateTransformation();
+				bw.getViewerFrameP().getViewerPanel().requestRepaint();
+				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+			}
+		});
+
 		// layout
 		final GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridx = 0;

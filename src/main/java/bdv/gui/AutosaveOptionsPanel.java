@@ -124,7 +124,7 @@ public class AutosaveOptionsPanel extends JPanel
 		gbc.gridy = 0;
 		gbc.gridwidth = 1;
 		gbc.gridheight = 1;
-		gbc.weightx = 0.0;
+		gbc.weightx = 1.0;
 		gbc.anchor = GridBagConstraints.LINE_END;
 		gbc.fill = GridBagConstraints.NONE;
 		gbc.insets = new Insets( 5, 5, 5, 5 );

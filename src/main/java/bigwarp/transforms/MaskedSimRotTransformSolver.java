@@ -23,50 +23,56 @@ package bigwarp.transforms;
 
 import bdv.viewer.animate.SimilarityModel3D;
 import bigwarp.landmarks.LandmarkTableModel;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractAffineModel3D;
-import net.imglib2.RandomAccessible;
+import mpicbg.models.RigidModel3D;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.SpatiallyInterpolatedRealTransform;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.MaskedSimilarityTransform;
+import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
-import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.RealType;
 
-public class MaskedTpsSimTransformSolver<T extends RealType<T>> implements TransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
+public class MaskedSimRotTransformSolver<T extends RealType<T>> extends AbstractTransformSolver< WrappedIterativeInvertibleRealTransform< ? >>
 {
-	private final TpsTransformSolver tpsSolver;
-	private final ModelTransformSolver simSolver;
+	private final AbstractTransformSolver<?> baseSolver;
+	private final ModelTransformSolver interpSolver;
 	private final RealRandomAccessible<T> lambda;
 	private final double[] center;
+	private final Interpolators interp;
 
-	public MaskedTpsSimTransformSolver( RealRandomAccessible<T> lambda, double[] center)
+	public MaskedSimRotTransformSolver( AbstractTransformSolver<?> solver, RealRandomAccessible<T> lambda, double[] center, Interpolators interp )
 	{
 		this.lambda = lambda;
 		this.center = center;
-		tpsSolver = new TpsTransformSolver();
-		simSolver = new ModelTransformSolver( new SimilarityModel3D() );
+		this.interp = interp;
+		baseSolver = solver;
+
+		if( interp == Interpolators.SIMILARITY )
+			interpSolver = new ModelTransformSolver( new SimilarityModel3D() );
+		else
+			interpSolver = new ModelTransformSolver( new RigidModel3D() );
 	}
 
+	@SuppressWarnings("rawtypes")
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
-		WrappedCoordinateTransform simXfm = simSolver.solve( mvgPts, tgtPts );
+		WrappedCoordinateTransform simXfm = interpSolver.solve( mvgPts, tgtPts );
 
 		AffineTransform3D sim = new AffineTransform3D();
 		BigWarpTransform.affine3d( (AbstractAffineModel3D)simXfm.getTransform(), sim );
 
-		@SuppressWarnings({ "rawtypes", "rawtypes" })
-		final MaskedSimilarityTransform<?> msim = new MaskedSimilarityTransform( sim, lambda, center );
+		final MaskedSimilarityTransform<?> msim = new MaskedSimilarityTransform( sim, lambda, center, interp );
 
 		final double[][] xfmMvg = transformPoints( simXfm, mvgPts );
-		final WrappedIterativeInvertibleRealTransform< ? > tps = tpsSolver.solve( xfmMvg, tgtPts );
+		final InvertibleRealTransform baseTransform = baseSolver.solve( xfmMvg, tgtPts );
 
 		final RealTransformSequence seq = new RealTransformSequence();
 		seq.add( msim );
-		seq.add( tps );
+		seq.add( baseTransform );
 
 		return wrap( seq, lambda );
 	}

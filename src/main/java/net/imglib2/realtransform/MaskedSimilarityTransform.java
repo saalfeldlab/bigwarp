@@ -1,5 +1,6 @@
 package net.imglib2.realtransform;
 
+import bdv.viewer.animate.AbstractTransformAnimator;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPositionable;
 import net.imglib2.RealRandomAccess;
@@ -18,31 +19,45 @@ import net.imglib2.type.numeric.RealType;
  */
 public class MaskedSimilarityTransform<T extends RealType<T>> implements RealTransform {
 
+	public static enum Interpolators { SIMILARITY, ROTATION };
+
 	private final RealRandomAccessible<T> lambda;
 
 	private RealRandomAccess<T> lambdaAccess;
 
 	private final AffineTransform3D transform;
 
-	private final SimilarityTransformInterpolator interpolator;
+	private final AbstractTransformAnimator interpolator;
 
 	private final double[] c;
 
 	private final boolean flip;
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda ) {
-		this( transform, lambda, new double[3], false );
+		this( transform, lambda, new double[3], Interpolators.SIMILARITY, false );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, boolean flip ) {
-		this( transform, lambda, new double[3], flip );
+		this( transform, lambda, new double[3], Interpolators.SIMILARITY, flip );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c ) {
-		this( transform, lambda, c, false );
+		this( transform, lambda, c, Interpolators.SIMILARITY, false );
 	}
 
-	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c, boolean flip ) {
+	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, Interpolators interp ) {
+		this( transform, lambda, new double[3], interp, false );
+	}
+
+	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, Interpolators interp, boolean flip ) {
+		this( transform, lambda, new double[3], interp, flip );
+	}
+
+	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c, Interpolators interp ) {
+		this( transform, lambda, c, interp, false );
+	}
+
+	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c, Interpolators interp, boolean flip ) {
 
 		assert ( transform.numSourceDimensions() == lambda.numDimensions() );
 		this.transform = transform;
@@ -51,7 +66,11 @@ public class MaskedSimilarityTransform<T extends RealType<T>> implements RealTra
 
 		this.lambda = lambda;
 		lambdaAccess = lambda.realRandomAccess();
-		interpolator = new SimilarityTransformInterpolator( transform, c );
+
+		if( interp ==  Interpolators.SIMILARITY )
+			interpolator = new SimilarityTransformInterpolator( transform, c );
+		else
+			interpolator = new RotationTransformInterpolator( transform, c );
 	}
 
 	@Override
