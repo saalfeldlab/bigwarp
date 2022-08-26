@@ -90,6 +90,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bdv.BigDataViewer;
+import bdv.KeyConfigContexts;
 import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -106,6 +107,7 @@ import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
+import bdv.tools.PreferencesDialog;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
@@ -113,8 +115,10 @@ import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.ui.appearance.AppearanceManager;
+import bdv.ui.appearance.AppearanceSettingsPage;
 import bdv.ui.keymap.Keymap;
 import bdv.ui.keymap.KeymapManager;
+import bdv.ui.keymap.KeymapSettingsPage;
 import bdv.util.Bounds;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -218,6 +222,8 @@ public class BigWarp< T >
 	protected final VisibilityAndGroupingDialog activeSourcesDialogP;
 
 	protected final VisibilityAndGroupingDialog activeSourcesDialogQ;
+
+	protected final PreferencesDialog preferencesDialog;
 
 	final AffineTransform3D fixedViewXfm;
 
@@ -545,9 +551,36 @@ public class BigWarp< T >
 
 
 //		System.out.println( "install actions" );
+		
+		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bw" } );
+		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
+		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, this.keymapManager.getCommandDescriptions() ) );
+
+//		appearanceManager.appearance().updateListeners().add( viewerFrame::repaint );
+//		appearanceManager.addLafComponent( fileChooser );
+//		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
+
+
+		final Actions navigationActions = new Actions( inputTriggerConfig, "bdv", "navigation" );
+		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );
+		NavigationActions.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
+
+		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
+		NavigationActions.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
+
 		BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-general" );
-		BigWarpActions.installViewerActions( bwActions, getViewerFrameP().getKeybindings(), this );
-		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ().getKeybindings(), this );
+		BigWarpActions.installViewerActions( bwActions, getViewerFrameP(), this );
+		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ(), this );
+
+		BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-table" );
+		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
+
+		keymap.updateListeners().add( () -> {
+			navigationActions.updateKeyConfig( keymap.getConfig() );
+			bwActions.updateKeyConfig( keymap.getConfig() );
+			tableActions.updateKeyConfig( keymap.getConfig() );
+			viewerFrameP.getTransformBehaviours().updateKeyConfig( keymap.getConfig() );
+		} );
 
 
 //		bwActions.installViewerActions( getViewerFrameQ().getKeybindings(), this );
@@ -1503,6 +1536,11 @@ public class BigWarp< T >
 		logger.trace( "selectedLandmark: " + bestIdx );
 		return bestIdx;
 	}
+	
+	public void selectAllLandmarks()
+	{
+		getLandmarkPanel().getJTable().selectAll();
+	}
 
 	public static double computeScaleAssumeRigid( final AffineTransform3D xfm )
 	{
@@ -1774,6 +1812,22 @@ public class BigWarp< T >
 		{
 			bookmarkEditorQ.initGoToBookmark();
 		}
+	}
+
+	public void goToBookmarkRotation() {
+
+		if (getViewerFrameP().isActive())
+			bookmarkEditorP.initGoToBookmarkRotation();
+		else if (getViewerFrameP().isActive())
+			bookmarkEditorQ.initGoToBookmarkRotation();
+	}
+
+	public void setBookmark() {
+
+		if (getViewerFrameP().isActive())
+			bookmarkEditorP.initSetBookmark();
+		else if (getViewerFrameQ().isActive())
+			bookmarkEditorQ.initSetBookmark();
 	}
 
 	public void resetView()

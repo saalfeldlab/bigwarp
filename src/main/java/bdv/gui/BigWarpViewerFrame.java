@@ -42,7 +42,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
 import bdv.cache.CacheControl;
-import bdv.tools.brightness.ConverterSetup;
 import bdv.ui.BdvDefaultCards;
 import bdv.ui.CardPanel;
 import bdv.ui.appearance.AppearanceManager;
@@ -235,4 +234,15 @@ public class BigWarpViewerFrame extends JFrame
 		else
 			triggerbindings.addInputTriggerMap( "block_transform", new InputTriggerMap(), "transform" );
 	}
+
+	/**
+	 * Get {@code Behaviours} hook where TransformEventHandler behaviours are installed.
+	 * This is installed in {@link #getTriggerbindings} with the id "transform".
+	 * The hook can be used to update the keymap and install additional behaviours.
+	 */
+	public Behaviours getTransformBehaviours()
+	{
+		return transformBehaviours;
+	}
+
 }

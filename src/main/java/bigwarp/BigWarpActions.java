@@ -31,21 +31,34 @@ import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
+import org.scijava.Context;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.PluginService;
 import org.scijava.ui.behaviour.KeyStrokeAdder;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptionsBuilder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
 import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.BigDataViewerActions;
+import bdv.KeyConfigContexts;
+import bdv.KeyConfigScopes;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
+import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
+import net.imglib2.img.imageplus.ByteImagePlus;
+import net.imglib2.img.imageplus.ImagePlusImgs;
+import net.imglib2.img.planar.PlanarCursor;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 public class BigWarpActions extends Actions
 {
@@ -53,6 +66,14 @@ public class BigWarpActions extends Actions
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 
 	// General options
+	public static final String EXPAND_CARDS = "expand and focus cards panel";
+	public static final String[] EXPAND_CARDS_KEYS = new String[] { "P" };
+
+	public static final String COLLAPSE_CARDS = "collapse cards panel";
+	public static final String[] COLLAPSE_CARDS_KEYS = new String[] { "shift P", "shift ESCAPE" };
+
+	public static final String PREFERENCES_DIALOG = "Preferences";
+	public static final String[] PREFERENCES_DIALOG_KEYS= new String[] { "meta COMMA", "ctrl COMMA" };
 
 	// Display options
 	public static final String   TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
@@ -82,15 +103,29 @@ public class BigWarpActions extends Actions
 //	public static final String CROP = "crop";
 
 	public static final String SAVE_SETTINGS = "save settings";
+	public static final String[] SAVE_SETTINGS_KEYS = new String[]{};
+
 	public static final String LOAD_SETTINGS = "load settings";
+	public static final String[] LOAD_SETTINGS_KEYS = new String[]{};
 
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
+	public static final String[] BRIGHTNESS_SETTINGS_KEYS = new String[]{ "S" };
+
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
-	public static final String SHOW_HELP = "help";
+	public static final String VISIBILITY_AND_GROUPING_MVG = String.format( VISIBILITY_AND_GROUPING, "moving" );
+	public static final String[] VISIBILITY_AND_GROUPING_MVG_KEYS = new String[]{ "F3" };
+
+	public static final String VISIBILITY_AND_GROUPING_TGT = String.format( VISIBILITY_AND_GROUPING, "target" );
+	public static final String[] VISIBILITY_AND_GROUPING_TGT_KEYS = new String[]{ "F4" };
+
+	public static final String  SHOW_HELP = "help";
+	public static final String[] SHOW_HELP_KEYS = new String[] { "F1" };
+
 	public static final String SHOW_SOURCE_INFO = "show source info";
 
 	// Warp visualization options
 	public static final String SHOW_WARPTYPE_DIALOG = "show warp vis dialog" ;
+	public static final String[] SHOW_WARPTYPE_DIALOG_KEYS = new String[]{ "U" };
 
 	public static final String SET_WARPTYPE_VIS = "set warp vis type %s" ;
 
@@ -143,7 +178,7 @@ public class BigWarpActions extends Actions
 	public static final String[] GO_TO_BOOKMARK_KEYS = new String[]{ "B" };
 
 	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
-	public static final String[] GO_TO_BOOKMARK_ROTATION_KEYS = new String[]{ "O" };
+	public static final String[] GO_TO_BOOKMARK_ROTATION_KEYS = new String[]{ "control shift B" };
 
 	public static final String UNDO = "undo";
 	public static final String[] UNDO_KEYS = new String[]{ "control Z" };
@@ -153,15 +188,29 @@ public class BigWarpActions extends Actions
 
 	public static final String SELECT_TABLE_ROWS = "select table row %d";
 
+	public static final String LANDMARK_SELECT_ALL = "select all landmarks";
+	public static final String[] LANDMARK_SELECT_ALL_KEYS = new String[]{ "ctrl A"};
+
+	public static final String LANDMARK_DESELECT_ALL = "deselect all landmarks";
+	public static final String[] LANDMARK_DESELECT_ALL_KEYS = new String[]{ "ESCAPE" };
+
+	public static final String LANDMARK_DELETE_SELECTED = "delete selected landmarks";
+	public static final String[] LANDMARK_DELETE_SELECTED_KEYS = new String[]{ "DELETE"};
+
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
+
 
 	// export options
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
 
 	public static final String EXPORT_IP = "export imageplus";
+
 	public static final String EXPORT_WARP = "export warp field";
+	public static final String[] EXPORT_WARP_KEYS = new String[] { "ctrl W" };
+
 	public static final String EXPORT_AFFINE = "export affine";
+	public static final String[] EXPORT_AFFINE_KEYS = new String[] { "ctrl A" };
 
 
 	public static final String DEBUG = "debug";
@@ -176,17 +225,49 @@ public class BigWarpActions extends Actions
 	{
 		super( keyConfig, context, name );
 	}
+	
+	/*
+	 * Command descriptions for all provided commands
+	 */
+	@Plugin( type = CommandDescriptionProvider.class )
+	public static class Descriptions extends CommandDescriptionProvider
+	{
+		public Descriptions()
+		{
+			super( KeyConfigScopes.BIGDATAVIEWER, KeyConfigContexts.BIGDATAVIEWER );
+		}
+
+		@Override
+		public void getCommandDescriptions( final CommandDescriptions descriptions )
+		{
+			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
+			descriptions.add( VISIBILITY_AND_GROUPING_MVG, VISIBILITY_AND_GROUPING_MVG_KEYS, "Show the Visibility&Grouping dialog for the moving frame." );
+			descriptions.add( VISIBILITY_AND_GROUPING_TGT, VISIBILITY_AND_GROUPING_TGT_KEYS, "Show the Visibility&Grouping dialog for the fixed frame." );
+			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
+			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
+			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
+
+			descriptions.add( SET_BOOKMARK, SET_BOOKMARK_KEYS, "Set a labeled bookmark at the current location." );
+			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
+			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
+
+			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
+		}
+	}
 
 	public static void installViewerActions(
 			Actions actions,
-			final InputActionBindings inputActionBindings,
+			final BigWarpViewerFrame bwFrame,
 			final BigWarp< ? > bw )
 	{
+
+		final InputActionBindings inputActionBindings = bwFrame.getKeybindings();
 		System.out.println( "install viewer actions" );
 		actions.install( inputActionBindings, "bw" );
 
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
 		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
+		actions.runnableAction( bw::toggleMovingImageDisplay, TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS );
 
 		// navigation
 		actions.runnableAction( bw::resetView, RESET_VIEWER, RESET_VIEWER_KEYS);
@@ -196,11 +277,59 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bw::warpToNearestLandmark, WARP_TO_NEAREST_POINT, WARP_TO_NEAREST_POINT_KEYS );
 		actions.runnableAction( bw::warpToNextLandmark, WARP_TO_NEXT_POINT, WARP_TO_NEXT_POINT_KEYS );
 		actions.runnableAction( bw::warpToPrevLandmark, WARP_TO_PREV_POINT, WARP_TO_PREV_POINT_KEYS );
+
+		// bookmarks
+		actions.runnableAction( bw::goToBookmark, GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS );
+		actions.runnableAction( bw::goToBookmarkRotation, GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS );
+		actions.runnableAction( bw::setBookmark, SET_BOOKMARK, SET_BOOKMARK_KEYS );
+
+		// cards
+		actions.runnableAction( bwFrame::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
+		actions.runnableAction( bwFrame::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
+
+		// export 
+		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
+		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
+		
+		// dialogs
+		actions.namedAction( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ), SHOW_HELP_KEYS );
+		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_MVG, bw.activeSourcesDialogP ), VISIBILITY_AND_GROUPING_MVG_KEYS );
+		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_TGT, bw.activeSourcesDialogQ ), VISIBILITY_AND_GROUPING_TGT_KEYS );
+		actions.namedAction( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ), SHOW_WARPTYPE_DIALOG_KEYS );
+		actions.namedAction( new ToggleDialogAction( PREFERENCES_DIALOG, bw.preferencesDialog ), PREFERENCES_DIALOG_KEYS );
+
+		// landmarks 
+		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
+		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
+		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
+
+		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
+		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
+
+	}
+
+	public static void installTableActions(
+			Actions actions,
+			final InputActionBindings inputActionBindings,
+			final BigWarp< ? > bw )
+	{
+		actions.install( inputActionBindings, "bw" );
+
+		// landmarks 
+		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
+		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
+		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
+
+		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().selectAll(); }, LANDMARK_SELECT_ALL, LANDMARK_SELECT_ALL_KEYS );
+		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().clearSelection(); }, LANDMARK_DESELECT_ALL, LANDMARK_DESELECT_ALL_KEYS );
+
+		actions.namedAction( bw.landmarkPopupMenu.deleteSelectedHandler, LANDMARK_DELETE_SELECTED_KEYS );
+
 	}
 
 	/**
 	 * Create BigWarp actions and install them in the specified
-	 * {@link InputActionBindings}.
+	* {@link InputActionBindings}.
 	 *
 	 * @param inputActionBindings
 	 *            {@link InputMap} and {@link ActionMap} are installed here.
@@ -1224,5 +1353,16 @@ public class BigWarpActions extends Actions
 			System.out.println( "LandmarkGridGenerator.fillFromDialog( bw )" );
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
+	}
+	
+	public synchronized void discoverCommandDescriptions()
+	{
+		final CommandDescriptionsBuilder builder = new CommandDescriptionsBuilder();
+		final Context context = new Context( PluginService.class );
+		context.inject( builder );
+		builder.discoverProviders( KeyConfigScopes.BIGDATAVIEWER );
+		builder.discoverProviders( "bw" );
+		context.dispose();
+		setCommandDescriptions( builder.build() );
 	}
 }
