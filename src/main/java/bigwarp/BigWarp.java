@@ -2024,9 +2024,12 @@ public class BigWarp< T >
 		if( landmarkModel.numActive() < 4 )
 			return;
 
-		final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
-		tpsMask.getRandomAccessible().setCenter(sph.getCenter());
-		tpsMask.getRandomAccessible().setRadius(sph.getRadius());
+		if( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
+		{
+			final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
+			tpsMask.getRandomAccessible().setCenter(sph.getCenter());
+			tpsMask.getRandomAccessible().setRadius(sph.getRadius());
+		}
 	}
 
 	public enum WarpVisType
@@ -2876,11 +2879,7 @@ public class BigWarp< T >
 				BigWarp.this.restimateTransformation();
 				BigWarp.this.landmarkPanel.repaint();
 			}
-
-			if ( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
-			{
-				autoEstimateMask();
-			}
+			autoEstimateMask();
 		}
 	}
 
@@ -3389,6 +3388,8 @@ public class BigWarp< T >
 		// image
 		if ( !didCompute )
 			setIsMovingDisplayTransformed( false );
+
+		autoEstimateMask();
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();

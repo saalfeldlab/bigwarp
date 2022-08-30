@@ -64,7 +64,7 @@ public class MaskOptionsPanel extends JPanel
 						"Mask options" ),
 				BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 		
-		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask");
+		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask", true );
 		autoEstimateMaskButton.setToolTipText( AUTO_ESTIMATE_HELP_TEXT );
 		autoEstimateMaskButton.addChangeListener( new ChangeListener()
 		{

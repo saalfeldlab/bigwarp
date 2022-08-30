@@ -6,12 +6,10 @@ import java.awt.event.MouseMotionListener;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.BigWarpViewerPanel;
-import bdv.viewer.ViewerPanel;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bigwarp.BigWarp;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
@@ -26,6 +24,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 
 	private boolean active;
 	private RealPoint p;
+//	private RealPoint pressPt;
 
 	private BigWarp<?> bw;
 
@@ -46,6 +45,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		overlays.add( bw.getViewerFrameQ().getViewerPanel().getMaskOverlay() );
 
 		p = new RealPoint( nd );
+//		pressPt = new RealPoint( nd );
 		active = false;
 	}
 
@@ -90,9 +90,14 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !active )
 			return;
 
+//		viewer.getGlobalMouseCoordinates( pressPt );
 		viewer.getGlobalMouseCoordinates( p );
+		if( e.isControlDown() || e.isShiftDown() )
+			return;
+
 		synchronized ( mask )
 		{
+//			mask.setCenter( pressPt );
 			mask.setCenter( p );
 		}
 		bw.setAutoEstimateMask( false );
@@ -111,12 +116,31 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 
 		viewer.getGlobalMouseCoordinates( p );
 		bw.setAutoEstimateMask( false );
-		synchronized ( mask )
+		
+		if( e.isControlDown() )
 		{
-			mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
-			final double r = Math.sqrt( mask.getSquaredRadius() );
-			overlays.stream().forEach( o -> o.setInnerRadius( r ));
+			synchronized ( mask )
+			{
+//				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, pressPt ) );
+				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
+			}
 		}
+		else if( e.isShiftDown() )
+		{
+			synchronized ( mask )
+			{
+				double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ));
+				mask.setSigma( d - Math.sqrt( mask.getSquaredRadius()) );
+			}
+		}
+		else
+		{
+			synchronized ( mask )
+			{
+				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
+			}
+		}
+
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
