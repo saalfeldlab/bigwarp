@@ -149,7 +149,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 
 		bw.setAutoEstimateMask( false );
 		final AffineTransform3D transform = viewer.state().getViewerTransform();
-		final double scale = (1.0 / Affine3DHelpers.extractScale(transform, 0)) + 0.05;
+		final double scale = (1.0 / (Affine3DHelpers.extractScale(transform, 0) + 1e-9 ) + 1e-6 );
 		final int sign = e.getWheelRotation();
 
 		if( e.isShiftDown() )
@@ -159,7 +159,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		else
 			mask.incSquaredSigma( sign * scale * scale );
 
-		final double r = Math.sqrt( mask.getSquaredSigma() );
+		final double r = mask.getSigma();
 		overlays.stream().forEach( o -> o.setOuterRadiusDelta( r ));
 
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();

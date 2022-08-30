@@ -31,6 +31,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	private double sigma;
 	private double sqrSigma;
 	private double invSqrSigma;
+	private double gaussInvSqrSigma;
 
 	private RealPoint center;
 
@@ -49,49 +50,6 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 		setRadius( 8.0 );
 		setSigma ( 10.0 );
-	}
-	
-	public static void main( String[] args )
-	{
-		long S = 50;
-		double[] center = new double[] { S, S, S };
-		RealPoint pt = RealPoint.wrap( center );
-
-		PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( 3, pt );
-		img.setRadius( 10 );
-		img.setSigma( 10 );
-		Interval interval = Intervals.createMinSize( 0, 0, 0, 2*S, 2*S, 2*S );
-//
-////		BdvOptions options = BdvOptions.options().screenScales( new double[] { 1 } );
-//		BdvOptions options = BdvOptions.options();
-//		BdvStackSource< DoubleType > bdv = BdvFunctions.show( img.rra, interval, "img", options );
-//		bdv.getBdvHandle().getSetupAssignments().getMinMaxGroups().get( 0 ).setRange( 0, 1 );
-//		
-////		InputActionBindings kb = bdv.getBdvHandle().getKeybindings();
-////		System.out.println( kb );
-////		kb.removeActionMap( "navigation" );
-////		kb.removeInputMap( "navigation" );
-//
-////		bdv.getBdvHandle().getTriggerbindings().removeInputTriggerMap( "block_transform" );
-//
-//		final MaskedSourceEditorMouseListener ml = new MaskedSourceEditorMouseListener( 3, null, bdv.getBdvHandle().getViewerPanel() );
-//		ml.setMask( img );
-////		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
-//
-		double x = 50;
-		RealRandomAccess< DoubleType > access = img.realRandomAccess();
-		access.setPosition( center );
-		while( x < 100 )
-		{
-			access.move( 1, 0 );
-			System.out.println( x + "," + access.get().getRealDouble());
-
-			x = access.getDoublePosition( 0 );
-		}
-
-//		x = 70;
-//		access.setPosition( new double[] { x, 50, 50 } );
-//		System.out.println( x + "," + access.get().getRealDouble());
 	}
 
 	private void update()
@@ -146,6 +104,11 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		return sqrSigma;
 	}
 
+	public double getSigma()
+	{
+		return sigma;
+	}
+
 	public void setSigma( double sigma )
 	{
 		this.sigma = sigma;
@@ -155,6 +118,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			sqrSigma = EPS;
 
 		invSqrSigma = 1.0 / sqrSigma;
+		updateGaussSigma();
 	}
 
 	public void setSquaredSigma( double squaredSigma )
@@ -165,6 +129,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			sqrSigma = EPS;
 
 		invSqrSigma = 1.0 / squaredSigma;
+		updateGaussSigma();
 	}
 
 	public void incSquaredSigma( double increment )
@@ -176,18 +141,14 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			sqrSigma = EPS;
 
 		invSqrSigma = 1.0 / sqrSigma;
+		updateGaussSigma();
 	}
-//
-//	public void mulSquaredSigma( double factor )
-//	{
-//		sqrSigma *= factor;
-//		sigma = Math.sqrt( sqrSigma );
-//
-//		if( sqrSigma <= 0  )
-//			sqrSigma = EPS;
-//
-//		invSqrSigma = 1.0 / sqrSigma;
-//	}
+	
+	private void updateGaussSigma()
+	{
+		final double gsig = gaussSigma( sigma );
+		gaussInvSqrSigma = 1.0 / ( gsig * gsig );
+	}
 
 	public void setCenter( RealLocalizable p )
 	{
@@ -204,7 +165,6 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		return center;
 	}
 
-	
 	final public static double squaredDistance( final RealLocalizable position1, final RealLocalizable position2 )
 	{
 		double dist = 0;
@@ -278,6 +238,19 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		setSquaredRadius(  json.get("squaredRadius").getAsDouble() );
 		setSquaredSigma(  json.get("squaredSigma").getAsDouble() );
 	}
+	
+	/**
+	 * Re.turns the sigma that makes a Gaussian shape most like a cosine with period T.
+	 * <p>
+	 * see https://gist.github.com/bogovicj/d212b236868c76798edfd11150b2c9a0
+	 *
+	 * @param T the cosine period
+	 * @return
+	 */
+	public static double gaussSigma( double T )
+	{
+		return 1.2737486038617858 * T + 0.0019703;
+	}
 
 	public class GaussianFalloff implements BiConsumer< RealLocalizable, DoubleType > {
 
@@ -294,7 +267,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 //				final double t = (r2 - plateauR2);
 				final double t = (r - plateauR);
 				// TODO sample exp function and interpolate to speed up
-				v.set( Math.exp( -0.5 * t * t * invSqrSigma ) );
+				v.set( Math.exp( -0.5 * t * t * gaussInvSqrSigma ) );
 //				v.set( Math.cos( t * 0.5  + 0.5 ));
 //				v.set( 1 / t );
 			}
