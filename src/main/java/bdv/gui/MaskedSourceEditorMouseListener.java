@@ -68,23 +68,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	public void setMask( PlateauSphericalMaskRealRandomAccessible mask )
 	{
 		this.mask = mask;
-		overlays.forEach( o -> {
-			o.setCenter( mask.getCenter() );
-			o.setInnerRadius( Math.sqrt( mask.getSquaredRadius()));
-			o.setOuterRadiusDelta( Math.sqrt( mask.getSquaredSigma()));
-		});
 	}
-
-//	public void setOverlay( final BigWarpMaskSphereOverlay overlay )
-//	{
-//		this.overlay = overlay;
-//		if( mask != null )
-//		{
-//			this.overlay.setCenter( mask.getCenter() );
-//			this.overlay.setInnerRadius( Math.sqrt( mask.getSquaredRadius() ) );
-//			this.overlay.setOuterRadiusDelta( Math.sqrt( mask.getSquaredSigma() ) );
-//		}
-//	}
 
 	public PlateauSphericalMaskRealRandomAccessible getMask()
 	{
@@ -110,7 +94,6 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		synchronized ( mask )
 		{
 			mask.setCenter( p );
-			overlays.stream().forEach( o -> o.setCenter( p ) );
 		}
 		bw.setAutoEstimateMask( false );
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
@@ -158,9 +141,6 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 			mask.incSquaredSigma( sign * scale * scale * slowSpeed * slowSpeed );
 		else
 			mask.incSquaredSigma( sign * scale * scale );
-
-		final double r = mask.getSigma();
-		overlays.stream().forEach( o -> o.setOuterRadiusDelta( r ));
 
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();

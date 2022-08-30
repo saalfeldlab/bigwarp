@@ -10,6 +10,7 @@ import java.awt.RenderingHints;
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.OverlayRenderer;
+import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 
@@ -52,11 +53,26 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 		viewerTransform = new AffineTransform3D();
 	}
 
+	public double[] getCenter()
+	{
+		return center;
+	}
+
+	public double[] getRadii()
+	{
+		return radii;
+	}
+
 	public void setCenter( final double[] center )
 	{
 		this.center = center;
 	}
-	
+
+	public void setCenter( final RealLocalizable c )
+	{
+		c.localize( center );
+	}
+
 	public void setCenter( final RealPoint center )
 	{
 		center.localize( this.center );

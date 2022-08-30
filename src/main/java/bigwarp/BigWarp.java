@@ -1793,6 +1793,8 @@ public class BigWarp< T >
 		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
 		maskSourceMouseListenerQ.setActive( false );
 		maskSourceMouseListenerQ.setMask( tpsMask.getRandomAccessible() );
+
+		tpsMask.getRandomAccessible().setOverlays( Arrays.asList( viewerP.getMaskOverlay(), viewerQ.getMaskOverlay() ));
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )
@@ -2022,7 +2024,7 @@ public class BigWarp< T >
 		if( landmarkModel.numActive() < 4 )
 			return;
 
-		Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
+		final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
 		tpsMask.getRandomAccessible().setCenter(sph.getCenter());
 		tpsMask.getRandomAccessible().setRadius(sph.getRadius());
 	}

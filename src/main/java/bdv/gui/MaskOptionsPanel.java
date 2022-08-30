@@ -183,7 +183,7 @@ public class MaskOptionsPanel extends JPanel
 	 */
 	public boolean isMask()
 	{
-		return falloffTypeDropdown.getSelectedIndex() > 0;
+		return maskTypeDropdown.getSelectedIndex() > 0;
 	}
 
 }

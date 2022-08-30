@@ -1,5 +1,6 @@
 package bigwarp.source;
 
+import java.util.List;
 import java.util.function.BiConsumer;
 
 import org.jdom2.Element;
@@ -7,8 +8,8 @@ import org.jdom2.Element;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import mpicbg.spim.data.XmlHelpers;
-import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
@@ -16,12 +17,12 @@ import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.position.FunctionRealRandomAccessible;
 import net.imglib2.type.numeric.real.DoubleType;
-import net.imglib2.util.Intervals;
 
 public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAccessible< DoubleType >
 {
 	private BiConsumer< RealLocalizable, DoubleType > pfun;
 	private FunctionRealRandomAccessible< DoubleType > rra;
+	private List<BigWarpMaskSphereOverlay> overlays;
 
 	private int nd;
 	
@@ -50,6 +51,19 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 		setRadius( 8.0 );
 		setSigma ( 10.0 );
+	}
+
+	public void setOverlays( final List< BigWarpMaskSphereOverlay > overlays )
+	{
+		this.overlays = overlays;
+		if ( overlays != null )
+		{
+			overlays.stream().forEach( o -> { 
+				o.setCenter( center ) ;
+				o.setInnerRadius( plateauR );
+				o.setOuterRadiusDelta( sigma );
+			});
+		}
 	}
 
 	private void update()
@@ -91,12 +105,16 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	{
 		plateauR = r;
 		plateauR2 = plateauR * plateauR ;
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setInnerRadius( plateauR ) );
 	}
 
 	public void setSquaredRadius( double r2 )
 	{
 		plateauR2 = r2;
 		plateauR = Math.sqrt( plateauR2 );
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setInnerRadius( plateauR ) );
 	}
 
 	public double getSquaredSigma()
@@ -119,17 +137,14 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 		invSqrSigma = 1.0 / sqrSigma;
 		updateGaussSigma();
+
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setOuterRadiusDelta( sigma ));
 	}
 
 	public void setSquaredSigma( double squaredSigma )
 	{
-		sqrSigma = squaredSigma;
-		sigma = Math.sqrt( sqrSigma );
-		if( sqrSigma <= 0  )
-			sqrSigma = EPS;
-
-		invSqrSigma = 1.0 / squaredSigma;
-		updateGaussSigma();
+		setSigma( Math.sqrt( sqrSigma ));
 	}
 
 	public void incSquaredSigma( double increment )
@@ -142,6 +157,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 		invSqrSigma = 1.0 / sqrSigma;
 		updateGaussSigma();
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setOuterRadiusDelta( sigma ));
 	}
 	
 	private void updateGaussSigma()
@@ -153,11 +170,15 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	public void setCenter( RealLocalizable p )
 	{
 		center.setPosition( p );
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setCenter( p ) );
 	}
 
 	public void setCenter( double[] p )
 	{
 		center.setPosition( p );
+		if ( overlays != null )
+			overlays.stream().forEach( o -> o.setCenter( p ) );
 	}
 
 	public RealPoint getCenter()
@@ -249,7 +270,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	 */
 	public static double gaussSigma( double T )
 	{
-		return 1.2737486038617858 * T + 0.0019703;
+		return ( 0.40535876907923957 * T + 0.03706937 );
 	}
 
 	public class GaussianFalloff implements BiConsumer< RealLocalizable, DoubleType > {
@@ -283,14 +304,14 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 			final double r = Math.sqrt( r2 );
 			if( r2 <= plateauR2 )
 				v.setOne();
-			else if ( r >= plateauR + 2 * sigma )
+			else if ( r >= plateauR + sigma )
 				v.setZero();
 			else
 			{
 //				final double t = (r2 - plateauR2);
 //				final double r = Math.sqrt( r2 );
 				final double t = (r - plateauR);
-				double val = 0.5 + 0.5 * Math.cos( t * PIon2 / sigma );
+				double val = 0.5 + 0.5 * Math.cos( t * PI / sigma );
 				v.set( val );
 			}
 		}

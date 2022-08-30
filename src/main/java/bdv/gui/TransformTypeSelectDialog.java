@@ -29,16 +29,11 @@ import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JCheckBox;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import bigwarp.BigWarp;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;
 import bigwarp.transforms.BigWarpTransform;;
 
 public class TransformTypeSelectDialog extends JDialog
