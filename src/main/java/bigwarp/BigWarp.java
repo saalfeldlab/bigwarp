@@ -2012,6 +2012,21 @@ public class BigWarp< T >
 		this.movingImageXml = movingImageXml;
 	}
 
+	public void setAutoEstimateMask( final boolean selected )
+	{
+		warpVisDialog.maskOptionsPanel.getAutoEstimateMaskButton().setSelected( selected );
+	}
+
+	public void autoEstimateMask()
+	{
+		if( landmarkModel.numActive() < 4 )
+			return;
+
+		Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
+		tpsMask.getRandomAccessible().setCenter(sph.getCenter());
+		tpsMask.getRandomAccessible().setRadius(sph.getRadius());
+	}
+
 	public enum WarpVisType
 	{
 		NONE, WARPMAG, JACDET, GRID
@@ -2161,6 +2176,7 @@ public class BigWarp< T >
 		else // warp mag is invisible, turn it on
 		{
 			state.setSourceActive( warpMagSource, true );
+
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
@@ -2861,9 +2877,7 @@ public class BigWarp< T >
 
 			if ( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
 			{
-				Sphere sph = BoundingSphereRitter.boundingSphere( landmarkModel.getFixedPointsCopy() );
-				tpsMask.getRandomAccessible().setCenter( sph.getCenter() );
-				tpsMask.getRandomAccessible().setRadius( sph.getRadius() );
+				autoEstimateMask();
 			}
 		}
 	}

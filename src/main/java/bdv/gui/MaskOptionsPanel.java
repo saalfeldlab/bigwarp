@@ -72,19 +72,19 @@ public class MaskOptionsPanel extends JPanel
 			@Override
 			public void stateChanged( ChangeEvent e )
 			{
-				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() );
+				if( autoEstimateMaskButton.isSelected() )
+					bw.autoEstimateMask();
 			}
 		} );
 
-
-		showMaskOverlayButton = new JCheckBox( "Show mask overlay");
+		showMaskOverlayButton = new JCheckBox( "Show mask overlay", true );
 		showMaskOverlayButton.setToolTipText( SHOW_MASK_OVERLAY_HELP_TEXT );
 		showMaskOverlayButton.addChangeListener( new ChangeListener()
 		{
 			@Override
 			public void stateChanged( ChangeEvent e )
 			{
-				bw.setMaskOverlayVisibility( showMaskOverlayButton.isSelected() );
+				bw.setMaskOverlayVisibility( showMaskOverlayButton.isSelected() && isMask() );
 			}
 		} );
 
@@ -101,6 +101,7 @@ public class MaskOptionsPanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
+				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() && isMask() );
 				bw.getBwTransform().setMask( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
 				bw.restimateTransformation();
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
@@ -176,6 +177,14 @@ public class MaskOptionsPanel extends JPanel
 	public JComboBox< FalloffType > getFalloffTypeDropdown()
 	{
 		return falloffTypeDropdown;
+	}
+
+	/**
+	 * @return true if a mask is applied to the transformation
+	 */
+	public boolean isMask()
+	{
+		return falloffTypeDropdown.getSelectedIndex() > 0;
 	}
 
 }

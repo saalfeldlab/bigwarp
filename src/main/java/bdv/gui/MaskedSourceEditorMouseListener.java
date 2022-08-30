@@ -112,6 +112,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 			mask.setCenter( p );
 			overlays.stream().forEach( o -> o.setCenter( p ) );
 		}
+		bw.setAutoEstimateMask( false );
 		bw.getViewerFrameP().getViewerPanel().requestRepaint();
 		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
@@ -126,6 +127,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 			return;
 
 		viewer.getGlobalMouseCoordinates( p );
+		bw.setAutoEstimateMask( false );
 		synchronized ( mask )
 		{
 			mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
@@ -145,6 +147,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !active )
 			return;
 
+		bw.setAutoEstimateMask( false );
 		final AffineTransform3D transform = viewer.state().getViewerTransform();
 		final double scale = (1.0 / Affine3DHelpers.extractScale(transform, 0)) + 0.05;
 		final int sign = e.getWheelRotation();
