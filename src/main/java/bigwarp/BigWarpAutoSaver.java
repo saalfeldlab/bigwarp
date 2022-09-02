@@ -21,13 +21,12 @@
  */
 package bigwarp;
 
+import bigwarp.landmarks.LandmarkTableModel;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
 import java.io.File;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Supplier;
-
-import bigwarp.landmarks.LandmarkTableModel;
 
 /**
  * Saves bigwarp landmarks to a file periodically, 
@@ -86,7 +85,6 @@ public class BigWarpAutoSaver
 	
 	public static void setAutosaveOptions( final BigWarp<?> bw, final long period, final String autoSavePath )
 	{
-		bw.setAutosaveFolder( new File( autoSavePath ) );
 
 		if( period > 0 )
 		{
@@ -103,6 +101,26 @@ public class BigWarpAutoSaver
 		else
 		{
 			bw.warpVisDialog.getAutoSaveOptionsPanel().getDoAutoSaveBox().setSelected( false );
+			bw.warpVisDialog.repaint();
+		}
+	}
+
+	/**
+	 * Set the folder where the results of auto-saving will be stored.
+	 *
+	 * @param autoSaveFolder
+	 * 		the destination folder
+	 */
+	public void setAutosaveFolder( final File autoSaveFolder )
+	{
+		boolean exists = autoSaveFolder.exists();
+		if ( !exists )
+			exists = autoSaveFolder.mkdir();
+
+		if ( exists && autoSaveFolder.isDirectory() )
+		{
+			autoSaveDirectory = autoSaveFolder;
+			bw.warpVisDialog.getAutoSaveOptionsPanel().getAutoSaveFolderText().setText( autoSaveFolder.getAbsolutePath() );
 			bw.warpVisDialog.repaint();
 		}
 	}

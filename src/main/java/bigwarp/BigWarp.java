@@ -323,8 +323,6 @@ public class BigWarp< T >
 
 	final FileDialog fileDialog;
 
-	protected File autoSaveDirectory;
-
 	protected File lastDirectory;
 
 	protected File lastLandmarks;
@@ -1880,7 +1878,7 @@ public class BigWarp< T >
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Floats?
 		FinalInterval itvl = new FinalInterval( data.sources.get( data.targetSourceIndices[0] ).getSpimSource().getSource( 0, 0 ));
-		tpsMask = PlateauSphericalMaskSource.build( ndims, new RealPoint( ndims ), itvl );
+		tpsMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
 
 		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
@@ -3194,33 +3192,13 @@ public class BigWarp< T >
 	}
 
 	/**
-	 * Set the folder where the results of auto-saving will be stored.
-	 * 
-	 * @param autoSaveFolder the destination folder
-	 */
-	public void setAutosaveFolder( final File autoSaveFolder )
-	{
-		boolean exists = autoSaveFolder.exists();
-		if( !exists )
-			exists = autoSaveFolder.mkdir();
-
-		if( exists && autoSaveFolder.isDirectory() )
-		{
-			this.autoSaveDirectory = autoSaveFolder;
-			warpVisDialog.getAutoSaveOptionsPanel().getAutoSaveFolderText()
-				.setText( autoSaveFolder.getAbsolutePath() );
-			warpVisDialog.repaint();
-		}
-	}
-
-	/**
 	 * Saves landmarks to a new File in the user's bigwarp folder.
 	 */
 	public void autoSaveLandmarks()
 	{
 		final File baseFolder;
-		if( autoSaveDirectory != null )
-			baseFolder = autoSaveDirectory;
+		if ( autoSaver.autoSaveDirectory != null )
+			baseFolder = autoSaver.autoSaveDirectory;
 		else
 			baseFolder = getBigwarpSettingsFolder();
 
@@ -3422,8 +3400,8 @@ public class BigWarp< T >
 
 		final Element autoSaveNode = new Element( "autosave" );
 		final Element autoSaveLocation = new Element( "location" );
-		if( autoSaveDirectory != null )
-			autoSaveLocation.setText( autoSaveDirectory.getAbsolutePath() ); 
+		if ( autoSaver.autoSaveDirectory != null )
+			autoSaveLocation.setText( autoSaver.autoSaveDirectory.getAbsolutePath() );
 		else
 			autoSaveLocation.setText( getBigwarpSettingsFolder().getAbsolutePath() );
 
