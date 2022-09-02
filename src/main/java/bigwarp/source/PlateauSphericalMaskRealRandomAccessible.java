@@ -1,15 +1,24 @@
 package bigwarp.source;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 import org.jdom2.Element;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.TypeAdapter;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+import java.io.IOException;
 
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import mpicbg.spim.data.XmlHelpers;
+import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
@@ -17,83 +26,147 @@ import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.position.FunctionRealRandomAccessible;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Intervals;
 
 public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAccessible< DoubleType >
 {
-	private BiConsumer< RealLocalizable, DoubleType > pfun;
-	private FunctionRealRandomAccessible< DoubleType > rra;
+	transient private BiConsumer< RealLocalizable, DoubleType > pfun;
+	transient private FunctionRealRandomAccessible< DoubleType > rra;
 	private List<BigWarpMaskSphereOverlay> overlays;
 
-	private int nd;
-	
-	private double plateauR;
-	private double plateauR2;
+	private FalloffShape fallOffShape;
 
-	private double sigma;
+	transient private int nd;
+
+	transient private double plateauR;
+	transient private double plateauR2;
+
+	transient private double sigma;
+
+	@SerializedName( SQUARED_SIGMA )
 	private double sqrSigma;
-	private double invSqrSigma;
+	transient private double invSqrSigma;
 	private double gaussInvSqrSigma;
 
+	@JsonAdapter( RealPointToDoubleArray.class )
 	private RealPoint center;
 
 	private static final double EPS = 1e-6;
 	private static final double PIon2 = Math.PI / 2.0;
 	private static final double PI = Math.PI;
 
-	public static enum FalloffType { COSINE, GAUSSIAN, LINEAR };
-
-	public PlateauSphericalMaskRealRandomAccessible( int n, RealPoint center )
+	public static enum FalloffShape
 	{
-		this.nd = n;
+		GAUSSIAN( it -> new GaussianFalloff( it ) ),
+		COSINE( it -> new CosineFalloff( it ) ),
+		LINEAR( it -> new LinearFalloff( it ) );
+
+		private final Function< PlateauSphericalMaskRealRandomAccessible, BiConsumer< RealLocalizable, DoubleType > > fallOffProvider;
+
+		FalloffShape( Function< PlateauSphericalMaskRealRandomAccessible, BiConsumer< RealLocalizable, DoubleType > > fallOffProvider )
+		{
+			this.fallOffProvider = fallOffProvider;
+		}
+
+		public BiConsumer< RealLocalizable, DoubleType > createFalloffFunction( PlateauSphericalMaskRealRandomAccessible mask )
+		{
+			return fallOffProvider.apply( mask );
+		}
+
+	}
+
+	public PlateauSphericalMaskRealRandomAccessible( RealPoint center )
+	{
+		this.nd = center.numDimensions();
 		this.center = center;
-		pfun = new CosineFalloff();
+		fallOffShape = FalloffShape.COSINE;
+		pfun = fallOffShape.createFalloffFunction( this );
 		update();
 
 		setRadius( 8.0 );
 		setSigma ( 10.0 );
 	}
 
-	public void setOverlays( final List< BigWarpMaskSphereOverlay > overlays )
-	{
+	public void setOverlays( final List< BigWarpMaskSphereOverlay > overlays ) {
 		this.overlays = overlays;
-		if ( overlays != null )
-		{
-			overlays.stream().forEach( o -> { 
-				o.setCenter( center ) ;
-				o.setInnerRadius( plateauR );
-				o.setOuterRadiusDelta( sigma );
+		if (overlays != null) {
+			overlays.stream().forEach(o -> {
+				o.setCenter(center);
+				o.setInnerRadius(plateauR);
+				o.setOuterRadiusDelta(sigma);
 			});
+		}
+	}
+
+	public static void main( String[] args )
+	{
+		long S = 50;
+		double[] center = new double[] { S, S, S };
+		RealPoint pt = RealPoint.wrap( center );
+
+		PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( pt );
+		img.setRadius( 10 );
+		img.setSigma( 10 );
+		Interval interval = Intervals.createMinSize( 0, 0, 0, 2 * S, 2 * S, 2 * S );
+//
+////		BdvOptions options = BdvOptions.options().screenScales( new double[] { 1 } );
+//		BdvOptions options = BdvOptions.options();
+//		BdvStackSource< DoubleType > bdv = BdvFunctions.show( img.rra, interval, "img", options );
+//		bdv.getBdvHandle().getSetupAssignments().getMinMaxGroups().get( 0 ).setRange( 0, 1 );
+//
+////		InputActionBindings kb = bdv.getBdvHandle().getKeybindings();
+////		System.out.println( kb );
+////		kb.removeActionMap( "navigation" );
+////		kb.removeInputMap( "navigation" );
+//
+////		bdv.getBdvHandle().getTriggerbindings().removeInputTriggerMap( "block_transform" );
+//
+//		final MaskedSourceEditorMouseListener ml = new MaskedSourceEditorMouseListener( 3, null, bdv.getBdvHandle().getViewerPanel() );
+//		ml.setMask( img );
+////		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
+//
+		double x = 50;
+		RealRandomAccess< DoubleType > access = img.realRandomAccess();
+		access.setPosition( center );
+		while ( x < 100 )
+		{
+			access.move( 1, 0 );
+			System.out.println( x + "," + access.get().getRealDouble());
+
+			x = access.getDoublePosition( 0 );
 		}
 	}
 
 	private void update()
 	{
-		rra = new FunctionRealRandomAccessible<>( nd, pfun, DoubleType::new );
+		rra = new FunctionRealRandomAccessible<>( nd, getFalloffFunction(), DoubleType::new );
 	}
 
-	public void setType( String type )
+	private BiConsumer< RealLocalizable, DoubleType > getFalloffFunction()
 	{
-		setType( FalloffType.valueOf( type ));
-	}
-
-	public void setType( FalloffType type )
-	{
-		switch (type) {
-		case GAUSSIAN:
-			pfun = new GaussianFalloff();
-			update();
-			break;
-		case COSINE:
-			pfun = new CosineFalloff();
-			update();
-			break;
-		case LINEAR:
-			pfun = new LinearFalloff();
-			update();
-			break;
-		default:
-			break;
+		if ( pfun == null )
+		{
+			pfun = fallOffShape.createFalloffFunction( this );
 		}
+		return pfun;
+	}
+
+	public FalloffShape getFallOffShape()
+	{
+		return fallOffShape;
+	}
+
+	public void setFalloffShape( String type )
+	{
+		setFalloffShape( FalloffShape.valueOf( type ) );
+	}
+
+	public void setFalloffShape( FalloffShape shape )
+	{
+
+		fallOffShape = shape;
+		pfun = shape.createFalloffFunction( this );
+		update();
 	}
 
 	public double getSquaredRadius()
@@ -160,7 +233,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		if ( overlays != null )
 			overlays.stream().forEach( o -> o.setOuterRadiusDelta( sigma ));
 	}
-	
+
 	private void updateGaussSigma()
 	{
 		final double gsig = gaussSigma( sigma );
@@ -185,6 +258,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	{
 		return center;
 	}
+
 
 	final public static double squaredDistance( final RealLocalizable position1, final RealLocalizable position2 )
 	{
@@ -248,6 +322,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		setSquaredSigma( XmlHelpers.getDouble( p, "squaredSigma" ));
 	}
 
+	@Deprecated
 	public void fromJson( JsonObject json )
 	{
 		final JsonArray c = json.get("center").getAsJsonArray();
@@ -259,7 +334,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		setSquaredRadius(  json.get("squaredRadius").getAsDouble() );
 		setSquaredSigma(  json.get("squaredSigma").getAsDouble() );
 	}
-	
+
 	/**
 	 * Re.turns the sigma that makes a Gaussian shape most like a cosine with period T.
 	 * <p>
@@ -273,67 +348,127 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		return ( 0.40535876907923957 * T + 0.03706937 );
 	}
 
-	public class GaussianFalloff implements BiConsumer< RealLocalizable, DoubleType > {
+	public static class GaussianFalloff implements BiConsumer< RealLocalizable, DoubleType >
+	{
+
+		private final PlateauSphericalMaskRealRandomAccessible mask;
+
+		public GaussianFalloff( PlateauSphericalMaskRealRandomAccessible mask )
+		{
+			this.mask = mask;
+		}
 
 		@Override
 		public void accept( RealLocalizable x, DoubleType v )
 		{
 			v.setZero();
-			double r2 = squaredDistance( x, center );
-			if( r2 <= plateauR2 )
+			double r2 = squaredDistance( x, mask.center );
+			if ( r2 <= mask.plateauR2 )
 				v.setOne();
 			else
 			{
 				final double r = Math.sqrt( r2 );
 //				final double t = (r2 - plateauR2);
-				final double t = (r - plateauR);
+				final double t = ( r - mask.plateauR );
 				// TODO sample exp function and interpolate to speed up
-				v.set( Math.exp( -0.5 * t * t * gaussInvSqrSigma ) );
+				v.set( Math.exp( -0.5 * t * t * mask.gaussInvSqrSigma ) );
 //				v.set( Math.cos( t * 0.5  + 0.5 ));
 //				v.set( 1 / t );
 			}
 		}
 	}
 
-	public class CosineFalloff implements BiConsumer< RealLocalizable, DoubleType > {
+	public static class CosineFalloff implements BiConsumer< RealLocalizable, DoubleType >
+	{
+
+		private final PlateauSphericalMaskRealRandomAccessible mask;
+
+		public CosineFalloff( PlateauSphericalMaskRealRandomAccessible mask )
+		{
+			this.mask = mask;
+		}
 
 		@Override
 		public void accept( RealLocalizable x, DoubleType v )
 		{
-			final double r2 = squaredDistance( x, center );
+			final double r2 = squaredDistance( x, mask.center );
 			final double r = Math.sqrt( r2 );
-			if( r2 <= plateauR2 )
+			if ( r2 <= mask.plateauR2 )
 				v.setOne();
-			else if ( r >= plateauR + sigma )
+			else if ( r >= mask.plateauR + mask.sigma )
 				v.setZero();
 			else
 			{
 //				final double t = (r2 - plateauR2);
 //				final double r = Math.sqrt( r2 );
-				final double t = (r - plateauR);
-				double val = 0.5 + 0.5 * Math.cos( t * PI / sigma );
+				final double t = ( r - mask.plateauR );
+				double val = 0.5 + 0.5 * Math.cos( t * PI / mask.sigma );
 				v.set( val );
 			}
 		}
 	}
 
-	public class LinearFalloff implements BiConsumer< RealLocalizable, DoubleType > {
+	public static class LinearFalloff implements BiConsumer< RealLocalizable, DoubleType >
+	{
+
+		private final PlateauSphericalMaskRealRandomAccessible mask;
+
+		public LinearFalloff( PlateauSphericalMaskRealRandomAccessible mask )
+		{
+			this.mask = mask;
+		}
 
 		@Override
 		public void accept( RealLocalizable x, DoubleType v )
 		{
 			v.setZero();
-			final double r2 = squaredDistance( x, center );
-			final double d2 = plateauR + sigma;
-			if( r2 <= plateauR2 )
+			final double r2 = squaredDistance( x, mask.center );
+			final double d2 = mask.plateauR + mask.sigma;
+			if ( r2 <= mask.plateauR2 )
 				v.setOne();
-			else if( r2 >= d2 * d2 )
+			else if ( r2 >= d2 * d2 )
 				v.setZero();
 			else
 			{
 				final double r = Math.sqrt( r2 );
-				v.set( 1 - (r - plateauR) /  sigma );
+				v.set( 1 - ( r - mask.plateauR ) / mask.sigma );
 			}
+		}
+	}
+
+	public static final String FALLOFF_SHAPE = "falloffShape";
+
+	public static final String CENTER = "center";
+
+	public static final String SQUARED_RADIUS = "squaredRadius";
+
+	public static final String SQUARED_SIGMA = "squaredSigma";
+
+	public static class RealPointToDoubleArray extends TypeAdapter< RealPoint >
+	{
+
+		@Override
+		public void write( final JsonWriter out, final RealPoint value ) throws IOException
+		{
+			final JsonWriter jsonWriter = out.beginArray();
+			for ( int i = 0; i < value.numDimensions(); i++ )
+			{
+				jsonWriter.value( value.getDoublePosition( i ) );
+			}
+			jsonWriter.endArray();
+		}
+
+		@Override
+		public RealPoint read( final JsonReader in ) throws IOException
+		{
+			in.beginArray();
+			ArrayList< Double > pos = new ArrayList<>();
+			while ( in.hasNext() )
+			{
+				pos.add( in.nextDouble() );
+			}
+			in.endArray();
+			return new RealPoint( pos.stream().mapToDouble( it -> it ).toArray() );
 		}
 	}
 
