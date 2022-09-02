@@ -220,7 +220,7 @@ public class BigWarp< T >
 
 	final AffineTransform3D fixedViewXfm;
 
-	private final Bookmarks bookmarks;
+	private Bookmarks bookmarks;
 
 	protected final BookmarksEditor bookmarkEditorP;
 
@@ -2013,6 +2013,11 @@ public class BigWarp< T >
 	{
 		this.movingSpimData = movingSpimData;
 		this.movingImageXml = movingImageXml;
+	}
+
+	public void setBookmarks( final Bookmarks bookmarks )
+	{
+		this.bookmarks = bookmarks;
 	}
 
 	public enum WarpVisType
