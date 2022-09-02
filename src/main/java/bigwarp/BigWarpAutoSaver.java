@@ -37,13 +37,18 @@ import java.util.TimerTask;
  */
 public class BigWarpAutoSaver 
 {
-	private final BigWarp<?> bw;
+	transient private final BigWarp<?> bw;
 
-	final Timer timer;
+	transient final Timer timer;
 
-	final AutoSave saveTask;
+	transient final AutoSave saveTask;
 
 	final long period;
+
+	@SerializedName("location")
+	@JsonAdapter( BigwarpSettings.FileAdapter.class )
+	protected File autoSaveDirectory;
+
 
 	public BigWarpAutoSaver( final BigWarp<?> bw, final long period )
 	{

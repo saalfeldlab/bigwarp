@@ -3396,8 +3396,17 @@ public class BigWarp< T >
 			proposedSettingsFile = fileChooser.getSelectedFile();
 			try
 			{
-				saveSettings( proposedSettingsFile.getCanonicalPath() );
-			} catch ( final IOException e )
+				final String canonicalPath = proposedSettingsFile.getCanonicalPath();
+				if ( canonicalPath.endsWith( ".json" ) )
+				{
+					saveSettingsJson( canonicalPath );
+				}
+				else
+				{
+					saveSettings( canonicalPath );
+				}
+			}
+			catch ( final IOException e )
 			{
 				e.printStackTrace();
 			}
@@ -3442,6 +3451,26 @@ public class BigWarp< T >
 		xout.output( doc, new FileWriter( xmlFilename ) );
 	}
 
+	protected void saveSettingsJson( final String jsonFilename ) throws IOException
+	{
+		BigwarpSettings settings = getSettings();
+		settings.serialize( jsonFilename );
+	}
+
+	public BigwarpSettings getSettings()
+	{
+		BigwarpSettings settings = new BigwarpSettings(
+				this,
+				viewerP,
+				viewerQ,
+				setupAssignments,
+				bookmarks,
+				autoSaver,
+				tpsMask.getRandomAccessible()
+		);
+		return settings;
+	}
+
 	protected void loadSettings()
 	{
 		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
@@ -3462,29 +3491,35 @@ public class BigWarp< T >
 		}
 	}
 
-	protected void loadSettings( final String xmlFilename ) throws IOException,
+	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
-		final SAXBuilder sax = new SAXBuilder();
-		final Document doc = sax.build( xmlFilename );
-		final Element root = doc.getRootElement();
-		viewerP.stateFromXml( root.getChild( "viewerP" ) );
-		viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
-		setupAssignments.restoreFromXml( root );
-		bookmarks.restoreFromXml( root );
-		activeSourcesDialogP.update();
-		activeSourcesDialogQ.update();
+		if (jsonOrXmlFilename.endsWith( ".json" )) {
+			getSettings().read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+			activeSourcesDialogP.update();
+			activeSourcesDialogQ.update();
+		} else {
+			final SAXBuilder sax = new SAXBuilder();
+			final Document doc = sax.build( jsonOrXmlFilename );
+			final Element root = doc.getRootElement();
+			viewerP.stateFromXml( root.getChild( "viewerP" ) );
+			viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
+			setupAssignments.restoreFromXml( root );
+			bookmarks.restoreFromXml( root );
+			activeSourcesDialogP.update();
+			activeSourcesDialogQ.update();
 
-		// auto-save settings
-		Element autoSaveElem = root.getChild( "autosave" );
-		final String autoSavePath = autoSaveElem.getChild( "location" ).getText();
-		final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText());
-		setAutosaveFolder( new File( autoSavePath ));
-		BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
+			// auto-save settings
+			Element autoSaveElem = root.getChild( "autosave" );
+			final String autoSavePath = autoSaveElem.getChild( "location" ).getText();
+			final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText() );
+			BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
 
-		final Element maskSettings = root.getChild( "transform-mask" );
-		if( maskSettings != null )
-			tpsMask.getRandomAccessible().fromXml( maskSettings );
+			final Element maskSettings = root.getChild( "transform-mask" );
+			if ( maskSettings != null )
+				tpsMask.getRandomAccessible().fromXml( maskSettings );
+		}
+
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();
