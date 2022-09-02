@@ -23,6 +23,7 @@ import bdv.util.BdvStackSource;
 import bdv.viewer.animate.AbstractTransformAnimator;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.SimilarityTransformAnimator;
+import bigwarp.BigwarpSettings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import bigwarp.source.PlateauSphericalMaskSource;
@@ -98,9 +99,9 @@ public class SimilarityTransformInterpolationExample {
 		// RandomAccessibleInterval<UnsignedByteType> img = Views.translateInverse( imgBase, 252, 76, 70 );
 
 		AffineTransform3D identity = new AffineTransform3D();
+		//TODO Caleb: John, what interval should we be using here?
 		FinalInterval bigItvl = Intervals.createMinMax(0, -200, 0, 1000, 1000, 150);
 		
-		Gson gson = new Gson();
 		final Path path = Paths.get( jsonFile );
 		final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
 		Reader reader;
@@ -108,7 +109,7 @@ public class SimilarityTransformInterpolationExample {
 		try
 		{
 			reader = Channels.newReader(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
-			json = gson.fromJson( reader, JsonObject.class );
+			json = BigwarpSettings.gson.fromJson( reader, JsonObject.class );
 		} catch ( IOException e )
 		{
 			e.printStackTrace();
@@ -120,10 +121,13 @@ public class SimilarityTransformInterpolationExample {
 			ltm.fromJson( json );
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( 3, new RealPoint( 3 ), bigItvl );
+
+		final JsonObject maskJson = json.getAsJsonObject( "mask" );
+		PlateauSphericalMaskRealRandomAccessible mask = BigwarpSettings.gson.fromJson( maskJson, PlateauSphericalMaskRealRandomAccessible.class);
+
+
+		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( mask, bigItvl );
 		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
-		tpsMask.getRandomAccessible().fromJson( json.getAsJsonObject( "mask" ) );
-		
 		
 		// build transformations
 		final double[][] mvgPts;
@@ -249,9 +253,12 @@ public class SimilarityTransformInterpolationExample {
 			ltm.fromJson( json );
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( 3, new RealPoint( 3 ), bigItvl );
+		final JsonObject mask = json.getAsJsonObject( "mask" );
+		PlateauSphericalMaskRealRandomAccessible maskRA = BigwarpSettings.gson.fromJson( mask, PlateauSphericalMaskRealRandomAccessible.class);
+
+
+		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( maskRA, bigItvl );
 		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
-		tpsMask.getRandomAccessible().fromJson( json.getAsJsonObject( "mask" ) );
 		
 		
 		// build transformations
