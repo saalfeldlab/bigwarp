@@ -3290,7 +3290,7 @@ public class BigWarp< T >
 	{
 		if( autoSaver != null )
 		{
-			autoSaver.stop();;
+			autoSaver.stop();
 			autoSaver = null;
 		}
 	}
