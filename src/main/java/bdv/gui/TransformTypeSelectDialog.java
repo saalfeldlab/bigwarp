@@ -21,25 +21,18 @@
  */
 package bdv.gui;
 
+import bigwarp.BigWarp;
+import bigwarp.transforms.BigWarpTransform;
 import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
-import javax.swing.JCheckBox;
 import javax.swing.JDialog;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-
-import bigwarp.BigWarp;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;
-import bigwarp.transforms.BigWarpTransform;;
 
 public class TransformTypeSelectDialog extends JDialog
 {
@@ -165,7 +158,7 @@ public class TransformTypeSelectDialog extends JDialog
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				bw.getTpsMaskSource().getRandomAccessible().setType( button.getText() );
+				bw.getTpsMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			}
