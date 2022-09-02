@@ -1933,6 +1933,11 @@ public class BigWarp< T >
 		viewerQ.requestRepaint();
 	}
 
+	public void setAutoSaver( final BigWarpAutoSaver autoSaver )
+	{
+		this.autoSaver = autoSaver;
+	}
+
 	protected void setupWarpMagBaselineOptions( final CoordinateTransform[] xfm, final int ndim )
 	{
 		if ( ndim == 2 )

@@ -50,7 +50,6 @@ public class BigWarpAutoSaver
 	{
 		this.bw = bw;
 		this.period = period;
-		bw.autoSaver = this;
 		timer = new Timer();
 		saveTask = new AutoSave();
 		timer.schedule( saveTask, period, period );
@@ -97,8 +96,9 @@ public class BigWarpAutoSaver
 			if( bw.autoSaver != null )
 				bw.autoSaver.stop();
 
-			new BigWarpAutoSaver( bw, period );
-			bw.warpVisDialog.repaint();
+			final BigWarpAutoSaver autoSaver = new BigWarpAutoSaver( bw, period );
+			bw.setAutoSaver( autoSaver );
+			autoSaver.setAutosaveFolder( new File( autoSavePath ) );
 		}
 		else
 		{

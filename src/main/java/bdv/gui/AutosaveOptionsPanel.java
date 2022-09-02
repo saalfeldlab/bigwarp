@@ -62,7 +62,7 @@ public class AutosaveOptionsPanel extends JPanel
 					if ( autoSaver != null )
 						autoSaver.stop();
 
-					new BigWarpAutoSaver( bw, periodMillis );
+					bw.setAutoSaver( new BigWarpAutoSaver( bw, periodMillis ));
 				}
 			}
 		} );
@@ -83,7 +83,7 @@ public class AutosaveOptionsPanel extends JPanel
 					savePeriodModel.setValue( lastAutoSaveFreq );
 
 					long periodMillis = ((Integer) savePeriodModel.getValue()).longValue() * 60000;
-					new BigWarpAutoSaver( bw, periodMillis );
+					bw.setAutoSaver( new BigWarpAutoSaver( bw, periodMillis ));
 					updating = false;
 				}
 				else
@@ -115,7 +115,7 @@ public class AutosaveOptionsPanel extends JPanel
 			{
 				final File folder = fileChooser.getSelectedFile();
 				getAutoSaveFolderText().setText( folder.getAbsolutePath() );
-				bw.setAutosaveFolder( folder );
+				bw.getAutoSaver().setAutosaveFolder( folder );
 			}
 		} );
 
