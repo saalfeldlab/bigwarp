@@ -171,7 +171,7 @@ public class SerializationTest
 		BigWarpInit.add( data,  imp, i++, 0, false);
 		BigWarpInit.add( data,  imp, i++, 0, false);
 		data.wrapUp();
-		BigWarpViewerOptions opts = BigWarpViewerOptions.options( true );
+		BigWarpViewerOptions opts = BigWarpViewerOptions.options().is2D( true );
 		return new BigWarp( data, "bigwarp", opts, null );
 	}
 }

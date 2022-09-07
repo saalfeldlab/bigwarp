@@ -135,16 +135,17 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		private final BigWarpViewerPanel panel;
 
-		private final ViewerState state;
+		private final ViewerState deprecatedState;
 
 		public BigWarpViewerPanelAdapter( final BigWarpViewerPanel viewerP )
 		{
 			this.panel = viewerP;
+			viewerP.state();
 			try
 			{
-				final Field stateField = ViewerPanel.class.getDeclaredField( "state" );
+				final Field stateField = ViewerPanel.class.getDeclaredField( "deprecatedState" );
 				stateField.setAccessible( true );
-				this.state = ( ViewerState ) stateField.get( panel );
+				this.deprecatedState = ( ViewerState ) stateField.get( panel );
 			}
 			catch ( NoSuchFieldException | IllegalAccessException e )
 			{
@@ -191,11 +192,11 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			switch ( in.nextString() )
 			{
 			case XmlIoViewerState.VIEWERSTATE_INTERPOLATION_VALUE_NLINEAR:
-				state.setInterpolation( Interpolation.NLINEAR );
+				deprecatedState.setInterpolation( Interpolation.NLINEAR );
 				break;
 			case XmlIoViewerState.VIEWERSTATE_INTERPOLATION_VALUE_NEARESTNEIGHBOR:
 			default:
-				state.setInterpolation( NEARESTNEIGHBOR );
+				deprecatedState.setInterpolation( NEARESTNEIGHBOR );
 			}
 		}
 
@@ -223,17 +224,17 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			switch ( in.nextString() )
 			{
 			case XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_GROUP:
-				state.setDisplayMode( DisplayMode.GROUP );
+				deprecatedState.setDisplayMode( DisplayMode.GROUP );
 				break;
 			case XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_FUSED:
-				state.setDisplayMode( DisplayMode.FUSED );
+				deprecatedState.setDisplayMode( DisplayMode.FUSED );
 				break;
 			case XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_FUSEDGROUP:
-				state.setDisplayMode( DisplayMode.FUSEDGROUP );
+				deprecatedState.setDisplayMode( DisplayMode.FUSEDGROUP );
 				break;
 			case XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_SINGLE:
 			default:
-				state.setDisplayMode( DisplayMode.SINGLE );
+				deprecatedState.setDisplayMode( DisplayMode.SINGLE );
 			}
 		}
 
@@ -310,7 +311,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		private void readSources( final JsonReader in ) throws IOException
 		{
-			final List< SourceState< ? > > sources = state.getSources();
+
+			final List< SourceState< ? > > sources = deprecatedState.getSources();
 			in.beginArray();
 			int i = 0;
 			while ( in.hasNext() )
@@ -345,13 +347,13 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 					readInterpolationMode( in );
 					break;
 				case XmlIoViewerState.VIEWERSTATE_CURRENTSOURCE_TAG:
-					state.setCurrentSource( in.nextInt() );
+					deprecatedState.setCurrentSource( in.nextInt() );
 					break;
 				case XmlIoViewerState.VIEWERSTATE_CURRENTGROUP_TAG:
-					state.setCurrentGroup( in.nextInt() );
+					deprecatedState.setCurrentGroup( in.nextInt() );
 					break;
 				case XmlIoViewerState.VIEWERSTATE_CURRENTTIMEPOINT_TAG:
-					state.setCurrentTimepoint( in.nextInt() );
+					deprecatedState.setCurrentTimepoint( in.nextInt() );
 					break;
 				}
 			}
