@@ -23,7 +23,8 @@ package bdv.gui;
 
 import bdv.viewer.ViewerOptions;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.animate.MessageOverlayAnimator;
+import bigwarp.ui.keymap.KeymapManager;
+
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 
 public class BigWarpViewerOptions extends ViewerOptions
@@ -54,6 +55,12 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return this;
 	}
 
+	public BigWarpViewerOptions bwKeymapManager( final KeymapManager keymapManager )
+	{
+		bwValues.keymapManager = keymapManager;
+		return this;
+	}
+
 	public BwValues getValues()
 	{
 		return bwValues;
@@ -76,6 +83,8 @@ public class BigWarpViewerOptions extends ViewerOptions
 	public BigWarpViewerOptions copy()
 	{
 		BigWarpViewerOptions out = new BigWarpViewerOptions();
+		out.bwKeymapManager( bwValues.keymapManager );
+
 		out.
 				width( values.getWidth() ).
 				height( values.getHeight() ).
@@ -88,9 +97,8 @@ public class BigWarpViewerOptions extends ViewerOptions
 				is2D( values.is2D() ).
 				transformEventHandlerFactory( values.getTransformEventHandlerFactory() ).
 				accumulateProjectorFactory( values.getAccumulateProjectorFactory() ).
-				inputTriggerConfig( values.getInputTriggerConfig() ).
+				inputTriggerConfig( bwValues.getInputTriggerConfig() ).
 				shareKeyPressedEvents( values.getKeyPressedManager() ).
-				keymapManager( values.getKeymapManager() ).
 				appearanceManager( values.getAppearanceManager() );
 		return out;
 	}
@@ -104,6 +112,18 @@ public class BigWarpViewerOptions extends ViewerOptions
 
 	public static class BwValues
 	{
+		private KeymapManager keymapManager = null;
 		private BigWarpMessageAnimator messageAnimator = new BigWarpMessageAnimator( 1500, 0.01, 0.1 );
+		private InputTriggerConfig inputTriggerConfig = null;
+
+		public KeymapManager getKeymapManager()
+		{
+			return keymapManager;
+		}
+
+		public InputTriggerConfig getInputTriggerConfig()
+		{
+			return inputTriggerConfig;
+		}
 	}
 }

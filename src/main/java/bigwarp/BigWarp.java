@@ -84,6 +84,7 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
 import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.slf4j.Logger;
@@ -117,7 +118,6 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.ui.appearance.AppearanceManager;
 import bdv.ui.appearance.AppearanceSettingsPage;
 import bdv.ui.keymap.Keymap;
-import bdv.ui.keymap.KeymapManager;
 import bdv.ui.keymap.KeymapSettingsPage;
 import bdv.util.Bounds;
 import bdv.viewer.BigWarpDragOverlay;
@@ -147,6 +147,7 @@ import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
+import bigwarp.ui.keymap.KeymapManager;
 import bigwarp.util.BigWarpUtils;
 import dev.dirs.ProjectDirectories;
 import fiji.util.gui.GenericDialogPlus;
@@ -184,6 +185,7 @@ import net.imglib2.type.numeric.real.FloatType;
 public class BigWarp< T >
 {
 	public static String configDir = ProjectDirectories.from( "sc", "fiji", "bigwarp" ).configDir;
+//	public static String configDir = "/groups/saalfeld/home/bogovicj/.bigwarp"; 
 
 	protected static final int DEFAULT_WIDTH = 600;
 
@@ -359,7 +361,7 @@ public class BigWarp< T >
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		System.out.println( "BigWarp actions");
-		final KeymapManager optionsKeymapManager = options.values.getKeymapManager();
+		final KeymapManager optionsKeymapManager = options.getValues().getKeymapManager();
 		final AppearanceManager optionsAppearanceManager = options.values.getAppearanceManager();
 		keymapManager = optionsKeymapManager != null ? optionsKeymapManager : new KeymapManager( configDir );
 		appearanceManager = optionsAppearanceManager != null ? optionsAppearanceManager : new AppearanceManager( configDir );
@@ -554,10 +556,22 @@ public class BigWarp< T >
 //		System.out.println( "install actions" );
 
 		Descriptions desc = new BigWarpActions.Descriptions();
+		CommandDescriptions bwDesc = new CommandDescriptions();
+		bwDesc.setKeyconfigContext( "bigwarp" );
+		desc.getCommandDescriptions( bwDesc );
+
 		desc.getCommandDescriptions( keymapManager.getCommandDescriptions() );
+
+		System.out.println( "####");
+		printDescs(  keymapManager.getCommandDescriptions() );
+		System.out.println( "####");
+		System.out.println( "####");
+		printDescs( bwDesc );
+		System.out.println( "####");
+
 		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bigwarp", "bw" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
-		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, this.keymapManager.getCommandDescriptions() ) );
+		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, new KeymapManager(), this.keymapManager.getCommandDescriptions() ) );
 
 //		appearanceManager.appearance().updateListeners().add( viewerFrame::repaint );
 //		appearanceManager.addLafComponent( fileChooser );

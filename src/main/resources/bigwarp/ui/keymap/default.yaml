@@ -1,0 +1,45 @@
+---
+- !mapping
+  action: Preferences
+  contexts: [bigwarp]
+  triggers: [ctrl COMMA, meta COMMA]
+- !mapping
+  action: brightness settings
+  contexts: [bigwarp]
+  triggers: [S]
+- !mapping
+  action: go to bookmark
+  contexts: [bigwarp]
+  triggers: [B]
+- !mapping
+  action: go to bookmark rotation
+  contexts: [bigwarp]
+  triggers: [shift ctrl B]
+- !mapping
+  action: help
+  contexts: [bigwarp]
+  triggers: [F1]
+- !mapping
+  action: landmark mode toggle
+  contexts: [bigwarp]
+  triggers: [SPACE]
+- !mapping
+  action: set bookmark
+  contexts: [bigwarp]
+  triggers: [shift B]
+- !mapping
+  action: visibility and grouping moving
+  contexts: [bigwarp]
+  triggers: [F3]
+- !mapping
+  action: visibility and grouping target
+  contexts: [bigwarp]
+  triggers: [F4]
+- !mapping
+  action: save settings
+  contexts: [bigwarp]
+  triggers: [not mapped]
+- !mapping
+  action: load settings
+  contexts: [bigwarp]
+  triggers: [not mapped]

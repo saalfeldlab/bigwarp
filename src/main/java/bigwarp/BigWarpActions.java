@@ -51,11 +51,13 @@ import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
+import net.imglib2.cache.img.DiskCachedCellImg;
 import net.imglib2.realtransform.AffineTransform3D;
 
 public class BigWarpActions extends Actions
 {
 	public static final CommandDescriptionProvider.Scope BIGWARP = new CommandDescriptionProvider.Scope( "bigwarp" );
+	public static final String BIGWARP_CTXT = "bigwarp";
 
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
@@ -221,6 +223,35 @@ public class BigWarpActions extends Actions
 		super( keyConfig, context, name );
 	}
 	
+//	/*
+//	 * Command descriptions for all provided commands
+//	 */
+//	@Plugin( type = CommandDescriptionProvider.class )
+//	public static class BdvDescriptions extends CommandDescriptionProvider 
+//	{
+//		public BdvDescriptions()
+//		{
+//			super( BIGWARP, "bigwarp" );
+//			bdv.BigDataViewerActions.Descriptions bdvDesc = new BigDataViewerActions.Descriptions();
+//		}
+//
+//		@Override
+//		public void getCommandDescriptions( final CommandDescriptions descriptions )
+//		{
+//			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
+//			descriptions.add( VISIBILITY_AND_GROUPING, VISIBILITY_AND_GROUPING_KEYS, "Show the Visibility&Grouping dialog." );
+//			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
+//			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
+//			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
+//			descriptions.add( EXPAND_CARDS, EXPAND_CARDS_KEYS, "Expand and focus the BigDataViewer card panel" );
+//			descriptions.add( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS, "Collapse the BigDataViewer card panel" );
+//			descriptions.add( SET_BOOKMARK, SET_BOOKMARK_KEYS, "Set a labeled bookmark at the current location." );
+//			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
+//			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
+//			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
+//		}
+//	}
+	
 	/*
 	 * Command descriptions for all provided commands
 	 */
@@ -229,7 +260,7 @@ public class BigWarpActions extends Actions
 	{
 		public Descriptions()
 		{
-			super( BIGWARP, "bw" );
+			super( BIGWARP, "bigwarp" );
 		}
 
 		@Override
@@ -251,6 +282,35 @@ public class BigWarpActions extends Actions
 			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
 		}
 	}
+	
+//	@Plugin( type = CommandDescriptionProvider.class )
+//	public static class TableDescriptions extends CommandDescriptionProvider
+//	{
+//		public TableDescriptions()
+//		{
+//			super( BIGWARP, "bw-table" );
+////			super( BDV, "bdv" );
+//		}
+//
+//		@Override
+//		public void getCommandDescriptions( final CommandDescriptions descriptions )
+//		{
+//			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
+//
+//			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
+//			descriptions.add( VISIBILITY_AND_GROUPING_MVG, VISIBILITY_AND_GROUPING_MVG_KEYS, "Show the Visibility&Grouping dialog for the moving frame." );
+//			descriptions.add( VISIBILITY_AND_GROUPING_TGT, VISIBILITY_AND_GROUPING_TGT_KEYS, "Show the Visibility&Grouping dialog for the fixed frame." );
+//			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
+//			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
+//			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
+//
+//			descriptions.add( SET_BOOKMARK, SET_BOOKMARK_KEYS, "Set a labeled bookmark at the current location." );
+//			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
+//			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
+//
+//			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
+//		}
+//	}
 
 	public static void installViewerActions(
 			Actions actions,
@@ -343,7 +403,7 @@ public class BigWarpActions extends Actions
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 
-		inputActionBindings.addActionMap( "bwv", createActionMapViewer( bw ) );
+		inputActionBindings.addActionMap( "bwV", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bwv", createInputMapViewer( keyProperties ) );
 	}
 	

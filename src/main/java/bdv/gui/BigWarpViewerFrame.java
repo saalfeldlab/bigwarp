@@ -45,13 +45,13 @@ import bdv.cache.CacheControl;
 import bdv.ui.BdvDefaultCards;
 import bdv.ui.CardPanel;
 import bdv.ui.appearance.AppearanceManager;
-import bdv.ui.keymap.KeymapManager;
 import bdv.ui.splitpanel.SplitPanel;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;
+import bigwarp.ui.keymap.KeymapManager;
 
 public class BigWarpViewerFrame extends JFrame
 {
