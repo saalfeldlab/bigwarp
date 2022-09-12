@@ -31,9 +31,7 @@ import javax.swing.JTable;
 import javax.swing.KeyStroke;
 import javax.swing.table.TableCellEditor;
 
-import org.scijava.Context;
 import org.scijava.plugin.Plugin;
-import org.scijava.plugin.PluginService;
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
@@ -47,21 +45,18 @@ import bdv.KeyConfigContexts;
 import bdv.KeyConfigScopes;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
-import net.imglib2.img.imageplus.ByteImagePlus;
-import net.imglib2.img.imageplus.ImagePlusImgs;
-import net.imglib2.img.planar.PlanarCursor;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 public class BigWarpActions extends Actions
 {
+	public static final CommandDescriptionProvider.Scope BIGWARP = new CommandDescriptionProvider.Scope( "bigwarp" );
+
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 
@@ -234,12 +229,14 @@ public class BigWarpActions extends Actions
 	{
 		public Descriptions()
 		{
-			super( KeyConfigScopes.BIGDATAVIEWER, KeyConfigContexts.BIGDATAVIEWER );
+			super( BIGWARP, "bw" );
 		}
 
 		@Override
 		public void getCommandDescriptions( final CommandDescriptions descriptions )
 		{
+			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
+
 			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
 			descriptions.add( VISIBILITY_AND_GROUPING_MVG, VISIBILITY_AND_GROUPING_MVG_KEYS, "Show the Visibility&Grouping dialog for the moving frame." );
 			descriptions.add( VISIBILITY_AND_GROUPING_TGT, VISIBILITY_AND_GROUPING_TGT_KEYS, "Show the Visibility&Grouping dialog for the fixed frame." );
@@ -1355,14 +1352,14 @@ public class BigWarpActions extends Actions
 		}
 	}
 	
-	public synchronized void discoverCommandDescriptions()
-	{
-		final CommandDescriptionsBuilder builder = new CommandDescriptionsBuilder();
-		final Context context = new Context( PluginService.class );
-		context.inject( builder );
-		builder.discoverProviders( KeyConfigScopes.BIGDATAVIEWER );
-		builder.discoverProviders( "bw" );
-		context.dispose();
-		setCommandDescriptions( builder.build() );
-	}
+//	public synchronized void discoverCommandDescriptions()
+//	{
+//		final CommandDescriptionsBuilder builder = new CommandDescriptionsBuilder();
+//		final Context context = new Context( PluginService.class );
+//		context.inject( builder );
+//		builder.discoverProviders( KeyConfigScopes.BIGDATAVIEWER );
+//		builder.discoverProviders( "bw" );
+//		context.dispose();
+//		setCommandDescriptions( builder.build() );
+//	}
 }

@@ -139,6 +139,7 @@ import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
+import bigwarp.BigWarpActions.Descriptions;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
@@ -551,8 +552,10 @@ public class BigWarp< T >
 
 
 //		System.out.println( "install actions" );
-		
-		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bw" } );
+
+		Descriptions desc = new BigWarpActions.Descriptions();
+		desc.getCommandDescriptions( keymapManager.getCommandDescriptions() );
+		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bigwarp", "bw" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
 		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, this.keymapManager.getCommandDescriptions() ) );
 
