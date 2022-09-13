@@ -267,11 +267,15 @@ public class BigWarpActions extends Actions
 		public void getCommandDescriptions( final CommandDescriptions descriptions )
 		{
 			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
+			descriptions.add( TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS, "Toggle landmark mode." );
 
-			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
+			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
+			descriptions.add( SHOW_WARPTYPE_DIALOG, SHOW_WARPTYPE_DIALOG_KEYS, "Show the BigWarp options dialog." );
+			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the appearance and keymap dialog." );
+
+			descriptions.add( BRIGHTNESS_SETTINGS, BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness & Colors dialog." );
 			descriptions.add( VISIBILITY_AND_GROUPING_MVG, VISIBILITY_AND_GROUPING_MVG_KEYS, "Show the Visibility&Grouping dialog for the moving frame." );
 			descriptions.add( VISIBILITY_AND_GROUPING_TGT, VISIBILITY_AND_GROUPING_TGT_KEYS, "Show the Visibility&Grouping dialog for the fixed frame." );
-			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
 			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
 			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
 
@@ -279,7 +283,32 @@ public class BigWarpActions extends Actions
 			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
 			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
 
-			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
+			descriptions.add( RESET_VIEWER, RESET_VIEWER_KEYS, "Resets the view to the view on startup." );
+			descriptions.add( ALIGN_OTHER_TO_ACTIVE, ALIGN_OTHER_TO_ACTIVE_KEYS, "Sets the view of the non-active viewer to match the active viewer." );
+			descriptions.add( ALIGN_ACTIVE_TO_OTHER, ALIGN_ACTIVE_TO_OTHER_KEYS, "Sets the view of the active viewer to match the non-active viewer." );
+			descriptions.add( WARP_TO_SELECTED_POINT, WARP_TO_SELECTED_POINT_KEYS, "Center the viewer on the selected landmark." );
+			descriptions.add( WARP_TO_NEAREST_POINT, WARP_TO_NEAREST_POINT_KEYS, "Center the viewer on the nearest landmark." );
+			descriptions.add( WARP_TO_NEXT_POINT, WARP_TO_NEXT_POINT_KEYS, "Center the viewer on the next landmark." );
+			descriptions.add( WARP_TO_PREV_POINT, WARP_TO_PREV_POINT_KEYS, "Center the viewer on the previous landmark." );
+
+			// cards
+			descriptions.add( EXPAND_CARDS, EXPAND_CARDS_KEYS, "Expand and focus the BigDataViewer card panel" );
+			descriptions.add( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS, "Collapse the BigDataViewer card panel" );
+
+			// export
+			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
+			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
+
+			// landmarks
+			descriptions.add( LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS, "Load landmark from a file." );
+			descriptions.add( SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS, "Save landmark from a file." );
+			descriptions.add( QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS, "Quick save landmarks.");
+			descriptions.add( UNDO, UNDO_KEYS, "Undo the last landmark change." );
+			descriptions.add( REDO, REDO_KEYS, "Redo the last landmark change." );
+
+			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmarks." );
+			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS , "Toggle visibility of landmark names." );
+
 		}
 	}
 	
