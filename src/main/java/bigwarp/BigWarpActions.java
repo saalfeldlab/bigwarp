@@ -35,14 +35,10 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.behaviour.KeyStrokeAdder;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
-import org.scijava.ui.behaviour.io.gui.CommandDescriptionsBuilder;
 import org.scijava.ui.behaviour.util.AbstractNamedAction;
 import org.scijava.ui.behaviour.util.Actions;
 import org.scijava.ui.behaviour.util.InputActionBindings;
 
-import bdv.BigDataViewerActions;
-import bdv.KeyConfigContexts;
-import bdv.KeyConfigScopes;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.viewer.SourceAndConverter;
@@ -51,7 +47,6 @@ import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
-import net.imglib2.cache.img.DiskCachedCellImg;
 import net.imglib2.realtransform.AffineTransform3D;
 
 public class BigWarpActions extends Actions
@@ -96,8 +91,6 @@ public class BigWarpActions extends Actions
 
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	public static final String[] TOGGLE_ESTIMATE_WARP_ONDRAG_KEYS = new String[]{};
-
-//	public static final String CROP = "crop";
 
 	public static final String SAVE_SETTINGS = "save settings";
 	public static final String[] SAVE_SETTINGS_KEYS = new String[]{};
@@ -145,17 +138,16 @@ public class BigWarpActions extends Actions
 	public static final String ALIGN_ACTIVE_TO_OTHER = String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER );
 	public static final String[] ALIGN_ACTIVE_TO_OTHER_KEYS = new String[] { "W" };
 
-
-	public static final String WARP_TO_SELECTED_POINT = "warp to selected landmark";
+	public static final String WARP_TO_SELECTED_POINT = "center on selected landmark";
 	public static final String[] WARP_TO_SELECTED_POINT_KEYS = new String[]{ "D" };
 
-	public static final String WARP_TO_NEXT_POINT = "warp to next landmark";
+	public static final String WARP_TO_NEXT_POINT = "center on next landmark";
 	public static final String[] WARP_TO_NEXT_POINT_KEYS = new String[]{ "ctrl D"};
 
-	public static final String WARP_TO_PREV_POINT = "warp to prev landmark";
+	public static final String WARP_TO_PREV_POINT = "center on prev landmark";
 	public static final String[] WARP_TO_PREV_POINT_KEYS = new String[]{ "ctrl shift D"};
 
-	public static final String WARP_TO_NEAREST_POINT = "warp to nearest landmark";
+	public static final String WARP_TO_NEAREST_POINT = "center on nearest landmark";
 	public static final String[] WARP_TO_NEAREST_POINT_KEYS = new String[]{ "E" };
 
 	// landmark options
@@ -189,19 +181,38 @@ public class BigWarpActions extends Actions
 	public static final String[] LANDMARK_SELECT_ALL_KEYS = new String[]{ "ctrl A"};
 
 	public static final String LANDMARK_DESELECT_ALL = "deselect all landmarks";
-	public static final String[] LANDMARK_DESELECT_ALL_KEYS = new String[]{ "ESCAPE" };
+	public static final String[] LANDMARK_DESELECT_ALL_KEYS = new String[]{ "ESCAPE", "ctrl shift A" };
+
+	public static final String LANDMARK_SELECT_ABOVE = "select landmark above";
+	public static final String[] LANDMARK_SELECT_ABOVE_KEYS = new String[]{ "ctrl UP"};
+
+	public static final String LANDMARK_SELECT_ALL_ABOVE = "select all landmarks above";
+	public static final String[] LANDMARK_SELECT_ALL_ABOVE_KEYS = new String[]{ "ctrl shift UP"};
+
+	public static final String LANDMARK_SELECT_BELOW = "select landmark below";
+	public static final String[] LANDMARK_SELECT_BELOW_KEYS = new String[]{ "ctrl DOWN"};
+
+	public static final String LANDMARK_SELECT_ALL_BELOW = "select all landmarks below";
+	public static final String[] LANDMARK_SELECT_ALL_BELOW_KEYS = new String[]{ "ctrl shift DOWN"};
 
 	public static final String LANDMARK_DELETE_SELECTED = "delete selected landmarks";
-	public static final String[] LANDMARK_DELETE_SELECTED_KEYS = new String[]{ "DELETE"};
+	public static final String[] LANDMARK_DELETE_SELECTED_KEYS = new String[]{ "DELETE" };
+
+	public static final String LANDMARK_DEACTIVATE_SELECTED = "deactivate selected landmarks";
+	public static final String[] LANDMARK_DEACTIVATE_SELECTED_KEYS = new String[]{ "BACK_SPACE" };
+
+	public static final String LANDMARK_ACTIVATE_SELECTED = "activate selected landmarks";
+	public static final String[] LANDMARK_ACTIVATE_SELECTED_KEYS = new String[]{ "ctrl BACK_SPACE" };
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
-
 
 	// export options
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
+	public static final String[] SAVE_WARPED_XML_KEYS = new String[] { "ctrl E" };
 
 	public static final String EXPORT_IP = "export imageplus";
+	public static final String[] EXPORT_IP_KEYS = new String[] { "ctrl shift W" };
 
 	public static final String EXPORT_WARP = "export warp field";
 	public static final String[] EXPORT_WARP_KEYS = new String[] { "ctrl W" };
@@ -222,36 +233,7 @@ public class BigWarpActions extends Actions
 	{
 		super( keyConfig, context, name );
 	}
-	
-//	/*
-//	 * Command descriptions for all provided commands
-//	 */
-//	@Plugin( type = CommandDescriptionProvider.class )
-//	public static class BdvDescriptions extends CommandDescriptionProvider 
-//	{
-//		public BdvDescriptions()
-//		{
-//			super( BIGWARP, "bigwarp" );
-//			bdv.BigDataViewerActions.Descriptions bdvDesc = new BigDataViewerActions.Descriptions();
-//		}
-//
-//		@Override
-//		public void getCommandDescriptions( final CommandDescriptions descriptions )
-//		{
-//			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
-//			descriptions.add( VISIBILITY_AND_GROUPING, VISIBILITY_AND_GROUPING_KEYS, "Show the Visibility&Grouping dialog." );
-//			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
-//			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
-//			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
-//			descriptions.add( EXPAND_CARDS, EXPAND_CARDS_KEYS, "Expand and focus the BigDataViewer card panel" );
-//			descriptions.add( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS, "Collapse the BigDataViewer card panel" );
-//			descriptions.add( SET_BOOKMARK, SET_BOOKMARK_KEYS, "Set a labeled bookmark at the current location." );
-//			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
-//			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
-//			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
-//		}
-//	}
-	
+
 	/*
 	 * Command descriptions for all provided commands
 	 */
@@ -296,6 +278,8 @@ public class BigWarpActions extends Actions
 			descriptions.add( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS, "Collapse the BigDataViewer card panel" );
 
 			// export
+			descriptions.add( EXPORT_IP, EXPORT_IP_KEYS, "Export moving image to ImageJ." );
+			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
 			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
 
@@ -312,34 +296,37 @@ public class BigWarpActions extends Actions
 		}
 	}
 	
-//	@Plugin( type = CommandDescriptionProvider.class )
-//	public static class TableDescriptions extends CommandDescriptionProvider
-//	{
-//		public TableDescriptions()
-//		{
-//			super( BIGWARP, "bw-table" );
-////			super( BDV, "bdv" );
-//		}
-//
-//		@Override
-//		public void getCommandDescriptions( final CommandDescriptions descriptions )
-//		{
-//			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
-//
-//			descriptions.add( BRIGHTNESS_SETTINGS,BRIGHTNESS_SETTINGS_KEYS, "Show the Brightness&Colors dialog." );
-//			descriptions.add( VISIBILITY_AND_GROUPING_MVG, VISIBILITY_AND_GROUPING_MVG_KEYS, "Show the Visibility&Grouping dialog for the moving frame." );
-//			descriptions.add( VISIBILITY_AND_GROUPING_TGT, VISIBILITY_AND_GROUPING_TGT_KEYS, "Show the Visibility&Grouping dialog for the fixed frame." );
-//			descriptions.add( SHOW_HELP, SHOW_HELP_KEYS, "Show the Help dialog." );
-//			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
-//			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
-//
-//			descriptions.add( SET_BOOKMARK, SET_BOOKMARK_KEYS, "Set a labeled bookmark at the current location." );
-//			descriptions.add( GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS, "Retrieve a labeled bookmark location." );
-//			descriptions.add( GO_TO_BOOKMARK_ROTATION, GO_TO_BOOKMARK_ROTATION_KEYS, "Retrieve a labeled bookmark, set only the orientation." );
-//
-//			descriptions.add( PREFERENCES_DIALOG, PREFERENCES_DIALOG_KEYS, "Show the Preferences dialog." );
-//		}
-//	}
+	@Plugin( type = CommandDescriptionProvider.class )
+	public static class TableDescriptions extends CommandDescriptionProvider
+	{
+		public TableDescriptions()
+		{
+			super( BIGWARP, "bw-table" );
+		}
+
+		@Override
+		public void getCommandDescriptions( final CommandDescriptions descriptions )
+		{
+			descriptions.add( LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS, "Load landmark from a file." );
+			descriptions.add( SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS, "Save landmark from a file." );
+			descriptions.add( QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS, "Quick save landmarks.");
+
+			descriptions.add( LANDMARK_SELECT_ALL, LANDMARK_SELECT_ALL_KEYS, "Select all landmarks." );
+			descriptions.add( LANDMARK_DESELECT_ALL, LANDMARK_DESELECT_ALL_KEYS, "Deselect all landmarks." );
+
+			descriptions.add( LANDMARK_DELETE_SELECTED, LANDMARK_DELETE_SELECTED_KEYS, "Delete selected landmarks." );
+			descriptions.add( LANDMARK_ACTIVATE_SELECTED, LANDMARK_ACTIVATE_SELECTED_KEYS, "Activate selected landmarks." ); 
+			descriptions.add( LANDMARK_DEACTIVATE_SELECTED, LANDMARK_DEACTIVATE_SELECTED_KEYS, "Deactivate selected landmarks." ); 
+
+			descriptions.add( LANDMARK_SELECT_ABOVE, LANDMARK_SELECT_ABOVE_KEYS, "Add the row above the curent selection to the selection" );
+			descriptions.add( LANDMARK_SELECT_ALL_ABOVE, LANDMARK_SELECT_ALL_ABOVE_KEYS, "Add the all rows above the curent selection to the selection" );
+			descriptions.add( LANDMARK_SELECT_BELOW, LANDMARK_SELECT_BELOW_KEYS, "Add the row below the curent selection to the selection" );
+			descriptions.add( LANDMARK_SELECT_ALL_BELOW, LANDMARK_SELECT_ALL_BELOW_KEYS, "Add the all rows below the curent selection to the selection" );
+
+			descriptions.add( UNDO, UNDO_KEYS, "Undo the last landmark change." );
+			descriptions.add( REDO, REDO_KEYS, "Redo the last landmark change." );
+		}
+	}
 
 	public static void installViewerActions(
 			Actions actions,
@@ -399,7 +386,7 @@ public class BigWarpActions extends Actions
 			final InputActionBindings inputActionBindings,
 			final BigWarp< ? > bw )
 	{
-		actions.install( inputActionBindings, "bw" );
+		actions.install( inputActionBindings, "bw-table" );
 
 		// landmarks 
 		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
@@ -411,6 +398,16 @@ public class BigWarpActions extends Actions
 
 		actions.namedAction( bw.landmarkPopupMenu.deleteSelectedHandler, LANDMARK_DELETE_SELECTED_KEYS );
 
+		actions.namedAction( bw.landmarkPopupMenu.activateSelectedHandler, LANDMARK_ACTIVATE_SELECTED_KEYS );
+		actions.namedAction( bw.landmarkPopupMenu.deactivateSelectedHandler, LANDMARK_DEACTIVATE_SELECTED_KEYS );
+
+		actions.namedAction( bw.landmarkPopupMenu.addAboveHandler, LANDMARK_SELECT_ABOVE_KEYS );
+		actions.namedAction( bw.landmarkPopupMenu.addAllAboveHandler, LANDMARK_SELECT_ALL_ABOVE_KEYS );
+		actions.namedAction( bw.landmarkPopupMenu.addBelowHandler, LANDMARK_SELECT_BELOW_KEYS );
+		actions.namedAction( bw.landmarkPopupMenu.addAllBelowHandler, LANDMARK_SELECT_ALL_BELOW_KEYS );
+
+		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
+		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
 	}
 
 	/**

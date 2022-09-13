@@ -26,6 +26,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.Arrays;
 
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
@@ -34,6 +35,7 @@ import org.scijava.ui.behaviour.util.AbstractNamedAction;
 
 import bdv.gui.BigWarpLandmarkPanel;
 import bigwarp.BigWarp;
+import bigwarp.BigWarpActions;
 import bigwarp.landmarks.LandmarkTableModel;
 
 public class LandmarkPointMenu extends JPopupMenu 
@@ -50,38 +52,37 @@ public class LandmarkPointMenu extends JPopupMenu
 	public static final String DELETE = "table delete";
 	public static final String DELETE_SELECTED = "table delete selected ";
 
-	public static final String ACTIVATE = "table activate";
-	public static final String ACTIVATE_SELECTED = "table activate selected ";
+	public static final String ACTIVATE_SELECTED = "table activate selected";
+	public static final String DEACTIVATE_SELECTED = "table deactivate selected ";
 
 	private static final long serialVersionUID = -3676180390835767585L;
 	
 	protected BigWarpLandmarkPanel landmarkPanel;
-	protected BigWarp bw;
-	
-//	public ClearHandler clearMoving;
-//	public ClearHandler clearFixed;
+	protected BigWarp< ? > bw;
+
 	public ClearSelectedHandler clearSelectedMoving;
 	public ClearSelectedHandler clearSelectedFixed;
 
-//	public DeleteHandler deleteHandler;
 	public DeleteSelectedHandler deleteSelectedHandler;
-	public ActivateSelectedHandler activateAllHandler;
-	public DeactivateSelectedHandler deactivateAllHandler;
-	
+	public ActivateSelectedHandler activateSelectedHandler;
+	public DeactivateSelectedHandler deactivateSelectedHandler;
+
+	public AddToSelection addAboveHandler;
+	public AddToSelection addAllAboveHandler;
+	public AddToSelection addBelowHandler;
+	public AddToSelection addAllBelowHandler;
+
 	protected MouseListener popupListener;
-//	protected JMenuItem deleteSingleItem;
 	protected JMenuItem deleteAllItem;
 	protected JMenuItem activateAllItem;
 	protected JMenuItem deactivateAllItem;
 
-//	protected JMenuItem clearMovingItem;
-//	protected JMenuItem clearFixedItem;
 	protected JMenuItem clearSelectedMovingItem;
 	protected JMenuItem clearSelectedFixedItem;
 
 	private Point clickPt;
 	
-	public LandmarkPointMenu( BigWarp bw )
+	public LandmarkPointMenu( BigWarp< ? > bw )
 	{
 		this( bw.getLandmarkPanel() );
 		this.bw = bw;
@@ -91,29 +92,22 @@ public class LandmarkPointMenu extends JPopupMenu
 	{
 		this.landmarkPanel = landmarkPanel;
 
-//		deleteHandler = new DeleteHandler( DELETE );
 		deleteSelectedHandler = new DeleteSelectedHandler( DELETE_SELECTED );
-		activateAllHandler = new ActivateSelectedHandler( ACTIVATE );
-		deactivateAllHandler = new DeactivateSelectedHandler( ACTIVATE_SELECTED );
+		activateSelectedHandler = new ActivateSelectedHandler( ACTIVATE_SELECTED );
+		deactivateSelectedHandler = new DeactivateSelectedHandler( DEACTIVATE_SELECTED );
 
-//		clearMoving = new ClearHandler( CLEAR_MOVING, MOVING );
-//		clearFixed = new ClearHandler( CLEAR_FIXED, FIXED );
 		clearSelectedMoving = new ClearSelectedHandler( CLEAR_SELECTED_MOVING, MOVING );
 		clearSelectedFixed = new ClearSelectedHandler( CLEAR_SELECTED_FIXED, FIXED );
 
-		popupListener = new PopupListener();
+		addAboveHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_ABOVE, true, false );
+		addAllAboveHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_ALL_ABOVE, true, true );
+		addBelowHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_BELOW, false, false );
+		addAllBelowHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_ALL_BELOW, false, true );
 
-//		deleteSingleItem = new JMenuItem( "Delete" );
-//		deleteSingleItem.addActionListener( deleteHandler );
+		popupListener = new PopupListener();
 
 		deleteAllItem = new JMenuItem( "Delete" );
 		deleteAllItem.addActionListener( deleteSelectedHandler );
-
-//		clearMovingItem = new JMenuItem( "Clear moving point" );
-//		clearMovingItem.addActionListener( clearMoving );
-//
-//		clearFixedItem = new JMenuItem( "Clear fixed point" );
-//		clearFixedItem.addActionListener( clearFixed );
 
 		clearSelectedMovingItem = new JMenuItem( "Clear moving" );
 		clearSelectedMovingItem.addActionListener( clearSelectedMoving );
@@ -122,17 +116,14 @@ public class LandmarkPointMenu extends JPopupMenu
 		clearSelectedFixedItem.addActionListener( clearSelectedFixed );
 
 		activateAllItem = new JMenuItem( "Activate" );
-		activateAllItem.addActionListener( activateAllHandler );
+		activateAllItem.addActionListener( activateSelectedHandler );
 
 		deactivateAllItem = new JMenuItem( "Deactivate" );
-		deactivateAllItem.addActionListener( deactivateAllHandler );
+		deactivateAllItem.addActionListener( deactivateSelectedHandler );
 
-//		this.add( deleteSingleItem );
 		this.add( deleteAllItem );
 
 		this.addSeparator();
-//		this.add( clearMovingItem );
-//		this.add( clearFixedItem );
 		this.add( clearSelectedMovingItem );
 		this.add( clearSelectedFixedItem );
 
@@ -304,7 +295,8 @@ public class LandmarkPointMenu extends JPopupMenu
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
-			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			final int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			Arrays.sort( selectedRows );
 
 			// do in reverse order so that the index
 			for( int i = selectedRows.length - 1; i >= 0; i-- )
@@ -332,7 +324,8 @@ public class LandmarkPointMenu extends JPopupMenu
 		@Override
 		public void actionPerformed(ActionEvent e) 
 		{
-			int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			final int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			Arrays.sort( selectedRows );
 
 			// do in reverse order so that the index
 			for( int i = selectedRows.length - 1; i >= 0; i-- )
@@ -347,4 +340,46 @@ public class LandmarkPointMenu extends JPopupMenu
 			landmarkPanel.repaint();
 		}
 	}
+
+	public class AddToSelection extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -904756750247052099L;
+
+		private final boolean before;
+		private final boolean all;
+
+		public AddToSelection( final String name, final boolean before, final boolean all )
+		{
+			super( name );
+			this.before = before;
+			this.all = all;
+		}
+
+		@Override
+		public void actionPerformed( ActionEvent e )
+		{
+			System.out.println( "add to selection " + before + " " + all );
+			final int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			Arrays.sort( selectedRows );
+
+			int i;
+			int j;
+			if ( before )
+			{
+				j = selectedRows[ 0 ];
+				i = all ? 0 : j - 1;
+			} else
+			{
+				i = selectedRows[ selectedRows.length - 1 ];
+				j = all ? landmarkPanel.getJTable().getRowCount() - 1 : i + 1;
+			}
+			landmarkPanel.getJTable().getSelectionModel().addSelectionInterval( i, j );
+
+			if ( bw != null )
+				bw.restimateTransformation();
+
+			landmarkPanel.repaint();
+		}
+	}
+
 }

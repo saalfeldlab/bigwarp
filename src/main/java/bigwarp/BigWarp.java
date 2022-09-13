@@ -148,6 +148,7 @@ import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.ui.keymap.KeymapManager;
+import bigwarp.ui.keymap.NavigationKeys;
 import bigwarp.util.BigWarpUtils;
 import dev.dirs.ProjectDirectories;
 import fiji.util.gui.GenericDialogPlus;
@@ -561,15 +562,7 @@ public class BigWarp< T >
 		desc.getCommandDescriptions( bwDesc );
 
 		desc.getCommandDescriptions( keymapManager.getCommandDescriptions() );
-
-		System.out.println( "####");
-		printDescs(  keymapManager.getCommandDescriptions() );
-		System.out.println( "####");
-		System.out.println( "####");
-		printDescs( bwDesc );
-		System.out.println( "####");
-
-		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bigwarp", "bw" } );
+		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bigwarp", "bw", "navigation", "bw-table" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
 		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, new KeymapManager(), this.keymapManager.getCommandDescriptions() ) );
 
@@ -578,12 +571,12 @@ public class BigWarp< T >
 //		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
 
-		final Actions navigationActions = new Actions( inputTriggerConfig, "bdv", "navigation" );
+		final Actions navigationActions = new Actions( inputTriggerConfig, "bigwarp", "navigation" );
 		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );
-		NavigationActions.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
+		NavigationKeys.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
 
-		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
-		NavigationActions.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
+		navigationActions.install( getViewerFrameQ().getKeybindings(), "bigwarp" );
+		NavigationKeys.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
 		BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-general" );
 		BigWarpActions.installViewerActions( bwActions, getViewerFrameP(), this );
@@ -602,7 +595,6 @@ public class BigWarp< T >
 
 //		bwActions.installViewerActions( getViewerFrameQ().getKeybindings(), this );
 //		BigWarpActions.install( bwActions, )
-
 
 //		BigWarpActions.installViewerActions( getViewerFrameP().getKeybindings(), this, inputTriggerConfig );
 //		BigWarpActions.installViewerActions( getViewerFrameQ().getKeybindings(), this, inputTriggerConfig );
