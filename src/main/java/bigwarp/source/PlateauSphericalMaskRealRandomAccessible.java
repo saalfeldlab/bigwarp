@@ -129,8 +129,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public void setSigma( double sigma )
 	{
-		this.sigma = sigma;
-		sqrSigma = sigma * sigma;
+		this.sigma = sigma < 0 ? -sigma : sigma;
+		sqrSigma = this.sigma * this.sigma;
 
 		if( sqrSigma <= 0  )
 			sqrSigma = EPS;
@@ -139,7 +139,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		updateGaussSigma();
 
 		if ( overlays != null )
-			overlays.stream().forEach( o -> o.setOuterRadiusDelta( sigma ));
+			overlays.stream().forEach( o -> o.setOuterRadiusDelta( this.sigma ));
 	}
 
 	public void setSquaredSigma( double squaredSigma )

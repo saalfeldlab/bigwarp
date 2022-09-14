@@ -23,8 +23,11 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	protected List<BigWarpMaskSphereOverlay> overlays;
 
 	private boolean active;
+	private boolean dragged = false;
+
 	private RealPoint p;
-//	private RealPoint pressPt;
+	private RealPoint c;
+	private RealPoint pressPt;
 
 	private BigWarp<?> bw;
 
@@ -45,7 +48,8 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		overlays.add( bw.getViewerFrameQ().getViewerPanel().getMaskOverlay() );
 
 		p = new RealPoint( nd );
-//		pressPt = new RealPoint( nd );
+		c = new RealPoint( nd );
+		pressPt = new RealPoint( nd );
 		active = false;
 	}
 
@@ -90,19 +94,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !active )
 			return;
 
-//		viewer.getGlobalMouseCoordinates( pressPt );
-		viewer.getGlobalMouseCoordinates( p );
-		if( e.isControlDown() || e.isShiftDown() )
-			return;
-
-		synchronized ( mask )
-		{
-//			mask.setCenter( pressPt );
-			mask.setCenter( p );
-		}
-		bw.setAutoEstimateMask( false );
-		bw.getViewerFrameP().getViewerPanel().requestRepaint();
-		bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+		dragged = false;
 	}
 
 	@Override
@@ -114,30 +106,44 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !active )
 			return;
 
+		// store starting center at start of drag
+		if( !dragged )
+		{
+			c.setPosition( mask.getCenter() );
+			viewer.getGlobalMouseCoordinates( pressPt );
+			dragged = true;
+		}
+
 		viewer.getGlobalMouseCoordinates( p );
 		bw.setAutoEstimateMask( false );
 		
 		if( e.isControlDown() )
 		{
+			final double d = PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() );
 			synchronized ( mask )
 			{
-//				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, pressPt ) );
-				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
+				mask.setSquaredRadius( d );
 			}
 		}
 		else if( e.isShiftDown() )
 		{
+			final double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ));
 			synchronized ( mask )
 			{
-				double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ));
 				mask.setSigma( d - Math.sqrt( mask.getSquaredRadius()) );
 			}
 		}
 		else
 		{
+			// p - pressPt inside the setPosition is the delta
+			// c is the original center (before dragging started)
+			// the code below sets the mask center to (c + delta)
+			for( int i = 0; i < p.numDimensions(); i++ )
+				p.setPosition( c.getDoublePosition(i) + p.getDoublePosition(i) - pressPt.getDoublePosition(i), i);
+
 			synchronized ( mask )
 			{
-				mask.setSquaredRadius( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ) );
+				mask.setCenter(p);
 			}
 		}
 
@@ -146,7 +152,29 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	}
 
 	@Override
-	public void mouseReleased( MouseEvent e ) { }
+	public void mouseReleased( MouseEvent e ) {
+
+		if( !active )
+			return;
+
+		if( e.isControlDown() || e.isShiftDown() )
+			return;
+
+		if( !dragged )
+		{
+			viewer.getGlobalMouseCoordinates( pressPt );
+			synchronized ( mask )
+			{
+				mask.setCenter( pressPt );
+			}
+
+			bw.setAutoEstimateMask( false );
+			bw.getViewerFrameP().getViewerPanel().requestRepaint();
+			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+		}
+		else
+			dragged = false;
+	}
 
 	@Override
 	public void mouseWheelMoved( MouseWheelEvent e )
