@@ -341,7 +341,25 @@ public class BigWarpTransform
 		if( tps == null )
 			return null;
 		else
-			return tps.getKernelTransform();
+		{
+			// TODO add get method in ThinplateSplineTransform to avoid reflection here
+			// this will be possible with imglib2-realtransform-4.0.0
+			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
+			try
+			{
+				final Field tpsField = c_tps.getDeclaredField( "tps" );
+				tpsField.setAccessible( true );
+				ThinPlateR2LogRSplineKernelTransform tpsbase = (ThinPlateR2LogRSplineKernelTransform)tpsField.get(  tps );
+				tpsField.setAccessible( false );
+
+				return tpsbase;
+			}
+			catch(Exception e )
+			{
+				e.printStackTrace();
+				return null;
+			}
+		}
 	}
 
 	public ThinplateSplineTransform getTps()

@@ -119,6 +119,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 
 		final DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( false, false );
+		if( params == null )
+			return;
+
 		final RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
@@ -514,11 +517,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		assert deformationField.numDimensions() == ( transform.numSourceDimensions() + 1 );
 		assert deformationField.dimension( deformationField.numDimensions() - 1 ) >= transform.numSourceDimensions();
 
-		System.out.println( "NTHREADS: " + nThreads );
-		System.out.println( "dfield size: " + Util.printInterval( deformationField ));
-		
 		final int ndims = transform.numSourceDimensions();
-
 		final long[] splitPoints = new long[ nThreads + 1 ];
 		long N;
 		final int dim2split;
