@@ -343,6 +343,7 @@ public class BigWarpTransform
 		else
 		{
 			// TODO add get method in ThinplateSplineTransform to avoid reflection here
+			// this will be possible with imglib2-realtransform-4.0.0
 			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
 			try
 			{
