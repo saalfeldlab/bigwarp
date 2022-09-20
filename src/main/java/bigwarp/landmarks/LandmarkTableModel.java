@@ -212,11 +212,13 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return PENDING_PT;
 	}
 	
+	@Deprecated
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
 	{
 		return estimatedXfm;
 	}
 	
+	@Deprecated
 	public void printDistances()
 	{
 		for( int i = 0; i < numRows; i++ )
@@ -247,6 +249,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return str;
 	}
 
+	@Deprecated
 	public boolean validateTransformPoints()
 	{
 		for( int i = 0; i < numRows; i++ )
@@ -1231,13 +1234,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	public int numActive()
 	{
 		return numActive;
-//		int numActive = 0;
-//		for ( int i = 0; i < this.numRows; i++ )
-//		{
-//			if ( activeList.get( i ) )
-//				numActive++;
-//		}
-//		return numActive;
 	}
 
 	/**
