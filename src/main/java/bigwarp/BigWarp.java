@@ -546,12 +546,12 @@ public class BigWarp< T >
 		inLandmarkMode = false;
 		setupKeyListener();
 
+		// save the initial viewer transforms
 		initialViewP = new AffineTransform3D();
 		initialViewQ = new AffineTransform3D();
 		viewerP.state().getViewerTransform( initialViewP );
 		viewerQ.state().getViewerTransform( initialViewQ );
 
-		// set colors and min/max ranges
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
 
@@ -1777,8 +1777,6 @@ public class BigWarp< T >
 	private static < T > SourceAndConverter< FloatType > addJacobianDeterminantSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
-		// or should we just stick with Doubles?
-
 		final JacobianDeterminantSource< FloatType > jdSource = new JacobianDeterminantSource<>( name, data, new FloatType() );
 		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
@@ -1789,11 +1787,9 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource(  final BigWarpData< T > data, final String name )
+	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource(  final BigWarpData< T > data, final boolean is2D, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
-		// or should we just stick with Doubles?
-
 		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource<>( name, data, new FloatType() );
 		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
@@ -1807,8 +1803,6 @@ public class BigWarp< T >
 	private static < T > SourceAndConverter< FloatType > addGridSource( final BigWarpData< T > data, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
-		// or should we just stick with Floats?
-
 		final GridSource< FloatType > gridSource = new GridSource<>( name, data, new FloatType(), null );
 		final RealARGBColorConverter< FloatType > converter = RealARGBColorConverter.create( new FloatType(), 0, 512 );
 		converter.setColor( new ARGBType( 0xffffffff ) );

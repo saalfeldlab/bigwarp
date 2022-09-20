@@ -27,8 +27,6 @@ import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
@@ -152,22 +150,7 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 	{
 		return ( t == 0 );
 	}
-	
-	/*
-	public Interval estimateBoundingInterval( final int t, final int level )
-	{
-		final Interval interval = getSource( t, level );
-		
-		System.out.println( "source Interval:  [ " + interval.min( 0 ) + ", " + interval.max( 0 ) +
-				" ]  x  [ " + interval.min( 1 ) + ", " + interval.max( 1 ) +" ] ");
-		
-		long[] delta = new long[ interval.numDimensions() ];
-		Arrays.fill( delta, 1 );
-		
-		return ((ThinPlateR2LogRSplineKernelTransform)warpMagImg.ra.warp).estimateBoundingBox( interval, delta );
-	}
-	 */
-	
+
 	@Override
 	public RandomAccessibleInterval<T> getSource( int t, int level ) 
 	{

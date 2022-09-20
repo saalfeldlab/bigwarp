@@ -144,22 +144,7 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 	{
 		return ( t == 0 );
 	}
-	
-	/*
-	public Interval estimateBoundingInterval( final int t, final int level )
-	{
-		final Interval interval = getSource( t, level );
-		
-		System.out.println( "source Interval:  [ " + interval.min( 0 ) + ", " + interval.max( 0 ) +
-				" ]  x  [ " + interval.min( 1 ) + ", " + interval.max( 1 ) +" ] ");
-		
-		long[] delta = new long[ interval.numDimensions() ];
-		Arrays.fill( delta, 1 );
-		
-		return ((ThinPlateR2LogRSplineKernelTransform)warpMagImg.ra.warp).estimateBoundingBox( interval, delta );
-	}
-	 */
-	
+
 	@Override
 	public RandomAccessibleInterval<T> getSource( int t, int level ) 
 	{
