@@ -21,14 +21,14 @@
  */
 package bigwarp.source;
 
-import mpicbg.models.AbstractModel;
-import mpicbg.models.CoordinateTransform;
 import net.imglib2.AbstractRealLocalizable;
 import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
+import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.util.Util;
 
 public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
@@ -40,6 +40,9 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 	
 	final double[] warpRes;
 	final double[] baseRes;
+
+	final RealPoint warpResPt;
+	final RealPoint baseResPt;
 
 	protected WarpMagnitudeRandomAccess( double[] dimensions )
 	{
@@ -61,6 +64,9 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 		this.value = value;
 		warpRes = new double[ numDimensions() ]; 
 		baseRes = new double[ numDimensions() ]; 
+
+		warpResPt = RealPoint.wrap( warpRes );
+		baseResPt = RealPoint.wrap( baseRes );
 	}
 
 	@Override
@@ -72,15 +78,12 @@ public class WarpMagnitudeRandomAccess< T extends RealType<T>> extends AbstractR
 			out.setZero();
 			return out;
 		}
-					
-		double[] mypt = new double[ this.numDimensions() ];
-		this.localize( mypt );
 
 		// apply the warp
-		warp.apply( mypt, warpRes );
+		warp.apply( this, warpResPt );
 
 		// apply the baseline transform
-		baseline.apply( mypt, baseRes );
+		baseline.apply( this, baseResPt );
 
 		double dist = 0.0;
 		for( int d = 0; d < warpRes.length; d++ )

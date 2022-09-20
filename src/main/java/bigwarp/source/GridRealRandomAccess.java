@@ -2,7 +2,7 @@
  * #%L
  * BigWarp plugin for Fiji.
  * %%
- * Copyright (C) 2015 - 2022 Howard Hughes Medical Institute.
+ * Copyright (C) 2015 - 2021 Howard Hughes Medical Institute.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -21,15 +21,22 @@
  */
 package bigwarp.source;
 
+import bdv.util.BdvFunctions;
+import bdv.util.BdvStackSource;
 import bigwarp.source.GridSource.GRID_TYPE;
 import net.imglib2.AbstractRealLocalizable;
+import net.imglib2.FinalInterval;
 import net.imglib2.Localizable;
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
+import net.imglib2.realtransform.AffineTransform2D;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.type.numeric.real.DoubleType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
 
@@ -61,22 +68,38 @@ public class GridRealRandomAccess< T extends RealType<T>> extends AbstractRealLo
 	{
 		super( dimensions.length );
 		this.value = value;
-		this.warp = warp;
+		if( warp != null )
+			this.warp = warp.copy();
+
 		this.method = method;
-		is2d = ( dimensions[2] == 0 );
+		is2d = ( dimensions.length == 2 || dimensions[2] == 0 );
 	}
 	
 	
 	public static void main( String[] args )
 	{
-		GridRealRandomAccess<DoubleType> ra = new GridRealRandomAccess<DoubleType>( new double[]{ 100.0, 100.0}, new DoubleType(), null );
-		ra.setMethod( GRID_TYPE.LINE );
+		AffineTransform3D transform = new AffineTransform3D();
+		transform.set(
+				1.1, -0.2, 0.1, 0,
+				0.3, 0.9, -0.1, 0,
+				-0.1, -0.2, 1.2, 0);
 		
-		for( double x = 2.1; x < 5.0; x+= 1.0 ) for( double y = 0.0; y < 5.0; y+= 0.5 )
-		{
-			ra.setPosition( new double[]{x,y});
-			System.out.println("("+x+","+y+") : " + ra.get() );
-		}
+		FinalInterval itvl = Intervals.createMinMax( 0,0,0, 255, 255, 255 );
+		AffineTransform3D srcXfm = new AffineTransform3D();
+		GridSource src = new GridSource( "grid", new UnsignedByteType(), itvl, srcXfm, null );
+		src.setMethod( GridSource.GRID_TYPE.LINE );
+
+		BdvStackSource bdv = BdvFunctions.show( src );
+
+//		GridRealRandomAccess<DoubleType> ra = new GridRealRandomAccess<DoubleType>( new double[]{ 100.0, 100.0 }, new DoubleType(), transform );
+//		ra.setMethod( GRID_TYPE.LINE );
+//		ra.setGridWidth( 4 );
+//
+//		for( double x = 2.1; x < 5.0; x+= 1.0 ) for( double y = 0.0; y < 5.0; y+= 0.5 )
+//		{
+//			ra.setPosition( new double[]{x,y});
+//			System.out.println("("+x+","+y+") : " + ra.get() );
+//		}
 	}
 	
 	public void setGridSpacing( double spacing )

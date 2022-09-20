@@ -2,7 +2,7 @@
  * #%L
  * BigWarp plugin for Fiji.
  * %%
- * Copyright (C) 2015 - 2022 Howard Hughes Medical Institute.
+ * Copyright (C) 2015 - 2021 Howard Hughes Medical Institute.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
@@ -26,6 +26,7 @@ import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import mpicbg.spim.data.sequence.VoxelDimensions;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
@@ -41,7 +42,9 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	
 	protected final String name;
 	
-	protected final BigWarpData<?> sourceData;
+	protected BigWarpData<?> sourceData;
+
+	protected AffineTransform3D sourceTransform;
 	
 	protected final Interval interval;
 
@@ -51,14 +54,33 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	
 	public GridSource( String name, BigWarpData< ? > data, T t, RealTransform warp  )
 	{
+		this( name, t, getInterval( data ), getSourceTransform( data ), warp );
+	}
+
+	public GridSource( String name, T t, Interval interval, AffineTransform3D sourceTransform,  RealTransform warp  )
+	{
 		this.name = name;
 		this.type = t.copy();
-		sourceData = data;
+		this.interval = interval;
+		// always identity
+		this.sourceTransform = new AffineTransform3D();
 		
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
 		gridImg = new GridRealRandomAccessibleRealInterval<T>( interval, t, warp );
 	}
 	
+	private static AffineTransform3D getSourceTransform( BigWarpData<?> data )
+	{
+		final AffineTransform3D sourceTransform = new AffineTransform3D();
+		data.sources.get( 0 ).getSpimSource().getSourceTransform( 0, 0, sourceTransform );
+		return sourceTransform;
+	}
+
+	private static Interval getInterval( BigWarpData<?> data )
+	{
+//		return new FinalInterval( data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+		return new FinalInterval( data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+	}
+
 	public void setGridSpacing( double spacing )
 	{
 		gridImg.ra.setGridSpacing( spacing );
@@ -102,7 +124,8 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public void getSourceTransform( int t, int level, AffineTransform3D transform )
 	{
-		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+//		sourceData.sources.get( 0 ).getSpimSource().getSourceTransform( t, level, transform );
+		transform.set( sourceTransform );
 	}
 
 	@Override
