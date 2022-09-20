@@ -129,6 +129,7 @@ import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
@@ -382,7 +383,7 @@ public class BigWarp< T >
 		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
 		baselineModelIndex = 0;
-		warpMagSource = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
+		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "WarpMagnitudeSource" );
 		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
 		gridSource = addGridSource( data, "GridSource" );
 
@@ -474,13 +475,22 @@ public class BigWarp< T >
 		activeSourcesDialogP.setTitle( "visibility and grouping ( moving )" );
 		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
-		
+
+		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
 		// set warp mag source to inactive at the start
 		viewerP.state().setSourceActive( warpMagSource, false );
 		viewerQ.state().setSourceActive( warpMagSource, false );
+		data.sourceColorSettings.put( warpMagSource, new ImagePlusLoader.ColorSettings( -1, 0, 15, white ));
+
 		// set warp grid source to inactive at the start
 		viewerP.state().setSourceActive( gridSource, false );
 		viewerQ.state().setSourceActive( gridSource, false );
+		data.sourceColorSettings.put( gridSource, new ImagePlusLoader.ColorSettings( -1, 0, 255, white ));
+
+		// set jacobian determinant source to inactive at the start
+		viewerP.state().setSourceActive( jacDetSource, false );
+		viewerQ.state().setSourceActive( jacDetSource, false );
+		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
 
 		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
 		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
@@ -564,6 +574,7 @@ public class BigWarp< T >
 			{
 				data.transferChannelSettings( viewerFrameP );
 				data.transferChannelSettings( viewerFrameQ );
+
 			}
 		} );
 
@@ -1883,21 +1894,8 @@ public class BigWarp< T >
 		final double[][] q = new double[ ndims ][ numActive ];
 		final double[] w = new double[ numActive ];
 
-		int k = 0;
-		for ( int i = 0; i < landmarkModel.getTransform().getNumLandmarks(); i++ )
-		{
-			if ( landmarkModel.isActive( i ) )
-			{
-				w[ k ] = 1.0;
-
-				for ( int d = 0; d < ndims; d++ )
-				{
-					p[ d ][ k ] = landmarkModel.getMovingPoint( i )[ d ];
-					q[ d ][ k ] = landmarkModel.getFixedPoint( i )[ d ];
-				}
-				k++;
-			}
-		}
+		landmarkModel.copyLandmarks( p, q );
+		Arrays.fill( w, 1.0 );
 
 		try
 		{
