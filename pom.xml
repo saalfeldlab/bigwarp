@@ -113,9 +113,6 @@
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 
-		<n5-ij.version>3.2.1</n5-ij.version>
-		<jitk-tps.version>3.0.3</jitk-tps.version>
-
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 	</properties>
@@ -251,6 +248,10 @@
 
 		<!-- Third-party dependencies -->
 		<dependency>
+			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
+			<artifactId>ejml</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
 		</dependency>
@@ -271,18 +272,13 @@
 			<artifactId>jdom2</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>${jcommander.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>com.googlecode.efficient-java-matrix-library</groupId>
-			<artifactId>ejml</artifactId>
-			<version>${ejml.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>se.sawano.java</groupId>
