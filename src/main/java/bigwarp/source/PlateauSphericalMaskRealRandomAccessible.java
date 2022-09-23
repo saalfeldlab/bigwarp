@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import org.jdom2.Element;
 
 import com.google.gson.JsonArray;
@@ -14,39 +15,39 @@ import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import java.io.IOException;
-
-import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import mpicbg.spim.data.XmlHelpers;
-import net.imglib2.Interval;
-import net.imglib2.RealInterval;
-import net.imglib2.RealLocalizable;
-import net.imglib2.RealPoint;
-import net.imglib2.RealRandomAccess;
-import net.imglib2.RealRandomAccessible;
+import net.imglib2.*;
 import net.imglib2.position.FunctionRealRandomAccessible;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Intervals;
+import org.jdom2.Element;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAccessible< DoubleType >
 {
 	transient private BiConsumer< RealLocalizable, DoubleType > pfun;
 	transient private FunctionRealRandomAccessible< DoubleType > rra;
-	private List<BigWarpMaskSphereOverlay> overlays;
+	transient private List<BigWarpMaskSphereOverlay> overlays;
 
 	private FalloffShape fallOffShape;
 
 	transient private int nd;
 
 	transient private double plateauR;
-	transient private double plateauR2;
+	@SerializedName(SQUARED_RADIUS)
+	private double plateauR2;
 
 	transient private double sigma;
 
 	@SerializedName( SQUARED_SIGMA )
 	private double sqrSigma;
 	transient private double invSqrSigma;
-	private double gaussInvSqrSigma;
+	transient private double gaussInvSqrSigma;
 
 	@JsonAdapter( RealPointToDoubleArray.class )
 	private RealPoint center;
