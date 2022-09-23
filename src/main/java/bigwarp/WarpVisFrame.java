@@ -66,6 +66,7 @@ import javax.swing.event.ChangeListener;
 
 import bdv.gui.AutosaveOptionsPanel;
 import bdv.gui.MaskOptionsPanel;
+import bdv.gui.TransformTypePanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 import net.imglib2.realtransform.BoundingBoxEstimation;
@@ -116,6 +117,9 @@ public class WarpVisFrame extends JDialog
 
 	// mask
 	final MaskOptionsPanel maskOptionsPanel;
+
+	// transform type
+	final TransformTypePanel transformTypePanel;
 
 	// autosave
 	private final AutosaveOptionsPanel autoSaveOptionsPanel;
@@ -343,6 +347,9 @@ public class WarpVisFrame extends JDialog
 		// mask options
 		maskOptionsPanel = new MaskOptionsPanel( bw );
 
+		// type options
+		transformTypePanel = new TransformTypePanel( bw );
+
 		// autosaver options
 		autoSaveOptionsPanel = new AutosaveOptionsPanel( bw, content );
 
@@ -357,38 +364,42 @@ public class WarpVisFrame extends JDialog
 		gbcContent.weightx = 1.0;
 		gbcContent.weighty = 1.0;
 		gbcContent.insets = new Insets( 1, 1, 1, 1 );
-		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		content.add( transformTypePanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 1;
+		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 2;
 		gbcContent.gridwidth = 1;
 		gbcContent.anchor = GridBagConstraints.WEST;
 		content.add( visTypePanel, gbcContent );
 
-		gbcContent.gridy = 1;
 		gbcContent.gridx = 1;
 		gbcContent.gridwidth = 2;
 		gbcContent.anchor = GridBagConstraints.EAST;
 		content.add( typeOptionPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 2;
+		gbcContent.gridy = 3;
 		gbcContent.gridwidth = 3;
 		content.add( inverseOptionsPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 3;
+		gbcContent.gridy = 4;
 		gbcContent.gridwidth = 3;
 		content.add( bboxPanel, gbcContent );
 
-		gbcContent.gridy = 4;
+		gbcContent.gridy = 5;
 		content.add( maskOptionsPanel, gbcContent );
 
-		gbcContent.gridy = 5;
+		gbcContent.gridy = 6;
 		content.add( getAutoSaveOptionsPanel(), gbcContent );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
-		
+
 		addListeners();
 		updateOptions();
 	}

@@ -65,6 +65,8 @@ public class TransformTypeSelectDialog extends JDialog
 	private final JRadioButton rotationButton;
 	private final JRadioButton translationButton;
 
+	private boolean active;
+
 	/**
 	 * Instantiates and displays a JFrame that enables
 	 * the selection of the transformation type.
@@ -77,6 +79,7 @@ public class TransformTypeSelectDialog extends JDialog
 		super( owner, "Transform Type select", false );
 
 		this.bw = bw;
+		active = true;
 		this.setLayout( new BorderLayout() );
 		transformType = bw.getTransformType();
 
@@ -148,7 +151,12 @@ public class TransformTypeSelectDialog extends JDialog
 		button.addActionListener( new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bw.setTransformType( button.getText() );
+				if( active )
+				{
+					final String type = button.getText();
+					bw.setTransformType( type );
+					bw.updateTransformTypePanel( type );
+				}
 			}
 		});
 	}
@@ -173,6 +181,22 @@ public class TransformTypeSelectDialog extends JDialog
 		updateButtonGroup();
 		this.validate();
 		this.repaint();
+	}
+
+	/**
+	 * After calling deactivate, updates to this panel won't affect Bigwarp.
+	 */
+	public void deactivate()
+	{
+		active = false;
+	}
+
+	/**
+	 * After calling activate, updates to this panel will affect Bigwarp.
+	 */
+	public void activate()
+	{
+		active = true;
 	}
 
 }

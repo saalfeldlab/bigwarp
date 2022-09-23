@@ -31,7 +31,6 @@ import java.awt.Cursor;
 import java.awt.FileDialog;
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
-import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -1764,13 +1763,11 @@ public class BigWarp< T >
 
 	public void toggleMaskOverlayVisibility()
 	{
-		getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
 		getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
 	}
 
 	public void setMaskOverlayVisibility( final boolean visible )
 	{
-		getViewerFrameP().getViewerPanel().getMaskOverlay().setVisible( visible );
 		getViewerFrameQ().getViewerPanel().getMaskOverlay().setVisible( visible );
 	}
 
@@ -1783,7 +1780,7 @@ public class BigWarp< T >
 	protected void addMaskMouseListener()
 	{
 		final Color[] maskColors = new Color[]{ Color.ORANGE, Color.YELLOW };
-		viewerP.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerP, maskColors, numDimensions() == 3 ));
+		// only render mask overlay on target window
 		viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
 
 		maskSourceMouseListenerP = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerP );
@@ -1794,7 +1791,7 @@ public class BigWarp< T >
 		maskSourceMouseListenerQ.setActive( false );
 		maskSourceMouseListenerQ.setMask( tpsMask.getRandomAccessible() );
 
-		tpsMask.getRandomAccessible().setOverlays( Arrays.asList( viewerP.getMaskOverlay(), viewerQ.getMaskOverlay() ));
+		tpsMask.getRandomAccessible().setOverlays( Arrays.asList( viewerQ.getMaskOverlay() ));
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )
@@ -3006,9 +3003,39 @@ public class BigWarp< T >
 
 	public void setTransformType( final String type )
 	{
-		transformSelector.setTransformType( type );
 		bwTransform.setTransformType( type );
 		this.restimateTransformation();
+	}
+
+	public void setTransformTypeUpdateUI( final String type )
+	{
+		setTransformType( type );
+		updateTransformTypeDialog( type );
+		updateTransformTypePanel( type );
+	}
+
+	/**
+	 * Update the transformation selection dialog to reflect the given transform type selection.
+	 * 
+	 * @param type the transformation type
+	 */
+	public void updateTransformTypeDialog( final String type )
+	{
+		transformSelector.deactivate();
+		transformSelector.setTransformType( type );
+		transformSelector.activate();
+	}
+
+	/**
+	 * Update the transformation selection panel in the options dialog to reflect the given transform type selection.
+	 * 
+	 * @param type the transformation type
+	 */
+	public void updateTransformTypePanel( final String type )
+	{
+		warpVisDialog.transformTypePanel.deactivate();
+		warpVisDialog.transformTypePanel.setType( type );
+		warpVisDialog.transformTypePanel.activate();
 	}
 
 	public String getTransformType()
