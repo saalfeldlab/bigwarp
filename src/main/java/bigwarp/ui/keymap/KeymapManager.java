@@ -48,7 +48,6 @@ public class KeymapManager extends AbstractKeymapManager< KeymapManager >
 
 	private KeymapManager( final boolean loadStyles, final String configDir )
 	{
-		System.out.println( "configDir:  " + configDir );
 		configFile = configDir == null ? null : configDir + "/" + CONFIG_FILE_NAME;
 		if ( loadStyles )
 			loadStyles();
@@ -144,7 +143,6 @@ public class KeymapManager extends AbstractKeymapManager< KeymapManager >
 	@Override
 	public void saveStyles()
 	{
-		System.out.println( "saveStyles" );
 		try
 		{
 			saveStyles( new File( configFile ) );
@@ -154,4 +152,5 @@ public class KeymapManager extends AbstractKeymapManager< KeymapManager >
 			e.printStackTrace();
 		}
 	}
+
 }

@@ -358,8 +358,10 @@ public class LandmarkPointMenu extends JPopupMenu
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			System.out.println( "add to selection " + before + " " + all );
 			final int[] selectedRows = landmarkPanel.getJTable().getSelectedRows();
+			if( selectedRows.length == 0 )
+				return;
+
 			Arrays.sort( selectedRows );
 
 			int i;

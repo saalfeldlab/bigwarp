@@ -177,7 +177,7 @@ public class BigWarpViewerFrame extends JFrame
 		mouseAndKeyHandler.setKeypressManager( optional.values.getKeyPressedManager(), viewer.getDisplayComponent() );
 		viewer.getDisplay().addHandler( mouseAndKeyHandler );
 
-		transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bdv" );
+		transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bigwarp", "navigation" );
 		transformBehaviours.install( triggerbindings, "transform" );
 
 		final TransformEventHandler tfHandler = viewer.getTransformEventHandler();

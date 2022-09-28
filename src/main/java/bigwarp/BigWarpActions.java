@@ -11,7 +11,7 @@
  * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
  * GNU General Public License for more details.
  * 
  * You should have received a copy of the GNU General Public
@@ -53,11 +53,15 @@ public class BigWarpActions extends Actions
 {
 	public static final CommandDescriptionProvider.Scope BIGWARP = new CommandDescriptionProvider.Scope( "bigwarp" );
 	public static final String BIGWARP_CTXT = "bigwarp";
+	public static final String NOT_MAPPED = "not mapped";
 
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 
 	// General options
+	public static final String CLOSE_DIALOG = "close dialog window";
+	public static final String[] CLOSE_DIALOG_KEYS = new String[] { NOT_MAPPED };
+
 	public static final String EXPAND_CARDS = "expand and focus cards panel";
 	public static final String[] EXPAND_CARDS_KEYS = new String[] { "P" };
 
@@ -90,13 +94,13 @@ public class BigWarpActions extends Actions
 	public static final String[] PRINT_TRANSFORM_KEYS = new String[]{ "control shift T" };
 
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
-	public static final String[] TOGGLE_ESTIMATE_WARP_ONDRAG_KEYS = new String[]{};
+	public static final String[] TOGGLE_ESTIMATE_WARP_ONDRAG_KEYS = new String[]{ NOT_MAPPED };
 
 	public static final String SAVE_SETTINGS = "save settings";
-	public static final String[] SAVE_SETTINGS_KEYS = new String[]{};
+	public static final String[] SAVE_SETTINGS_KEYS = new String[]{ NOT_MAPPED };
 
 	public static final String LOAD_SETTINGS = "load settings";
-	public static final String[] LOAD_SETTINGS_KEYS = new String[]{};
+	public static final String[] LOAD_SETTINGS_KEYS = new String[]{ NOT_MAPPED };
 
 	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
 	public static final String[] BRIGHTNESS_SETTINGS_KEYS = new String[]{ "S" };
@@ -221,12 +225,37 @@ public class BigWarpActions extends Actions
 	public static final String[] EXPORT_AFFINE_KEYS = new String[] { "ctrl A" };
 
 
+	public static final String CLEAR_MOVING = "table clear moving";
+	public static final String[] CLEAR_MOVING_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String CLEAR_FIXED = "table clear fixed";
+	public static final String[] CLEAR_FIXED_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String CLEAR_SELECTED_MOVING = "table clear selected moving";
+	public static final String[] CLEAR_SELECTED_MOVING_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String CLEAR_SELECTED_FIXED = "table clear selected fixed";
+	public static final String[] CLEAR_SELECTED_FIXED_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String DELETE = "table delete";
+	public static final String[] DELETE_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String DELETE_SELECTED = "table delete selected ";
+	public static final String[] DELETE_SELECTED_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String ACTIVATE_SELECTED = "table activate selected";
+	public static final String[] ACTIVATE_SELECTED_KEYS = new String[] { NOT_MAPPED };
+
+	public static final String DEACTIVATE_SELECTED = "table deactivate selected ";
+	public static final String[] DEACTIVATE_SELECTED_KEYS = new String[]{ NOT_MAPPED };
+
+
 	public static final String DEBUG = "debug";
 	public static final String GARBAGE_COLLECTION = "garbage collection";
 
 	public BigWarpActions( final KeyStrokeAdder.Factory keyConfig, String name )
 	{
-		this( keyConfig, "bw", name );
+		this( keyConfig, "bigwarp", name );
 	}
 
 	public BigWarpActions( final KeyStrokeAdder.Factory keyConfig, String context, String name )
@@ -242,12 +271,14 @@ public class BigWarpActions extends Actions
 	{
 		public Descriptions()
 		{
-			super( BIGWARP, "bigwarp" );
+			super( BIGWARP, "bigwarp", "bw-table", "navigation" );
 		}
 
 		@Override
 		public void getCommandDescriptions( final CommandDescriptions descriptions )
 		{
+			descriptions.add( CLOSE_DIALOG, CLOSE_DIALOG_KEYS, "Close bigwarp." );
+
 			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
 			descriptions.add( TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS, "Toggle landmark mode." );
 
@@ -282,6 +313,7 @@ public class BigWarpActions extends Actions
 			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
 			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
+			descriptions.add( PRINT_TRANSFORM,PRINT_TRANSFORM_KEYS, "Prints the current transformation." );
 
 			// landmarks
 			descriptions.add( LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS, "Load landmark from a file." );
@@ -301,12 +333,23 @@ public class BigWarpActions extends Actions
 	{
 		public TableDescriptions()
 		{
-			super( BIGWARP, "bw-table" );
+			super( BIGWARP, "bw-table", "bigwarp", "navigation" );
 		}
 
 		@Override
 		public void getCommandDescriptions( final CommandDescriptions descriptions )
 		{
+			descriptions.add( CLEAR_MOVING, CLEAR_MOVING_KEYS, "Clears moving landmark under the mouse cursor." );
+			descriptions.add( CLEAR_FIXED, CLEAR_FIXED_KEYS, "Clears fixed landmark under the mouse cursor." );
+			descriptions.add( CLEAR_SELECTED_MOVING, CLEAR_SELECTED_MOVING_KEYS, "Clears moving landmark for currently selected row." );
+			descriptions.add( CLEAR_SELECTED_FIXED, CLEAR_SELECTED_FIXED_KEYS, "Clears fixed landmark for currently selected row." );
+
+			descriptions.add( DELETE, DELETE_KEYS, "Delete table row under the mouse cursor" );
+			descriptions.add( DELETE_SELECTED, DELETE_SELECTED_KEYS, "Delete all selected rows in the table" );
+
+			descriptions.add( ACTIVATE_SELECTED, ACTIVATE_SELECTED_KEYS, "Activate all selected rows in the table" );
+			descriptions.add( DEACTIVATE_SELECTED, DEACTIVATE_SELECTED_KEYS, "Deactivate all selected rows in the table" );
+
 			descriptions.add( LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS, "Load landmark from a file." );
 			descriptions.add( SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS, "Save landmark from a file." );
 			descriptions.add( QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS, "Quick save landmarks.");
@@ -371,7 +414,21 @@ public class BigWarpActions extends Actions
 		actions.namedAction( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ), SHOW_WARPTYPE_DIALOG_KEYS );
 		actions.namedAction( new ToggleDialogAction( PREFERENCES_DIALOG, bw.preferencesDialog ), PREFERENCES_DIALOG_KEYS );
 
-		// landmarks 
+		// landmarks unbound
+		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().selectAll(); }, LANDMARK_SELECT_ALL, NOT_MAPPED );
+		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().clearSelection(); }, LANDMARK_DESELECT_ALL, NOT_MAPPED );
+
+		actions.namedAction( bw.landmarkPopupMenu.deleteSelectedHandler, NOT_MAPPED );
+
+		actions.namedAction( bw.landmarkPopupMenu.activateSelectedHandler, NOT_MAPPED );
+		actions.namedAction( bw.landmarkPopupMenu.deactivateSelectedHandler, NOT_MAPPED );
+
+		actions.namedAction( bw.landmarkPopupMenu.addAboveHandler, NOT_MAPPED );
+		actions.namedAction( bw.landmarkPopupMenu.addAllAboveHandler, NOT_MAPPED );
+		actions.namedAction( bw.landmarkPopupMenu.addBelowHandler, NOT_MAPPED );
+		actions.namedAction( bw.landmarkPopupMenu.addAllBelowHandler, NOT_MAPPED );
+
+		// landmarks bound
 		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
 		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
 		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
@@ -388,11 +445,41 @@ public class BigWarpActions extends Actions
 	{
 		actions.install( inputActionBindings, "bw-table" );
 
-		// landmarks 
-		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
-		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
-		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
+		// unmapped
+		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
+		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
+		actions.runnableAction( bw::toggleMovingImageDisplay, TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS );
 
+		// navigation
+		actions.runnableAction( bw::resetView, RESET_VIEWER, NOT_MAPPED );
+		actions.runnableAction( bw::matchOtherViewerPanelToActive, ALIGN_OTHER_TO_ACTIVE, NOT_MAPPED );
+		actions.runnableAction( bw::matchActiveViewerPanelToOther, ALIGN_ACTIVE_TO_OTHER, NOT_MAPPED );
+		actions.runnableAction( bw::warpToSelectedLandmark, WARP_TO_SELECTED_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::warpToNearestLandmark, WARP_TO_NEAREST_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::warpToNextLandmark, WARP_TO_NEXT_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::warpToPrevLandmark, WARP_TO_PREV_POINT, NOT_MAPPED );
+
+		// bookmarks
+		actions.runnableAction( bw::goToBookmark, GO_TO_BOOKMARK, NOT_MAPPED );
+		actions.runnableAction( bw::goToBookmarkRotation, GO_TO_BOOKMARK_ROTATION, NOT_MAPPED );
+		actions.runnableAction( bw::setBookmark, SET_BOOKMARK, NOT_MAPPED );
+
+		// cards
+		actions.runnableAction( ()->{}, EXPAND_CARDS, NOT_MAPPED );
+		actions.runnableAction( ()->{}, COLLAPSE_CARDS, NOT_MAPPED );
+
+		// export
+		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
+		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
+
+		// dialogs
+		actions.namedAction( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ), SHOW_HELP_KEYS );
+		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_MVG, bw.activeSourcesDialogP ), VISIBILITY_AND_GROUPING_MVG_KEYS );
+		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_TGT, bw.activeSourcesDialogQ ), VISIBILITY_AND_GROUPING_TGT_KEYS );
+		actions.namedAction( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ), SHOW_WARPTYPE_DIALOG_KEYS );
+		actions.namedAction( new ToggleDialogAction( PREFERENCES_DIALOG, bw.preferencesDialog ), PREFERENCES_DIALOG_KEYS );
+
+		// landmarks
 		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().selectAll(); }, LANDMARK_SELECT_ALL, LANDMARK_SELECT_ALL_KEYS );
 		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().clearSelection(); }, LANDMARK_DESELECT_ALL, LANDMARK_DESELECT_ALL_KEYS );
 
@@ -405,6 +492,10 @@ public class BigWarpActions extends Actions
 		actions.namedAction( bw.landmarkPopupMenu.addAllAboveHandler, LANDMARK_SELECT_ALL_ABOVE_KEYS );
 		actions.namedAction( bw.landmarkPopupMenu.addBelowHandler, LANDMARK_SELECT_BELOW_KEYS );
 		actions.namedAction( bw.landmarkPopupMenu.addAllBelowHandler, LANDMARK_SELECT_ALL_BELOW_KEYS );
+
+		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
+		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
+		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
 
 		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
 		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
