@@ -55,7 +55,6 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -84,14 +83,11 @@ import org.jdom2.input.SAXBuilder;
 import org.jdom2.output.Format;
 import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
-import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
 import org.scijava.ui.behaviour.util.Actions;
-import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bdv.BigDataViewer;
-import bdv.KeyConfigContexts;
 import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
@@ -149,6 +145,7 @@ import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.ui.keymap.KeymapManager;
 import bigwarp.ui.keymap.NavigationKeys;
+import bigwarp.ui.keymap.UnmappedNavigationActions;
 import bigwarp.util.BigWarpUtils;
 import dev.dirs.ProjectDirectories;
 import fiji.util.gui.GenericDialogPlus;
@@ -361,7 +358,6 @@ public class BigWarp< T >
 
 	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		System.out.println( "BigWarp actions");
 		final KeymapManager optionsKeymapManager = options.getValues().getKeymapManager();
 		final AppearanceManager optionsAppearanceManager = options.values.getAppearanceManager();
 		keymapManager = optionsKeymapManager != null ? optionsKeymapManager : new KeymapManager( configDir );
@@ -406,7 +402,7 @@ public class BigWarp< T >
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
 		addDefaultTableMouseListener();
 
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this, keymapManager );
 
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
@@ -545,24 +541,7 @@ public class BigWarp< T >
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
 
-//		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, inputTriggerConfig, ( ndims == 2 ) );
-//		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, inputTriggerConfig );
-//
-//		WarpNavigationActions.installActionBindings( getViewerFrameQ().getKeybindings(), viewerFrameQ, inputTriggerConfig, ( ndims == 2 ) );
-//		BigWarpActions.installActionBindings( getViewerFrameQ().getKeybindings(), this, inputTriggerConfig );
-//
-//		BigWarpActions.installLandmarkPanelActionBindings( landmarkFrame.getKeybindings(), this, landmarkTable, inputTriggerConfig );
-
-
-//		System.out.println( "install actions" );
-
-		Descriptions desc = new BigWarpActions.Descriptions();
-		CommandDescriptions bwDesc = new CommandDescriptions();
-		bwDesc.setKeyconfigContext( "bigwarp" );
-		desc.getCommandDescriptions( bwDesc );
-
-		desc.getCommandDescriptions( keymapManager.getCommandDescriptions() );
-		preferencesDialog = new PreferencesDialog( viewerFrameP, keymap, new String[] { KeyConfigContexts.BIGDATAVIEWER, "bigwarp", "bw", "navigation", "bw-table" } );
+		preferencesDialog = new PreferencesDialog( landmarkFrame, keymap, new String[] { "bigwarp", "navigation", "bw-table" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
 		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, new KeymapManager(), this.keymapManager.getCommandDescriptions() ) );
 
@@ -570,39 +549,30 @@ public class BigWarp< T >
 //		appearanceManager.addLafComponent( fileChooser );
 //		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
-
-		final Actions navigationActions = new Actions( inputTriggerConfig, "bigwarp", "navigation" );
+		final Actions navigationActions = new Actions( inputTriggerConfig, "navigation" );
 		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );
 		NavigationKeys.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
 
-		navigationActions.install( getViewerFrameQ().getKeybindings(), "bigwarp" );
+		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
 		NavigationKeys.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
-		BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-general" );
+		final BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bigwarp" );
 		BigWarpActions.installViewerActions( bwActions, getViewerFrameP(), this );
 		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ(), this );
 
-		BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw", "bw-table" );
+		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
+		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
 		keymap.updateListeners().add( () -> {
+
 			navigationActions.updateKeyConfig( keymap.getConfig() );
 			bwActions.updateKeyConfig( keymap.getConfig() );
 			tableActions.updateKeyConfig( keymap.getConfig() );
+
 			viewerFrameP.getTransformBehaviours().updateKeyConfig( keymap.getConfig() );
+			viewerFrameQ.getTransformBehaviours().updateKeyConfig( keymap.getConfig() );
 		} );
-
-
-//		bwActions.installViewerActions( getViewerFrameQ().getKeybindings(), this );
-//		BigWarpActions.install( bwActions, )
-
-//		BigWarpActions.installViewerActions( getViewerFrameP().getKeybindings(), this, inputTriggerConfig );
-//		BigWarpActions.installViewerActions( getViewerFrameQ().getKeybindings(), this, inputTriggerConfig );
-
-
-//		final Actions navigationActions = new Actions( inputTriggerConfig, "bw-bdv", "navigation" );
-//		navigationActions.install( viewerFrameP.getKeybindings(), "navigation" );
-//		NavigationActions.install( navigationActions, viewerP, options.values.is2D() );
 
 		// this call has to come after the actions are set
 		warpVisDialog.setActions();
@@ -1750,7 +1720,6 @@ public class BigWarp< T >
 
 	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
 	{
-		System.out.println( "warp to landmark " + row );
 		if( inLandmarkMode )
 		{
 			message.showMessage( "Can't move viewer in landmark mode." );
