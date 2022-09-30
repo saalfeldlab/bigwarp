@@ -545,9 +545,10 @@ public class BigWarp< T >
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
 		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, new KeymapManager(), this.keymapManager.getCommandDescriptions() ) );
 
-//		appearanceManager.appearance().updateListeners().add( viewerFrame::repaint );
+		appearanceManager.appearance().updateListeners().add( viewerFrameP::repaint );
+		appearanceManager.appearance().updateListeners().add( viewerFrameQ::repaint );
 //		appearanceManager.addLafComponent( fileChooser );
-//		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
+		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
 		final Actions navigationActions = new Actions( inputTriggerConfig, "navigation" );
 		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );

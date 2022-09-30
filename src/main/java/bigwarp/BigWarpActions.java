@@ -41,6 +41,7 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
+import bdv.util.Prefs;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
@@ -1009,10 +1010,13 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.getViewerFrameP().getViewerPanel().toggleBoxOverlayVisible();
-			bw.getViewerFrameQ().getViewerPanel().toggleBoxOverlayVisible();
-			bw.getViewerFrameP().getViewerPanel().toggleTextOverlayVisible();
-			bw.getViewerFrameQ().getViewerPanel().toggleTextOverlayVisible();
+//			bw.getViewerFrameP().getViewerPanel().toggleBoxOverlayVisible();
+//			bw.getViewerFrameQ().getViewerPanel().toggleBoxOverlayVisible();
+//			bw.getViewerFrameP().getViewerPanel().toggleTextOverlayVisible();
+//			bw.getViewerFrameQ().getViewerPanel().toggleTextOverlayVisible();
+			Prefs.showTextOverlay(!Prefs.showTextOverlay());
+			Prefs.showMultibox(!Prefs.showMultibox());
+
 			bw.getViewerFrameP().repaint();
 			bw.getViewerFrameQ().repaint();
 		}
