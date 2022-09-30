@@ -379,7 +379,6 @@ public class BigWarpActions extends Actions
 	{
 
 		final InputActionBindings inputActionBindings = bwFrame.getKeybindings();
-		System.out.println( "install viewer actions" );
 		actions.install( inputActionBindings, "bw" );
 
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);

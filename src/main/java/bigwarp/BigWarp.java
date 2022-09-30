@@ -66,6 +66,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
@@ -124,18 +125,14 @@ import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
-import bdv.viewer.NavigationActions;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.VisibilityAndGrouping;
-import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
-import bigwarp.BigWarpActions.Descriptions;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
@@ -322,6 +319,8 @@ public class BigWarp< T >
 	final JFrame fileFrame;
 
 	final FileDialog fileDialog;
+
+	final JFileChooser fileChooser;
 
 	protected File autoSaveDirectory;
 
@@ -545,9 +544,38 @@ public class BigWarp< T >
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
 		preferencesDialog.addPage( new KeymapSettingsPage( "Keymap", this.keymapManager, new KeymapManager(), this.keymapManager.getCommandDescriptions() ) );
 
+		fileChooser = new JFileChooser();
+		fileChooser.setFileFilter( new FileFilter()
+		{
+			@Override
+			public String getDescription()
+			{
+				return "xml files";
+			}
+
+			@Override
+			public boolean accept( final File f )
+			{
+				if ( f.isDirectory() )
+					return true;
+				if ( f.isFile() )
+				{
+					final String s = f.getName();
+					final int i = s.lastIndexOf( '.' );
+					if ( i > 0 && i < s.length() - 1 )
+					{
+						final String ext = s.substring( i + 1 ).toLowerCase();
+						return ext.equals( "xml" );
+					}
+				}
+				return false;
+			}
+		} );
+
 		appearanceManager.appearance().updateListeners().add( viewerFrameP::repaint );
 		appearanceManager.appearance().updateListeners().add( viewerFrameQ::repaint );
-//		appearanceManager.addLafComponent( fileChooser );
+		appearanceManager.appearance().updateListeners().add( landmarkFrame::repaint );
+		appearanceManager.addLafComponent( fileChooser );
 		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
 		final Actions navigationActions = new Actions( inputTriggerConfig, "navigation" );
