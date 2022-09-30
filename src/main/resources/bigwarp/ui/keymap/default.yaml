@@ -178,43 +178,43 @@
 - !mapping
   action: set current source 0
   contexts: [bigwarp, navigation]
-  triggers: ['0']
+  triggers: ['1']
 - !mapping
   action: set current source 1
   contexts: [bigwarp, navigation]
-  triggers: ['1']
+  triggers: ['2']
 - !mapping
   action: set current source 2
   contexts: [bigwarp, navigation]
-  triggers: ['2']
+  triggers: ['3']
 - !mapping
   action: set current source 3
   contexts: [bigwarp, navigation]
-  triggers: ['3']
+  triggers: ['4']
 - !mapping
   action: set current source 4
   contexts: [bigwarp, navigation]
-  triggers: ['4']
+  triggers: ['5']
 - !mapping
   action: set current source 5
   contexts: [bigwarp, navigation]
-  triggers: ['5']
+  triggers: ['6']
 - !mapping
   action: set current source 6
   contexts: [bigwarp, navigation]
-  triggers: ['6']
+  triggers: ['7']
 - !mapping
   action: set current source 7
   contexts: [bigwarp, navigation]
-  triggers: ['7']
+  triggers: ['8']
 - !mapping
   action: set current source 8
   contexts: [bigwarp, navigation]
-  triggers: ['8']
+  triggers: ['9']
 - !mapping
   action: set current source 9
   contexts: [bigwarp, navigation]
-  triggers: ['9']
+  triggers: ['0']
 - !mapping
   action: show warp vis dialog
   contexts: [bigwarp, bw-table]

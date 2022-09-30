@@ -7,7 +7,6 @@ import org.scijava.ui.behaviour.KeyStrokeAdder.Factory;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
 
-import bdv.TransformEventHandler2D;
 import bdv.TransformEventHandler3D;
 import bdv.viewer.NavigationActions;
 import bigwarp.BigWarpActions;
