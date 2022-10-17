@@ -1,16 +1,21 @@
 #@ File (label="Landmark file") landmarksPath
 #@ Integer (label="Number of dimensions", value=3) nd
-#@ Boolean (label="As transformation matrix", value=true) asXfmMtx
+#@ String (label="Transformation type", choices={"Thin Plate Spline", "Affine", "Similarity", "Rotation", "Translation" }) transformType
 
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.transforms.BigWarpTransform;
 
-/**
- * Prints the affine part of the transformation defined by the given bigwarp landmarks stored
- * in the passed csv 
- */
-
-def printArray( x ){
-	(0..<nd).each{ println( x[it].join( ' '))} 
+def prettyPrintAffine( affine, nd )
+{
+	StringBuffer sb = new StringBuffer();
+	for( int r = 0; r < nd; r++ ){
+		for( int c = 0; c < nd+1; c++ ){
+			sb.append( affine.get( r, c ));
+			sb.append( "\t" );
+		}
+		sb.append( "\n" );
+	}
+	println( sb );
 }
 
 ltm = new LandmarkTableModel( nd );
@@ -23,15 +28,6 @@ try
 	return;
 }
 
-// the affine this returns is not the usual transformation matrix,
-// but rather a "displacement matrix, i.e:
-// 		y = x + Ax
-affine = ltm.getTransform().getAffine();
-
-
-// if we want a the usual transformation matrix, just add in the identity
-// 		y = (I + A)x
-if( asXfmMtx )
-	(0..<nd).each{ affine[it][it] = 1 + affine[it][it] }
-
-printArray( affine )
+bwt = new BigWarpTransform( ltm, transformType );
+prettyPrintAffine( bwt.affine3d(), nd );
+	
