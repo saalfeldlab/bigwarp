@@ -77,7 +77,6 @@ import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
@@ -161,13 +160,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( landmarkModel, params.ignoreAffine, dims, spacing, params.nThreads );
+			toImagePlus( landmarkModel, params.splitAffine, dims, spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, landmarkModel, dims, spacing, params.blockSize, params.compression, params.nThreads );
+				writeN5( params.n5Base, params.n5Dataset, landmarkModel, dims, spacing, params.blockSize, params.compression, params.nThreads, params.splitAffine );
 			}
 			catch ( IOException e )
 			{
@@ -199,13 +198,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( ltm, params.ignoreAffine, params.size, params.spacing, params.nThreads );
+			toImagePlus( ltm, params.splitAffine, params.size, params.spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, ltm, params.size, params.spacing, params.blockSize, params.compression, params.nThreads );
+				writeN5( params.n5Base, params.n5Dataset, ltm, params.size, params.spacing, params.blockSize, params.compression, params.nThreads, params.splitAffine );
 			}
 			catch ( IOException e )
 			{
@@ -213,16 +212,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 	}
-	
 	public static ImagePlus toImagePlus(
 			final LandmarkTableModel ltm,
-			final boolean ignoreAffine,
+			final boolean splitAffine,
 			final long[] dims,
 			final double[] spacing,
 			final int nThreads )
 	{
 		final double[] offset = new double[ spacing.length ];
-		return toImagePlus( ltm, ignoreAffine, dims, spacing, offset, nThreads );
+		return toImagePlus( ltm, splitAffine, dims, spacing, offset, nThreads );
 	}
 
 	/**
@@ -230,7 +228,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * <p>
 	 * 
 	 * @param ltm the {@link LandmarkTableModel}
-	 * @param ignoreAffine whether to omit the affine part of the transformation
+	 * @param splitAffine whether to omit the affine part of the transformation
 	 * @param dims the dimensions of the output {@link ImagePlus}'s spatial dimensions
 	 * @param spacing the pixel spacing of the output field
 	 * @param offset the physical offset (origin) of the output field
@@ -239,28 +237,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 */
 	public static ImagePlus toImagePlus(
 			final LandmarkTableModel ltm,
-			final boolean ignoreAffine,
+			final boolean splitAffine,
 			final long[] dims,
 			final double[] spacing,
 			final double[] offset,
 			final int nThreads )
 	{
 		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
-		final RealTransform tps = getTpsAffineToggle( bwXfm, ignoreAffine );
-
-		AffineGet pixelToPhysical = null;
-		if( spacing.length == 2)
-		{
-			pixelToPhysical = new Scale2D( spacing );
-		}
-		else if( spacing.length == 3)
-		{	
-			pixelToPhysical = new Scale3D( spacing );
-		}
-		else
-		{
-			return null;
-		}
+		final RealTransform tps = getTpsAffineToggle( bwXfm, splitAffine );
 		
 		int nd = dims.length;
 		long[] ipDims = null;
@@ -292,7 +276,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		LoopBuilder.setImages( dfieldVirt, dfieldImpPerm ).multiThreaded( TaskExecutors.fixedThreadPool( nThreads ) ).forEachPixel( (x,y) -> { y.setReal(x.get()); });
 
 		String title = "bigwarp dfield";
-		if ( ignoreAffine )
+		if ( splitAffine )
 			title += " (no affine)";
 
 		ImagePlus dfieldIp = dfield.getImagePlus();
@@ -326,57 +310,86 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		writeN5( n5BasePath, "dfield", ltm, dims, spacing, spatialBlockSize, compression, nThreads );
 	}
 
-	public static void writeN5( final String n5BasePath, final String n5Dataset,
+	public static void writeN5(
+			final String n5BasePath,
+			final String n5Dataset,
 			final LandmarkTableModel ltm,
 			final long[] dims,
 			final double[] spacing,
 			final int[] spatialBlockSize,
 			final Compression compression,
-			final int nThreads ) throws IOException 
+			final int nThreads ) throws IOException
 	{
+		writeN5( n5BasePath, n5Dataset, ltm, dims, spacing, spatialBlockSize, compression, nThreads, false );
+	}
+
+	public static void writeN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final LandmarkTableModel ltm,
+			final long[] dims,
+			final double[] spacing,
+			final int[] spatialBlockSize,
+			final Compression compression,
+			final int nThreads,
+			final boolean splitAffine ) throws IOException
+	{
+
+		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
+
 		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
-		final RealTransform tpsTotal = getTpsAffineToggle( bwXfm, false );
+		final RealTransform tpsTotal = getTpsAffineToggle( bwXfm, splitAffine );
 
-		AffineGet pixelToPhysical = null;
-		if( spacing.length == 2 )
-			pixelToPhysical = new Scale2D( spacing );
-		else if( spacing.length == 3 )
-			pixelToPhysical = new Scale3D( spacing );
+		AffineGet affine = null;
+		if ( splitAffine )
+		{
+			final double[][] affineArray = bwXfm.affinePartOfTpsHC();
+			if ( affineArray.length == 2 )
+			{
+				final AffineTransform2D affine2d = new AffineTransform2D();
+				affine2d.set( affineArray );
+				affine = affine2d;
+			}
+			else
+			{
+				final AffineTransform3D affine3d = new AffineTransform3D();
+				affine3d.set( affineArray );
+				affine = affine3d;
+			}
+		}
 
-		FloatImagePlus< FloatType > dfieldRaw = convertToDeformationField(
-				dims, tpsTotal, pixelToPhysical, nThreads );
-
-		// this works for both 2d and 3d, it turn out
-		RandomAccessibleInterval< FloatType > dfield =
-					Views.permute(
-						Views.permute( dfieldRaw,
-								0, 2 ),
-						1, 2 );
+		RandomAccessibleInterval< DoubleType > dfield = DisplacementFieldTransform.createDisplacementField(
+				tpsTotal, new FinalInterval( dims ), spacing );
 
 		int[] blockSize = new int[ spatialBlockSize.length + 1 ];
 		blockSize[ 0 ] = spatialBlockSize.length;
-		for( int i = 0; i < spatialBlockSize.length; i++ )
-		{
-			blockSize[ i + 1 ] = spatialBlockSize[ i ];
-		}
+		System.arraycopy( spatialBlockSize, 0, blockSize, 1, spatialBlockSize.length );
 
 		final N5Writer n5 = new N5Factory().openWriter( n5BasePath );
-		N5DisplacementField.save( n5, n5Dataset, null, dfield, spacing, blockSize, compression );
+		N5DisplacementField.save( n5, dataset, affine, dfield, spacing, blockSize, compression );
 		n5.close();
 	}
 
-	private static RealTransform getTpsAffineToggle( BigWarpTransform bwXfm, boolean ignoreAffine )
+	private static RealTransform getTpsAffineToggle( BigWarpTransform bwXfm, boolean splitAffine )
 	{
-		if( ignoreAffine )
+		if ( splitAffine )
 		{
 			final ThinPlateR2LogRSplineKernelTransform tps = bwXfm.getTpsBase();
 			return new ThinplateSplineTransform(
-						new ThinPlateR2LogRSplineKernelTransform( tps.getSourceLandmarks(), null, null, tps.getKnotWeights() ));
+					new ThinPlateR2LogRSplineKernelTransform( tps.getSourceLandmarks(), null, null, tps.getKnotWeights() ) );
 		}
 		else
 			return bwXfm.getTransformation();
 	}
 
+	/**
+	 * @param tps
+	 *
+	 * @return
+	 *
+	 * @deprecated Use {@link BigWarpTransform} method instead
+	 */
+	@Deprecated()
 	public static AffineGet toAffine( final ThinPlateR2LogRSplineKernelTransform tps )
 	{
 		double[] affineFlat = toFlatAffine( tps );
@@ -599,7 +612,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			dim2split = 2;
 		}
 
-		long del = ( long )( N / nThreads ); 
+		long del = ( N / nThreads );
 		splitPoints[ 0 ] = 0;
 		splitPoints[ nThreads ] = deformationField.dimension( dim2split );
 		for( int i = 1; i < nThreads; i++ )
@@ -620,6 +633,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try
@@ -698,7 +712,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	private static class DeformationFieldExportParameters 
 	{
 		public final String landmarkPath;
-		public final boolean ignoreAffine;
+		public final boolean splitAffine;
 		public final int nThreads;
 
 		public final long[] size;
@@ -711,7 +725,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		public DeformationFieldExportParameters(
 				final String landmarkPath,
-				final boolean ignoreAffine,
+				final boolean splitAffine,
 				final int nThreads,
 				final long[] size,
 				final double[] spacing,
@@ -721,7 +735,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final Compression compression )
 		{
 			this.landmarkPath = landmarkPath;
-			this.ignoreAffine = ignoreAffine;
+			this.splitAffine = splitAffine;
 			this.nThreads = nThreads;
 
 			this.size = size;
@@ -744,7 +758,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				gd.addFileField( "landmarks_image_file", "" );
 			}
 
-			gd.addCheckbox( "Ignore affine part", false );
+			gd.addCheckbox( "split affine", false );
 			gd.addNumericField( "threads", 1, 0 );
 			gd.addMessage( "Size and spacing" );
 
@@ -778,7 +792,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if( promptLandmarks )
 				landmarkPath = gd.getNextString();
 
-			final boolean ignoreAffine = gd.getNextBoolean();
+			final boolean splitAffine = gd.getNextBoolean();
 			final int nThreads = ( int ) gd.getNextNumber();
 
 			ImagePlus ref_imp = null;
@@ -834,7 +848,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			return new DeformationFieldExportParameters( 
 					landmarkPath,
-					ignoreAffine,
+					splitAffine,
 					nThreads,
 					size,
 					spacing,
