@@ -108,6 +108,34 @@ public class SerializationTest
 
 	}
 
+	/* When creating and closing multiple BigWarp instances, occassionally the comparison test fails.
+	 *   It shouldn't be a problem in practice, since this only occurs during testing, but I think it indicates
+	 * 	there may be a race condidtion somewhere. To duplicate the issue, run this test multiple times, and
+	 * 	it should eventually fail. It is not consistent. */
+	private void repeatComparison() throws Exception
+	{
+		for ( int i = 0; i < 20; i++ )
+		{
+			System.out.println( i );
+			BigWarp< ? > bw = createBigWarp();
+
+			/* Load the known good*/
+			final String originalXmlSettings = "src/test/resources/compareKnownXml.bigwarp.settings.xml";
+			bw.loadSettings( originalXmlSettings );
+
+			/* save it back out*/
+			final File tmpXmlFile = Files.createTempFile( "xml-settings", ".xml" ).toFile();
+			bw.saveSettings( tmpXmlFile.getAbsolutePath() );
+
+			/* compare the original and generated */
+			XMLUnit.setIgnoreWhitespace( true );
+			XMLUnit.setIgnoreComments( true );
+			XMLAssert.assertXMLEqual( new FileReader( originalXmlSettings ), new FileReader( tmpXmlFile ) );
+
+			bw.closeAll();
+		}
+
+	}
 
 	@Test
 	public void compareKnownXmlComparisonTest() throws SpimDataException, IOException, JDOMException, SAXException
@@ -118,27 +146,29 @@ public class SerializationTest
 		bw.loadSettings( originalXmlSettings );
 		final BigwarpSettings settings = bw.getSettings();
 
-		final StringWriter stringWriter = new StringWriter();
-		final JsonWriter out = new JsonWriter( stringWriter );
-
-		settings.write( out, settings );
 		final File tmpJsonFile = Files.createTempFile( "json-settings", ".json" ).toFile();
-		final FileWriter fileWriter = new FileWriter( tmpJsonFile );
-		fileWriter.write( stringWriter.toString() );
-		fileWriter.flush();
-		fileWriter.close();
+		try ( final FileWriter fileWriter = new FileWriter( tmpJsonFile ) )
+		{
+			final JsonWriter out = new JsonWriter( fileWriter );
+			settings.write( out, settings );
+		}
+		/* Ideally, we should close the instance, and get a new one for this test, but it's not currently safe to do this. See SerializationTest#repeatComparison*/
+//		bw.closeAll();
+//		bw = createBigWarp();
 
-		bw.closeAll();
-
-		bw = createBigWarp();
-		bw.loadSettings(tmpJsonFile.getAbsolutePath());
-
+		bw.loadSettings( tmpJsonFile.getAbsolutePath() );
 		final File tmpXmlFile = Files.createTempFile( "xml-settings", ".xml" ).toFile();
-		bw.saveSettings(tmpXmlFile.getAbsolutePath());
+		bw.saveSettings( tmpXmlFile.getAbsolutePath() );
 		XMLUnit.setIgnoreWhitespace( true );
 		XMLUnit.setIgnoreComments( true );
-		XMLAssert.assertXMLEqual( new FileReader( originalXmlSettings ), new FileReader( tmpXmlFile ) );
-
+		try
+		{
+			XMLAssert.assertXMLEqual( new FileReader( originalXmlSettings ), new FileReader( tmpXmlFile ) );
+		}
+		finally
+		{
+			bw.closeAll();
+		}
 	}
 
 
@@ -147,9 +177,9 @@ public class SerializationTest
 		prettyPrint( json.toString() );
 	}
 
-	private static void prettyPrint(String json) {
-		final JsonParser jsonParser = new JsonParser();
-		final JsonElement parse = jsonParser.parse( json );
+	private static void prettyPrint( String json )
+	{
+		final JsonElement parse = JsonParser.parseString( json );
 		final JsonObject asJsonObject = parse.getAsJsonObject();
 
 		System.out.println(new GsonBuilder().setPrettyPrinting().create().toJson( asJsonObject ));
@@ -159,19 +189,17 @@ public class SerializationTest
 	{
 		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
 		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
-				2,
-				( l, v ) -> {
-					v.setOne();
-				},
+				3,
+				( l, v ) ->  v.setOne(),
 				UnsignedByteType::new );
-		ImagePlus imp = ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32 ) ), "img" );
+		ImagePlus imp = ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32, 1 ) ), "img" );
 		int i = 0;
-		BigWarpInit.add( data,  imp, i++, 0, true);
-		BigWarpInit.add( data,  imp, i++, 0, false);
-		BigWarpInit.add( data,  imp, i++, 0, false);
-		BigWarpInit.add( data,  imp, i++, 0, false);
+		BigWarpInit.add( data, imp, i++, 0, true );
+		BigWarpInit.add( data, imp, i++, 0, false );
+		BigWarpInit.add( data, imp, i++, 0, false );
+		BigWarpInit.add( data, imp, i, 0, false );
 		data.wrapUp();
-		BigWarpViewerOptions opts = BigWarpViewerOptions.options( true );
-		return new BigWarp( data, "bigwarp", opts, null );
+		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
+		return new BigWarp<>( data, "bigwarp", opts, null );
 	}
 }
