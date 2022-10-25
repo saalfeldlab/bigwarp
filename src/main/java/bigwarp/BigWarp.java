@@ -3458,16 +3458,17 @@ public class BigWarp< T >
 
 	public BigwarpSettings getSettings()
 	{
-		BigwarpSettings settings = new BigwarpSettings(
+		return new BigwarpSettings(
 				this,
 				viewerP,
 				viewerQ,
 				setupAssignments,
 				bookmarks,
 				autoSaver,
-				tpsMask.getRandomAccessible()
+				tpsMask.getRandomAccessible(),
+				landmarkModel,
+				bwTransform
 		);
-		return settings;
 	}
 
 	protected void loadSettings()

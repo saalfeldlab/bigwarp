@@ -13,9 +13,14 @@ import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.SourceState;
 import bdv.viewer.state.ViewerState;
 import bdv.viewer.state.XmlIoViewerState;
+import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.io.TransformWriterJson;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
@@ -42,6 +47,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	transient private final BigWarp< ? > bigWarp;
 
+	private final LandmarkTableModel landmarks;
+
+	private final BigWarpTransform transform;
+
 	BigWarpViewerPanel viewerP;
 
 	BigWarpViewerPanel viewerQ;
@@ -54,7 +63,16 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	final PlateauSphericalMaskRealRandomAccessible tpsMask;
 
-	public BigwarpSettings( BigWarp bigWarp, final BigWarpViewerPanel viewerP, final BigWarpViewerPanel viewerQ, final SetupAssignments setupAssignments, final Bookmarks bookmarks, final BigWarpAutoSaver autoSaver, final PlateauSphericalMaskRealRandomAccessible tpsMask )
+	public BigwarpSettings( BigWarp bigWarp,
+			final BigWarpViewerPanel viewerP,
+			final BigWarpViewerPanel viewerQ,
+			final SetupAssignments setupAssignments,
+			final Bookmarks bookmarks,
+			final BigWarpAutoSaver autoSaver,
+			final PlateauSphericalMaskRealRandomAccessible tpsMask,
+			final LandmarkTableModel landmarks,
+			final BigWarpTransform transform
+	)
 	{
 
 		this.bigWarp = bigWarp;
@@ -64,6 +82,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.bookmarks = bookmarks;
 		this.autoSaver = autoSaver;
 		this.tpsMask = tpsMask;
+		this.landmarks = landmarks;
+		this.transform = transform;
 	}
 
 	public void serialize( String jsonFilename ) throws IOException
@@ -90,6 +110,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		gson.toJson( autoSaver, BigWarpAutoSaver.class, out );
 		out.name( "TPSMask" );
 		gson.toJson( tpsMask, PlateauSphericalMaskRealRandomAccessible.class, out );
+		if (landmarks != null) {
+			out.name( "Transform" );
+			out.jsonValue( TransformWriterJson.write( landmarks, transform ).toString() );
+		}
 		out.endObject();
 	}
 
@@ -124,6 +148,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				tpsMask.setFalloffShape( maskFromJson.getFallOffShape() );
 				tpsMask.setSquaredRadius( maskFromJson.getSquaredRadius() );
 				tpsMask.setCenter( maskFromJson.getCenter() );
+				break;
+			case "Transform":
+				final JsonObject transformObject = ( JsonObject ) JsonParser.parseReader( in );
+				TransformWriterJson.read( bigWarp, transformObject );
 				break;
 			default:
 				throw new RuntimeException( "Unknown BigWarpSetting: " + nextName );
