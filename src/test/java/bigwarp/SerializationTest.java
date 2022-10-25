@@ -3,6 +3,7 @@ package bigwarp;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.tools.bookmarks.Bookmarks;
 import bigwarp.source.PlateauSphericalMaskSource;
+import com.google.api.client.json.Json;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -11,13 +12,19 @@ import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import ij.ImagePlus;
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PipedOutputStream;
+import java.io.PipedReader;
+import java.io.PipedWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.FinalInterval;
 import net.imglib2.RealPoint;
@@ -29,20 +36,21 @@ import net.imglib2.view.Views;
 import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.jdom2.JDOMException;
+import org.junit.Assert;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
 public class SerializationTest
 {
 
-	public void maskTest()
+	private void maskTest()
 	{
 		PlateauSphericalMaskSource mask = PlateauSphericalMaskSource.build( new RealPoint( 3 ), new FinalInterval( 5, 10, 20 ) );
 		Gson gson = BigwarpSettings.gson;
 		prettyPrint( gson.toJson( mask.getRandomAccessible() ));
 	}
 
-	public void bookmarksTest()
+	private void bookmarksTest()
 	{
 		final Bookmarks bookmarks = new Bookmarks();
 		bookmarks.put( "identity", new AffineTransform3D() );
@@ -59,7 +67,7 @@ public class SerializationTest
 		prettyPrint( json );
 	}
 
-	public void autoSaverTest() throws SpimDataException
+	private void autoSaverTest()
 	{
 		final BigWarpAutoSaver saver = new BigWarpAutoSaver( null, 1000 );
 		saver.autoSaveDirectory = new File("/tmp");
@@ -69,7 +77,7 @@ public class SerializationTest
 	}
 
 
-	public void setupAssignmentsTest() throws SpimDataException, IOException
+	private void setupAssignmentsTest() throws SpimDataException, IOException
 	{
 		final BigWarp<?> bw = createBigWarp();
 		final StringWriter stringWriter = new StringWriter();
@@ -81,7 +89,7 @@ public class SerializationTest
 	}
 
 
-	public void viewerPanelTest() throws SpimDataException, IOException
+	private void viewerPanelTest() throws SpimDataException, IOException
 	{
 		final BigWarp<?> bw = createBigWarp();
 		final StringWriter stringWriter = new StringWriter();
@@ -93,7 +101,7 @@ public class SerializationTest
 	}
 
 
-	public void BigWarpSettingsTest() throws SpimDataException, IOException
+	private void BigWarpSettingsTest() throws SpimDataException, IOException
 	{
 		final BigWarp<?> bw = createBigWarp();
 		bw.setAutoSaver( new BigWarpAutoSaver( bw, 10000 ) );
@@ -120,7 +128,7 @@ public class SerializationTest
 			BigWarp< ? > bw = createBigWarp();
 
 			/* Load the known good*/
-			final String originalXmlSettings = "src/test/resources/compareKnownXml.bigwarp.settings.xml";
+			final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
 			bw.loadSettings( originalXmlSettings );
 
 			/* save it back out*/
@@ -142,7 +150,7 @@ public class SerializationTest
 	{
 		BigWarp<?> bw = createBigWarp();
 
-		final String originalXmlSettings = "src/test/resources/compareKnownXml.bigwarp.settings.xml";
+		final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
 		bw.loadSettings( originalXmlSettings );
 		final BigwarpSettings settings = bw.getSettings();
 
@@ -169,6 +177,43 @@ public class SerializationTest
 		{
 			bw.closeAll();
 		}
+	}
+
+	@Test
+	public void landmarkComparisonTest() throws SpimDataException, IOException, JDOMException, SAXException
+	{
+		BigWarp< ? > bw = createBigWarp();
+
+		final String xmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
+		final String csvLandmarks = "src/test/resources/settings/landmarks.csv";
+		final String expectedJsonFile = "src/test/resources/settings/expected.json";
+		bw.loadSettings( xmlSettings );
+		bw.loadLandmarks(csvLandmarks);
+
+		final BigwarpSettings settings = bw.getSettings();
+
+		final PipedWriter writer = new PipedWriter();
+		final PipedReader in = new PipedReader( writer, 10000 );
+
+		final JsonWriter out = new JsonWriter( writer );
+		final JsonReader reader = new JsonReader( in );
+
+		settings.write( out, settings );
+		out.close();
+		writer.close();
+
+		final JsonElement jsonSettingsOut = JsonParser.parseReader( in );
+		final JsonElement expectedJson = JsonParser.parseReader( new FileReader(expectedJsonFile));
+
+		try
+		{
+			Assert.assertEquals( expectedJson, jsonSettingsOut );
+		}
+		finally
+		{
+			bw.closeAll();
+		}
+
 	}
 
 
@@ -201,5 +246,10 @@ public class SerializationTest
 		data.wrapUp();
 		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
 		return new BigWarp<>( data, "bigwarp", opts, null );
+	}
+
+	public static void main( String[] args ) throws SpimDataException
+	{
+		createBigWarp();
 	}
 }
