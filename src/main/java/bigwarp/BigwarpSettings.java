@@ -68,7 +68,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	public void serialize( String jsonFilename ) throws IOException
 	{
-		write( new JsonWriter( new FileWriter( jsonFilename ) ), this );
+		try ( final FileWriter fileWriter = new FileWriter( jsonFilename ) )
+		{
+			write( new JsonWriter( fileWriter ), this );
+		}
 	}
 
 	@Override
