@@ -24,15 +24,7 @@ public class TransformWriterJson {
 
 	public void write(LandmarkTableModel ltm, BigWarpTransform bwTransform, File f ) {
 
-		JsonObject transformObj = new JsonObject();
-		transformObj.add("type", new JsonPrimitive( bwTransform.getTransformType() ));
-		transformObj.add("landmarks", ltm.toJson());
-
-		if( bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS) )
-		{
-			PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
-			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
-		}
+		final JsonObject transformObj = write( ltm, bwTransform );
 
 		try {
 			final Path path = Paths.get(f.getCanonicalPath());
@@ -44,7 +36,7 @@ public class TransformWriterJson {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void read( final File f, final BigWarp<?> bw )
 	{
 		try
@@ -53,23 +45,42 @@ public class TransformWriterJson {
 			final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
 			final Reader reader = Channels.newReader(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
 			JsonObject json = BigwarpSettings.gson.fromJson( reader, JsonObject.class );
-			
-			if( json.has( "landmarks" ))
-				bw.getLandmarkPanel().getTableModel().fromJson( json );
 
-			if( json.has( "mask" ))
-			{
-				JsonObject maskParams = json.get("mask").getAsJsonObject();
-				final PlateauSphericalMaskRealRandomAccessible mask = bw.getTpsMaskSource().getRandomAccessible();
-				mask.setCenter( BigwarpSettings.gson.fromJson( maskParams.get( "center" ), double[].class ));
-				mask.setSquaredRadius( maskParams.get("squaredRadius").getAsDouble() );
-				mask.setSquaredSigma( maskParams.get("squaredSigma").getAsDouble() );
-			}
+			read( bw, json );
 
 		} catch ( IOException e )
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+
+	public static JsonObject write(LandmarkTableModel ltm, BigWarpTransform bwTransform) {
+
+		JsonObject transformObj = new JsonObject();
+		transformObj.add("type", new JsonPrimitive( bwTransform.getTransformType() ));
+		transformObj.add("landmarks", ltm.toJson());
+
+		if( bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS) )
+		{
+			PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
+			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
+		}
+		return transformObj;
+	}
+
+	public static void read( final BigWarp< ? > bw, final JsonObject json )
+	{
+		if( json.has( "landmarks" ))
+			bw.getLandmarkPanel().getTableModel().fromJson( json );
+
+		if( json.has( "mask" ))
+		{
+			JsonObject maskParams = json.get("mask").getAsJsonObject();
+			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTpsMaskSource().getRandomAccessible();
+			mask.setCenter( BigwarpSettings.gson.fromJson( maskParams.get( "center" ), double[].class ));
+			mask.setSquaredRadius( maskParams.get("squaredRadius").getAsDouble() );
+			mask.setSquaredSigma( maskParams.get("squaredSigma").getAsDouble() );
 		}
 	}
 
