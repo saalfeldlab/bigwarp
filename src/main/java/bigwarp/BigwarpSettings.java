@@ -63,7 +63,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	final PlateauSphericalMaskRealRandomAccessible tpsMask;
 
-	public BigwarpSettings( BigWarp bigWarp,
+	public BigwarpSettings(
+			final BigWarp<?> bigWarp,
 			final BigWarpViewerPanel viewerP,
 			final BigWarpViewerPanel viewerQ,
 			final SetupAssignments setupAssignments,
@@ -108,9 +109,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		gson.toJson( bookmarks, Bookmarks.class, out );
 		out.name( "Autosave" );
 		gson.toJson( autoSaver, BigWarpAutoSaver.class, out );
-		out.name( "TPSMask" );
-		gson.toJson( tpsMask, PlateauSphericalMaskRealRandomAccessible.class, out );
-		if (landmarks != null) {
+		if ( landmarks != null )
+		{
 			out.name( "Transform" );
 			out.jsonValue( TransformWriterJson.write( landmarks, transform ).toString() );
 		}
@@ -733,7 +733,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		}
 	}
 
-	private static interface ConverterSetupDTO extends ConverterSetup
+	private interface ConverterSetupDTO extends ConverterSetup
 	{
 
 		int getGroupId();
