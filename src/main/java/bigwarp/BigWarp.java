@@ -3324,7 +3324,7 @@ public class BigWarp< T >
 		if( filename.endsWith("csv"))
 			landmarkModel.save(new File( filename ));
 		else if( filename.endsWith("json"))
-			new TransformWriterJson().write(landmarkModel, bwTransform, new File( filename ));
+			TransformWriterJson.write(landmarkModel, bwTransform, new File( filename ));
 	}
 
 	protected void loadLandmarks()
@@ -3365,7 +3365,7 @@ public class BigWarp< T >
 		}
 		else if( filename.endsWith( "json" ))
 		{
-			new TransformWriterJson().read( file, this );
+			TransformWriterJson.read( file, this );
 		}
 
 		boolean didCompute = restimateTransformation();

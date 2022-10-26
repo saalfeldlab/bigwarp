@@ -1,6 +1,5 @@
 package bigwarp.transforms.io;
 
-import bdv.gui.TransformTypeSelectDialog;
 import bigwarp.BigWarp;
 import bigwarp.BigwarpSettings;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -22,7 +21,7 @@ import java.nio.file.StandardOpenOption;
 
 public class TransformWriterJson {
 
-	public void write(LandmarkTableModel ltm, BigWarpTransform bwTransform, File f ) {
+	public static void write(LandmarkTableModel ltm, BigWarpTransform bwTransform, File f ) {
 
 		final JsonObject transformObj = write( ltm, bwTransform );
 
@@ -37,7 +36,7 @@ public class TransformWriterJson {
 		}
 	}
 
-	public void read( final File f, final BigWarp<?> bw )
+	public static void read( final File f, final BigWarp<?> bw )
 	{
 		try
 		{
@@ -61,7 +60,7 @@ public class TransformWriterJson {
 		transformObj.add("type", new JsonPrimitive( bwTransform.getTransformType() ));
 		transformObj.add("landmarks", ltm.toJson());
 
-		if( bwTransform.getTransformType().equals( TransformTypeSelectDialog.MASKEDTPS) )
+		if( bwTransform.isMasked() )
 		{
 			PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
 			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
