@@ -160,7 +160,7 @@ public class TransformTypeSelectDialog extends JDialog
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				bw.getTpsMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
+				bw.getTransformMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			}

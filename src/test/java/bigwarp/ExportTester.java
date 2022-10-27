@@ -21,6 +21,7 @@
  */
 package bigwarp;
 
+import bigwarp.transforms.BigWarpTransform;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -90,7 +91,7 @@ public class ExportTester
 	
 	public static void pix_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PIXEL;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -126,7 +127,7 @@ public class ExportTester
 	
 	public static void v_spc_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PHYSICAL;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -160,7 +161,7 @@ public class ExportTester
 	
 	public static void spc_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PHYSICAL;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -194,7 +195,7 @@ public class ExportTester
 
 	public static void pspc_pspc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.SPECIFIED_PIXEL;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -228,7 +229,7 @@ public class ExportTester
 	
 	public static void lmk_mvg( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINTS;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.MOVING;
@@ -262,7 +263,7 @@ public class ExportTester
 
 	public static void lmk_tgt( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINTS;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;
@@ -296,7 +297,7 @@ public class ExportTester
 
 	public static void lmk_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINTS;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -331,7 +332,7 @@ public class ExportTester
 	
 	public static void mvg_mvg( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.MOVING_WARPED;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.MOVING;
@@ -365,7 +366,7 @@ public class ExportTester
 	
 	public static void mvg_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.MOVING_WARPED;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -399,7 +400,7 @@ public class ExportTester
 	
 	public static void mvg_tgt( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.MOVING_WARPED;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;
@@ -433,7 +434,7 @@ public class ExportTester
 	
 	public static void tgt_tgt( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.TARGET;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;
@@ -467,7 +468,7 @@ public class ExportTester
 	
 	public static void v_tgt_tgt( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.TARGET;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;
@@ -503,7 +504,7 @@ public class ExportTester
 	
 	public static void tgt_spc( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.TARGET;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.SPECIFIED;
@@ -537,7 +538,7 @@ public class ExportTester
 
 	public static void tgt_mvg( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.TARGET;
 		String fieldOfViewPointFilter = "";
 		String resolutionOption = ApplyBigwarpPlugin.MOVING;
@@ -571,7 +572,7 @@ public class ExportTester
 		
 	public static void tgt_lmpix( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PIXEL;
 		String fieldOfViewPointFilter = ".*5";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;
@@ -605,7 +606,7 @@ public class ExportTester
 
 	public static void tgt_lmphy( ImagePlus impm, ImagePlus impt, LandmarkTableModel landmarks )
 	{
-		String transformType = TransformTypeSelectDialog.TPS;
+		String transformType = BigWarpTransform.TPS;
 		String fieldOfViewOption = ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PHYSICAL;
 		String fieldOfViewPointFilter = ".*5";
 		String resolutionOption = ApplyBigwarpPlugin.TARGET;

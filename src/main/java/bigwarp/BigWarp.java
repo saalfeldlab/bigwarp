@@ -188,7 +188,7 @@ public class BigWarp< T >
 
 	public static final int JACDET_SOURCE_ID = 1006827158;
 
-	public static final int TPSMASK_SOURCE_ID = 33872301;
+	public static final int TRANSFORM_MASK_SOURCE_ID = 33872301;
 
 	protected BigWarpViewerOptions options;
 
@@ -287,9 +287,9 @@ public class BigWarp< T >
 
 	protected final SourceAndConverter< FloatType > jacDetSource;
 
-	protected final SourceAndConverter< DoubleType > tpsMaskSource;
+	protected final SourceAndConverter< DoubleType > transformMaskSource;
 
-	protected PlateauSphericalMaskSource tpsMask;
+	protected PlateauSphericalMaskSource transformMask;
 
 	protected final AbstractModel< ? >[] baseXfmList;
 
@@ -400,7 +400,7 @@ public class BigWarp< T >
 		warpMagSource = addWarpMagnitudeSource( data, "WarpMagnitudeSource" );
 		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
 		gridSource = addGridSource( data, "GridSource" );
-		tpsMaskSource = addTpsMaskSource( data, ndims, "TPS Mask Source" );
+		transformMaskSource = addTransformMaskSource( data, ndims, "Transform Mask Source" );
 
 		this.sources = this.data.sources;
 		final List< ConverterSetup > converterSetups = data.converterSetups;
@@ -505,7 +505,7 @@ public class BigWarp< T >
 
 		bwTransform = new BigWarpTransform( landmarkModel );
 		bwTransform.initializeInverseParameters(data);
-		bwTransform.setLambda( tpsMask.getRandomAccessible() );
+		bwTransform.setLambda( transformMask.getRandomAccessible() );
 
 		solverThread = new SolveThread( this );
 		solverThread.start();
@@ -531,7 +531,7 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
-		warpVisDialog.maskOptionsPanel.setMask( tpsMask );
+		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
@@ -1785,13 +1785,13 @@ public class BigWarp< T >
 
 		maskSourceMouseListenerP = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerP );
 		maskSourceMouseListenerP.setActive( false );
-		maskSourceMouseListenerP.setMask( tpsMask.getRandomAccessible() );
+		maskSourceMouseListenerP.setMask( transformMask.getRandomAccessible() );
 
 		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
 		maskSourceMouseListenerQ.setActive( false );
-		maskSourceMouseListenerQ.setMask( tpsMask.getRandomAccessible() );
+		maskSourceMouseListenerQ.setMask( transformMask.getRandomAccessible() );
 
-		tpsMask.getRandomAccessible().setOverlays( Arrays.asList( viewerP.getMaskOverlay(), viewerQ.getMaskOverlay() ));
+		transformMask.getRandomAccessible().setOverlays( Arrays.asList( viewerP.getMaskOverlay(), viewerQ.getMaskOverlay() ));
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )
@@ -1874,24 +1874,24 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	private SourceAndConverter< DoubleType > addTpsMaskSource( final BigWarpData< T > data, final int ndims, final String name )
+	private SourceAndConverter< DoubleType > addTransformMaskSource( final BigWarpData< T > data, final int ndims, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		// or should we just stick with Floats?
 		FinalInterval itvl = new FinalInterval( data.sources.get( data.targetSourceIndices[0] ).getSpimSource().getSource( 0, 0 ));
-		tpsMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
+		transformMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
 
 		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
-		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( tpsMask, converter, null );
-		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TPSMASK_SOURCE_ID ) );
+		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( transformMask, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TRANSFORM_MASK_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
 		return soc;
 	}
 
-	public PlateauSphericalMaskSource getTpsMaskSource()
+	public PlateauSphericalMaskSource getTransformMaskSource()
 	{
-		return tpsMask;
+		return transformMask;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -2034,8 +2034,8 @@ public class BigWarp< T >
 		if( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
 		{
 			final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
-			tpsMask.getRandomAccessible().setCenter(sph.getCenter());
-			tpsMask.getRandomAccessible().setRadius(sph.getRadius());
+			transformMask.getRandomAccessible().setCenter(sph.getCenter());
+			transformMask.getRandomAccessible().setRadius(sph.getRadius());
 		}
 	}
 
@@ -2550,7 +2550,6 @@ public class BigWarp< T >
 		public final HashMap< Integer, ColorSettings > setupSettings;
 
 		public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
-
 		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
 		{
 			this.sources = sources;
@@ -3443,7 +3442,7 @@ public class BigWarp< T >
 		autoSaveNode.addContent( autoSavePeriod );
 
 		root.addContent( autoSaveNode );
-		root.addContent( tpsMask.getRandomAccessible().toXml() );
+		root.addContent( transformMask.getRandomAccessible().toXml() );
 
 		final Document doc = new Document( root );
 		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
@@ -3465,7 +3464,7 @@ public class BigWarp< T >
 				setupAssignments,
 				bookmarks,
 				autoSaver,
-				tpsMask.getRandomAccessible(),
+				transformMask.getRandomAccessible(),
 				landmarkModel,
 				bwTransform
 		);
@@ -3517,7 +3516,7 @@ public class BigWarp< T >
 
 			final Element maskSettings = root.getChild( "transform-mask" );
 			if ( maskSettings != null )
-				tpsMask.getRandomAccessible().fromXml( maskSettings );
+				transformMask.getRandomAccessible().fromXml( maskSettings );
 		}
 
 

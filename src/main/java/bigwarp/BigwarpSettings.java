@@ -61,7 +61,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	BigWarpAutoSaver autoSaver;
 
-	final PlateauSphericalMaskRealRandomAccessible tpsMask;
+	final PlateauSphericalMaskRealRandomAccessible transformMask;
 
 	public BigwarpSettings(
 			final BigWarp<?> bigWarp,
@@ -70,7 +70,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final SetupAssignments setupAssignments,
 			final Bookmarks bookmarks,
 			final BigWarpAutoSaver autoSaver,
-			final PlateauSphericalMaskRealRandomAccessible tpsMask,
+			final PlateauSphericalMaskRealRandomAccessible transformMask,
 			final LandmarkTableModel landmarks,
 			final BigWarpTransform transform
 	)
@@ -82,7 +82,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.setupAssignments = setupAssignments;
 		this.bookmarks = bookmarks;
 		this.autoSaver = autoSaver;
-		this.tpsMask = tpsMask;
+		this.transformMask = transformMask;
 		this.landmarks = landmarks;
 		this.transform = transform;
 	}

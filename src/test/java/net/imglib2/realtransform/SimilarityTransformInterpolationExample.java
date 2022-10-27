@@ -123,8 +123,8 @@ public class SimilarityTransformInterpolationExample {
 		PlateauSphericalMaskRealRandomAccessible mask = BigwarpSettings.gson.fromJson( maskJson, PlateauSphericalMaskRealRandomAccessible.class);
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( mask, bigItvl );
-		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
+		PlateauSphericalMaskSource transformMask = PlateauSphericalMaskSource.build( mask, bigItvl );
+		PlateauSphericalMaskRealRandomAccessible lambda = transformMask.getRandomAccessible();
 		
 		// build transformations
 		final double[][] mvgPts;
@@ -254,8 +254,8 @@ public class SimilarityTransformInterpolationExample {
 		PlateauSphericalMaskRealRandomAccessible maskRA = BigwarpSettings.gson.fromJson( mask, PlateauSphericalMaskRealRandomAccessible.class);
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( maskRA, bigItvl );
-		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
+		PlateauSphericalMaskSource transformMask = PlateauSphericalMaskSource.build( maskRA, bigItvl );
+		PlateauSphericalMaskRealRandomAccessible lambda = transformMask.getRandomAccessible();
 		
 		
 		// build transformations
