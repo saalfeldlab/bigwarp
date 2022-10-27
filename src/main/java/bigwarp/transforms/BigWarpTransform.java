@@ -332,22 +332,7 @@ public class BigWarpTransform
 			return null;
 		else
 		{
-			// TODO add get method in ThinplateSplineTransform to avoid reflection here
-			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
-			try
-			{
-				final Field tpsField = c_tps.getDeclaredField( "tps" );
-				tpsField.setAccessible( true );
-				ThinPlateR2LogRSplineKernelTransform tpsbase = (ThinPlateR2LogRSplineKernelTransform)tpsField.get(  tps );
-				tpsField.setAccessible( false );
-
-				return tpsbase;
-			}
-			catch(Exception e )
-			{
-				e.printStackTrace();
-				return null;
-			}
+			return tps.getKernelTransform();
 		}
 	}
 
