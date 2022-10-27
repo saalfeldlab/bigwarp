@@ -123,7 +123,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 ////		bdv.getBdvHandle().getTriggerbindings().removeInputTriggerMap( "block_transform" );
 //
 //		final MaskedSourceEditorMouseListener ml = new MaskedSourceEditorMouseListener( 3, null, bdv.getBdvHandle().getViewerPanel() );
-//		ml.setMask( img );
+//		ml.setMaskInterpolationType( img );
 ////		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
 //
 		double x = 50;

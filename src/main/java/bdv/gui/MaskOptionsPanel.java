@@ -98,7 +98,7 @@ public class MaskOptionsPanel extends JPanel
 			public void actionPerformed( ActionEvent e )
 			{
 				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() && isMask() );
-				bw.getBwTransform().setMask( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
+				bw.getBwTransform().setMaskInterpolationType( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
 				bw.restimateTransformation();
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
