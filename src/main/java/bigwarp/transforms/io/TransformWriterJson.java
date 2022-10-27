@@ -6,7 +6,6 @@ import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import bigwarp.transforms.BigWarpTransform;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -57,7 +56,8 @@ public class TransformWriterJson {
 	public static JsonObject write(LandmarkTableModel ltm, BigWarpTransform bwTransform) {
 
 		JsonObject transformObj = new JsonObject();
-		transformObj.add("type", new JsonPrimitive( bwTransform.getTransformType() ));
+		transformObj.addProperty("type", bwTransform.getTransformType() );
+		transformObj.addProperty("maskInterpolationType", bwTransform.getMaskInterpolationType() );
 		transformObj.add("landmarks", ltm.toJson());
 
 		if( bwTransform.isMasked() )
@@ -65,6 +65,7 @@ public class TransformWriterJson {
 			PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
 			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
 		}
+
 		return transformObj;
 	}
 
@@ -73,13 +74,18 @@ public class TransformWriterJson {
 		if( json.has( "landmarks" ))
 			bw.getLandmarkPanel().getTableModel().fromJson( json );
 
+		final String maskInterpolationType = json.get( "maskInterpolationType" ).getAsString();
+		bw.getBwTransform().setMaskInterpolationType( maskInterpolationType );
+
 		if( json.has( "mask" ))
 		{
 			JsonObject maskParams = json.get("mask").getAsJsonObject();
-			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTpsMaskSource().getRandomAccessible();
-			mask.setCenter( BigwarpSettings.gson.fromJson( maskParams.get( "center" ), double[].class ));
-			mask.setSquaredRadius( maskParams.get("squaredRadius").getAsDouble() );
-			mask.setSquaredSigma( maskParams.get("squaredSigma").getAsDouble() );
+			final PlateauSphericalMaskRealRandomAccessible maskFromJson = BigwarpSettings.gson.fromJson( maskParams, PlateauSphericalMaskRealRandomAccessible.class );
+
+			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTransformMaskSource().getRandomAccessible();
+			mask.setFalloffShape( maskFromJson.getFallOffShape() );
+			mask.setSquaredRadius( maskFromJson.getSquaredRadius() );
+			mask.setCenter( maskFromJson.getCenter() );
 		}
 	}
 

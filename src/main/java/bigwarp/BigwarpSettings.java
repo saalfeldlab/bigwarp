@@ -143,12 +143,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				autoSaver = gson.fromJson( in, BigWarpAutoSaver.class );
 				bigWarp.setAutoSaver( autoSaver );
 				break;
-			case "TPSMask":
-				final PlateauSphericalMaskRealRandomAccessible maskFromJson = gson.fromJson( in, PlateauSphericalMaskRealRandomAccessible.class );
-				tpsMask.setFalloffShape( maskFromJson.getFallOffShape() );
-				tpsMask.setSquaredRadius( maskFromJson.getSquaredRadius() );
-				tpsMask.setCenter( maskFromJson.getCenter() );
-				break;
 			case "Transform":
 				final JsonObject transformObject = ( JsonObject ) JsonParser.parseReader( in );
 				TransformWriterJson.read( bigWarp, transformObject );
