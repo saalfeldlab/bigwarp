@@ -2,34 +2,30 @@
     "ViewerP": {
         "Sources": [
             true,
+            true,
             false,
             true,
             false,
-            false,
-            false,
-            false,
-            false
+            true
         ],
         "SourceGroups": [
             {
                 "active": true,
                 "name": "moving images",
                 "id": [
-                    0,
-                    1
+                    0
                 ]
             },
             {
                 "active": true,
                 "name": "fixed images",
                 "id": [
-                    2,
-                    3
+                    1
                 ]
             }
         ],
         "DisplayMode": "ss",
-        "Interpolation": "nlinear",
+        "Interpolation": "nearestneighbor",
         "CurrentSource": 0,
         "CurrentGroup": 0,
         "CurrentTimePoint": 0
@@ -37,35 +33,31 @@
     "ViewerQ": {
         "Sources": [
             true,
+            true,
             false,
             true,
             false,
-            false,
-            false,
-            false,
-            false
+            true
         ],
         "SourceGroups": [
             {
                 "active": true,
                 "name": "moving images",
                 "id": [
-                    0,
-                    1
+                    0
                 ]
             },
             {
                 "active": true,
                 "name": "fixed images",
                 "id": [
-                    2,
-                    3
+                    1
                 ]
             }
         ],
-        "DisplayMode": "fs",
+        "DisplayMode": "ss",
         "Interpolation": "nearestneighbor",
-        "CurrentSource": 2,
+        "CurrentSource": 1,
         "CurrentGroup": 1,
         "CurrentTimePoint": 0
     },
@@ -74,58 +66,44 @@
             {
                 "id": 0,
                 "min": 0.0,
-                "max": 860.4,
-                "color": -10027213,
+                "max": 255.0,
+                "color": -1,
                 "groupId": 0
             },
             {
                 "id": 1,
                 "min": 0.0,
                 "max": 255.0,
-                "color": 0,
-                "groupId": 1
-            },
-            {
-                "id": 2,
-                "min": 0.0,
-                "max": 2000.0,
-                "color": -39169,
-                "groupId": 2
-            },
-            {
-                "id": 3,
-                "min": 0.0,
-                "max": 433.408,
                 "color": -1,
-                "groupId": 3
+                "groupId": 1
             },
             {
                 "id": 956736363,
                 "min": 0.0,
                 "max": 65535.0,
                 "color": -1,
-                "groupId": 4
+                "groupId": 2
             },
             {
                 "id": 1006827158,
                 "min": 0.0,
                 "max": 65535.0,
                 "color": -1,
-                "groupId": 5
+                "groupId": 3
             },
             {
                 "id": 1696993146,
                 "min": 0.0,
                 "max": 65535.0,
                 "color": -1,
-                "groupId": 6
+                "groupId": 4
             },
             {
                 "id": 33872301,
                 "min": 0.0,
                 "max": 65535.0,
                 "color": -1,
-                "groupId": 7
+                "groupId": 5
             }
         ],
         "MinMaxGroups": [
@@ -134,9 +112,9 @@
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
-                "rangeMax": 4000.0,
+                "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 860.4
+                "currentMax": 255.0
             },
             {
                 "id": 1,
@@ -152,9 +130,9 @@
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
-                "rangeMax": 2000.0,
+                "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 2000.0
+                "currentMax": 512.0
             },
             {
                 "id": 3,
@@ -163,7 +141,7 @@
                 "rangeMin": 0.0,
                 "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 255.0
+                "currentMax": 512.0
             },
             {
                 "id": 4,
@@ -181,96 +159,85 @@
                 "rangeMin": 0.0,
                 "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 512.0
-            },
-            {
-                "id": 6,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 65535.0,
-                "currentMin": 0.0,
-                "currentMax": 512.0
-            },
-            {
-                "id": 7,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 65535.0,
-                "currentMin": 0.0,
-                "currentMax": 512.0
+                "currentMax": 1.0
             }
         ]
     },
     "Bookmarks": {
         "bookmarks": {}
     },
-    "Autosave": {
-        "period": 180000,
-        "location": "/tmp/.bigwarp"
-    },
     "Transform": {
         "type": "Thin Plate Spline",
-        "maskInterpolationType": "NONE",
+        "maskInterpolationType": "LINEAR",
         "landmarks": {
             "type": "BigWarpLandmarks",
             "numDimensions": 3,
             "movingPoints": [
                 [
-                    193.1527102803737,
-                    163.57943925233658,
-                    130.00000000000003
+                    138.5264565425024,
+                    153.68156638013366,
+                    130.0
                 ],
                 [
-                    132.8910280373831,
-                    248.17757009345803,
-                    130.00000000000003
+                    256.96599808978027,
+                    260.65921680993307,
+                    130.0
                 ],
                 [
-                    222.70411214953256,
-                    272.51401869158883,
-                    130.00000000000003
+                    99.04660936007639,
+                    293.771346704871,
+                    130.0
                 ],
                 [
-                    182.72280373831765,
-                    159.52336448598143,
-                    170.5607476635514
+                    185.64756446991402,
+                    222.45291308500472,
+                    193.67717287488063
                 ],
                 [
-                    176.92841121495317,
-                    255.1308411214954,
-                    170.5607476635514
+                    245.0465937080423,
+                    187.61109998806953,
+                    85.38357770940299
+                ],
+                [
+                    148.2207748912096,
+                    228.0398521995533,
+                    85.38357770940299
                 ]
             ],
             "fixedPoints": [
                 [
-                    216.01797508417232,
-                    233.3341910984992,
-                    126.86263579832789
+                    209.84489016236864,
+                    199.5291308500477,
+                    130.0
                 ],
                 [
-                    145.77520051769838,
-                    213.26482693664948,
-                    126.8626357983279
+                    171.63858643744027,
+                    283.5829990448901,
+                    130.0
                 ],
                 [
-                    146.49196352347872,
-                    298.5596246245108,
-                    126.86263579832789
+                    138.5264565425024,
+                    200.80267430754532,
+                    130.0
                 ],
                 [
-                    182.72280373831765,
-                    159.52336448598143,
-                    170.5607476635514
+                    185.64756446991402,
+                    222.45291308500472,
+                    193.67717287488063
                 ],
                 [
-                    176.92841121495317,
-                    255.1308411214954,
-                    170.5607476635514
+                    269.7014326647564,
+                    123.11652340019099,
+                    91.28427889207263
+                ],
+                [
+                    138.5264565425024,
+                    300.13906399235907,
+                    91.28427889207263
                 ]
             ],
             "active": [
+                true,
                 true,
                 true,
                 true,
@@ -282,7 +249,18 @@
                 "Pt-1",
                 "Pt-2",
                 "Pt-3",
-                "Pt-4"
+                "Pt-4",
+                "Pt-5"
+            ]
+        },
+        "mask": {
+            "fallOffShape": "COSINE",
+            "squaredRadius": 12135.963559594926,
+            "squaredSigma": 100.0,
+            "center": [
+                204.1139446036294,
+                211.62779369627503,
+                91.28427889207263
             ]
         }
     }
