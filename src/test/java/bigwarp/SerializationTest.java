@@ -115,6 +115,7 @@ public class SerializationTest
 		final JsonObject expected = new JsonObject();
 		expected.addProperty( "period", 1000 );
 		expected.addProperty( "location", "/tmp" );
+		saver.stop();
 
 		Assert.assertEquals( expected, actual );
 	}
