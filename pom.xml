@@ -112,6 +112,13 @@
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
+		<jitk-tps.version>3.0.2</jitk-tps.version>
+		<imglib2-realtransform.version>4.0.0</imglib2-realtransform.version>
+
+		<n5.version>2.5.1</n5.version>
+		<n5-ij.version>3.2.1</n5-ij.version>
+		<n5-imglib2.version>4.3.0</n5-imglib2.version>
+		<n5-hdf5.version>1.4.1</n5-hdf5.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
@@ -291,6 +298,11 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>xmlunit</groupId>
+			<artifactId>xmlunit</artifactId>
+			<version>1.5</version>
 		</dependency>
 	</dependencies>
 </project>

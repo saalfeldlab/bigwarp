@@ -34,25 +34,38 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
 import bigwarp.BigWarp;
+import bigwarp.transforms.BigWarpTransform;
 
 public class TransformTypeSelectDialog extends JDialog
 {
 	private static final long serialVersionUID = 1L;
 	
+	@Deprecated
 	public static final String TPS = "Thin Plate Spline";
+	@Deprecated
+	public static final String MASKEDTPS = "Masked Thin Plate Spline";
+	@Deprecated
+	public static final String MASKEDSIMTPS = "Masked Similarity + Thin Plate Spline";
+	@Deprecated
 	public static final String AFFINE = "Affine";
+	@Deprecated
 	public static final String SIMILARITY = "Similarity";
+	@Deprecated
 	public static final String ROTATION = "Rotation";
+	@Deprecated
 	public static final String TRANSLATION = "Translation";
-	
+
 	private final BigWarp< ? > bw;
 	private String transformType;
 
+	private final ButtonGroup group;
 	private final JRadioButton tpsButton;
 	private final JRadioButton affineButton;
 	private final JRadioButton similarityButton;
 	private final JRadioButton rotationButton;
 	private final JRadioButton translationButton;
+
+	private boolean active;
 
 	/**
 	 * Instantiates and displays a JFrame that enables
@@ -66,16 +79,17 @@ public class TransformTypeSelectDialog extends JDialog
 		super( owner, "Transform Type select", false );
 
 		this.bw = bw;
+		active = true;
 		this.setLayout( new BorderLayout() );
 		transformType = bw.getTransformType();
 
-		tpsButton = new JRadioButton( TPS );
-		affineButton = new JRadioButton( AFFINE );
-		similarityButton = new JRadioButton( SIMILARITY );
-		rotationButton = new JRadioButton( ROTATION );
-		translationButton = new JRadioButton( TRANSLATION );
+		tpsButton = new JRadioButton( BigWarpTransform.TPS );
+		affineButton = new JRadioButton( BigWarpTransform.AFFINE );
+		similarityButton = new JRadioButton( BigWarpTransform.SIMILARITY );
+		rotationButton = new JRadioButton( BigWarpTransform.ROTATION );
+		translationButton = new JRadioButton( BigWarpTransform.TRANSLATION );
 		
-		ButtonGroup group = new ButtonGroup();
+		group = new ButtonGroup();
 		group.add( tpsButton );
 		group.add( affineButton );
 		group.add( similarityButton );
@@ -89,7 +103,7 @@ public class TransformTypeSelectDialog extends JDialog
 		addActionListender( similarityButton );
 		addActionListender( rotationButton );
 		addActionListender( translationButton );
-		
+
 		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
 		radioPanel.add( affineButton );
@@ -105,7 +119,8 @@ public class TransformTypeSelectDialog extends JDialog
 								"Transform type" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
-		add( radioPanel, BorderLayout.LINE_START );
+		add( radioPanel, BorderLayout.PAGE_START );
+
 		pack();
 	}
 
@@ -113,19 +128,19 @@ public class TransformTypeSelectDialog extends JDialog
 	{
 		switch( transformType )
 		{
-		case TPS:
+		case BigWarpTransform.TPS:
 			tpsButton.setSelected( true );
 			break;
-		case AFFINE:
+		case BigWarpTransform.AFFINE:
 			affineButton.setSelected( true );
 			break;
-		case SIMILARITY:
+		case BigWarpTransform.SIMILARITY:
 			similarityButton.setSelected( true );
 			break;
-		case ROTATION:
+		case BigWarpTransform.ROTATION:
 			rotationButton.setSelected( true );
 			break;
-		case TRANSLATION:
+		case BigWarpTransform.TRANSLATION:
 			translationButton.setSelected( true );
 			break;
 		}
@@ -136,9 +151,28 @@ public class TransformTypeSelectDialog extends JDialog
 		button.addActionListener( new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				bw.setTransformType( button.getText() );
+				if( active )
+				{
+					final String type = button.getText();
+					bw.setTransformType( type );
+					bw.updateTransformTypePanel( type );
+				}
 			}
 		});
+	}
+
+	public void addFalloffActionListender( final JRadioButton button )
+	{
+		button.addActionListener( new ActionListener()
+		{
+			@Override
+			public void actionPerformed( ActionEvent e )
+			{
+				bw.getTransformMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
+				bw.getViewerFrameP().getViewerPanel().requestRepaint();
+				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+			}
+		} );
 	}
 
 	public void setTransformType( String transformType )
@@ -148,4 +182,21 @@ public class TransformTypeSelectDialog extends JDialog
 		this.validate();
 		this.repaint();
 	}
+
+	/**
+	 * After calling deactivate, updates to this panel won't affect Bigwarp.
+	 */
+	public void deactivate()
+	{
+		active = false;
+	}
+
+	/**
+	 * After calling activate, updates to this panel will affect Bigwarp.
+	 */
+	public void activate()
+	{
+		active = true;
+	}
+
 }

@@ -138,11 +138,7 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				System.out.println("ok");
 				filterPoints( matchedPtNames, outputIntervalList, selectionTable );
-
-				System.out.println( matchedPtNames );
-				System.out.println( outputIntervalList );
 
 				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
@@ -158,7 +154,6 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				//System.out.println("cancel");
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
 		});

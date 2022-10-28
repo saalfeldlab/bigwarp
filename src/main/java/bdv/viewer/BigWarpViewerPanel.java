@@ -26,8 +26,10 @@ import bdv.gui.BigWarpViewerOptions;
 import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
+import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -50,6 +52,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected BigWarpOverlay overlay;
 
 	protected BigWarpDragOverlay dragOverlay;
+
+	protected BigWarpMaskSphereOverlay maskOverlay;
 
 	protected boolean isMoving;
 
@@ -236,8 +240,24 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.dragOverlay = dragOverlay;
 	}
 
+	public void addOverlay( OverlayRenderer overlay )
+	{
+		super.getDisplay().overlays().add( overlay );
+	}
+
 	public BigWarpDragOverlay getDragOverlay(){
 		return dragOverlay;
+	}
+
+	public BigWarpMaskSphereOverlay getMaskOverlay()
+	{
+		return maskOverlay;
+	}
+
+	public void setMaskOverlay( final BigWarpMaskSphereOverlay maskOverlay )
+	{
+		this.maskOverlay = maskOverlay;
+		addOverlay( maskOverlay );
 	}
 
 	public boolean getIsMoving()

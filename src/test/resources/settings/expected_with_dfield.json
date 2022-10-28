@@ -1,0 +1,267 @@
+{
+    "ViewerP": {
+        "Sources": [
+            true,
+            true,
+            false,
+            true,
+            false,
+            true
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": [
+                    0
+                ]
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": [
+                    1
+                ]
+            }
+        ],
+        "DisplayMode": "ss",
+        "Interpolation": "nearestneighbor",
+        "CurrentSource": 0,
+        "CurrentGroup": 0,
+        "CurrentTimePoint": 0
+    },
+    "ViewerQ": {
+        "Sources": [
+            true,
+            true,
+            false,
+            true,
+            false,
+            true
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": [
+                    0
+                ]
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": [
+                    1
+                ]
+            }
+        ],
+        "DisplayMode": "ss",
+        "Interpolation": "nearestneighbor",
+        "CurrentSource": 1,
+        "CurrentGroup": 1,
+        "CurrentTimePoint": 0
+    },
+    "SetupAssignments": {
+        "ConverterSetups": [
+            {
+                "id": 0,
+                "min": 0.0,
+                "max": 255.0,
+                "color": -1,
+                "groupId": 0
+            },
+            {
+                "id": 1,
+                "min": 0.0,
+                "max": 255.0,
+                "color": -1,
+                "groupId": 1
+            },
+            {
+                "id": 956736363,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 2
+            },
+            {
+                "id": 1006827158,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 3
+            },
+            {
+                "id": 1696993146,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 4
+            },
+            {
+                "id": 33872301,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 5
+            }
+        ],
+        "MinMaxGroups": [
+            {
+                "id": 0,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            {
+                "id": 1,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            {
+                "id": 2,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 3,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 4,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 5,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 1.0
+            }
+        ]
+    },
+    "Bookmarks": {
+        "bookmarks": {}
+    },
+    "Transform": {
+        "type": "Thin Plate Spline",
+        "maskInterpolationType": "LINEAR",
+        "landmarks": {
+            "type": "BigWarpLandmarks",
+            "numDimensions": 3,
+            "movingPoints": [
+                [
+                    138.5264565425024,
+                    153.68156638013366,
+                    130.0
+                ],
+                [
+                    256.96599808978027,
+                    260.65921680993307,
+                    130.0
+                ],
+                [
+                    99.04660936007639,
+                    293.771346704871,
+                    130.0
+                ],
+                [
+                    185.64756446991402,
+                    222.45291308500472,
+                    193.67717287488063
+                ],
+                [
+                    245.0465937080423,
+                    187.61109998806953,
+                    85.38357770940299
+                ],
+                [
+                    148.2207748912096,
+                    228.0398521995533,
+                    85.38357770940299
+                ]
+            ],
+            "fixedPoints": [
+                [
+                    209.84489016236864,
+                    199.5291308500477,
+                    130.0
+                ],
+                [
+                    171.63858643744027,
+                    283.5829990448901,
+                    130.0
+                ],
+                [
+                    138.5264565425024,
+                    200.80267430754532,
+                    130.0
+                ],
+                [
+                    185.64756446991402,
+                    222.45291308500472,
+                    193.67717287488063
+                ],
+                [
+                    269.7014326647564,
+                    123.11652340019099,
+                    91.28427889207263
+                ],
+                [
+                    138.5264565425024,
+                    300.13906399235907,
+                    91.28427889207263
+                ]
+            ],
+            "active": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            "names": [
+                "Pt-0",
+                "Pt-1",
+                "Pt-2",
+                "Pt-3",
+                "Pt-4",
+                "Pt-5"
+            ]
+        },
+        "mask": {
+            "fallOffShape": "COSINE",
+            "squaredRadius": 12135.963559594926,
+            "squaredSigma": 100.0,
+            "center": [
+                204.1139446036294,
+                211.62779369627503,
+                91.28427889207263
+            ]
+        }
+    }
+}

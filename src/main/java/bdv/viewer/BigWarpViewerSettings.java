@@ -120,8 +120,6 @@ public class BigWarpViewerSettings  {
 	public void togglePointsVisible(){
 		displaySettings.put( KEY_SPOTS_VISIBLE, 
 				!((Boolean)displaySettings.get( KEY_SPOTS_VISIBLE )).booleanValue());
-		
-		//System.out.println(((Boolean)displaySettings.get( KEY_DISPLAY_SPOT_NAMES )));
 	}
 	
 	public void setSpotColor( Color c )

@@ -1067,12 +1067,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		gd.addChoice( "Transform type", 
 				new String[] {
-					TransformTypeSelectDialog.TPS,
-					TransformTypeSelectDialog.AFFINE,
-					TransformTypeSelectDialog.SIMILARITY,
-					TransformTypeSelectDialog.ROTATION,
-					TransformTypeSelectDialog.TRANSLATION },
-				TransformTypeSelectDialog.TPS);
+					BigWarpTransform.TPS,
+					BigWarpTransform.AFFINE,
+					BigWarpTransform.SIMILARITY,
+					BigWarpTransform.ROTATION,
+					BigWarpTransform.TRANSLATION },
+				BigWarpTransform.TPS);
 
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution", 

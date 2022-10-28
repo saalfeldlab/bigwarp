@@ -50,6 +50,7 @@ public class BigWarpActions
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
+	public static final String TRANSFORM_TYPE = "transform type";
 
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
@@ -83,6 +84,9 @@ public class BigWarpActions
 	public static final String QUICK_SAVE_LANDMARKS = "quick save landmarks";
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
+
+	public static final String MASK_SIZE_EDIT = "mask edit";
+	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
 
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
@@ -160,7 +164,7 @@ public class BigWarpActions
 		
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F3" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F4" );
-		map.put( "transform type", "F2" );
+		map.put( TRANSFORM_TYPE, "F2" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
@@ -188,7 +192,7 @@ public class BigWarpActions
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
-		new ToggleDialogAction( "transform type", bw.transformSelector ).put( actionMap );
+		new ToggleDialogAction( TRANSFORM_TYPE, bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -252,6 +256,9 @@ public class BigWarpActions
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( ESTIMATE_WARP, "C" );
+
+		map.put( MASK_SIZE_EDIT, "M" );
+		map.put( MASK_VIS_TOGGLE, "control M" );
 
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
@@ -325,6 +332,10 @@ public class BigWarpActions
 		new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ).put( actionMap );
 		new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ).put( actionMap );
 		new EstimateWarpAction( ESTIMATE_WARP, bw ).put( actionMap );
+
+		// MASK
+		new MaskSizeEdit( bw ).put(actionMap);
+		new MaskVisToggle( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -1156,4 +1167,43 @@ public class BigWarpActions
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}
+
+	public static class MaskSizeEdit extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -7918625162439713732L;
+		private final BigWarp< ? > bw;
+
+		public MaskSizeEdit( final BigWarp< ? > bw )
+		{
+			super( MASK_SIZE_EDIT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.maskSourceMouseListenerP.toggleActive();
+			bw.maskSourceMouseListenerQ.toggleActive();
+		}
+	}
+
+	public static class MaskVisToggle extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 493457851797644046L;
+		private final BigWarp< ? > bw;
+
+		public MaskVisToggle( final BigWarp< ? > bw )
+		{
+			super( MASK_VIS_TOGGLE );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
+			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
+		}
+	}
+
 }

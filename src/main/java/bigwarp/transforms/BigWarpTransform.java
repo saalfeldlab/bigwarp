@@ -23,14 +23,13 @@ package bigwarp.transforms;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
-import java.util.Optional;
 
 import bdv.gui.TransformTypeSelectDialog;
-import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import ij.IJ;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.models.AbstractAffineModel2D;
@@ -46,30 +45,49 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
+import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
+import net.imglib2.type.numeric.RealType;
 
 public class BigWarpTransform
 {
+	public static final String TPS = "Thin Plate Spline";
+	public static final String AFFINE = "Affine";
+	public static final String SIMILARITY = "Similarity";
+	public static final String ROTATION = "Rotation";
+	public static final String TRANSLATION = "Translation";
+
+	public static final String MASK_INTERP = "LINEAR";
+	public static final String SIM_MASK_INTERP = "SIMILARITY";
+	public static final String ROT_MASK_INTERP = "ROTATION";
+
 	private final int ndims;
 
 	private final LandmarkTableModel tableModel;
 
 	private String transformType;
-	
+
+	private String maskInterpolationType;
+
 	private InvertibleRealTransform currentTransform;
 
 	private double inverseTolerance = 0.5;
 
 	private int maxIterations = 200;
 
+	private RealRandomAccessible<? extends RealType<?>> lambda;
+
+	private AbstractTransformSolver<?> solver;
+
 	public BigWarpTransform( final LandmarkTableModel tableModel )
 	{
-		this( tableModel, TransformTypeSelectDialog.TPS );
+		this( tableModel, TPS );
 	}
 
 	public BigWarpTransform( final LandmarkTableModel tableModel, final String transformType )
@@ -77,11 +95,57 @@ public class BigWarpTransform
 		this.tableModel = tableModel;
 		this.ndims = tableModel.getNumdims();
 		this.transformType = transformType;
+		this.maskInterpolationType = "NONE";
+		updateSolver();
 	}
 
 	public void setTransformType( final String transformType )
 	{
 		this.transformType = transformType;
+		updateSolver();
+	}
+
+	public void setMaskInterpolationType( String maskType )
+	{
+		this.maskInterpolationType = maskType;
+		updateSolver();
+	}
+
+	public String getMaskInterpolationType()
+	{
+		return maskInterpolationType;
+	}
+
+	public boolean isMasked()
+	{
+		return maskInterpolationType.equals( MASK_INTERP ) || maskInterpolationType.equals( ROT_MASK_INTERP ) || maskInterpolationType.equals( SIM_MASK_INTERP );
+	}
+
+	public void updateSolver()
+	{
+		if ( transformType.equals( TPS ) )
+		{
+			solver = new TpsTransformSolver();
+		}
+		else
+		{
+			solver = new ModelTransformSolver( getModelType() );
+		}
+
+		if ( maskInterpolationType.equals( MASK_INTERP ) )
+		{
+			solver = new MaskedTransformSolver( solver, lambda );
+		}
+		else if ( maskInterpolationType.equals( ROT_MASK_INTERP ) || maskInterpolationType.equals( SIM_MASK_INTERP ) )
+		{
+			final double[] center = new double[ 3 ];
+			if ( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
+			{
+				((PlateauSphericalMaskRealRandomAccessible) lambda).getCenter()
+						.localize( center );
+			}
+			solver = new MaskedSimRotTransformSolver( solver, lambda, center, Interpolators.valueOf( maskInterpolationType ) );
+		}
 	}
 
 	public void setInverseTolerance( double inverseTolerance )
@@ -109,6 +173,16 @@ public class BigWarpTransform
 		return transformType;
 	}
 
+	public RealRandomAccessible<? extends RealType<?>> getLambda( )
+	{
+		return lambda;
+	}
+
+	public void setLambda( final RealRandomAccessible< ? extends RealType< ? > > lambda )
+	{
+		this.lambda = lambda;
+	}
+
 	public InvertibleRealTransform getTransformation()
 	{
 		return getTransformation( -1 );
@@ -117,24 +191,16 @@ public class BigWarpTransform
 	public InvertibleRealTransform getTransformation( final int index )
 	{
 		InvertibleRealTransform invXfm = null;
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TPS ))
 		{
-			WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( tableModel );
+			WrappedIterativeInvertibleRealTransform<?> tpsXfm = (WrappedIterativeInvertibleRealTransform< ? >) solver.solve( tableModel, index );
 			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
 			invXfm = tpsXfm;
 		}
 		else
 		{
-			final double[][] mvgPts;
-			final double[][] tgtPts;
-
-			final int numActive = tableModel.numActive();
-			mvgPts = new double[ ndims ][ numActive ];
-			tgtPts = new double[ ndims ][ numActive ];
-			tableModel.copyLandmarks( mvgPts, tgtPts ); // synchronized
-
-			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
+			invXfm = solver.solve(tableModel, index);
 		}
 
 		if( tableModel.getNumdims() == 2 )
@@ -178,13 +244,13 @@ public class BigWarpTransform
 	public AbstractAffineModel3D<?> getModel3D()
 	{
 		switch( transformType ){
-		case TransformTypeSelectDialog.AFFINE:
+		case AFFINE:
 			return new AffineModel3D();
-		case TransformTypeSelectDialog.SIMILARITY:
+		case SIMILARITY:
 			return new SimilarityModel3D();
-		case TransformTypeSelectDialog.ROTATION:
+		case ROTATION:
 			return new RigidModel3D();
-		case TransformTypeSelectDialog.TRANSLATION:
+		case TRANSLATION:
 			return new TranslationModel3D();
 		}
 		return null;
@@ -193,13 +259,13 @@ public class BigWarpTransform
 	public AbstractAffineModel2D<?> getModel2D()
 	{
 		switch( transformType ){
-		case TransformTypeSelectDialog.AFFINE:
+		case AFFINE:
 			return new AffineModel2D();
-		case TransformTypeSelectDialog.SIMILARITY:
+		case SIMILARITY:
 			return new SimilarityModel2D();
-		case TransformTypeSelectDialog.ROTATION:
+		case ROTATION:
 			return new RigidModel2D();
-		case TransformTypeSelectDialog.TRANSLATION:
+		case TRANSLATION:
 			return new TranslationModel2D();
 		}
 		return null;
@@ -207,7 +273,7 @@ public class BigWarpTransform
 
 	public InvertibleCoordinateTransform getCoordinateTransform()
 	{
-		if( !transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( !transformType.equals( TPS ))
 		{
 			WrappedCoordinateTransform wct = (WrappedCoordinateTransform)( unwrap2d( getTransformation() ));
 			return wct.getTransform();
@@ -236,95 +302,20 @@ public class BigWarpTransform
 		AffineTransform3D out = new AffineTransform3D();
 		if( transformType.equals( TransformTypeSelectDialog.TPS ))
 		{
-			double[][] tpsAffine = getTpsBase().getAffine();
-			double[] translation = getTpsBase().getTranslation();
-
-			double[] affine = new double[ 12 ];
-			if( ndims == 2 )
-			{
-				affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
-				affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
-				// dont set affine 2
-				affine[ 3 ] = translation[ 0 ];
-
-				affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
-				affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
-				// dont set 6
-				affine[ 7 ] = translation[ 1 ];
-
-				// dont set 8,9,11
-				affine[ 10 ] = 1.0;
-			}
-			else
-			{
-				affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
-				affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
-				affine[ 2 ] = tpsAffine[ 0 ][ 2 ];
-				affine[ 3 ] = translation[ 0 ];
-
-				affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
-				affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
-				affine[ 6 ] = tpsAffine[ 1 ][ 2 ];
-				affine[ 7 ] = translation[ 1 ];
-
-				affine[ 8 ] = tpsAffine[ 2 ][ 0 ];
-				affine[ 9 ] = tpsAffine[ 2 ][ 1 ];
-				affine[ 10 ] = 1 + tpsAffine[ 2 ][ 2 ];
-				affine[ 11 ] = translation[ 2 ];
-			}
-
-			out.set( affine );
+			return affine3d( getTpsBase(), out );
 		}
 		else
 		{
 			if( ndims == 2 )
 			{
 				AbstractAffineModel2D model2d = (AbstractAffineModel2D)getCoordinateTransform();
-
-				double[][] mtx = new double[2][3];
-				model2d.toMatrix( mtx );
-
-				double[] affine = new double[ 12 ];
-				affine[ 0 ] = mtx[ 0 ][ 0 ];
-				affine[ 1 ] = mtx[ 0 ][ 1 ];
-				// dont set affine 2
-				affine[ 3 ] = mtx[ 0 ][ 2 ];
-
-				affine[ 4 ] = mtx[ 1 ][ 0 ];
-				affine[ 5 ] = mtx[ 1 ][ 1 ];
-				// dont set affine 6
-				affine[ 7 ] = mtx[ 1 ][ 2 ];
-
-				// dont set affines 8,9,11
-				affine[ 10 ] = 1.0;
-
-				out.set( affine );
+				return affine3d( model2d, out );
 
 			}
 			else if( ndims == 3 )
 			{
 				AbstractAffineModel3D model3d = (AbstractAffineModel3D)getCoordinateTransform();
-
-				double[][] mtx = new double[3][4];
-				model3d.toMatrix( mtx );
-
-				double[] affine = new double[ 12 ];
-				affine[ 0 ] = mtx[ 0 ][ 0 ];
-				affine[ 1 ] = mtx[ 0 ][ 1 ];
-				affine[ 2 ] = mtx[ 0 ][ 2 ];
-				affine[ 3 ] = mtx[ 0 ][ 3 ];
-
-				affine[ 4 ] = mtx[ 1 ][ 0 ];
-				affine[ 5 ] = mtx[ 1 ][ 1 ];
-				affine[ 6 ] = mtx[ 1 ][ 2 ];
-				affine[ 7 ] = mtx[ 1 ][ 3 ];
-
-				affine[ 8 ] = mtx[ 2 ][ 0 ];
-				affine[ 9 ] = mtx[ 2 ][ 1 ];
-				affine[ 10 ] = mtx[ 2 ][ 2 ];
-				affine[ 11 ] = mtx[ 2 ][ 3 ];
-
-				out.set( affine );
+				return affine3d( model3d, out );
 			}
 			else
 			{
@@ -332,7 +323,6 @@ public class BigWarpTransform
 				return null;
 			}
 		}
-		return out;
 	}
 	
 	public ThinPlateR2LogRSplineKernelTransform getTpsBase()
@@ -342,29 +332,13 @@ public class BigWarpTransform
 			return null;
 		else
 		{
-			// TODO add get method in ThinplateSplineTransform to avoid reflection here
-			// this will be possible with imglib2-realtransform-4.0.0
-			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
-			try
-			{
-				final Field tpsField = c_tps.getDeclaredField( "tps" );
-				tpsField.setAccessible( true );
-				ThinPlateR2LogRSplineKernelTransform tpsbase = (ThinPlateR2LogRSplineKernelTransform)tpsField.get(  tps );
-				tpsField.setAccessible( false );
-
-				return tpsbase;
-			}
-			catch(Exception e )
-			{
-				e.printStackTrace();
-				return null;
-			}
+			return tps.getKernelTransform();
 		}
 	}
 
 	public ThinplateSplineTransform getTps()
 	{
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TPS ))
 		{
 			WrappedIterativeInvertibleRealTransform<?> wiirt = (WrappedIterativeInvertibleRealTransform<?>)( unwrap2d( getTransformation()) );
 			return ((ThinplateSplineTransform)wiirt.getTransform());
@@ -417,7 +391,7 @@ public class BigWarpTransform
 	public String affineToString()
 	{
 		String s = "";
-		if( getTransformType().equals( TransformTypeSelectDialog.TPS ))
+		if( getTransformType().equals( TPS ))
 		{
 			double[][] affine = affinePartOfTpsHC();
 			for( int r = 0; r < affine.length; r++ )
@@ -515,6 +489,98 @@ public class BigWarpTransform
 		}
 
 		setInverseTolerance( 0.5 * highestResDim);
+	}
+
+	public static AffineTransform3D affine3d( AbstractAffineModel2D model2d, AffineTransform3D out )
+	{
+		double[][] mtx = new double[2][3];
+		model2d.toMatrix( mtx );
+
+		double[] affine = new double[ 12 ];
+		affine[ 0 ] = mtx[ 0 ][ 0 ];
+		affine[ 1 ] = mtx[ 0 ][ 1 ];
+		// dont set affine 2
+		affine[ 3 ] = mtx[ 0 ][ 2 ];
+
+		affine[ 4 ] = mtx[ 1 ][ 0 ];
+		affine[ 5 ] = mtx[ 1 ][ 1 ];
+		// dont set affine 6
+		affine[ 7 ] = mtx[ 1 ][ 2 ];
+
+		// dont set affines 8,9,11
+		affine[ 10 ] = 1.0;
+
+		out.set( affine );
+		return out;
+	}
+
+	public static AffineTransform3D affine3d( AbstractAffineModel3D model3d, AffineTransform3D out )
+	{
+		double[][] mtx = new double[3][4];
+		model3d.toMatrix( mtx );
+
+		double[] affine = new double[ 12 ];
+		affine[ 0 ] = mtx[ 0 ][ 0 ];
+		affine[ 1 ] = mtx[ 0 ][ 1 ];
+		affine[ 2 ] = mtx[ 0 ][ 2 ];
+		affine[ 3 ] = mtx[ 0 ][ 3 ];
+
+		affine[ 4 ] = mtx[ 1 ][ 0 ];
+		affine[ 5 ] = mtx[ 1 ][ 1 ];
+		affine[ 6 ] = mtx[ 1 ][ 2 ];
+		affine[ 7 ] = mtx[ 1 ][ 3 ];
+
+		affine[ 8 ] = mtx[ 2 ][ 0 ];
+		affine[ 9 ] = mtx[ 2 ][ 1 ];
+		affine[ 10 ] = mtx[ 2 ][ 2 ];
+		affine[ 11 ] = mtx[ 2 ][ 3 ];
+
+		out.set( affine );
+		return out;
+	}
+
+	public static AffineTransform3D affine3d( ThinPlateR2LogRSplineKernelTransform tps, AffineTransform3D out )
+	{
+		double[][] tpsAffine = tps.getAffine();
+		double[] translation = tps.getTranslation();
+		int ndims = tps.getNumDims();
+
+		double[] affine = new double[ 12 ];
+		if( ndims == 2 )
+		{
+			affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
+			affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
+			// dont set affine 2
+			affine[ 3 ] = translation[ 0 ];
+
+			affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
+			affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
+			// dont set 6
+			affine[ 7 ] = translation[ 1 ];
+
+			// dont set 8,9,11
+			affine[ 10 ] = 1.0;
+		}
+		else
+		{
+			affine[ 0 ] = 1 + tpsAffine[ 0 ][ 0 ];
+			affine[ 1 ] = tpsAffine[ 0 ][ 1 ];
+			affine[ 2 ] = tpsAffine[ 0 ][ 2 ];
+			affine[ 3 ] = translation[ 0 ];
+
+			affine[ 4 ] = tpsAffine[ 1 ][ 0 ];
+			affine[ 5 ] = 1 + tpsAffine[ 1 ][ 1 ];
+			affine[ 6 ] = tpsAffine[ 1 ][ 2 ];
+			affine[ 7 ] = translation[ 1 ];
+
+			affine[ 8 ] = tpsAffine[ 2 ][ 0 ];
+			affine[ 9 ] = tpsAffine[ 2 ][ 1 ];
+			affine[ 10 ] = 1 + tpsAffine[ 2 ][ 2 ];
+			affine[ 11 ] = translation[ 2 ];
+		}
+
+		out.set( affine );
+		return out;
 	}
 
 }

@@ -40,6 +40,11 @@ public class BigWarpViewerOptions extends ViewerOptions
 		return new BigWarpViewerOptions();
 	}
 
+	public static BigWarpViewerOptions options( final boolean is2D )
+	{
+		return options().is2D( is2D );
+	}
+
 	@Override
 	public BigWarpViewerOptions inputTriggerConfig( final InputTriggerConfig c )
 	{
