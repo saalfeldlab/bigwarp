@@ -1,11 +1,14 @@
 package bdv.gui;
 
+import bigwarp.BigWarp;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffShape;
+import bigwarp.source.PlateauSphericalMaskSource;
+import bigwarp.transforms.BigWarpTransform;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -13,12 +16,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-
-import bigwarp.BigWarp;
-import bigwarp.BigWarpAutoSaver;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffType;
-import bigwarp.source.PlateauSphericalMaskSource;
-import bigwarp.transforms.BigWarpTransform;
 
 public class MaskOptionsPanel extends JPanel
 {
@@ -44,7 +41,7 @@ public class MaskOptionsPanel extends JPanel
 	private final JCheckBox showMaskOverlayButton;
 
 	private final JLabel falloffTypeLabel;
-	private final JComboBox< FalloffType > falloffTypeDropdown;
+	private final JComboBox< FalloffShape > falloffTypeDropdown;
 
 	private final JLabel maskTypeLabel;
 	private final JComboBox< String > maskTypeDropdown;
@@ -89,7 +86,7 @@ public class MaskOptionsPanel extends JPanel
 
 		falloffTypeLabel = new JLabel( "Mask falloff");
 		falloffTypeLabel.setToolTipText( FALLOFF_HELP_TEXT );
-		falloffTypeDropdown = new JComboBox<>( FalloffType.values() );
+		falloffTypeDropdown = new JComboBox<>( FalloffShape.values() );
 		falloffTypeDropdown.setToolTipText( FALLOFF_HELP_TEXT );
 
 		maskTypeLabel = new JLabel( "Mask interpolation");
@@ -101,7 +98,7 @@ public class MaskOptionsPanel extends JPanel
 			public void actionPerformed( ActionEvent e )
 			{
 				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() && isMask() );
-				bw.getBwTransform().setMask( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
+				bw.getBwTransform().setMaskInterpolationType( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
 				bw.restimateTransformation();
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
@@ -155,7 +152,7 @@ public class MaskOptionsPanel extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				maskSource.getRandomAccessible().setType( (FalloffType)falloffTypeDropdown.getSelectedItem() );
+				maskSource.getRandomAccessible().setFalloffShape( (FalloffShape)falloffTypeDropdown.getSelectedItem() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();	
 			}
@@ -173,7 +170,7 @@ public class MaskOptionsPanel extends JPanel
 		return showMaskOverlayButton;
 	}
 
-	public JComboBox< FalloffType > getFalloffTypeDropdown()
+	public JComboBox< FalloffShape > getFalloffShapeDropdown()
 	{
 		return falloffTypeDropdown;
 	}

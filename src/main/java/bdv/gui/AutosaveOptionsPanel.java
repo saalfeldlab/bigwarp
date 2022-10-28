@@ -1,5 +1,7 @@
 package bdv.gui;
 
+import bigwarp.BigWarp;
+import bigwarp.BigWarpAutoSaver;
 import java.awt.Container;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -7,7 +9,6 @@ import java.awt.Insets;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.File;
-
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -19,9 +20,6 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-
-import bigwarp.BigWarp;
-import bigwarp.BigWarpAutoSaver;
 
 public class AutosaveOptionsPanel extends JPanel
 {
@@ -62,7 +60,7 @@ public class AutosaveOptionsPanel extends JPanel
 					if ( autoSaver != null )
 						autoSaver.stop();
 
-					new BigWarpAutoSaver( bw, periodMillis );
+					bw.setAutoSaver( new BigWarpAutoSaver( bw, periodMillis ));
 				}
 			}
 		} );
@@ -83,7 +81,7 @@ public class AutosaveOptionsPanel extends JPanel
 					savePeriodModel.setValue( lastAutoSaveFreq );
 
 					long periodMillis = ((Integer) savePeriodModel.getValue()).longValue() * 60000;
-					new BigWarpAutoSaver( bw, periodMillis );
+					bw.setAutoSaver( new BigWarpAutoSaver( bw, periodMillis ));
 					updating = false;
 				}
 				else
@@ -115,7 +113,7 @@ public class AutosaveOptionsPanel extends JPanel
 			{
 				final File folder = fileChooser.getSelectedFile();
 				getAutoSaveFolderText().setText( folder.getAbsolutePath() );
-				bw.setAutosaveFolder( folder );
+				bw.getAutoSaver().setAutosaveFolder( folder );
 			}
 		} );
 

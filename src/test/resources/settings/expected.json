@@ -1,0 +1,289 @@
+{
+    "ViewerP": {
+        "Sources": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": [
+                    0,
+                    1
+                ]
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": [
+                    2,
+                    3
+                ]
+            }
+        ],
+        "DisplayMode": "ss",
+        "Interpolation": "nlinear",
+        "CurrentSource": 0,
+        "CurrentGroup": 0,
+        "CurrentTimePoint": 0
+    },
+    "ViewerQ": {
+        "Sources": [
+            true,
+            false,
+            true,
+            false,
+            false,
+            false,
+            false,
+            false
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": [
+                    0,
+                    1
+                ]
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": [
+                    2,
+                    3
+                ]
+            }
+        ],
+        "DisplayMode": "fs",
+        "Interpolation": "nearestneighbor",
+        "CurrentSource": 2,
+        "CurrentGroup": 1,
+        "CurrentTimePoint": 0
+    },
+    "SetupAssignments": {
+        "ConverterSetups": [
+            {
+                "id": 0,
+                "min": 0.0,
+                "max": 860.4,
+                "color": -10027213,
+                "groupId": 0
+            },
+            {
+                "id": 1,
+                "min": 0.0,
+                "max": 255.0,
+                "color": 0,
+                "groupId": 1
+            },
+            {
+                "id": 2,
+                "min": 0.0,
+                "max": 2000.0,
+                "color": -39169,
+                "groupId": 2
+            },
+            {
+                "id": 3,
+                "min": 0.0,
+                "max": 433.408,
+                "color": -1,
+                "groupId": 3
+            },
+            {
+                "id": 956736363,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 4
+            },
+            {
+                "id": 1006827158,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 5
+            },
+            {
+                "id": 1696993146,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 6
+            },
+            {
+                "id": 33872301,
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 7
+            }
+        ],
+        "MinMaxGroups": [
+            {
+                "id": 0,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 4000.0,
+                "currentMin": 0.0,
+                "currentMax": 860.4
+            },
+            {
+                "id": 1,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            {
+                "id": 2,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 2000.0,
+                "currentMin": 0.0,
+                "currentMax": 2000.0
+            },
+            {
+                "id": 3,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            {
+                "id": 4,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 5,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 6,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            },
+            {
+                "id": 7,
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 512.0
+            }
+        ]
+    },
+    "Bookmarks": {
+        "bookmarks": {}
+    },
+    "Autosave": {
+        "period": 180000,
+        "location": "/tmp/.bigwarp"
+    },
+    "Transform": {
+        "type": "Thin Plate Spline",
+        "maskInterpolationType": "NONE",
+        "landmarks": {
+            "type": "BigWarpLandmarks",
+            "numDimensions": 3,
+            "movingPoints": [
+                [
+                    193.1527102803737,
+                    163.57943925233658,
+                    130.00000000000003
+                ],
+                [
+                    132.8910280373831,
+                    248.17757009345803,
+                    130.00000000000003
+                ],
+                [
+                    222.70411214953256,
+                    272.51401869158883,
+                    130.00000000000003
+                ],
+                [
+                    182.72280373831765,
+                    159.52336448598143,
+                    170.5607476635514
+                ],
+                [
+                    176.92841121495317,
+                    255.1308411214954,
+                    170.5607476635514
+                ]
+            ],
+            "fixedPoints": [
+                [
+                    216.01797508417232,
+                    233.3341910984992,
+                    126.86263579832789
+                ],
+                [
+                    145.77520051769838,
+                    213.26482693664948,
+                    126.8626357983279
+                ],
+                [
+                    146.49196352347872,
+                    298.5596246245108,
+                    126.86263579832789
+                ],
+                [
+                    182.72280373831765,
+                    159.52336448598143,
+                    170.5607476635514
+                ],
+                [
+                    176.92841121495317,
+                    255.1308411214954,
+                    170.5607476635514
+                ]
+            ],
+            "active": [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            "names": [
+                "Pt-0",
+                "Pt-1",
+                "Pt-2",
+                "Pt-3",
+                "Pt-4"
+            ]
+        }
+    }
+}

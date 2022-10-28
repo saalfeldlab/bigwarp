@@ -34,7 +34,7 @@ import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 
 import bigwarp.BigWarp;
-import bigwarp.transforms.BigWarpTransform;;
+import bigwarp.transforms.BigWarpTransform;
 
 public class TransformTypeSelectDialog extends JDialog
 {
@@ -168,7 +168,7 @@ public class TransformTypeSelectDialog extends JDialog
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				bw.getTpsMaskSource().getRandomAccessible().setType( button.getText() );
+				bw.getTransformMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			}

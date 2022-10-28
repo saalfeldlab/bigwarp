@@ -21,6 +21,75 @@
  */
 package bigwarp;
 
+<<<<<<< HEAD
+import bdv.viewer.ConverterSetups;
+import bdv.viewer.DisplayMode;
+import bdv.viewer.TransformListener;
+import bdv.viewer.ViewerState;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.FileDialog;
+import java.awt.KeyEventPostProcessor;
+import java.awt.KeyboardFocusManager;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+
+import javax.swing.ActionMap;
+import javax.swing.InputMap;
+import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JTable;
+import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellEditor;
+
+import mpicbg.spim.data.SpimData;
+import mpicbg.spim.data.XmlIoSpimData;
+import mpicbg.spim.data.registration.ViewTransformAffine;
+
+import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.utility.geom.BoundingSphereRitter;
+import org.janelia.utility.geom.Sphere;
+import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.JDOMException;
+import org.jdom2.input.SAXBuilder;
+import org.jdom2.output.Format;
+import org.jdom2.output.XMLOutputter;
+import org.scijava.ui.behaviour.io.InputTriggerConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+=======
+>>>>>>> cmhulbert/jsonSettings
 import bdv.BigDataViewer;
 import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
@@ -1784,11 +1853,19 @@ public class BigWarp< T >
 		// only render mask overlay on target window
 		viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
 
+		maskSourceMouseListenerP = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerP );
+		maskSourceMouseListenerP.setActive( false );
+		maskSourceMouseListenerP.setMask( transformMask.getRandomAccessible() );
+
 		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
 		maskSourceMouseListenerQ.setActive( false );
 		maskSourceMouseListenerQ.setMask( transformMask.getRandomAccessible() );
 
-		transformMask.getRandomAccessible().setOverlays( Arrays.asList( viewerQ.getMaskOverlay() ));
+<<<<<<< HEAD
+		tpsMask.getRandomAccessible().setOverlays( Arrays.asList( viewerQ.getMaskOverlay() ));
+=======
+		transformMask.getRandomAccessible().setOverlays( Arrays.asList( viewerP.getMaskOverlay(), viewerQ.getMaskOverlay() ));
+>>>>>>> cmhulbert/jsonSettings
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )

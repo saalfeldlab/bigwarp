@@ -73,7 +73,7 @@ public class BigWarpTransform
 
 	private String transformType;
 
-	private String maskType;
+	private String maskInterpolationType;
 
 	private InvertibleRealTransform currentTransform;
 
@@ -95,7 +95,7 @@ public class BigWarpTransform
 		this.tableModel = tableModel;
 		this.ndims = tableModel.getNumdims();
 		this.transformType = transformType;
-		this.maskType = "NONE";
+		this.maskInterpolationType = "NONE";
 		updateSolver();
 	}
 
@@ -105,20 +105,20 @@ public class BigWarpTransform
 		updateSolver();
 	}
 
-	public void setMask( String maskType )
+	public void setMaskInterpolationType( String maskType )
 	{
-		this.maskType = maskType;
+		this.maskInterpolationType = maskType;
 		updateSolver();
 	}
 
-	public String getMask()
+	public String getMaskInterpolationType()
 	{
-		return maskType;
+		return maskInterpolationType;
 	}
 
 	public boolean isMasked()
 	{
-		return maskType.equals( MASK_INTERP ) || maskType.equals( ROT_MASK_INTERP ) || maskType.equals( SIM_MASK_INTERP );
+		return maskInterpolationType.equals( MASK_INTERP ) || maskInterpolationType.equals( ROT_MASK_INTERP ) || maskInterpolationType.equals( SIM_MASK_INTERP );
 	}
 
 	public void updateSolver()
@@ -132,11 +132,11 @@ public class BigWarpTransform
 			solver = new ModelTransformSolver( getModelType() );
 		}
 
-		if ( maskType.equals( MASK_INTERP ) )
+		if ( maskInterpolationType.equals( MASK_INTERP ) )
 		{
 			solver = new MaskedTransformSolver( solver, lambda );
 		}
-		else if ( maskType.equals( ROT_MASK_INTERP ) || maskType.equals( SIM_MASK_INTERP ) )
+		else if ( maskInterpolationType.equals( ROT_MASK_INTERP ) || maskInterpolationType.equals( SIM_MASK_INTERP ) )
 		{
 			final double[] center = new double[ 3 ];
 			if ( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
@@ -144,7 +144,7 @@ public class BigWarpTransform
 				((PlateauSphericalMaskRealRandomAccessible) lambda).getCenter()
 						.localize( center );
 			}
-			solver = new MaskedSimRotTransformSolver( solver, lambda, center, Interpolators.valueOf( maskType ) );
+			solver = new MaskedSimRotTransformSolver( solver, lambda, center, Interpolators.valueOf( maskInterpolationType ) );
 		}
 	}
 
@@ -332,22 +332,7 @@ public class BigWarpTransform
 			return null;
 		else
 		{
-			// TODO add get method in ThinplateSplineTransform to avoid reflection here
-			final Class< ThinplateSplineTransform > c_tps = ThinplateSplineTransform.class;
-			try
-			{
-				final Field tpsField = c_tps.getDeclaredField( "tps" );
-				tpsField.setAccessible( true );
-				ThinPlateR2LogRSplineKernelTransform tpsbase = (ThinPlateR2LogRSplineKernelTransform)tpsField.get(  tps );
-				tpsField.setAccessible( false );
-
-				return tpsbase;
-			}
-			catch(Exception e )
-			{
-				e.printStackTrace();
-				return null;
-			}
+			return tps.getKernelTransform();
 		}
 	}
 

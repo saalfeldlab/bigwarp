@@ -1,5 +1,24 @@
 package net.imglib2.realtransform;
 
+import bdv.util.Affine3DHelpers;
+import bdv.util.BdvFunctions;
+import bdv.util.BdvOptions;
+import bdv.util.BdvStackSource;
+import bdv.viewer.animate.AbstractTransformAnimator;
+import bdv.viewer.animate.SimilarityModel3D;
+import bdv.viewer.animate.SimilarityTransformAnimator;
+import bigwarp.BigwarpSettings;
+import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.PlateauSphericalMaskSource;
+import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.ModelTransformSolver;
+import bigwarp.transforms.TpsTransformSolver;
+import bigwarp.transforms.WrappedCoordinateTransform;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import ij.IJ;
+import ij.ImagePlus;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.channels.Channels;
@@ -12,31 +31,10 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-
-import bdv.util.Affine3DHelpers;
-import bdv.util.BdvFunctions;
-import bdv.util.BdvOptions;
-import bdv.util.BdvStackSource;
-import bdv.viewer.animate.AbstractTransformAnimator;
-import bdv.viewer.animate.SimilarityModel3D;
-import bdv.viewer.animate.SimilarityTransformAnimator;
-import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
-import bigwarp.source.PlateauSphericalMaskSource;
-import bigwarp.transforms.BigWarpTransform;
-import bigwarp.transforms.ModelTransformSolver;
-import bigwarp.transforms.TpsTransformSolver;
-import bigwarp.transforms.WrappedCoordinateTransform;
-import ij.IJ;
-import ij.ImagePlus;
 import mpicbg.models.AbstractAffineModel3D;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
@@ -98,9 +96,9 @@ public class SimilarityTransformInterpolationExample {
 		// RandomAccessibleInterval<UnsignedByteType> img = Views.translateInverse( imgBase, 252, 76, 70 );
 
 		AffineTransform3D identity = new AffineTransform3D();
+		//TODO Caleb: John, what interval should we be using here?
 		FinalInterval bigItvl = Intervals.createMinMax(0, -200, 0, 1000, 1000, 150);
 		
-		Gson gson = new Gson();
 		final Path path = Paths.get( jsonFile );
 		final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
 		Reader reader;
@@ -108,7 +106,7 @@ public class SimilarityTransformInterpolationExample {
 		try
 		{
 			reader = Channels.newReader(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
-			json = gson.fromJson( reader, JsonObject.class );
+			json = BigwarpSettings.gson.fromJson( reader, JsonObject.class );
 		} catch ( IOException e )
 		{
 			e.printStackTrace();
@@ -120,10 +118,13 @@ public class SimilarityTransformInterpolationExample {
 			ltm.fromJson( json );
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( 3, new RealPoint( 3 ), bigItvl );
-		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
-		tpsMask.getRandomAccessible().fromJson( json.getAsJsonObject( "mask" ) );
-		
+
+		final JsonObject maskJson = json.getAsJsonObject( "mask" );
+		PlateauSphericalMaskRealRandomAccessible mask = BigwarpSettings.gson.fromJson( maskJson, PlateauSphericalMaskRealRandomAccessible.class);
+
+
+		PlateauSphericalMaskSource transformMask = PlateauSphericalMaskSource.build( mask, bigItvl );
+		PlateauSphericalMaskRealRandomAccessible lambda = transformMask.getRandomAccessible();
 		
 		// build transformations
 		final double[][] mvgPts;
@@ -249,9 +250,12 @@ public class SimilarityTransformInterpolationExample {
 			ltm.fromJson( json );
 
 
-		PlateauSphericalMaskSource tpsMask = PlateauSphericalMaskSource.build( 3, new RealPoint( 3 ), bigItvl );
-		PlateauSphericalMaskRealRandomAccessible lambda = tpsMask.getRandomAccessible();
-		tpsMask.getRandomAccessible().fromJson( json.getAsJsonObject( "mask" ) );
+		final JsonObject mask = json.getAsJsonObject( "mask" );
+		PlateauSphericalMaskRealRandomAccessible maskRA = BigwarpSettings.gson.fromJson( mask, PlateauSphericalMaskRealRandomAccessible.class);
+
+
+		PlateauSphericalMaskSource transformMask = PlateauSphericalMaskSource.build( maskRA, bigItvl );
+		PlateauSphericalMaskRealRandomAccessible lambda = transformMask.getRandomAccessible();
 		
 		
 		// build transformations

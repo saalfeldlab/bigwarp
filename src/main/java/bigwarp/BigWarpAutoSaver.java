@@ -21,13 +21,12 @@
  */
 package bigwarp;
 
+import bigwarp.landmarks.LandmarkTableModel;
+import com.google.gson.annotations.JsonAdapter;
+import com.google.gson.annotations.SerializedName;
 import java.io.File;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Supplier;
-
-import bigwarp.landmarks.LandmarkTableModel;
 
 /**
  * Saves bigwarp landmarks to a file periodically, 
@@ -38,19 +37,23 @@ import bigwarp.landmarks.LandmarkTableModel;
  */
 public class BigWarpAutoSaver 
 {
-	private final BigWarp<?> bw;
+	transient private final BigWarp<?> bw;
 
-	final Timer timer;
+	transient final Timer timer;
 
-	final AutoSave saveTask;
+	transient final AutoSave saveTask;
 
 	final long period;
+
+	@SerializedName("location")
+	@JsonAdapter( BigwarpSettings.FileAdapter.class )
+	protected File autoSaveDirectory;
+
 
 	public BigWarpAutoSaver( final BigWarp<?> bw, final long period )
 	{
 		this.bw = bw;
 		this.period = period;
-		bw.autoSaver = this;
 		timer = new Timer();
 		saveTask = new AutoSave();
 		timer.schedule( saveTask, period, period );
@@ -87,7 +90,6 @@ public class BigWarpAutoSaver
 	
 	public static void setAutosaveOptions( final BigWarp<?> bw, final long period, final String autoSavePath )
 	{
-		bw.setAutosaveFolder( new File( autoSavePath ) );
 
 		if( period > 0 )
 		{
@@ -97,12 +99,33 @@ public class BigWarpAutoSaver
 			if( bw.autoSaver != null )
 				bw.autoSaver.stop();
 
-			new BigWarpAutoSaver( bw, period );
-			bw.warpVisDialog.repaint();
+			final BigWarpAutoSaver autoSaver = new BigWarpAutoSaver( bw, period );
+			bw.setAutoSaver( autoSaver );
+			autoSaver.setAutosaveFolder( new File( autoSavePath ) );
 		}
 		else
 		{
 			bw.warpVisDialog.getAutoSaveOptionsPanel().getDoAutoSaveBox().setSelected( false );
+			bw.warpVisDialog.repaint();
+		}
+	}
+
+	/**
+	 * Set the folder where the results of auto-saving will be stored.
+	 *
+	 * @param autoSaveFolder
+	 * 		the destination folder
+	 */
+	public void setAutosaveFolder( final File autoSaveFolder )
+	{
+		boolean exists = autoSaveFolder.exists();
+		if ( !exists )
+			exists = autoSaveFolder.mkdir();
+
+		if ( exists && autoSaveFolder.isDirectory() )
+		{
+			autoSaveDirectory = autoSaveFolder;
+			bw.warpVisDialog.getAutoSaveOptionsPanel().getAutoSaveFolderText().setText( autoSaveFolder.getAbsolutePath() );
 			bw.warpVisDialog.repaint();
 		}
 	}
