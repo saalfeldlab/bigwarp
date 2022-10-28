@@ -79,6 +79,7 @@ import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.transforms.io.TransformWriterJson;
 import bigwarp.util.BigWarpUtils;
+import com.google.common.collect.Lists;
 import com.google.gson.stream.JsonReader;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
@@ -158,6 +159,7 @@ import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.RealTransformFiniteDerivatives;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.real.AbstractRealType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import org.janelia.saalfeldlab.n5.Compression;
@@ -491,12 +493,13 @@ public class BigWarp< T >
 		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
 		
-		// set warp mag source to inactive at the start
-		viewerP.state().setSourceActive( warpMagSource, false );
-		viewerQ.state().setSourceActive( warpMagSource, false );
-		// set warp grid source to inactive at the start
-		viewerP.state().setSourceActive( gridSource, false );
-		viewerQ.state().setSourceActive( gridSource, false );
+		// set sources to inactive at the start
+		for ( final SourceAndConverter< ? > source : Arrays.asList( warpMagSource, gridSource, jacDetSource, transformMaskSource ) )
+		{
+			viewerP.state().setSourceActive( source, false );
+			viewerQ.state().setSourceActive( source, false );
+		}
+
 
 		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
 		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
