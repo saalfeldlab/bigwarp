@@ -3432,7 +3432,7 @@ public class BigWarp< T >
 
 		final Element autoSaveNode = new Element( "autosave" );
 		final Element autoSaveLocation = new Element( "location" );
-		if ( autoSaver.autoSaveDirectory != null )
+		if ( autoSaver != null && autoSaver.autoSaveDirectory != null )
 			autoSaveLocation.setText( autoSaver.autoSaveDirectory.getAbsolutePath() );
 		else
 			autoSaveLocation.setText( getBigwarpSettingsFolder().getAbsolutePath() );
