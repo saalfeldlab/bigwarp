@@ -3398,13 +3398,13 @@ public class BigWarp< T >
 			try
 			{
 				final String canonicalPath = proposedSettingsFile.getCanonicalPath();
-				if ( canonicalPath.endsWith( ".json" ) )
+				if ( canonicalPath.endsWith( ".xml" ) )
 				{
-					saveSettingsJson( canonicalPath );
+					saveSettings( canonicalPath );
 				}
 				else
 				{
-					saveSettings( canonicalPath );
+					saveSettingsJson( canonicalPath );
 				}
 			}
 			catch ( final IOException e )
@@ -3496,11 +3496,8 @@ public class BigWarp< T >
 	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
-		if (jsonOrXmlFilename.endsWith( ".json" )) {
-			getSettings().read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
-			activeSourcesDialogP.update();
-			activeSourcesDialogQ.update();
-		} else {
+		if ( jsonOrXmlFilename.endsWith( ".xml" ) )
+		{
 			final SAXBuilder sax = new SAXBuilder();
 			final Document doc = sax.build( jsonOrXmlFilename );
 			final Element root = doc.getRootElement();
@@ -3521,7 +3518,12 @@ public class BigWarp< T >
 			if ( maskSettings != null )
 				transformMask.getRandomAccessible().fromXml( maskSettings );
 		}
-
+		else
+		{
+			getSettings().read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+			activeSourcesDialogP.update();
+			activeSourcesDialogQ.update();
+		}
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();
