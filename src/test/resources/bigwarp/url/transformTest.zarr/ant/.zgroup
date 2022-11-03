@@ -1,0 +1,10 @@
+{
+    "coordinateTransformations" : [
+        {
+            "type" : "scale",
+            "scale" : [1,1,1],
+            "input" : "ant-in",
+            "output" : "ant-out"
+        }
+    ]
+}
