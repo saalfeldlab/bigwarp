@@ -42,7 +42,6 @@ import bdv.spimdata.SpimDataMinimal;
 import bdv.spimdata.WrapBasicImgLoader;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.BigWarpExporter.ExportThread;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.loader.ImagePlusLoader;

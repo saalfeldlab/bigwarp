@@ -38,7 +38,6 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import net.imglib2.realtransform.AffineTransform3D;
 
 public class SourceInfoDialog extends JDialog

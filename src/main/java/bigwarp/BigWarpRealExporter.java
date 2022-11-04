@@ -28,7 +28,6 @@ import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;

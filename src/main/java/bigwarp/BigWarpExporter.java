@@ -40,7 +40,6 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.models.AffineModel2D;

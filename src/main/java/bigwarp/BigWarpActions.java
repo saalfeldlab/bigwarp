@@ -37,8 +37,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;

@@ -52,7 +52,7 @@ import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpExporter;
 import bigwarp.BigWarpInit;

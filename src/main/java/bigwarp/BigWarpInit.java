@@ -55,7 +55,6 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;

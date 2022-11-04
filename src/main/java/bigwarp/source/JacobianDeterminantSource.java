@@ -25,7 +25,7 @@ import java.util.Arrays;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;

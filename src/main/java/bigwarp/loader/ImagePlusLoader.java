@@ -50,7 +50,7 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import ij.ImagePlus;
 import ij.process.LUT;
 import mpicbg.spim.data.generic.sequence.BasicImgLoader;

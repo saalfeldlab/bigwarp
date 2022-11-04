@@ -29,14 +29,11 @@ import mpicbg.spim.data.sequence.VoxelDimensions;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.janelia.saalfeldlab.n5.ij.N5IJUtils;
-
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.exception.ImgLibException;
 import net.imglib2.img.display.imagej.ImageJFunctions;
@@ -44,19 +41,14 @@ import net.imglib2.img.imageplus.ImagePlusImg;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
-import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealViews;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 
 public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 {

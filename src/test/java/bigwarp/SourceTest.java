@@ -30,7 +30,6 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.BdvFunctions;
 import bdv.util.BdvStackSource;
 import bdv.viewer.Source;
-import bigwarp.BigWarp.BigWarpData;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;

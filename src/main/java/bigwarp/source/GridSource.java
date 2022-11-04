@@ -23,8 +23,7 @@ package bigwarp.source;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;

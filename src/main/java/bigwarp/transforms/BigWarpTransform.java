@@ -29,7 +29,7 @@ import bdv.gui.TransformTypeSelectDialog;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import ij.IJ;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
