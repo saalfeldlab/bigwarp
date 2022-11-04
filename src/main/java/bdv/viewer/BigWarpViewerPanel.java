@@ -59,9 +59,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	protected int ndims;
 
-	final protected int[] movingSourceIndexList;
+	final protected List<Integer> movingSourceIndexList;
 
-	final protected int[] targetSourceIndexList;
+	final protected List<Integer> targetSourceIndexList;
 
 	protected boolean boxOverlayVisible = true;
 
@@ -75,13 +75,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 	ViewerOptions options;
 
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList )
+			List<Integer> movingSourceIndexList, List<Integer> targetSourceIndexList )
 	{
 		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
 	}
 
 	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList  )
+			List<Integer> movingSourceIndexList, List<Integer> targetSourceIndexList  )
 	{
 		super( sources, 1, cache, optional.getViewerOptions( isMoving ) );
 		this.viewerSettings = viewerSettings;
@@ -202,7 +202,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()

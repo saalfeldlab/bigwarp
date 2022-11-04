@@ -44,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -187,12 +188,14 @@ public class BigWarp< T >
 	protected BigWarpData< T > data;
 
 	// descriptive names for indexing sources
-	protected int[] movingSourceIndexList;
+	protected List<Integer> movingSourceIndexList;
 
-	protected int[] targetSourceIndexList;
-
-	protected List< SourceAndConverter< T > > sources;
+	protected List<Integer> targetSourceIndexList;
 	
+	protected List< SourceAndConverter< T > > sources;
+
+	protected HashSet< SourceAndConverter< T >> movingSources;
+
 	protected final SetupAssignments setupAssignments;
 
 	protected final BrightnessDialog brightnessDialog;
@@ -380,7 +383,7 @@ public class BigWarp< T >
 
 		fixedViewXfm = new AffineTransform3D();
 		//sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
-		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+		data.sources.get( data.targetSourceIndexList.get(0) ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
 		baselineModelIndex = 0;
 		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "WarpMagnitudeSource" );
@@ -389,12 +392,16 @@ public class BigWarp< T >
 
 		this.sources = this.data.sources;
 		final List< ConverterSetup > converterSetups = data.converterSetups;
-		this.movingSourceIndexList = data.movingSourceIndices;
-		this.targetSourceIndexList = data.targetSourceIndices;
-		Arrays.sort( movingSourceIndexList );
-		Arrays.sort( targetSourceIndexList );
+		this.movingSourceIndexList = data.movingSourceIndexList;
+		this.targetSourceIndexList = data.movingSourceIndexList;
+		Collections.sort( movingSourceIndexList );
+		Collections.sort( targetSourceIndexList );
+//		Arrays.sort( movingSourceIndexList );
+//		Arrays.sort( targetSourceIndexList );
 
 		sources = wrapSourcesAsTransformed( data.sources, ndims, data );
+		// TODO JOHN CHECK THIS!!
+		data.sources = sources;
 
 		setGridType( GridSource.GRID_TYPE.LINE );
 
@@ -634,6 +641,16 @@ public class BigWarp< T >
 		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
 	}
 
+	public void addSource( Source<?> source, boolean moving )
+	{
+		
+	}
+
+	public void addSource( Source<?> source )
+	{
+		addSource( source, false );
+	}
+
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
 	{
 		keyEventPostProcessorSet.add( ke );
@@ -822,7 +839,7 @@ public class BigWarp< T >
 	public void saveMovingImageToFile()
 	{
 		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() );
+		File proposedFile = new File( sources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getName() );
 
 		fileChooser.setSelectedFile( proposedFile );
 		final int returnVal = fileChooser.showSaveDialog( null );
@@ -1761,13 +1778,14 @@ public class BigWarp< T >
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		int[] warpUsIndices = data.movingSourceIndices;
-		HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
+		final List<Integer> warpUsIndices = data.movingSourceIndexList;
+		final HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
 
 		int i = 0;
-		for ( final SourceAndConverter<T>sac : sources )
+		for ( final SourceAndConverter<T> sac : sources )
 		{
-			int idx = Arrays.binarySearch( warpUsIndices, i );
+//			int idx = Arrays.binarySearch( warpUsIndices, i );
+			int idx = warpUsIndices.indexOf( i );
 			if ( idx >= 0 )
 			{
 				SourceAndConverter<T> newSac = wrapSourceAsTransformed( sac, "xfm_" + i, ndims );
@@ -1798,7 +1816,7 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource(  final BigWarpData< T > data, final boolean is2D, final String name )
+	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource( final BigWarpData< T > data, final boolean is2D, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource<>( name, data, new FloatType() );
@@ -2096,9 +2114,9 @@ public class BigWarp< T >
 	{
 		this.currentTransform = transform;
 
-		for ( int i = 0; i < movingSourceIndexList.length; i++ )
+		for ( int i = 0; i < movingSourceIndexList.size(); i++ )
 		{
-			int idx = movingSourceIndexList [ i ];
+			final int idx = movingSourceIndexList.get( i );
 
 			// the xfm must always be 3d for bdv to be happy.
 			// when bigwarp has 2d images though, the z- component will be left unchanged
@@ -2113,9 +2131,9 @@ public class BigWarp< T >
 
 	public void updateSourceBoundingBoxEstimators()
 	{
-		for ( int i = 0; i < movingSourceIndexList.length; i++ )
+		for ( int i = 0; i < movingSourceIndexList.size(); i++ )
 		{
-			int idx = movingSourceIndexList [ i ];
+			final int idx = movingSourceIndexList.get( i );
 
 			// the xfm must always be 3d for bdv to be happy.
 			// when bigwarp has 2d images though, the z- component will be left unchanged
@@ -2194,9 +2212,9 @@ public class BigWarp< T >
 
 	public synchronized void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
-		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
+		for( int i = 0 ; i < movingSourceIndexList.size(); i ++ )
 		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
+			final int movingSourceIndex = movingSourceIndexList.get( 0 );
 
 			( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).getSpimSource() ) ).setIsTransformed( isTransformed );
 
@@ -2227,7 +2245,7 @@ public class BigWarp< T >
 	public boolean isMovingDisplayTransformed()
 	{
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
-		return ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+		return ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
 	}
 
 	/**
@@ -2416,34 +2434,46 @@ public class BigWarp< T >
 
 	public static class BigWarpData< T >
 	{
-		public final List< SourceAndConverter< T > > sources;
+		// TODO JOHN CHECK ME
+		public List< SourceAndConverter< T > > sources;
 
 		public final List< ConverterSetup > converterSetups;
 
 		public final CacheControl cache;
 
-		public int[] movingSourceIndices;
+//		public int[] movingSourceIndices;
+//
+//		public int[] targetSourceIndices;
 
-		public int[] targetSourceIndices;
+		public final List< Integer > movingSourceIndexList;
 
-		public final ArrayList< Integer > movingSourceIndexList;
-
-		public final ArrayList< Integer > targetSourceIndexList;
+		public final List< Integer > targetSourceIndexList;
+		
+		public final HashMap< SourceAndConverter<T>, Boolean > isMovingMap;
 
 		public final HashMap< Integer, ColorSettings > setupSettings;
 
 		public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
 
-		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
+		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
+				final CacheControl cache, 
+				final int[] movingIndexes, 
+				final int[] targetIndexes )
+		{
+			this( sources, converterSetups, cache,
+					listOf( movingIndexes ),
+					listOf( targetIndexes ));
+		}
+		
+		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
+				final CacheControl cache )
 		{
 			this.sources = sources;
 			this.converterSetups = converterSetups;
-			this.movingSourceIndices = movingSourceIndices;
-			this.targetSourceIndices = targetSourceIndices;
 
 			this.movingSourceIndexList = new ArrayList<>();
 			this.targetSourceIndexList = new ArrayList<>();
-			
+			isMovingMap = new HashMap<>();
 
 			if ( cache == null )
 				this.cache = new CacheControl.Dummy();
@@ -2454,13 +2484,103 @@ public class BigWarp< T >
 			sourceColorSettings = new HashMap<>();
 		}
 
+		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
+				final CacheControl cache, 
+				final List<Integer> movingIndexes, 
+				final List<Integer> targetIndexes )
+		{
+			this.sources = sources;
+			this.converterSetups = converterSetups;
+//			this.movingSourceIndices = movingSourceIndices;
+//			this.targetSourceIndices = targetSourceIndices;
+
+			this.movingSourceIndexList = movingIndexes;
+			this.targetSourceIndexList = targetIndexes;
+			isMovingMap = new HashMap<>();
+			updateIsMovingMap();
+
+			if ( cache == null )
+				this.cache = new CacheControl.Dummy();
+			else
+				this.cache = cache;
+
+			setupSettings = new HashMap<>();
+			sourceColorSettings = new HashMap<>();
+		}
+		
+		private void updateIsMovingMap()
+		{
+			isMovingMap.clear();
+			for( Integer i : movingSourceIndexList )
+				isMovingMap.put( sources.get( i ), true );
+
+			for( Integer i : targetSourceIndexList )
+				isMovingMap.put( sources.get( i ), false );	
+		}
+
+		private static ArrayList<Integer> listOf( int[] x )
+		{
+			final ArrayList< Integer > out = new ArrayList<Integer>();
+			for( int i : x )
+				out.add( i );
+
+			return out;
+		}
+
+		public int numMovingSources()
+		{
+			return movingSourceIndexList.size();
+		}
+
+		public SourceAndConverter< T > getMovingSource( int i )
+		{
+			return sources.get( movingSourceIndexList.get( i ) );
+		}
+
+		public int numTargetSources()
+		{
+			return targetSourceIndexList.size();
+		}
+
+		public SourceAndConverter< T > getTargetSource( int i )
+		{
+			return sources.get( targetSourceIndexList.get( i ) );
+		}
+		
+		public List<ConverterSetup> getMovingConverterSetups()
+		{
+			final ArrayList<ConverterSetup> out = new ArrayList<>();
+			for( int i : movingSourceIndexList )
+				out.add( converterSetups.get( i ) );
+
+			return out;
+		}
+		
+		public List<ConverterSetup> getTargetConverterSetups()
+		{
+			final ArrayList<ConverterSetup> out = new ArrayList<>();
+			for( int i : targetSourceIndexList )
+				out.add( converterSetups.get( i ) );
+
+			return out;
+		}
+
+		public boolean isMoving( SourceAndConverter<?> sac ) {
+			if( !isMovingMap.containsKey( sac ))
+				return false;
+			else
+				return isMovingMap.get( sac );
+		}
+
 		public void wrapUp()
 		{
-			movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
-			targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
-
-			Arrays.sort( movingSourceIndices );
-			Arrays.sort( targetSourceIndices );
+//			movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
+//			targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
+//
+//			Arrays.sort( movingSourceIndices );
+//			Arrays.sort( targetSourceIndices );
+			Collections.sort( movingSourceIndexList );
+			Collections.sort( targetSourceIndexList );
 		}
 
 		/**

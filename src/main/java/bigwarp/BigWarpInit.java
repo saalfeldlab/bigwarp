@@ -24,6 +24,8 @@ package bigwarp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
@@ -317,7 +319,9 @@ public class BigWarpInit
 
 		data.wrapUp();
 
-		if ( names != null ) { return new BigWarpData( wrapSourcesAsRenamable( data.sources, names ), data.converterSetups, data.cache, data.movingSourceIndices, data.targetSourceIndices ); }
+		if ( names != null ) { return new BigWarpData( 
+				wrapSourcesAsRenamable( data.sources, names ), data.converterSetups, data.cache, 
+					data.movingSourceIndexList, data.targetSourceIndexList ); }
 
 		return data;
 	}
@@ -558,7 +562,7 @@ public class BigWarpInit
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
 
-		return new BigWarpData( sources, converterSetups, null, null, null );
+		return new BigWarpData( sources, converterSetups, null );
 	}
 
 	/**
@@ -721,6 +725,10 @@ public class BigWarpInit
 
 		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
 		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+//		List<Integer> movingSourceIndices = IntStream.range( 0, numMovingSources ).collect( Collectors.toList());
+//		List<Integer> targetSourceIndices = IntStream.range( numMovingSources, numTargetSources + numMovingSources )
+//				.collect( Collectors.toList());
+		
 
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );

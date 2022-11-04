@@ -80,8 +80,8 @@ public class BigWarpViewerFrame extends JFrame
 			final CacheControl cache,
 			final String title,
 			final boolean isMoving,
-			final int[] movingIndexList,
-			final int[] targetIndexList )
+			final List<Integer> movingIndexList,
+			final List<Integer> targetIndexList )
 	{
 		this( bw, width, height, sources, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
@@ -96,8 +96,8 @@ public class BigWarpViewerFrame extends JFrame
 			final BigWarpViewerOptions optional,
 			final String title,
 			final boolean isMoving,
-			final int[] movingIndexList,
-			final int[] targetIndexList )
+			final List<Integer> movingIndexList,
+			final List<Integer> targetIndexList )
 	{
 		super( title, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL ) );
 		this.bw = bw;
@@ -118,7 +118,7 @@ public class BigWarpViewerFrame extends JFrame
 
 		if ( !isMoving )
 		{
-			viewer.state().setCurrentSource( viewer.state().getSources().get( bw.getData().targetSourceIndices[ 0 ] ));
+			viewer.state().setCurrentSource( viewer.state().getSources().get( bw.getData().targetSourceIndexList.get(0)));
 		}
 
 		keybindings = new InputActionBindings();

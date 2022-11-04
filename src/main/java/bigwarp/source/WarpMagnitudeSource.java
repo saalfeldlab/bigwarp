@@ -60,8 +60,11 @@ public class WarpMagnitudeSource< T extends RealType< T >> implements Source< T 
 
 		sourceData = data;
 
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+//		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		interval = sourceData.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 );
+
+//		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		final VoxelDimensions srcVoxDims = sourceData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 		String unit = "pix";
 		if( srcVoxDims != null )
 			unit = srcVoxDims.unit();

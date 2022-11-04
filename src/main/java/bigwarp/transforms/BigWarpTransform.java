@@ -487,14 +487,15 @@ public class BigWarpTransform
 
 	public void initializeInverseParameters( BigWarpData<?> bwData )
 	{
-		int N = bwData.targetSourceIndices.length;
+		final int N = bwData.numTargetSources();
 
 		double val;
 		double highestResDim = 0;
 
 		for( int i = 0; i < N; i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);	
+//			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);
+			final SourceAndConverter< ? > src = bwData.getTargetSource( i );
 
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||

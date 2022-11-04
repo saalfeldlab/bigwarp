@@ -58,9 +58,9 @@ public class SourceInfoDialog extends JDialog
 
 		final StringBuffer infoString = new StringBuffer();
 		infoString.append( "MOVING:\n" );
-		for ( int i = 0; i < bwData.movingSourceIndices.length; i++ )
+		for ( int i = 0; i < bwData.movingSourceIndexList.size(); i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.movingSourceIndices[ i ]);
+			SourceAndConverter< ? > src = bwData.sources.get( bwData.movingSourceIndexList.get( i ));
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||
 				name.equals( "JacobianDeterminantSource" ) ||
@@ -73,9 +73,9 @@ public class SourceInfoDialog extends JDialog
 		}
 
 		infoString.append( "\nTARGET:\n" );
-		for ( int i = 0; i < bwData.targetSourceIndices.length; i++ )
+		for ( int i = 0; i < bwData.targetSourceIndexList.size(); i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);
+			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndexList.get( i ));
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||
 				name.equals( "JacobianDeterminantSource" ) ||

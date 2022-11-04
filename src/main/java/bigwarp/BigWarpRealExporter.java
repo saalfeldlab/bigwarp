@@ -28,6 +28,7 @@ import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp.BigWarpData;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
@@ -59,29 +60,25 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	final private T baseType;
 
 	public BigWarpRealExporter(
-			final List< SourceAndConverter< T >> sources,
+			final BigWarpData<T> bwData,
 			final List< ConverterSetup > convSetups,
-			final int[] movingSourceIndexList,
-			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
 			final boolean needConversion,
 			final ProgressWriter progress )
 	{
-		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( bwData, convSetups, interp, progress );
 		this.baseType = baseType;
 	}
 
 	public BigWarpRealExporter(
-			final List< SourceAndConverter< T >> sources,
+			final BigWarpData<T> bwData,
 			final List< ConverterSetup > convSetups,
-			final int[] movingSourceIndexList,
-			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final T baseType,
 			final ProgressWriter progress )
 	{
-		this( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, baseType, false, progress );
+		this( bwData, convSetups, interp, baseType, false, progress );
 	}
 
 	/**
@@ -108,19 +105,43 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		return true;
 	}
 	
+	/**
+	 * Returns true if moving image sources are all of the same type.
+	 * 
+	 * @param sources the sources
+	 * @param <T> the type
+	 * @param movingSourceIndexList list of indexes for moving sources
+	 * @return true if all moving sources are of the same type
+	 */
+	public static <T> boolean isTypeListFullyConsistent( List< SourceAndConverter< T >> sources, List<Integer> movingSourceIndexList )
+	{
+		Object baseType = sources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
+
+		for ( int i = 1; i < movingSourceIndexList.size(); i++ )
+		{
+			int idx = movingSourceIndexList.get( i );
+			Object type = sources.get( idx ).getSpimSource().getType();
+
+			if ( !baseType.getClass().equals( type.getClass() ) )
+				return false;
+		}
+
+		return true;
+	}
+	
 	@Override
 	public RandomAccessibleInterval< T > exportRai()
 	{
+		System.out.println( "RealExporter.exportRai");
 		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
 
 		buildTotalRenderTransform();
 
-		final int numChannels = movingSourceIndexList.length;
+		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final int movingSourceIndex = movingSourceIndexList[ i ];
-
-			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
+			SourceAndConverter< T > msrcTmp = bwData.getMovingSource( i );
+			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > ) bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
 			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
@@ -142,7 +163,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	@SuppressWarnings("unchecked")
 	public ImagePlus export()
 	{
-		int numChannels = movingSourceIndexList.length;
+		final int numChannels = bwData.numMovingSources();
 		RandomAccessibleInterval< T > raiStack = exportRai();
 		
 		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
@@ -209,7 +230,8 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
 		
-		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
+//		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
+		ip.setTitle( bwData.getMovingSource( 0 ).getSpimSource().getName() + nameSuffix );
 
 		return ip;
 	}

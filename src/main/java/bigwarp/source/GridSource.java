@@ -78,7 +78,8 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	private static Interval getInterval( BigWarpData<?> data )
 	{
 //		return new FinalInterval( data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
-		return new FinalInterval( data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+//		return new FinalInterval( data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+		return new FinalInterval( data.getMovingSource( 0 ).getSpimSource().getSource( 0, 0 ));
 	}
 
 	public void setGridSpacing( double spacing )
@@ -143,7 +144,8 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+//		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		return sourceData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 	}
 
 	@Override

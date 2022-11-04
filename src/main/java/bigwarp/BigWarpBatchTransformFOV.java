@@ -69,12 +69,6 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
-import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
-import net.imglib2.type.numeric.integer.UnsignedShortType;
-import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.ConstantUtils;
 
@@ -338,8 +332,6 @@ public class BigWarpBatchTransformFOV
 		{
 			movingSourceIndexList[ i ] = i;
 		}
-		
-		int[] targetSourceIndexList = data.targetSourceIndices;
 		
 		@SuppressWarnings("unchecked")
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
