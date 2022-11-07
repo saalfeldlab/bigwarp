@@ -293,6 +293,10 @@
 			<artifactId>alphanumeric-comparator</artifactId>
 			<version>${alphanumeric-comparator.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf</artifactId>
+		</dependency>
 
 		<!-- Test scope dependencies -->
 		<dependency>
