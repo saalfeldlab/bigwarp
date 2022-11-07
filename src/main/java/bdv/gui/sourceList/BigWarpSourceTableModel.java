@@ -23,6 +23,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	protected final ArrayList<SourceRow> sources;
 	protected final ArrayList<RemoveRowButton> rmRowButtons;
 
+	protected static int movingColIdx = 1;
+	protected static int removeColIdx = 3;
+
 	private Component container;
 
 	public BigWarpSourceTableModel()
@@ -81,7 +84,14 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	@Override
 	public boolean isCellEditable( int row, int col )
 	{
-		return true;
+		return ( col == movingColIdx ) || ( col == removeColIdx );
+	}
+
+	@Override
+	public void setValueAt(Object value, int row, int col)
+	{
+		if( col == movingColIdx )
+			sources.get( row ).moving = (Boolean)value;
 	}
 
 	public void add( String srcName, boolean moving, boolean isImagePlus )
@@ -108,11 +118,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public boolean remove( int i )
 	{
-		System.out.println( "rm     " + i );
-		System.out.println( "src sz " + sources.size() );
 		if( i >= sources.size() )
 		{
-			System.out.println( "not removed " );
+			System.out.println( "NOT REMOVED - SHOULD NEVER BE CALLED" );
 			return false;
 		}
 

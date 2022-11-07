@@ -21,32 +21,22 @@
  */
 package bdv.gui.sourceList;
 
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
-import javax.swing.DefaultCellEditor;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.UIManager;
-import javax.swing.table.TableCellRenderer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import bdv.gui.sourceList.BigWarpSourceTableModel.ButtonEditor;
 import bdv.gui.sourceList.BigWarpSourceTableModel.ButtonRenderer;
-import bdv.gui.sourceList.BigWarpSourceTableModel.RemoveRowButton;
 
 public class BigWarpSourceListPanel extends JPanel
 {
-
 	private static final long serialVersionUID = 2370565900502584680L;
 
 	protected BigWarpSourceTableModel tableModel;
@@ -55,7 +45,6 @@ public class BigWarpSourceListPanel extends JPanel
 
 	public final Logger logger = LoggerFactory.getLogger( BigWarpSourceListPanel.class );
 
-//	public BigWarpSourceListPanel()
 	public BigWarpSourceListPanel( BigWarpSourceTableModel tableModel )
 	{
 		super( new GridLayout( 1, 0 ) );
@@ -84,9 +73,6 @@ public class BigWarpSourceListPanel extends JPanel
 		table.setPreferredScrollableViewportSize( new Dimension( 400, 800 ) );
 		table.setFillsViewportHeight( true );
 		table.setShowVerticalLines( false );
-
-//		table.setDefaultEditor( String.class,
-//				new TextFieldCellEditor( new TextFieldCell(table), String.class ));
 	}
 
 	public void setTableModel( BigWarpSourceTableModel tableModel )
