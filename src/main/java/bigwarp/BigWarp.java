@@ -106,10 +106,12 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Supplier;
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
 import javax.swing.JCheckBox;
@@ -160,6 +162,7 @@ import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Pair;
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.utility.geom.BoundingSphereRitter;
@@ -2511,6 +2514,8 @@ public class BigWarp< T >
 	{
 		public final List< SourceAndConverter< T > > sources;
 
+		public final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> urls = new HashMap<>();
+
 		public final List< ConverterSetup > converterSetups;
 
 		public final CacheControl cache;
@@ -3472,7 +3477,8 @@ public class BigWarp< T >
 				autoSaver,
 				transformMask.getRandomAccessible(),
 				landmarkModel,
-				bwTransform
+				bwTransform,
+				data.urls
 		);
 	}
 

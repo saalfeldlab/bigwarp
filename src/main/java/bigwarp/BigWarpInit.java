@@ -337,11 +337,32 @@ public class BigWarpInit
 	{
 		ImagePlusLoader loader = new ImagePlusLoader( ip );
 		SpimDataMinimal[] dataList = loader.loadAll( setupId );
+		final int startSetupId = setupId;
+		final int prevSacCount = bwdata.sources.size();
 		for ( SpimDataMinimal data : dataList )
 		{
 			add( bwdata, data, setupId, numTimepoints, isMoving );
 			setupId++;
 		}
+
+		final int postSacCount = bwdata.sources.size();
+		final List<SourceAndConverter<?>> addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
+		final BigWarpData< ? > bigwarpData = bwdata;
+		bigwarpData.urls.put( startSetupId, new ValuePair<>(() -> {
+			final FileInfo originalFileInfo = ip.getOriginalFileInfo();
+			if (originalFileInfo != null) {
+				final String url = originalFileInfo.url;
+				if ( url != null && !url.isEmpty() )
+				{
+					return url;
+				} else  {
+					return originalFileInfo.getFilePath();
+				}
+			}
+			return null;
+		}, new ArrayList<>(addedSacs)) );
+
+
 		loader.update(bwdata);
 		return loader.numSources();
 	}
@@ -498,10 +519,24 @@ public class BigWarpInit
 			SpimData spimData;
 			try
 			{
+				final int prevSacCount = bwdata.sources.size();
 				spimData = new XmlIoSpimData().load( rootPath );
 				add( bwdata, spimData, setupId, 0, isMoving );
+				final int postSacCount = bwdata.sources.size();
 
-				if( isMoving )
+				final List< ? extends SourceAndConverter< ? > > addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
+				bwdata.urls.put( setupId, new ValuePair<>( () -> {
+					try
+					{
+						return spimData.getBasePath().getCanonicalPath();
+					}
+					catch ( IOException e )
+					{
+						return null;
+					}
+				}, new ArrayList<>(addedSacs) ) );
+
+				if ( isMoving )
 					return spimData;
 			}
 			catch ( SpimDataException e ) { e.printStackTrace(); }
@@ -509,7 +544,12 @@ public class BigWarpInit
 		}
 		else
 		{
-			BigWarpInit.add( bwdata, loadN5Source( rootPath, dataset ), setupId, 0, isMoving );
+			final int prevSacCount = bwdata.sources.size();
+			BigWarpInit.add(bwdata, loadN5Source(rootPath, dataset), setupId, 0, isMoving);
+			final int postSacCount = bwdata.sources.size();
+			final List< ? extends SourceAndConverter< ? > > addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
+			//TODO Caleb: Canonicalize the URL?
+			bwdata.urls.put( setupId, new ValuePair<>(() -> rootPath + "?" + dataset, new ArrayList<>(addedSacs)));
 			return null;
 		}
 	}
