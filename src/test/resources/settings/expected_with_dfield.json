@@ -12,9 +12,9 @@
             true,
             true,
             false,
-            true,
             false,
-            true
+            false,
+            false
         ],
         "SourceGroups": [
             {
@@ -43,9 +43,9 @@
             true,
             true,
             false,
-            true,
             false,
-            true
+            false,
+            false
         ],
         "SourceGroups": [
             {
