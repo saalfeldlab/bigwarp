@@ -567,32 +567,23 @@ public class BigWarp< T >
 		// starting view
 		data.sources.get( data.targetSourceIndexList.get(0) ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 		List< SourceAndConverter< T > > dSrcs = data.sources;
-//		List< SourceAndConverter< ? > > pSrcs = viewerP.state().getSources();
-//		List< SourceAndConverter< ? > > qSrcs = viewerQ.state().getSources();
-//
-//		System.out.println("before");
-//		for( SourceAndConverter< T > s : data.sources )
-//		for( SourceAndConverter< ? > s : pSrcs )
-//		{
-//			System.out.println( data.sourceColorSettings.get( s ));
-//		}
 
 		viewerP.state().clearSources();
-		viewerQ.state().clearSources();
-
 		final SynchronizedViewerState pState = viewerP.state();
+
+		viewerQ.state().clearSources();
 		final SynchronizedViewerState qState = viewerQ.state();
-		for( SourceAndConverter<T> sac : dSrcs )
+
+		for( int i = 0; i < dSrcs.size(); i++ )
 		{
+			final SourceAndConverter<T> sac = dSrcs.get( i );
 			pState.addSource( sac );
 			qState.addSource( sac );
-		}
 
-//		for( SourceAndConverter< T > s : data.sources )
-//		for( SourceAndConverter< ? > s : viewerP.state().getSources() )
-//		{
-//			System.out.println( data.sourceColorSettings.get( s ));
-//		}
+			// update the viewer converter setups too
+			viewerFrameP.getConverterSetups().put( sac, data.converterSetups.get( i ) );
+			viewerFrameQ.getConverterSetups().put( sac, data.converterSetups.get( i ) );
+		}
 
 		SwingUtilities.invokeLater( new Runnable()
 		{
@@ -661,12 +652,12 @@ public class BigWarp< T >
 		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
 	}
 
-	public void addSource( Source<?> source, boolean moving )
+	public void addSource( Source<T> source, boolean moving )
 	{
-		
+		data.addSource( source, moving );
 	}
 
-	public void addSource( Source<?> source )
+	public void addSource( Source<T> source )
 	{
 		addSource( source, false );
 	}

@@ -25,7 +25,6 @@ import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 
 public class BigWarpData< T >
@@ -193,6 +192,40 @@ public class BigWarpData< T >
 		Collections.sort( targetSourceIndexList );
 	}
 
+	public void addSource( Source<T> src, boolean isMoving )
+	{
+		addSource( src, isMoving );
+	}
+
+	public void addSource( Source<T> src, boolean isMoving, RealTransform transform )
+	{
+		// find an unused id
+		int id = 0;
+		for( ConverterSetup cs : converterSetups )
+		{
+			if( id == cs.getSetupId() )
+				id++;
+		}
+		BigWarpInit.add( this, src, id, 0, isMoving, transform );
+	}
+
+	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving )
+	{
+		addSourceAndConverter( sac, isMoving, null );
+	}
+
+	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving, RealTransform transform )
+	{
+		sources.add( sac );
+		isMovingMap.put( sac, isMoving );
+		transforms.add( transform ); // transform may be null
+
+		if( isMoving )
+			movingSourceIndexList.add( sources.size() - 1 );
+		else
+			targetSourceIndexList.add( sources.size() - 1 );
+	}
+
 	public void setTransform( int i, RealTransform transform )
 	{
 		transforms.set( i, transform );
@@ -200,8 +233,6 @@ public class BigWarpData< T >
 
 	public void applyTransformations()
 	{
-//		System.out.println( "before " + colorSettings.keySet().size());
-
 		int i = 0;
 		for ( final SourceAndConverter<T> sac : sources )
 		{
@@ -216,7 +247,6 @@ public class BigWarpData< T >
 			}
 			i++;
 		}
-//		System.out.println( "after " + colorSettings.keySet().size());
 	}
 
 	public static < T > SourceAndConverter< T > inheritConverter( final Source<T> src, final SourceAndConverter< T > sac )
@@ -314,7 +344,6 @@ public class BigWarpData< T >
 					if ( sourceColorSettings.get( sac ) == null )
 						continue;
 
-					System.out.println( setups.getConverterSetup( sac ) );
 					sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
 				}
 				else
