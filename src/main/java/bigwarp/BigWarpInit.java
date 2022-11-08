@@ -21,13 +21,22 @@
  */
 package bigwarp;
 
+import ij.IJ;
+import ij.plugin.FolderOpener;
+import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import ij.io.FileInfo;
+import java.util.Objects;
+import net.imglib2.util.ValuePair;
 import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
+import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
@@ -80,6 +89,7 @@ import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
+import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 
 public class BigWarpInit
 {
@@ -374,7 +384,113 @@ public class BigWarpInit
 		return bwdata;
 	}
 
-	public static SpimData addToData( final BigWarpData<?> bwdata, 
+
+	private static String schemeSpecificPartWithoutQuery( URI uri )
+	{
+		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
+	}
+
+	public static Source< ? > add( final BigWarpData< ? > bwData, String uri,  int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	{
+		final URI tmpUri = new URI( "TMP", uri, null );
+		String encodedUriString = tmpUri.getRawSchemeSpecificPart();
+		encodedUriString = encodedUriString.replaceAll( "%23", "#" );
+		URI firstUri = new URI( encodedUriString );
+		final int prevSacCount = bwData.sources.size();
+		Source< ? > source = null;
+		if ( firstUri.isOpaque() )
+		{
+			URI secondUri = new URI( firstUri.getSchemeSpecificPart() );
+			final String firstScheme = firstUri.getScheme().toLowerCase();
+			final String secondScheme = secondUri.getScheme();
+			final String secondSchemeSpecificMinusQuery = schemeSpecificPartWithoutQuery( secondUri );
+			final boolean dontIncludeScheme = secondScheme == null || Objects.equals( secondScheme, "" ) || Objects.equals( secondScheme.toLowerCase(), "file" );
+			final String secondSchemeAndPath = dontIncludeScheme ? secondSchemeSpecificMinusQuery : secondScheme + "://" + secondSchemeSpecificMinusQuery;
+			final String datasetQuery = secondUri.getQuery();
+			final String dataset = datasetQuery == null ? "/" : datasetQuery;
+			final N5Reader n5reader;
+			switch ( firstScheme )
+			{
+			case "n5":
+				n5reader = new N5Factory().openReader( secondSchemeAndPath );
+				break;
+			case "zarr":
+				n5reader = new N5ZarrReader( secondSchemeAndPath );
+				break;
+			case "h5":
+			case "hdf5":
+			case "hdf":
+				n5reader = new N5HDF5Reader( secondSchemeAndPath );
+				break;
+			default:
+				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
+			}
+
+			source = loadN5Source( n5reader, dataset );
+			add( bwData, source, setupId, 0, isMoving);
+		}
+		else
+		{
+			firstUri = new URI( encodedUriString.replaceAll( "%23", "#" ) );
+			final String firstSchemeSpecificPartMinusQuery = schemeSpecificPartWithoutQuery( firstUri );
+			final boolean skipScheme = firstUri.getScheme() == null
+					|| firstUri.getScheme().trim().isEmpty()
+					|| firstUri.getScheme().trim().equalsIgnoreCase( "n5" )
+					|| firstUri.getScheme().trim().equalsIgnoreCase( "file" );
+			final String firstSchemeAndPath = skipScheme ? firstSchemeSpecificPartMinusQuery : firstUri.getScheme() + "://" + firstSchemeSpecificPartMinusQuery;
+			try
+			{
+				final N5Reader n5reader = new N5Factory().openReader( firstSchemeAndPath );
+				final String datasetQuery = firstUri.getQuery();
+				final String dataset = datasetQuery == null ? "/" : datasetQuery;
+				source = loadN5Source( n5reader, dataset );
+				add( bwData, source, setupId, 0, isMoving);
+			}
+			catch ( Exception ignored )
+			{
+			}
+			if (source == null) {
+				if ( firstSchemeAndPath.trim().toLowerCase().endsWith( ".xml" ) )
+				{
+					addToData( bwData, isMoving, setupId, firstSchemeAndPath, firstUri.getQuery() );
+					return bwData.sources.get( bwData.sources.size() - 1 ).getSpimSource();
+				}
+				else
+				{
+					final ImagePlus ijp;
+					try
+					{
+
+						if ( new File( uri ).isDirectory() )
+						{
+							ijp = FolderOpener.open( uri );
+						}
+						else
+						{
+							ijp = IJ.openImage( uri );
+						}
+					}
+					catch ( Exception e )
+					{
+						return null;
+					}
+					add( bwData, ijp, setupId, 0, isMoving);
+					source = bwData.sources.get( bwData.sources.size() - 1 ).getSpimSource();
+				}
+			}
+
+		}
+
+		/* override any already set urls with the uri we used to load this source. */
+		if (source != null) {
+			final int postSacCount = bwData.sources.size();
+			final List< ? extends SourceAndConverter< ? > > addedSacs = bwData.sources.subList( prevSacCount, postSacCount );
+			bwData.urls.put( setupId, new ValuePair<>( () -> uri, new ArrayList<>(addedSacs) ) );
+		}
+		return source;
+	}
+
+	public static SpimData addToData( final BigWarpData<?> bwdata,
 			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		if( rootPath.endsWith( "xml" ))
