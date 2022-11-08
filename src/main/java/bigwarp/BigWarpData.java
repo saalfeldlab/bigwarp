@@ -4,31 +4,40 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.IntStream;
 
 import bdv.cache.CacheControl;
 import bdv.gui.BigWarpViewerFrame;
+import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.transformation.TransformedSource;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.VisibilityAndGrouping;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
+import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.RealTransformSequence;
+import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 
 public class BigWarpData< T >
 {
 	// TODO JOHN CHECK ME
 	public List< SourceAndConverter< T > > sources;
 
+	public List<RealTransform> transforms;
+
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
-
-//	public int[] movingSourceIndices;
-//
-//	public int[] targetSourceIndices;
 
 	public final List< Integer > movingSourceIndexList;
 
@@ -49,12 +58,30 @@ public class BigWarpData< T >
 				listOf( movingIndexes ),
 				listOf( targetIndexes ));
 	}
+
+	public BigWarpData( final List< SourceAndConverter< T > > sources,
+			final List< ConverterSetup > converterSetups,
+			final CacheControl cache )
+	{
+		this( sources, null, converterSetups, cache );
+	}
 	
-	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
+	public BigWarpData( final List< SourceAndConverter< T > > sources,
+			final List< RealTransform > transforms,
+			final List< ConverterSetup > converterSetups,
 			final CacheControl cache )
 	{
 		this.sources = sources;
 		this.converterSetups = converterSetups;
+
+		if( transforms != null )
+			this.transforms = transforms;
+		else
+		{
+			// fill the initial transform list with nulls
+			this.transforms = new ArrayList<>();
+			IntStream.range( 0, sources.size() ).forEach(  i -> this.transforms.add( null ));
+		}
 
 		this.movingSourceIndexList = new ArrayList<>();
 		this.targetSourceIndexList = new ArrayList<>();
@@ -76,8 +103,6 @@ public class BigWarpData< T >
 	{
 		this.sources = sources;
 		this.converterSetups = converterSetups;
-//		this.movingSourceIndices = movingSourceIndices;
-//		this.targetSourceIndices = targetSourceIndices;
 
 		this.movingSourceIndexList = movingIndexes;
 		this.targetSourceIndexList = targetIndexes;
@@ -166,6 +191,105 @@ public class BigWarpData< T >
 //		Arrays.sort( targetSourceIndices );
 		Collections.sort( movingSourceIndexList );
 		Collections.sort( targetSourceIndexList );
+	}
+
+	public void setTransform( int i, RealTransform transform )
+	{
+		transforms.set( i, transform );
+	}
+
+	public void applyTransformations()
+	{
+//		System.out.println( "before " + colorSettings.keySet().size());
+
+		int i = 0;
+		for ( final SourceAndConverter<T> sac : sources )
+		{
+			if ( transforms.get( i ) != null )
+			{
+				SourceAndConverter<T> newSac = inheritConverter(
+						applyFixedTransform( sac.getSpimSource(), transforms.get( i )),
+						sac );
+
+				sourceColorSettings.put( newSac, sourceColorSettings.get( sac ));
+				sources.set( i, newSac );
+			}
+			i++;
+		}
+//		System.out.println( "after " + colorSettings.keySet().size());
+	}
+
+	public static < T > SourceAndConverter< T > inheritConverter( final Source<T> src, final SourceAndConverter< T > sac )
+	{
+		if ( sac.asVolatile() == null ) {
+			return new SourceAndConverter< T >( src, sac.getConverter(), null );
+		}
+		else
+		{
+			System.out.println( "Inherit Converter needs to handle volatile");
+//			inheritConverter( src, sac );
+			return null;
+//			return new SourceAndConverter< T >( src, sac.getConverter(), wrapSourceAsTransformed( src, name + "_vol", ndims ) );
+		}
+	}
+
+	public <T> Source<T> applyFixedTransform( final Source<T> src, final RealTransform transform )
+	{
+		RealTransform tform = transform;
+		if( transform.numSourceDimensions() < 3 )
+		{
+			if( transform instanceof InvertibleRealTransform )
+				tform = new Wrapped2DTransformAs3D( transform );
+			else
+				tform = new InvertibleWrapped2DTransformAs3D( ( InvertibleRealTransform ) transform );
+		}
+
+		if( transform instanceof AffineGet )
+		{
+			// can use TransformedSource
+			TransformedSource<?> tsrc;
+
+			/*
+			 * UNSURE WHAT TO DO IN THIS CASE
+			 */
+//			if( (src instanceof WarpedSource ))
+//			{
+//				Source< ? > wsrc = ( ( WarpedSource< ? > ) src ).getWrappedSource();
+//			}
+
+			final AffineTransform3D affine3d;
+			if( transform instanceof AffineTransform3D )
+				affine3d = ( AffineTransform3D ) transform;
+			else
+			{
+				affine3d = new AffineTransform3D();
+				affine3d.preConcatenate( ( AffineGet ) transform );
+			}
+
+			if ( src instanceof TransformedSource )
+			{
+				tsrc = ( TransformedSource ) ( src );
+			}
+			else
+			{
+				tsrc = new TransformedSource( src );
+			}
+			tsrc.setFixedTransform( affine3d );
+			return ( Source< T > ) tsrc;
+		}
+		else
+		{
+			// need to use WarpedSource
+			WarpedSource<?> wsrc;
+			if( !(src instanceof WarpedSource ))
+				wsrc = new WarpedSource( src, src.getName() );
+			else
+				wsrc = (WarpedSource<?>)src;
+
+			wsrc.updateTransform( tform );
+			wsrc.setIsTransformed( true );
+			return ( Source< T > ) wsrc;
+		}
 	}
 
 	/**

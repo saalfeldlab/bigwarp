@@ -74,6 +74,7 @@ import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
@@ -339,10 +340,17 @@ public class BigWarpInit
 		return loader.numSources();
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "rawtypes" } )
 	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
+		return add( bwdata, src, setupId, numTimepoints, isMoving, null );
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
+	{
 		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
+		bwdata.transforms.add( transform );
 
 		int N = bwdata.sources.size();
 		if ( isMoving )

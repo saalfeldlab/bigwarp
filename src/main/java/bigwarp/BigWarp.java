@@ -110,6 +110,7 @@ import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.tools.transformation.TransformedSource;
 import bdv.util.Bounds;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
@@ -164,8 +165,9 @@ import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -1406,7 +1408,7 @@ public class BigWarp< T >
 
 		InvertibleRealTransform transform; 
 		if( options.values.is2D()  && currentTransform != null )
-			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
+			transform = ((InvertibleWrapped2DTransformAs3D)currentTransform).getTransform();
 		else
 			transform = currentTransform;
 
@@ -2162,7 +2164,7 @@ public class BigWarp< T >
 
 			// the xfm must always be 3d for bdv to be happy.
 			// when bigwarp has 2d images though, the z- component will be left unchanged
-			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
+			// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
 			// the updateTransform method creates a copy of the transform
 			( ( WarpedSource< ? > ) ( data.sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
