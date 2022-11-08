@@ -7,6 +7,7 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
+import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.state.SourceGroup;
@@ -28,11 +29,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
+import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.util.Pair;
 import org.scijava.listeners.Listeners;
 
 import static bdv.viewer.Interpolation.NEARESTNEIGHBOR;
@@ -50,6 +56,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	private final LandmarkTableModel landmarks;
 
 	private final BigWarpTransform transform;
+
+	private final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> sourceUrls;
 
 	BigWarpViewerPanel viewerP;
 
@@ -72,7 +80,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final BigWarpAutoSaver autoSaver,
 			final PlateauSphericalMaskRealRandomAccessible transformMask,
 			final LandmarkTableModel landmarks,
-			final BigWarpTransform transform
+			final BigWarpTransform transform,
+			final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> sourceUrls
 	)
 	{
 
@@ -85,6 +94,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.transformMask = transformMask;
 		this.landmarks = landmarks;
 		this.transform = transform;
+		this.sourceUrls = sourceUrls;
 	}
 
 	public void serialize( String jsonFilename ) throws IOException
@@ -98,7 +108,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	@Override
 	public void write( final JsonWriter out, final BigwarpSettings value ) throws IOException
 	{
+
 		out.beginObject();
+		out.name( "Sources" );
+		new BigWarpSourcesAdapter( bigWarp.data ).write( out, sourceUrls );
 		out.name( "ViewerP" );
 		new BigWarpViewerPanelAdapter( viewerP ).write( out, viewerP );
 		out.name( "ViewerQ" );
@@ -126,6 +139,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final String nextName = in.nextName();
 			switch ( nextName )
 			{
+			case "Sources":
+				new BigWarpSourcesAdapter( bigWarp.data ).read( in );
+				break;
 			case "ViewerP":
 				new BigWarpViewerPanelAdapter( viewerP ).read( in );
 				break;
@@ -153,6 +169,86 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		}
 		in.endObject();
 		return this;
+	}
+
+	public static class BigWarpSourcesAdapter extends TypeAdapter<Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>>> {
+
+		private final BigWarp.BigWarpData<?> data;
+
+		public BigWarpSourcesAdapter( final BigWarp.BigWarpData<?> data )
+		{
+			this.data = data;
+		}
+
+		@Override
+		public void write( final JsonWriter out, final Map< Integer, Pair< Supplier< String >, List< SourceAndConverter< ? > > > > value ) throws IOException
+		{
+			out.beginObject();
+			for ( Map.Entry< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> entry : value.entrySet() )
+			{
+				Integer id = entry.getKey();
+				final Supplier<String> urlSupplier = entry.getValue().getA();
+				/* currently we only care about the first source when a single `add` call creates multiple sources.
+				 * This is because they will deserialzie to multiple sources from one url next time as well. */
+				final SourceAndConverter< ? > source = entry.getValue().getB().get( 0 );
+				out.name( "" + id );
+
+				out.beginObject();
+
+				final int sourceIdx = data.sources.indexOf( source );
+				final boolean isMoving = data.movingSourceIndexList.contains( sourceIdx );
+
+				final String url = urlSupplier.get();
+				if ( url != null )
+				{
+					out.name( "url" ).value( url );
+				}
+				out.name( "isMoving" ).value( isMoving );
+				out.endObject();
+			}
+			out.endObject();
+		}
+
+		@Override
+		public Map< Integer, Pair< Supplier< String >, List< SourceAndConverter< ? > > > > read( final JsonReader in ) throws IOException
+		{
+			in.beginObject();
+			while ( in.hasNext() )
+			{
+				//TODO Caleb: What to do if `data` alrread has a source for this `id`?
+				int id = Integer.parseInt( in.nextName() );
+				in.beginObject();
+				String url = null;
+				Boolean isMoving = null;
+				while ( in.hasNext() )
+				{
+					switch ( in.nextName() )
+					{
+					case "url":
+						url = in.nextString();
+						break;
+					case "isMoving":
+						isMoving = in.nextBoolean();
+						break;
+					}
+				}
+				try
+				{
+					if (url != null) {
+						BigWarpInit.add( data, url, id, isMoving );
+					} else {
+						//TODO Caleb: Prompt? Error?
+					}
+				}
+				catch ( URISyntaxException | SpimDataException e )
+				{
+					throw new IOException("Error Parsing Source by URI", e );
+				}
+				in.endObject();
+			}
+			in.endObject();
+			return data.urls;
+		}
 	}
 
 	public static class BigWarpViewerPanelAdapter extends TypeAdapter< BigWarpViewerPanel >
