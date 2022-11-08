@@ -573,9 +573,9 @@ public class WarpVisFrame extends JDialog
 		warpGridModButton.setText( "Modulo" );
 		
 		// turn on the default values
-		setWarpVisOffButton.doClick();
-		warpMagAffineButton.doClick();
-		warpGridLineButton.doClick();
+//		setWarpVisOffButton.doClick();
+//		warpMagAffineButton.doClick();
+//		warpGridLineButton.doClick();
 	}
 	
 	public void addListeners()

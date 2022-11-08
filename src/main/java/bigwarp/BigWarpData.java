@@ -190,6 +190,7 @@ public class BigWarpData< T >
 					if ( sourceColorSettings.get( sac ) == null )
 						continue;
 
+					System.out.println( setups.getConverterSetup( sac ) );
 					sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
 				}
 				else

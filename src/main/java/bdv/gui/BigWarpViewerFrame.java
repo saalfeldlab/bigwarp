@@ -79,47 +79,40 @@ public class BigWarpViewerFrame extends JFrame
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final String title,
-			final boolean isMoving,
-			final List<Integer> movingIndexList,
-			final List<Integer> targetIndexList )
+			final boolean isMoving )
 	{
-		this( bw, width, height, sources, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
+		this( bw, width, height, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving );
 	}
 	
 	public BigWarpViewerFrame(
 			BigWarp<?> bw,
 			final int width, final int height,
-			final List< SourceAndConverter< ? > > sources,
 			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final BigWarpViewerOptions optional,
 			final String title,
-			final boolean isMoving,
-			final List<Integer> movingIndexList,
-			final List<Integer> targetIndexList )
+			final boolean isMoving )
 	{
 		super( title, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
+		viewer = new BigWarpViewerPanel( bw.getData(), viewerSettings, cache, optional.size( width / 2,  height ), isMoving );
 		setups = new ConverterSetups( viewer.state() );
 		setups.listeners().add( s -> viewer.requestRepaint() );
 
-		if ( converterSetups.size() != sources.size() )
+		if ( converterSetups.size() != bw.getData().sources.size() )
 			System.err.println( "WARNING! Constructing BigWarp with converterSetups.size() that is not the same as sources.size()." );
-		final int numSetups = Math.min( converterSetups.size(), sources.size() );
+		final int numSetups = Math.min( converterSetups.size(), bw.getData().sources.size() );
 		for ( int i = 0; i < numSetups; ++i )
 		{
-			final SourceAndConverter< ? > source = sources.get( i );
+			final SourceAndConverter< ? > source = bw.getData().sources.get( i );
 			final ConverterSetup setup = converterSetups.get( i );
 			if ( setup != null )
 				setups.put( source, setup );
 		}
 
-		if ( !isMoving )
-		{
-			viewer.state().setCurrentSource( viewer.state().getSources().get( bw.getData().targetSourceIndexList.get(0)));
-		}
+		if ( !isMoving && bw.getData().targetSourceIndexList.size() > 0 )
+			viewer.state().setCurrentSource( bw.getData().getTargetSource( 0 ) );
 
 		keybindings = new InputActionBindings();
 		triggerbindings = new TriggerBehaviourBindings();
