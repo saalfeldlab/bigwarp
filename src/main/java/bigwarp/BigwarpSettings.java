@@ -261,16 +261,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		public BigWarpViewerPanelAdapter( final BigWarpViewerPanel viewerP )
 		{
 			this.panel = viewerP;
-			try
-			{
-				final Field stateField = ViewerPanel.class.getDeclaredField( "state" );
-				stateField.setAccessible( true );
-				this.state = ( ViewerState ) stateField.get( panel );
-			}
-			catch ( NoSuchFieldException | IllegalAccessException e )
-			{
-				throw new RuntimeException( e );
-			}
+			this.state = panel.getState();
 		}
 
 		@Override
