@@ -23,7 +23,7 @@ package bigwarp;
 
 import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimDataException;

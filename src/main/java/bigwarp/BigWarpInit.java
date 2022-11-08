@@ -29,6 +29,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import ij.io.FileInfo;
 import java.util.Objects;
@@ -62,7 +64,6 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
@@ -82,6 +83,7 @@ import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
@@ -327,7 +329,9 @@ public class BigWarpInit
 
 		data.wrapUp();
 
-		if ( names != null ) { return new BigWarpData( wrapSourcesAsRenamable( data.sources, names ), data.converterSetups, data.cache, data.movingSourceIndices, data.targetSourceIndices ); }
+		if ( names != null ) { return new BigWarpData( 
+				wrapSourcesAsRenamable( data.sources, names ), data.converterSetups, data.cache, 
+					data.movingSourceIndexList, data.targetSourceIndexList ); }
 
 		return data;
 	}
@@ -367,10 +371,17 @@ public class BigWarpInit
 		return loader.numSources();
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "rawtypes" } )
 	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
+		return add( bwdata, src, setupId, numTimepoints, isMoving, null );
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
+	{
 		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
+		bwdata.transforms.add( transform );
 
 		int N = bwdata.sources.size();
 		if ( isMoving )
@@ -717,7 +728,7 @@ public class BigWarpInit
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
 
-		return new BigWarpData( sources, converterSetups, null, null, null );
+		return new BigWarpData( sources, converterSetups, null );
 	}
 
 	/**
@@ -880,6 +891,10 @@ public class BigWarpInit
 
 		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
 		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+//		List<Integer> movingSourceIndices = IntStream.range( 0, numMovingSources ).collect( Collectors.toList());
+//		List<Integer> targetSourceIndices = IntStream.range( numMovingSources, numTargetSources + numMovingSources )
+//				.collect( Collectors.toList());
+		
 
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );

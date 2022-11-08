@@ -27,7 +27,7 @@ import java.util.Arrays;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import ij.IJ;
@@ -51,7 +51,7 @@ import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.RealType;
 
@@ -205,7 +205,7 @@ public class BigWarpTransform
 
 		if( tableModel.getNumdims() == 2 )
 		{
-			invXfm = new Wrapped2DTransformAs3D( invXfm );
+			invXfm = new InvertibleWrapped2DTransformAs3D( invXfm );
 		}
 
 		currentTransform = invXfm;
@@ -283,8 +283,8 @@ public class BigWarpTransform
 
 	public InvertibleRealTransform unwrap2d( InvertibleRealTransform ixfm )
 	{
-		if( ixfm instanceof Wrapped2DTransformAs3D )
-			return ((Wrapped2DTransformAs3D)ixfm).getTransform();
+		if( ixfm instanceof InvertibleWrapped2DTransformAs3D )
+			return ((InvertibleWrapped2DTransformAs3D)ixfm).getTransform();
 		else
 			return ixfm;
 	}
@@ -376,9 +376,9 @@ public class BigWarpTransform
 		{
 			s = (( WrappedCoordinateTransform ) currentTransform).getTransform().toString();
 		}
-		else if( currentTransform instanceof Wrapped2DTransformAs3D )
+		else if( currentTransform instanceof InvertibleWrapped2DTransformAs3D )
 		{
-			s = ( ( Wrapped2DTransformAs3D) currentTransform ).toString();
+			s = ( ( InvertibleWrapped2DTransformAs3D) currentTransform ).toString();
 		}
 		else
 		{
@@ -461,14 +461,15 @@ public class BigWarpTransform
 
 	public void initializeInverseParameters( BigWarpData<?> bwData )
 	{
-		int N = bwData.targetSourceIndices.length;
+		final int N = bwData.numTargetSources();
 
 		double val;
 		double highestResDim = 0;
 
 		for( int i = 0; i < N; i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);	
+//			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);
+			final SourceAndConverter< ? > src = bwData.getTargetSource( i );
 
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||

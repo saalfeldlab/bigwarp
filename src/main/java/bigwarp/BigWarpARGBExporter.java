@@ -29,14 +29,11 @@ import mpicbg.spim.data.sequence.VoxelDimensions;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.janelia.saalfeldlab.n5.ij.N5IJUtils;
-
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.exception.ImgLibException;
 import net.imglib2.img.display.imagej.ImageJFunctions;
@@ -44,16 +41,12 @@ import net.imglib2.img.imageplus.ImagePlusImg;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
-import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealViews;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.type.numeric.NumericType;
 import net.imglib2.view.MixedTransformView;
 import net.imglib2.view.Views;
 import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.viewer.ConverterSetups;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
 
@@ -62,15 +55,24 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 	private Interpolation interp;
 
+//	public BigWarpARGBExporter(
+//			final List< SourceAndConverter< ARGBType >> sources,
+//			final List< ConverterSetup > convSetups,
+//			final int[] movingSourceIndexList,
+//			final int[] targetSourceIndexList,
+//			final Interpolation interp,
+//			final ProgressWriter progress )
+//	{
+//		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
+//	}
+	
 	public BigWarpARGBExporter(
-			final List< SourceAndConverter< ARGBType >> sources,
+			BigWarpData<ARGBType> bwData,
 			final List< ConverterSetup > convSetups,
-			final int[] movingSourceIndexList,
-			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
-		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
+		super( bwData, convSetups, interp, progress );
 	}
 
 	/**
@@ -106,7 +108,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 		buildTotalRenderTransform();
 
-		int numChannels = movingSourceIndexList.length;
+		final int numChannels = bwData.numMovingSources();
 		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
@@ -114,8 +116,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
-			final RealRandomAccessible< ARGBType > raiRaw = ( RealRandomAccessible< ARGBType > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
+			final RealRandomAccessible< ARGBType > raiRaw = ( RealRandomAccessible< ARGBType > )bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
 			final AffineRandomAccessible< ARGBType, AffineGet > rai = RealViews.affine( 
@@ -132,7 +133,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	{
 		buildTotalRenderTransform();
 
-		int numChannels = movingSourceIndexList.length;
+		final int numChannels = bwData.numMovingSources();
 		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
@@ -193,8 +194,8 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 			ip.getCalibration().yOrigin = offsetTransform.get( 1, 3 );
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
-		
-		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
+
+		ip.setTitle( bwData.getMovingSource( 0 ).getSpimSource().getName() + nameSuffix );
 
 		return ip;
 	}

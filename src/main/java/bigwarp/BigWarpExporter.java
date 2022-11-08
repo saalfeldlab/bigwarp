@@ -40,7 +40,6 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.models.AffineModel2D;
@@ -79,9 +78,10 @@ public abstract class BigWarpExporter <T>
 
 	private List< ImagePlus > outputList;
 
-	final protected int[] movingSourceIndexList;
-
-	final protected int[] targetSourceIndexList;
+//	final protected int[] movingSourceIndexList;
+//
+//	final protected int[] targetSourceIndexList;
+	protected final BigWarpData<T> bwData;
 	
 	protected AffineTransform3D pixelRenderToPhysical;
 	
@@ -119,17 +119,68 @@ public abstract class BigWarpExporter <T>
 
 	private String exportPath;
 
+//	public BigWarpExporter(
+//			final List< SourceAndConverter< T >> sourcesIn,
+//			final List< ConverterSetup > convSetups,
+//			final int[] movingSourceIndexList,
+//			final int[] targetSourceIndexList,
+//			final Interpolation interp,
+//			final ProgressWriter progress )
+//	{
+//		this.sources = new ArrayList<SourceAndConverter<T>>();
+//		this.convSetups = convSetups;
+//		for( SourceAndConverter<T> sac : sourcesIn )
+//		{
+//			Source<T> srcCopy = null;
+//			Source<T> src = sac.getSpimSource();
+//			if( src instanceof WarpedSource )
+//			{
+//				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
+//				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
+//	
+//				if( ws.getTransform() != null )
+//				{
+//					wsCopy.updateTransform( ws.getTransform().copy() );
+//					wsCopy.setIsTransformed( true );
+//				}
+//				srcCopy = wsCopy;
+//			}
+//			else
+//				srcCopy = src;
+//				
+//			SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
+//			sources.add( copy );
+//		}
+//
+//		this.movingSourceIndexList = movingSourceIndexList;
+//		this.targetSourceIndexList = targetSourceIndexList;
+//
+//		if( progress == null )
+//			this.progress = new ProgressWriterConsole();
+//		else
+//			this.progress = progress;
+//
+//		this.setInterp( interp );
+//		
+//		pixelRenderToPhysical = new AffineTransform3D();
+//		resolutionTransform = new AffineTransform3D();
+//		offsetTransform = new AffineTransform3D();
+//
+//		try {
+//			unit = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+//		} catch( Exception e ) {}
+//	}
+	
 	public BigWarpExporter(
-			final List< SourceAndConverter< T >> sourcesIn,
+			BigWarpData<T> bwData,
 			final List< ConverterSetup > convSetups,
-			final int[] movingSourceIndexList,
-			final int[] targetSourceIndexList,
 			final Interpolation interp,
 			final ProgressWriter progress )
 	{
+		this.bwData = bwData;
 		this.sources = new ArrayList<SourceAndConverter<T>>();
 		this.convSetups = convSetups;
-		for( SourceAndConverter<T> sac : sourcesIn )
+		for( SourceAndConverter<T> sac : bwData.sources )
 		{
 			Source<T> srcCopy = null;
 			Source<T> src = sac.getSpimSource();
@@ -152,9 +203,6 @@ public abstract class BigWarpExporter <T>
 			sources.add( copy );
 		}
 
-		this.movingSourceIndexList = movingSourceIndexList;
-		this.targetSourceIndexList = targetSourceIndexList;
-
 		if( progress == null )
 			this.progress = new ProgressWriterConsole();
 		else
@@ -167,7 +215,7 @@ public abstract class BigWarpExporter <T>
 		offsetTransform = new AffineTransform3D();
 
 		try {
-			unit = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
+			unit = bwData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions().unit();
 		} catch( Exception e ) {}
 	}
 
@@ -277,6 +325,22 @@ public abstract class BigWarpExporter <T>
 		for( int i = 0; i < indexList.length; i++ )
 		{
 			ConverterSetup setup = convSetups.get( indexList[ i ] );
+			double rngmin = setup.getDisplayRangeMin();
+			double rngmax = setup.getDisplayRangeMax();
+
+			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
+			imp.setDisplayRange( rngmin, rngmax );
+			imp.updateAndDraw();
+		}
+	}
+	
+	public static void updateBrightnessContrast( 
+			final ImagePlus imp,
+			final List<ConverterSetup> convSetups)
+	{
+		for( int i = 0; i < convSetups.size(); i++ )
+		{
+			final ConverterSetup setup = convSetups.get( i );
 			double rngmin = setup.getDisplayRangeMin();
 			double rngmax = setup.getDisplayRangeMax();
 
@@ -808,7 +872,7 @@ public abstract class BigWarpExporter <T>
 				if (exporter.result != null && exporter.showResult && show )
 				{
 					if( !exporter.isRGB() )
-						BigWarpExporter.updateBrightnessContrast( exporter.result, exporter.convSetups, exporter.movingSourceIndexList );
+						BigWarpExporter.updateBrightnessContrast( exporter.result, exporter.bwData.getMovingConverterSetups() );
 
 				}
 
@@ -839,17 +903,17 @@ public abstract class BigWarpExporter <T>
 			final Interpolation interp,
 			final ProgressWriter progressWriter )
 	{
-		int[] movingSourceIndexList = bwData.movingSourceIndices;
-		int[] targetSourceIndexList = bwData.targetSourceIndices;
+		List<Integer> movingSourceIndexList = bwData.movingSourceIndexList;
+//		List<Integer> targetSourceIndexList = bwData.targetSourceIndexList;
 
 		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )
 		{
-			Object baseType = transformedSources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
+			Object baseType = transformedSources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
 			if( baseType instanceof RealType )
-				return new BigWarpRealExporter( transformedSources, bwData.converterSetups, movingSourceIndexList, targetSourceIndexList, interp, (RealType)baseType, progressWriter);
+				return new BigWarpRealExporter( bwData, bwData.converterSetups, interp, (RealType)baseType, progressWriter);
 			else if ( ARGBType.class.isInstance( baseType ) )
 			{
-				return new BigWarpARGBExporter( (List)transformedSources, bwData.converterSetups, movingSourceIndexList, targetSourceIndexList, interp, progressWriter );
+				return new BigWarpARGBExporter( (BigWarpData<ARGBType>)bwData, bwData.converterSetups, interp, progressWriter );
 			}
 			else
 			{

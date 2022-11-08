@@ -52,7 +52,7 @@ import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpExporter;
 import bigwarp.BigWarpInit;
@@ -167,17 +167,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final String resolutionOption )
 	{
 		String unit = "pix";
-		boolean doTargetImagesExist = bwData.targetSourceIndices != null  && bwData.targetSourceIndices.length > 0;
+		boolean doTargetImagesExist = bwData.targetSourceIndexList != null  && bwData.targetSourceIndexList.size() > 0;
 		if( resolutionOption.equals( MOVING ) || resolutionOption.equals( MOVING_WARPED ) || !doTargetImagesExist )
 		{
-			VoxelDimensions mvgVoxDims = bwData.sources.get( bwData.movingSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			VoxelDimensions mvgVoxDims = bwData.sources.get( bwData.movingSourceIndexList.get( 0 ) ).getSpimSource().getVoxelDimensions();
 			if( mvgVoxDims != null )
 				unit = mvgVoxDims.unit();
 		}
 		else 
 		{
 			// use target units even if 
-			VoxelDimensions tgtVoxDims = bwData.sources.get( bwData.targetSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			VoxelDimensions tgtVoxDims = bwData.sources.get( bwData.targetSourceIndexList.get( 0 ) ).getSpimSource().getVoxelDimensions();
 			if( tgtVoxDims != null )
 				unit = tgtVoxDims.unit();
 		}
@@ -194,21 +194,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 		
 		if( resolutionOption.equals( TARGET ))
 		{
-			if( bwData.targetSourceIndices.length <= 0 )
+			if( bwData.targetSourceIndexList.size() <= 0 )
 				return null;
 			
 			Source< ? > spimSource = bwData.sources.get( 
-					bwData.targetSourceIndices[ 0 ]).getSpimSource();
+					bwData.targetSourceIndexList.get( 0 )).getSpimSource();
 			
 			return getResolution( spimSource, resolutionOption, resolutionSpec );
 		}
 		else if( resolutionOption.equals( MOVING ))
 		{
-			if( bwData.targetSourceIndices.length <= 0 )
+			if( bwData.targetSourceIndexList.size() <= 0 )
 				return null;
 			
 			Source< ? > spimSource = bwData.sources.get( 
-					bwData.movingSourceIndices[ 0 ]).getSpimSource();
+					bwData.movingSourceIndexList.get( 0 )).getSpimSource();
 			return getResolution( spimSource, resolutionOption, resolutionSpec );
 		}
 		else if( resolutionOption.equals( SPECIFIED ))
@@ -450,26 +450,26 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] outputResolution) {
 
 		if (fieldOfViewOption.equals(TARGET)) {
-			if (bwData.targetSourceIndices.length <= 0) {
+			if (bwData.targetSourceIndexList.size() <= 0) {
 				System.err.println("Requested target fov but target image is missing.");
 				return null;
 			}
 
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.targetSourceIndices[0]).getSpimSource(),
+							bwData.sources.get(bwData.targetSourceIndexList.get( 0 )).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(MOVING_WARPED)) {
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							bwData.sources.get(bwData.movingSourceIndexList.get( 0 )).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(UNION_TARGET_MOVING)) {
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							bwData.sources.get(bwData.movingSourceIndexList.get( 0 )).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(SPECIFIED_PIXEL)) {
@@ -820,8 +820,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
-		int numChannels = bwData.movingSourceIndices.length;
-		int[] movingSourceIndexList = bwData.movingSourceIndices;
+//		int numChannels = bwData.movingSourceIndexList.size();
+		int numChannels = bwData.numMovingSources();
+		List<Integer> movingSourceIndexList = bwData.movingSourceIndexList;
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
 				bwData.sources, 
 				landmarks.getNumdims(),
@@ -830,8 +831,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
-			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
+			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList.get( i )).getSpimSource())).updateTransform( invXfm );
+			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList.get( i )).getSpimSource())).setIsTransformed( true );
 		}
 
 		ProgressWriter progressWriter = new ProgressWriterIJ();
@@ -982,10 +983,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		pixelRenderToPhysical.concatenate( offsetTransform );
 
 		// render and write 
-		final int N = data.movingSourceIndices.length;
+		final int N = data.movingSourceIndexList.size();
 		for ( int i = 0; i < N; i++ )
 		{
-			final int movingSourceIndex = data.movingSourceIndices[ i ];
+			final int movingSourceIndex = data.movingSourceIndexList.get( i );
 			@SuppressWarnings( "unchecked" )
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
@@ -994,7 +995,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			final IntervalView< T > img = Views.interval( Views.raster( rai ), 
 					Intervals.zeroMin( outputInterval ) );
-			final String srcName = data.sources.get( data.movingSourceIndices[ i ]).getSpimSource().getName();
+			final String srcName = data.sources.get( data.movingSourceIndexList.get( i )).getSpimSource().getName();
 
 			String destDataset = dataset;
 			if( N >  1 )

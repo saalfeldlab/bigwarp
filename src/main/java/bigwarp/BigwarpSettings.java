@@ -111,7 +111,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		out.beginObject();
 		out.name( "Sources" );
-		new BigWarpSourcesAdapter( bigWarp.data ).write( out, sourceUrls );
+		new BigWarpSourcesAdapter( bigWarp.getData() ).write( out, sourceUrls );
 		out.name( "ViewerP" );
 		new BigWarpViewerPanelAdapter( viewerP ).write( out, viewerP );
 		out.name( "ViewerQ" );
@@ -173,9 +173,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	public static class BigWarpSourcesAdapter extends TypeAdapter<Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>>> {
 
-		private final BigWarp.BigWarpData<?> data;
+		private final BigWarpData<?> data;
 
-		public BigWarpSourcesAdapter( final BigWarp.BigWarpData<?> data )
+		public BigWarpSourcesAdapter( final BigWarpData<?> data )
 		{
 			this.data = data;
 		}

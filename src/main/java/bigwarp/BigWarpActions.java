@@ -37,8 +37,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
@@ -558,21 +556,20 @@ public class BigWarpActions
 			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			BigWarpData< ? > data = bw.getData();
-			for( int mi : data.movingSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "mvg src xfm " + xfm  );
-			}
-
-			for( int ti : data.targetSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "tgt src xfm " + xfm  );
-			}
-
-
-			System.out.println( " " );
+//			BigWarpData< ? > data = bw.getData();
+//			for( int mi : data.movingSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "mvg src xfm " + xfm  );
+//			}
+//
+//			for( int ti : data.targetSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "tgt src xfm " + xfm  );
+//			}
+//
+//			System.out.println( " " );
 		}
 	}
 	

@@ -27,15 +27,13 @@ import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.InvertibleRealTransform;
 
-import java.io.File;
-
 public class TransformPoints2DTest {
 
     public static void main(String... args) throws Exception {
 
         ImagePlus impBlobs = IJ.openImage("https://imagej.nih.gov/ij/images/blobs.gif");
 
-        BigWarp.BigWarpData bwData = BigWarpInit.createBigWarpDataFromImages( impBlobs, impBlobs );
+        BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( impBlobs, impBlobs );
 
         BigWarp bigWarp = new BigWarp(bwData, "2D points transform", null);
 //        bigWarp.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/landmarks2d-blobs.csv" ));

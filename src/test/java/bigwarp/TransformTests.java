@@ -25,7 +25,6 @@ package bigwarp;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.TransformListener;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimDataException;

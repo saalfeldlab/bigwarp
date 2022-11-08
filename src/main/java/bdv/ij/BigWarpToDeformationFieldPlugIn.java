@@ -61,19 +61,25 @@ import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.converter.Converters;
+import net.imglib2.converter.RealFloatConverter;
+import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.FloatImagePlus;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.iterator.IntervalIterator;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.parallel.TaskExecutors;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.DisplacementFieldTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Scale2D;
 import net.imglib2.realtransform.Scale3D;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
@@ -99,8 +105,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		new ImageJ();
 //		IJ.run("Boats (356K)");
-		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
-//		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack_p2p2p4.tif" );
+//		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
+		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack.tif" );
 		
 //		WindowManager.getActiveWindow();
 		imp.show();
@@ -111,8 +117,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public <T> void runFromBigWarpInstance(
 			final LandmarkTableModel landmarkModel,
 			final List<SourceAndConverter<T>> sources,
-			final int[] targetSourceIndexList )
+			final List<Integer> targetSourceIndexList )
 	{
+		System.out.println( "run from instance." );
 		ImageJ ij = IJ.getInstance();
 		if ( ij == null )
 			return;
@@ -122,28 +129,31 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( params == null )
 			return;
 
-		final RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSource( 0, 0 );
+		final RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList.get( 0 ) ).getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
-		long[] dims;
-		if ( ndims <= 2 )
-		{
-			dims = new long[ 3 ];
-			dims[ 0 ] = tgtInterval.dimension( 0 );
-			dims[ 1 ] = tgtInterval.dimension( 1 );
-			dims[ 2 ] = 2;
-		}
-		else
-		{
-			dims = new long[ 4 ];
-			dims[ 0 ] = tgtInterval.dimension( 0 );
-			dims[ 1 ] = tgtInterval.dimension( 1 );
-			dims[ 2 ] = 3;
-			dims[ 3 ] = tgtInterval.dimension( 2 );
-		}
+		// dimensions of the output image plus
+//		long[] dims;
+//		if ( ndims <= 2 )
+//		{
+//			dims = new long[ 3 ];
+//			dims[ 0 ] = tgtInterval.dimension( 0 );
+//			dims[ 1 ] = tgtInterval.dimension( 1 );
+//			dims[ 2 ] = 2;
+//		}
+//		else
+//		{
+//			dims = new long[ 4 ];
+//			dims[ 0 ] = tgtInterval.dimension( 0 );
+//			dims[ 1 ] = tgtInterval.dimension( 1 );
+//			dims[ 2 ] = 3;
+//			dims[ 3 ] = tgtInterval.dimension( 2 );
+//		}
+
+		long[] dims = tgtInterval.dimensionsAsLongArray();
 
 		double[] spacing = new double[ 3 ];
-		VoxelDimensions voxelDim = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions();
+		VoxelDimensions voxelDim = sources.get( targetSourceIndexList.get( 0 ) ).getSpimSource().getVoxelDimensions();
 		voxelDim.dimensions( spacing );
 
 		if( params.spacing != null )
@@ -154,7 +164,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( landmarkModel, params.ignoreAffine, dims, spacing, params.nThreads );
+			toImagePlus( landmarkModel, params.ignoreAffine, params.virtual, dims, spacing, params.nThreads );
 		}
 		else
 		{
@@ -192,7 +202,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( ltm, params.ignoreAffine, params.size, params.spacing, params.nThreads );
+			toImagePlus( ltm, params.ignoreAffine, params.virtual, params.size, params.spacing, params.nThreads );
 		}
 		else
 		{
@@ -206,12 +216,38 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 	}
-
+	
 	public static ImagePlus toImagePlus(
 			final LandmarkTableModel ltm,
 			final boolean ignoreAffine,
+			final boolean virtual,
 			final long[] dims,
 			final double[] spacing,
+			final int nThreads )
+	{
+		final double[] offset = new double[ spacing.length ];
+		return toImagePlus( ltm, ignoreAffine, virtual, dims, spacing, offset, nThreads );
+	}
+
+	/**
+	 * Create an {@link ImagePlus} that holds the displacement field.
+	 * <p>
+	 * 
+	 * @param ltm the {@link LandmarkTableModel}
+	 * @param ignoreAffine whether to omit the affine part of the transformation
+	 * @param dims the dimensions of the output {@link ImagePlus}'s spatial dimensions
+	 * @param spacing the pixel spacing of the output field
+	 * @param offset the physical offset (origin) of the output field
+	 * @param nThreads number of threads for copying
+	 * @return an image holding the displacement field
+	 */
+	public static ImagePlus toImagePlus(
+			final LandmarkTableModel ltm,
+			final boolean ignoreAffine,
+			final boolean virtual,
+			final long[] dims,
+			final double[] spacing,
+			final double[] offset,
 			final int nThreads )
 	{
 		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
@@ -223,28 +259,73 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			pixelToPhysical = new Scale2D( spacing );
 		}
 		else if( spacing.length == 3)
-		{
+		{	
 			pixelToPhysical = new Scale3D( spacing );
 		}
 		else
 		{
 			return null;
 		}
+		
+		int nd = dims.length;
+		long[] ipDims = null;
+		if ( nd == 2)
+		{
+			ipDims = new long[ 4 ];
+			ipDims[ 0 ] = dims[ 0 ];
+			ipDims[ 1 ] = dims[ 1 ];
+			ipDims[ 2 ] = 2;
+			ipDims[ 3 ] = 1;
+		}
+		else if ( nd == 3 )
+		{
+			ipDims = new long[ 4 ];
+			ipDims[ 0 ] = dims[ 0 ];
+			ipDims[ 1 ] = dims[ 1 ];
+			ipDims[ 2 ] = 3;
+			ipDims[ 3 ] = dims[ 2 ];
+		}
+		else
+			return null;
 
-		FloatImagePlus< FloatType > dfield = convertToDeformationField( dims, tps, pixelToPhysical, nThreads );
+		final RandomAccessibleInterval< DoubleType > dfieldVirt = DisplacementFieldTransform.createDisplacementField( tps, new FinalInterval( dims ), spacing, offset );
+
+		ImagePlus dfieldIp;
+		if( virtual )
+		{
+			final RealFloatConverter<DoubleType> conv = new RealFloatConverter<>();
+			final RandomAccessibleInterval< FloatType > dfieldF = Views.moveAxis(
+						Converters.convert2( dfieldVirt, conv, FloatType::new ),
+						0, 2 );
+			dfieldIp = ImageJFunctions.wrap( dfieldF, "" ); // title gets set below
+		}
+		else
+		{
+			final FloatImagePlus< FloatType > dfield = ImagePlusImgs.floats( ipDims );
+
+			// make the "vector" axis the first dimension
+			RandomAccessibleInterval< FloatType > dfieldImpPerm = Views.moveAxis( dfield, 2, 0 );
+			LoopBuilder.setImages( dfieldVirt, dfieldImpPerm ).multiThreaded( TaskExecutors.fixedThreadPool( nThreads ) ).forEachPixel( (x,y) -> { y.setReal(x.get()); });
+			dfieldIp = dfield.getImagePlus();
+		}
 
 		String title = "bigwarp dfield";
 		if ( ignoreAffine )
 			title += " (no affine)";
 
-		ImagePlus dfieldIp = dfield.getImagePlus();
 		dfieldIp.setTitle( title );
 
 		dfieldIp.getCalibration().pixelWidth = spacing[ 0 ];
 		dfieldIp.getCalibration().pixelHeight = spacing[ 1 ];
 
+		dfieldIp.getCalibration().xOrigin = offset[ 0 ];
+		dfieldIp.getCalibration().yOrigin = offset[ 1 ];
+
 		if( spacing.length > 2 )
+		{
 			dfieldIp.getCalibration().pixelDepth = spacing[ 2 ];
+			dfieldIp.getCalibration().zOrigin = offset[ 2 ];
+		}
 
 		dfieldIp.show();
 		return dfieldIp;
@@ -395,6 +476,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return dims;
 	}
 
+	@Deprecated
 	public static FloatImagePlus< FloatType > convertToDeformationField(
 			final long[] dims,
 			final RealTransform transform,
@@ -458,6 +540,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 *            the {@link RandomAccessibleInterval} into which the
 	 *            displacement field will be written
 	 */
+	@Deprecated
 	public static < T extends RealType< T > > void fromRealTransform( 
 			final RealTransform transform, 
 			final AffineGet pixelToPhysical,
@@ -509,6 +592,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @param nThreads
 	 *            the number of threads
 	 */
+	@Deprecated
 	public static < T extends RealType< T > > void fromRealTransform( final RealTransform transform, 
 			final AffineGet pixelToPhysical,
 			final RandomAccessibleInterval< T > deformationField,
@@ -632,6 +716,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		public final String landmarkPath;
 		public final boolean ignoreAffine;
+		public final boolean virtual;
 		public final int nThreads;
 
 		public final long[] size;
@@ -645,6 +730,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public DeformationFieldExportParameters(
 				final String landmarkPath,
 				final boolean ignoreAffine,
+				final boolean virtual,
 				final int nThreads,
 				final long[] size,
 				final double[] spacing,
@@ -655,6 +741,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			this.landmarkPath = landmarkPath;
 			this.ignoreAffine = ignoreAffine;
+			this.virtual = virtual;
 			this.nThreads = nThreads;
 
 			this.size = size;
@@ -678,6 +765,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 
 			gd.addCheckbox( "Ignore affine part", false );
+			gd.addCheckbox( "virtual", false );
 			gd.addNumericField( "threads", 1, 0 );
 			gd.addMessage( "Size and spacing" );
 
@@ -712,6 +800,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				landmarkPath = gd.getNextString();
 
 			final boolean ignoreAffine = gd.getNextBoolean();
+			final boolean virtual = gd.getNextBoolean();
 			final int nThreads = ( int ) gd.getNextNumber();
 
 			ImagePlus ref_imp = null;
@@ -768,6 +857,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return new DeformationFieldExportParameters( 
 					landmarkPath,
 					ignoreAffine,
+					virtual,
 					nThreads,
 					size,
 					spacing,

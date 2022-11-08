@@ -61,7 +61,7 @@ import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 
 import com.google.gson.Gson;
@@ -895,8 +895,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	public void updateAllWarpedPoints( final InvertibleRealTransform xfm )
 	{
 		final InvertibleRealTransform xfmToUse;
-		if (xfm instanceof Wrapped2DTransformAs3D && ndims == 2)
-			xfmToUse = ((Wrapped2DTransformAs3D) xfm).transform;
+		if (xfm instanceof InvertibleWrapped2DTransformAs3D && ndims == 2)
+			xfmToUse = ((InvertibleWrapped2DTransformAs3D) xfm).transform;
 		else
 			xfmToUse = xfm;
 

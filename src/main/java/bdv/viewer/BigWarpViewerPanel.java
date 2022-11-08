@@ -26,10 +26,10 @@ import bdv.gui.BigWarpViewerOptions;
 import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
-import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
+import bigwarp.BigWarpData;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -47,6 +47,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final int TARGET_GROUP_INDEX = 1;
 
+	protected final BigWarpData<?> bwData;
+
 	protected BigWarpViewerSettings viewerSettings;
 
 	protected BigWarpOverlay overlay;
@@ -63,10 +65,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	protected int ndims;
 
-	final protected int[] movingSourceIndexList;
-
-	final protected int[] targetSourceIndexList;
-
 	protected boolean boxOverlayVisible = true;
 
 	protected boolean textOverlayVisible = true;
@@ -78,23 +76,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	ViewerOptions options;
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList )
+	public BigWarpViewerPanel( final BigWarpData bwData , final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving )
 	{
-		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
+		this( bwData, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving );
 	}
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList  )
+	public BigWarpViewerPanel( final BigWarpData bwData, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving )
 	{
-		super( sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		// TODO compiler complains if the first argument is 'final BigWarpData<?> bwData'
+		super( bwData.sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		this.bwData = bwData;
 		this.viewerSettings = viewerSettings;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed
 										// image by default
-		this.movingSourceIndexList = movingSourceIndexList;
-		this.targetSourceIndexList = targetSourceIndexList;
-
 		getDisplay().overlays().add( g -> {
 			if ( null != overlay ) {
 				overlay.setViewerState( state() );
@@ -170,10 +165,10 @@ public class BigWarpViewerPanel extends ViewerPanel
 			//  and targetSourceIndexList are required, or whether a
 			//  List<SourceAndConverter<?>> can be used directly
 			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
-			for ( int i : movingSourceIndexList )
+			for ( int i : bwData.movingSourceIndexList )
 				moving.add( state.getSources().get( i ) );
 			final List< SourceAndConverter< ? > > target = new ArrayList<>();
-			for ( int i : targetSourceIndexList )
+			for ( int i : bwData.targetSourceIndexList )
 				target.add( state.getSources().get( i ) );
 
 			state.clearGroups();
@@ -206,7 +201,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+//		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( bwData.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
+		return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()

@@ -110,6 +110,10 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
+		<imglib2.version>6.0.0</imglib2.version>
+		<imglib2-realtransform.version>4.0.0</imglib2-realtransform.version>
+		<n5-imglib2.version>5.0.0-SNAPSHOT</n5-imglib2.version>
+
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 		<jitk-tps.version>3.0.2</jitk-tps.version>
@@ -211,6 +215,10 @@
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-imglib2</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-blosc</artifactId>
 		</dependency>
 		<dependency>
@@ -291,6 +299,10 @@
 			<groupId>se.sawano.java</groupId>
 			<artifactId>alphanumeric-comparator</artifactId>
 			<version>${alphanumeric-comparator.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf</artifactId>
 		</dependency>
 
 		<!-- Test scope dependencies -->

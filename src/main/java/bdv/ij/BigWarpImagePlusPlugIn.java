@@ -28,7 +28,7 @@ import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ij.util.ProgressWriterIJ;
 import bigwarp.BigWarp;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
