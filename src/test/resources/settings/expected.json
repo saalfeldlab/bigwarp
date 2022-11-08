@@ -1,4 +1,18 @@
 {
+    "Sources": {
+        "3": {
+            "isMoving": false
+        },
+        "2": {
+            "isMoving": false
+        },
+        "1": {
+            "isMoving": false
+        },
+        "0": {
+            "isMoving": true
+        }
+    },
     "ViewerP": {
         "Sources": [
             true,
