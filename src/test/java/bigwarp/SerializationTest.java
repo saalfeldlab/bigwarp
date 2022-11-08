@@ -36,12 +36,23 @@ import net.imglib2.view.Views;
 import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.jdom2.JDOMException;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
 public class SerializationTest
 {
+
+	private BigWarp< ? > bw;
+
+	@After
+	public void	after() {
+		if (bw != null) {
+			bw.closeAll();
+			bw = null;
+		}
+	}
 
 	@Test
 	public void maskTest()
@@ -123,7 +134,7 @@ public class SerializationTest
 	@Test
 	public void setupAssignmentsTest() throws SpimDataException, IOException
 	{
-		final BigWarp< ? > bw = createBigWarp( new boolean[] { true, false, false, false } );
+		bw = createBigWarp( new boolean[] { true, false, false, false } );
 
 		final PipedWriter writer = new PipedWriter();
 		final PipedReader in = new PipedReader( writer, 10000 );
@@ -171,7 +182,7 @@ public class SerializationTest
 	@Test
 	public void viewerPanelTest() throws SpimDataException, IOException
 	{
-		final BigWarp< ? > bw = createBigWarp( new boolean[] { true, false, false, false } );
+		bw = createBigWarp( new boolean[] { true, false, false, false } );
 
 		final PipedWriter writer = new PipedWriter();
 		final PipedReader in = new PipedReader( writer, 10000 );
@@ -215,8 +226,20 @@ public class SerializationTest
 		expected.addProperty( XmlIoViewerState.VIEWERSTATE_CURRENTTIMEPOINT_TAG, value.getState().getCurrentTimepoint() );
 
 		Assert.assertEquals( prettyPrint(expected), prettyPrint( actual.getAsJsonObject()) );
+	}
 
+	@Test
+	public void sourceSerializationTest() throws SpimDataException
+	{
+		//TODO Caleb: Currently, Bigwarp cannot be loaded without soruces existing.
+		// When this is possible, this test should be written to create bigwarp with no initial sources,
+		// and then import some sources from a settings file, and compare the added sources to the expected.
 
+		// bw = createBigWarp( new boolean[0] );
+		// bw.loadSettings("src/test/resources/settings/settingsWithSource.json");
+		// Grab the sources
+		// Compare the ids, urls, isMoving status, and isActive
+		assert(false);
 	}
 
 	/* When creating and closing multiple BigWarp instances, occassionally the comparison test fails.
@@ -228,7 +251,7 @@ public class SerializationTest
 		for ( int i = 0; i < 20; i++ )
 		{
 			System.out.println( i );
-			BigWarp< ? > bw = createBigWarp( new boolean[] { true, false, false, false } );
+			bw = createBigWarp( new boolean[] { true, false, false, false } );
 
 			/* Load the known good*/
 			final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
@@ -272,20 +295,14 @@ public class SerializationTest
 		bw.saveSettings( tmpXmlFile.getAbsolutePath() );
 		XMLUnit.setIgnoreWhitespace( true );
 		XMLUnit.setIgnoreComments( true );
-		try
-		{
-			XMLAssert.assertXMLEqual( new FileReader( originalXmlSettings ), new FileReader( tmpXmlFile ) );
-		}
-		finally
-		{
-			bw.closeAll();
-		}
+		XMLAssert.assertXMLEqual( new FileReader( originalXmlSettings ), new FileReader( tmpXmlFile ) );
+
 	}
 
 	@Test
 	public void jsonLoadSaveComparisonTest() throws SpimDataException, IOException, JDOMException
 	{
-		BigWarp< ? > bw = createBigWarp( new boolean[] { true, false } );
+		bw = createBigWarp( new boolean[] { true, false } );
 
 		final String expectedJsonFile = "src/test/resources/settings/expected_with_dfield.json";
 		bw.loadSettings( expectedJsonFile );
@@ -303,20 +320,13 @@ public class SerializationTest
 		final JsonElement jsonSettingsOut = JsonParser.parseReader( in );
 		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( expectedJsonFile ) );
 
-		try
-		{
-			Assert.assertEquals( expectedJson, jsonSettingsOut );
-		}
-		finally
-		{
-			bw.closeAll();
-		}
+		Assert.assertEquals( expectedJson, jsonSettingsOut );
 	}
 
 	@Test
 	public void landmarkComparisonTest() throws SpimDataException, IOException, JDOMException
 	{
-		BigWarp< ? > bw = createBigWarp( new boolean[] { true, false, false, false } );
+		bw = createBigWarp( new boolean[] { true, false, false, false } );
 
 		final String xmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
 		final String csvLandmarks = "src/test/resources/settings/landmarks.csv";
@@ -337,14 +347,7 @@ public class SerializationTest
 		final JsonElement jsonSettingsOut = JsonParser.parseReader( in );
 		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( expectedJsonFile ) );
 
-		try
-		{
-			Assert.assertEquals( expectedJson, jsonSettingsOut );
-		}
-		finally
-		{
-			bw.closeAll();
-		}
+		Assert.assertEquals( expectedJson, jsonSettingsOut );
 
 	}
 
@@ -381,10 +384,5 @@ public class SerializationTest
 		data.wrapUp();
 		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
 		return new BigWarp<>( data, "bigwarp", opts, null );
-	}
-
-	public static void main( String[] args ) throws SpimDataException
-	{
-		createBigWarp( new boolean[] { true, false, false, false } );
 	}
 }
