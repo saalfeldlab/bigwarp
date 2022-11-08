@@ -525,7 +525,10 @@ public class BigWarpInit
 			e.printStackTrace();
 			return null;
 		}
-
+		return loadN5Source( n5, n5Dataset );
+	}
+	public static Source<?> loadN5Source( final N5Reader n5, final String n5Dataset )
+	{
 		final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
 			new ImagePlusLegacyMetadataParser(),
 			new N5CosemMetadataParser(),
