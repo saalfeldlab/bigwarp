@@ -1,42 +1,62 @@
 package bigwarp.url;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import bdv.tools.transformation.TransformedSource;
+import bdv.viewer.Source;
+import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpInit;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.gui.NewImage;
+import ij.plugin.StackWriter;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
-
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import mpicbg.spim.data.SpimDataException;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.scijava.util.FileUtils;
 
-import bdv.viewer.Source;
-import ij.IJ;
-import ij.ImagePlus;
-import ij.gui.NewImage;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 
 public class UrlParseTest
 {
-	
-	private Class<N5FSReader> n5Clazz;
-	private Class<N5ZarrReader> zarrClazz;
-	private Class<N5HDF5Reader> h5Clazz;
 
-	private HashMap<String,long[]> urlToDimensions;
+	private static final String TIFF_FILE_3D = "src/test/resources/bigwarp/url/img.tif";
+
+	public static final String PNG_FILE_2D = "src/test/resources/bigwarp/url/img2d.png";
+
+	public static final String TIFF_STACK_DIR = "src/test/resources/bigwarp/url/imgDir3d/";
+
+	private Class< N5FSReader > n5Clazz;
+
+	private Class< N5ZarrReader > zarrClazz;
+
+	private Class< N5HDF5Reader > h5Clazz;
+
+	private HashMap< String, long[] > urlToDimensions;
 
 	private String n5Root, zarrRoot, h5Root;
-	private String img3dTifPath, img2dPngPath;
 
 	@Before
-	public void before()
+	public void before() throws IOException
 	{
+		/* Cleanup, to ensure no old test files persist */
+		cleanup();
+
 		n5Clazz = N5FSReader.class;
 		zarrClazz = N5ZarrReader.class;
 		h5Clazz = N5HDF5Reader.class;
@@ -59,12 +79,20 @@ public class UrlParseTest
 		urlToDimensions.put( zarrRoot + "?img2", new long[] { 8, 12, 16 } );
 
 		ImagePlus img3d = NewImage.createByteImage( "img3d", 8, 8, 4, NewImage.FILL_RAMP );
-		img3dTifPath = new File( "src/test/resources/bigwarp/url/img.tif").getAbsolutePath();
-		IJ.save( img3d, img3dTifPath );
+		IJ.save( img3d, TIFF_FILE_3D );
 
 		ImagePlus img2d = NewImage.createByteImage( "img2d", 8, 8, 1, NewImage.FILL_RAMP );
-		img2dPngPath = new File( "src/test/resources/bigwarp/url/img2d.png").getAbsolutePath();
-		IJ.save( img2d, img2dPngPath );
+		IJ.save( img2d, PNG_FILE_2D );
+		Files.createDirectory( Paths.get( TIFF_STACK_DIR ) );
+		StackWriter.save( img3d , TIFF_STACK_DIR, "format=tif");
+	}
+
+	@After
+	public void cleanup() throws IOException
+	{
+		Files.deleteIfExists(Paths.get( TIFF_FILE_3D ));
+		Files.deleteIfExists(Paths.get( PNG_FILE_2D ));
+		FileUtils.deleteRecursively( new File(TIFF_STACK_DIR));
 	}
 
 	@Test
@@ -73,9 +101,9 @@ public class UrlParseTest
 		N5Factory n5Factory = new N5Factory();
 		try
 		{
-			assertEquals( n5Clazz, n5Factory.openReader( n5Root ).getClass());
-			assertEquals( zarrClazz, n5Factory.openReader( zarrRoot ).getClass());
-			assertEquals( h5Clazz, n5Factory.openReader( h5Root ).getClass());
+			assertEquals( n5Clazz, n5Factory.openReader( n5Root ).getClass() );
+			assertEquals( zarrClazz, n5Factory.openReader( zarrRoot ).getClass() );
+			assertEquals( h5Clazz, n5Factory.openReader( h5Root ).getClass() );
 		}
 		catch ( IOException e )
 		{
@@ -83,26 +111,31 @@ public class UrlParseTest
 		}
 	}
 
+	@Test
 	public void testUrlSources()
 	{
 		final String bdvXmlUrl = new File( "src/test/resources/mri-stack.xml" ).getAbsolutePath();
 
-		Source<?> bdvXmlSrc = loadSourceFromUrl( bdvXmlUrl );
-//		assertNotNull( bdvXmlSrc );
+		Source< ? > bdvXmlSrc = loadSourceFromUri( bdvXmlUrl );
+		assertNotNull( bdvXmlSrc );
 
-		Source<?> img3dTif = loadSourceFromUrl( img3dTifPath );
-//		assertNotNull( img3dTif );
-//		assertArrayEquals( new long[]{8,8,4}, img3dTif.getSource( 0, 0 ).dimensionsAsLongArray() );
+		Source< ? > img3dTif = loadSourceFromUri( TIFF_FILE_3D );
+		assertNotNull( img3dTif );
+		assertArrayEquals( new long[]{8,8,4}, img3dTif.getSource( 0, 0 ).dimensionsAsLongArray() );
 
-		Source<?> img2dPng = loadSourceFromUrl( img2dPngPath );
-//		assertNotNull( img2dPng );
-//		assertArrayEquals( new long[]{8,8,1}, img2dPng.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
+		Source< ? > img2dPng = loadSourceFromUri( PNG_FILE_2D );
+		assertNotNull( img2dPng );
+		assertArrayEquals( new long[]{8,8,1}, img2dPng.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
 
-		for( String url : urlToDimensions.keySet() )
+		Source< ? > img3dTifFromDir = loadSourceFromUri( TIFF_STACK_DIR );
+		assertNotNull( img3dTifFromDir );
+		assertArrayEquals( new long[]{8,8,4}, img3dTifFromDir.getSource( 0, 0 ).dimensionsAsLongArray() );
+
+		for ( String url : urlToDimensions.keySet() )
 		{
-			Source<?> src = loadSourceFromUrl( url );
-//			assertNotNull( src );
-//			assertArrayEquals( urlToDimensions.get( url ), src.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
+			Source< ? > src = loadSourceFromUri( url );
+			assertNotNull( src );
+			assertArrayEquals( urlToDimensions.get( url ), src.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
 		}
 	}
 
@@ -123,16 +156,74 @@ public class UrlParseTest
 //		assertEquals( s0, s0Default );
 	}
 
+	@Test
+	public void n5FileEquivalencyTest() throws IOException
+	{
+		final String relativePath = "src/test/resources/bigwarp/url/transformTest.n5";
+		final String absolutePath = Paths.get( relativePath ).toAbsolutePath().toFile().getCanonicalPath();
+		final String[] variants = new String[]{
+				"n5:file://" + absolutePath + "?img#coordinateTransformations[0]",
+				"n5:file://" + absolutePath + "?img",
+				"n5://" + absolutePath + "?img#coordinateTransformations[0]",
+				"n5://" + absolutePath + "?img",
+				"file://" + absolutePath + "?img#coordinateTransformations[0]",
+				"file://" + absolutePath + "?img",
+				"n5:" + absolutePath + "?img#coordinateTransformations[0]",
+				"n5:" + absolutePath + "?img",
+				absolutePath + "?img#coordinateTransformations[0]",
+				absolutePath + "?img",
+				"n5:file://" + relativePath + "?img#coordinateTransformations[0]",
+				"n5:file://" + relativePath + "?img",
+				"n5://" + relativePath + "?img#coordinateTransformations[0]",
+				"n5://" + relativePath + "?img",
+				"file://" + relativePath + "?img#coordinateTransformations[0]",
+				"file://" + relativePath + "?img",
+				"n5:" + relativePath + "?img#coordinateTransformations[0]",
+				"n5:" + relativePath + "?img",
+				relativePath + "?img#coordinateTransformations[0]",
+				relativePath + "?img"
+		};
+
+		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
+		try
+		{
+
+			final AtomicInteger id = new AtomicInteger( 1 );
+			for ( String uri :  variants)
+			{
+				final int setupId = id.getAndIncrement();
+				BigWarpInit.add( data, uri, setupId, new Random().nextBoolean() );
+				assertEquals( uri, data.urls.get(setupId ).getA().get());
+			}
+		}
+		catch ( URISyntaxException | IOException | SpimDataException e )
+		{
+			throw new RuntimeException( e );
+		}
+	}
+
 	private Object loadTransformFromUrl( String url )
 	{
 		// TODO Caleb will remove me and replace calls to me with something real
 		return null;
 	}
 
-	private Source<?> loadSourceFromUrl( String url )
+	private Source< ? > loadSourceFromUri( String uri )
 	{
-		// TODO Caleb will remove me and replace calls to me with something real
-		return null;
+
+
+		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
+		try
+		{
+			final Source< ? > source = BigWarpInit.add( data, uri, 0, true );
+			data.wrapUp();
+			return source;
+		}
+		catch ( URISyntaxException | IOException | SpimDataException e )
+		{
+			throw new RuntimeException( e );
+		}
 	}
+
 
 }
