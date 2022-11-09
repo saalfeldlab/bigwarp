@@ -5,8 +5,11 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -31,11 +34,17 @@ import com.formdev.flatlaf.util.UIScale;
 
 import bdv.gui.sourceList.BigWarpSourceListPanel;
 import bdv.gui.sourceList.BigWarpSourceTableModel;
+import bdv.gui.sourceList.BigWarpSourceTableModel.SourceRow;
+import bdv.ij.util.ProgressWriterIJ;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpData;
+import bigwarp.BigWarpInit;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
+import mpicbg.spim.data.SpimDataException;
 
 
 public class BigWarpInitDialog extends JFrame
@@ -58,6 +67,9 @@ public class BigWarpInitDialog extends JFrame
 	private String lastOpenedContainer = "";
 	private ExecutorService exec;
 
+    private Consumer<BigWarpSourceTableModel> okayCallback;
+    private Consumer<BigWarpSourceTableModel> cancelCallback;
+
 	private static final int DEFAULT_OUTER_PAD = 8;
 	private static final int DEFAULT_BUTTON_PAD = 3;
 	private static final int DEFAULT_MID_PAD = 5;
@@ -68,12 +80,63 @@ public class BigWarpInitDialog extends JFrame
 		initialPath = "";
 
 		buildN5SelectionDialog();
-
         final Container content = getContentPane();
         content.add( createContent() );
         pack();
 
         initializeImagePlusSources();
+
+        cancelCallback = x -> {};
+		okayCallback = x -> {
+			runBigWarp( x );
+		};
+	}
+
+	public static void runBigWarp( BigWarpSourceTableModel sourceTable )
+	{
+		final BigWarpData< ? > data = BigWarpInit.initData();
+		final int N = sourceTable.getRowCount();
+
+		int id = 0;
+		for( int i = 0; i < N; i++ )
+		{
+			SourceRow tableRow = sourceTable.get( i );
+			if( tableRow.isImagePlus )
+			{
+				final ImagePlus imp = WindowManager.getImage( tableRow.srcName );
+				id += BigWarpInit.add( data, imp, id, 0, tableRow.moving );
+			}
+			else
+			{
+				// TODO deal with exceptions, and possibility of multiplke sources per uri
+				try
+				{
+					BigWarpInit.add( data, tableRow.srcName, id, tableRow.moving );
+				}
+				catch ( URISyntaxException e )
+				{
+					e.printStackTrace();
+				}
+				catch ( IOException e )
+				{
+					e.printStackTrace();
+				}
+				catch ( SpimDataException e )
+				{
+					e.printStackTrace();
+				}
+				id++;
+			}
+		}
+
+		try
+		{
+			BigWarp<?> bw = new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
+		}
+		catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
 	}
 
 	public JPanel createContent()
@@ -224,6 +287,7 @@ public class BigWarpInitDialog extends JFrame
 		panel.add(messageLabel, cbot);
 
 		okBtn = new JButton("OK");
+		okBtn.addActionListener( e -> okayCallback.accept( sourceTableModel ));
 		cbot.gridx = 5;
 		cbot.weightx = 0.0;
 		cbot.gridwidth = 1;
@@ -234,6 +298,7 @@ public class BigWarpInitDialog extends JFrame
 		panel.add(okBtn, cbot);
 
 		cancelBtn = new JButton("Cancel");
+		cancelBtn.addActionListener( e -> cancelCallback.accept( sourceTableModel ));
 		cbot.gridx = 6;
 		cbot.ipadx = 0;
 		cbot.gridwidth = 1;
@@ -304,7 +369,7 @@ public class BigWarpInitDialog extends JFrame
 		// an image is not added, and / or updating the dropdown menu periodically
 		if( !title.isEmpty() && imp != null )
 		{
-			sourceTableModel.add( title );
+			sourceTableModel.addImagePlus( title );
 			repaint();
 		}
 	}
@@ -378,8 +443,11 @@ public class BigWarpInitDialog extends JFrame
 		ImageJ ij = new ImageJ();
 //		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
 //		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
-		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
-		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
+
+//		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
+
+		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
 
 		createAndShowGUI();
 	}

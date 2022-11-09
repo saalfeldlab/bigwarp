@@ -46,6 +46,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		this.container = container;
 	}
 
+	public SourceRow get( int i )
+	{
+		return sources.get( i );
+	}
+
 	@Override 
 	public String getColumnName( int col ){
 		return columnNames[col];
@@ -119,6 +124,16 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public void add( String srcName )
 	{
 		add( srcName, false );
+	}
+
+	public void addImagePlus( String srcName )
+	{
+		addImagePlus( srcName, false );
+	}
+
+	public void addImagePlus( String srcName, boolean isMoving )
+	{
+		add( srcName, isMoving, true );
 	}
 
 	public boolean remove( int i )
