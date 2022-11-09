@@ -106,6 +106,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		sources.add( new SourceRow( srcName, moving, "", isImagePlus ));
 	}
 
+	public void setTransform( int i, String transform )
+	{
+		sources.get( i ).transformName = transform;
+	}
+
 	public void add( String srcName, boolean moving )
 	{
 		add( srcName, moving, false );

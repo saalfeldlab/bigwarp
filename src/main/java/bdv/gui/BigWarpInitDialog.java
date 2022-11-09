@@ -42,20 +42,17 @@ public class BigWarpInitDialog extends JFrame
 {
 
 	private static final long serialVersionUID = -2914972130819029899L;
-	private JButton browseBtn;
-	private JTextField containerPathText;
-	
+	private JTextField containerPathText, transformPathText;
+
 	private String initialPath;
 	private JLabel messageLabel;
-	private JButton okBtn;
-	private JButton cancelBtn;
+	private JButton okBtn, cancelBtn;
 	private JPanel listPanel;
 	private JTable sourceTable;
-	private JButton addN5Button;
+	private JButton browseBtn, addN5Button, browseTransformButton;
 	private BigWarpSourceTableModel sourceTableModel;
 	private JComboBox<String> imagePlusDropdown;
-	private JButton addImageButton;
-	private JButton addPathButton;
+	private JButton addImageButton, addPathButton, addTransformButton;
 	private DatasetSelectorDialog selectionDialog;
 
 	private String lastOpenedContainer = "";
@@ -90,10 +87,6 @@ public class BigWarpInitDialog extends JFrame
 		final JPanel panel = new JPanel(false);
 		panel.setLayout(new GridBagLayout());	
 
-		containerPathText = new JTextField();
-		containerPathText.setText( initialPath );
-		containerPathText.setPreferredSize( new Dimension( frameSizeX / 3, containerPathText.getPreferredSize().height ) );
-//		containerPathText.addActionListener( e -> openContainer( n5Fun, () -> getN5RootPath(), pathFun ) );
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
 		ctxt.gridx = 0;
@@ -102,32 +95,45 @@ public class BigWarpInitDialog extends JFrame
 		ctxt.gridheight = 1;
 		ctxt.weightx = 0.0;
 		ctxt.weighty = 0.0;
+		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.fill = GridBagConstraints.NONE;
 		ctxt.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
 		
 		final JLabel addFileLabel = new JLabel( "Add file/folder:");
 		panel.add(addFileLabel, ctxt);
+
+		final GridBagConstraints gbcBar = new GridBagConstraints();
+		gbcBar.gridx = 1;
+		gbcBar.gridy = 0;
+		gbcBar.gridwidth = 4;
+		gbcBar.gridheight = 1;
+		gbcBar.weightx = 1.0;
+		gbcBar.weighty = 0.0;
+		gbcBar.fill = GridBagConstraints.HORIZONTAL;
+		gbcBar.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
 		
-		ctxt.gridx = 1;
-		ctxt.gridy = 0;
-		ctxt.gridwidth = 4;
-		ctxt.gridheight = 1;
-		ctxt.weightx = 1.0;
-		ctxt.fill = GridBagConstraints.HORIZONTAL;
-		panel.add(containerPathText, ctxt);
+		containerPathText = new JTextField();
+		containerPathText.setText( initialPath );
+		containerPathText.setPreferredSize( new Dimension( frameSizeX / 3, containerPathText.getPreferredSize().height ) );
+//		containerPathText.addActionListener( e -> openContainer( n5Fun, () -> getN5RootPath(), pathFun ) );
+		panel.add(containerPathText, gbcBar);
 
 		final GridBagConstraints cadd = new GridBagConstraints();
 		cadd.gridx = 5;
+		cadd.gridy = 0;
 		cadd.gridwidth = 1;
 		cadd.weightx = 0.0;
-		cadd.fill = GridBagConstraints.HORIZONTAL;
+		cadd.fill = GridBagConstraints.NONE;
+		cadd.anchor = GridBagConstraints.LINE_START;
 		cadd.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
+
 		addPathButton = new JButton("+");
 		addPathButton.addActionListener( e -> addPath() );
 		panel.add(addPathButton, cadd);
 
 		final GridBagConstraints cbrowse = new GridBagConstraints();
 		cbrowse.gridx = 6;
+		cbrowse.gridy = 0;
 		cbrowse.gridwidth = 1;
 		cbrowse.weightx = 0.0;
 		cbrowse.anchor = GridBagConstraints.LINE_END;
@@ -135,50 +141,59 @@ public class BigWarpInitDialog extends JFrame
 		cbrowse.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 		browseBtn = new JButton("Browse");
 		panel.add(browseBtn, cbrowse);
-		
+
 		// add image / n5
+		ctxt.gridy = 1;
+		panel.add( new JLabel("Add open image:"), ctxt );
+
 		final GridBagConstraints gbc = new GridBagConstraints();
-		gbc.gridx = 0;
-		gbc.gridy = 1;
-		gbc.gridwidth = 1;
-		gbc.weightx = 0.0;
-		gbc.weighty = 0.0;
-		gbc.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
-		panel.add( new JLabel("Add open image"), gbc );
-		
 		gbc.gridx = 1;
-		gbc.gridwidth = 2;
+		gbc.gridy = 1;
+		gbc.gridwidth = 3;
 		gbc.weightx = 1.0;
+		gbc.weighty = 0.0;
 		gbc.fill = GridBagConstraints.HORIZONTAL;
-		gbc.anchor = GridBagConstraints.EAST;
+		gbc.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
+		gbc.anchor = GridBagConstraints.LINE_END;
 		imagePlusDropdown = new JComboBox<>( new String[] { "<none>" } );
 		panel.add( imagePlusDropdown, gbc );
 		updateImagePlusDropdown();
-		
-		gbc.gridx = 3;
-		gbc.gridwidth = 1;
-		gbc.weightx = 0.0;
-		gbc.fill = GridBagConstraints.NONE;
+
+		cadd.gridy = 1;
 		addImageButton = new JButton("+");
-		panel.add( addImageButton, gbc );
+		panel.add( addImageButton, cadd );
 		addImageButton.addActionListener( e -> { addImagePlus(); });
 
-		gbc.gridx = 6;
-		gbc.gridwidth = 1;
-		gbc.weightx = 0.0;
-		gbc.anchor = GridBagConstraints.LINE_END;
-		gbc.fill = GridBagConstraints.HORIZONTAL;
 		addN5Button = new JButton( "H5/N5/Zarr" );
-		panel.add( addN5Button, gbc );
+		cbrowse.gridy = 1;
+		panel.add( addN5Button, cbrowse );
 
 		addN5Button.addActionListener( e -> {
 			selectionDialog.run( this::n5DialogCallback );
 		});
 
+		// add transforms
+		ctxt.gridy = 2;
+		panel.add( new JLabel("Add transformation:"), ctxt );
+
+		transformPathText = new JTextField();
+		transformPathText.setPreferredSize( new Dimension( frameSizeX / 3, transformPathText.getPreferredSize().height ) );
+		gbcBar.gridy = 2;
+		panel.add( transformPathText, gbcBar );
+
+		addTransformButton = new JButton( "+" );
+		addTransformButton.addActionListener( e -> addTransform() );
+		cadd.gridy = 2;
+		panel.add( addTransformButton, cadd );
+
+		browseTransformButton = new JButton("Browse");
+		cbrowse.gridy = 2;
+		panel.add( browseTransformButton, cbrowse );
+
 		// source list
 		final GridBagConstraints clist = new GridBagConstraints();
 		clist.gridx = 0;
-		clist.gridy = 2;
+		clist.gridy = 3;
 		clist.gridwidth = 7;
 		clist.gridheight = 3;
 		clist.weightx = 1.0;
@@ -195,7 +210,7 @@ public class BigWarpInitDialog extends JFrame
 		// bottom button section
 		final GridBagConstraints cbot = new GridBagConstraints();
 		cbot.gridx = 0;
-		cbot.gridy = 5;
+		cbot.gridy = 6;
 		cbot.gridwidth = 4;
 		cbot.gridheight = 1;
 		cbot.weightx = 1.0;
@@ -242,8 +257,7 @@ public class BigWarpInitDialog extends JFrame
 		selectionDialog.setTreeRenderer( new N5DatasetTreeCellRenderer( true ) );
 
 		// restrict canonical metadata to those with spatial metadata, but
-		// without
-		// multiscale
+		// without multiscale
 		selectionDialog.getTranslationPanel().setFilter( x -> ( x instanceof CanonicalDatasetMetadata ) );
 
 		selectionDialog.setContainerPathUpdateCallback( x -> {
@@ -305,6 +319,17 @@ public class BigWarpInitDialog extends JFrame
 		}
 	}
 
+	protected void addTransform()
+	{
+		final String path = transformPathText.getText();
+		int row = sourceTable.getSelectedRow();
+		if( !path.isEmpty() && row >= 0 )
+		{
+			sourceTableModel.setTransform( row, path );
+			repaint();
+		}
+	}
+
 	protected void updateImagePlusDropdown()
 	{
 		if( IJ.getInstance() == null )
@@ -351,8 +376,10 @@ public class BigWarpInitDialog extends JFrame
 	public static void main( String[] args )
 	{
 		ImageJ ij = new ImageJ();
-		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
-		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
+//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
+//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
+		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
+		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
 
 		createAndShowGUI();
 	}
