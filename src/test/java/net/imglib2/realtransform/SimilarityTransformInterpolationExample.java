@@ -355,6 +355,7 @@ public class SimilarityTransformInterpolationExample {
 
 	}
 	
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static BdvStackSource<UnsignedByteType> makeTimeStack( RealRandomAccessible<UnsignedByteType> img, Interval interval, AbstractTransformAnimator interpolator, String name, BdvOptions opts )
 	{
 		return makeTimeStack( img, interval, new AnimatorTimeVaryingTransformation( interpolator ), name, opts );

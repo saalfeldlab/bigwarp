@@ -4,6 +4,7 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import ij.IJ;
 import ij.ImagePlus;
@@ -184,7 +185,7 @@ public class UrlParseTest
 				relativePath + "?img"
 		};
 
-		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
+		final BigWarpData< Object > data = BigWarpInit.initData();
 		try
 		{
 
@@ -212,7 +213,7 @@ public class UrlParseTest
 	{
 
 
-		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
+		final BigWarpData< Object > data = BigWarpInit.initData();
 		try
 		{
 			final Source< ? > source = BigWarpInit.add( data, uri, 0, true );

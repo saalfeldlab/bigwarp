@@ -371,7 +371,7 @@ public class SerializationTest
 
 	private static BigWarp< ? > createBigWarp( boolean[] moving ) throws SpimDataException
 	{
-		final BigWarp.BigWarpData< Object > data = BigWarpInit.initData();
+		final BigWarpData< Object > data = BigWarpInit.initData();
 		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
 				3,
 				( l, v ) -> v.setOne(),
