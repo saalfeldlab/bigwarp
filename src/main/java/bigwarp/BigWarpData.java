@@ -32,7 +32,6 @@ import net.imglib2.util.Pair;
 
 public class BigWarpData< T >
 {
-	// TODO JOHN CHECK ME
 	public List< SourceAndConverter< T > > sources;
 
 	public final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> urls = new HashMap<>();
@@ -52,6 +51,11 @@ public class BigWarpData< T >
 	public final HashMap< Integer, ColorSettings > setupSettings;
 
 	public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
+
+	public BigWarpData()
+	{
+		this( new ArrayList<>(), new ArrayList<>(), null );
+	}
 
 	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
 			final CacheControl cache, 
@@ -188,13 +192,9 @@ public class BigWarpData< T >
 
 	public void wrapUp()
 	{
-//		movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
-//		targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
-//
-//		Arrays.sort( movingSourceIndices );
-//		Arrays.sort( targetSourceIndices );
 		Collections.sort( movingSourceIndexList );
 		Collections.sort( targetSourceIndexList );
+		updateIsMovingMap();
 	}
 
 	public void addSource( Source<T> src, boolean isMoving )
@@ -229,6 +229,20 @@ public class BigWarpData< T >
 			movingSourceIndexList.add( sources.size() - 1 );
 		else
 			targetSourceIndexList.add( sources.size() - 1 );
+	}
+
+	public void remove( int i )
+	{
+		SourceAndConverter< T > sac = sources.get( i );
+		System.out.println( sac );
+		System.out.println( isMovingMap );
+		if( isMovingMap.remove( sac ) != null )
+			movingSourceIndexList.remove( movingSourceIndexList.indexOf( i ) );
+		else
+			targetSourceIndexList.remove( targetSourceIndexList.indexOf( i ) );
+
+		sources.remove( i );
+		transforms.remove( i );
 	}
 
 	public void setTransform( int i, RealTransform transform )

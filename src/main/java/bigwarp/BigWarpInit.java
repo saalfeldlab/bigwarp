@@ -725,10 +725,10 @@ public class BigWarpInit
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static < T > BigWarpData< T > initData()
 	{
-		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
-
-		return new BigWarpData( sources, converterSetups, null );
+//		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
+//		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
+//		return new BigWarpData( sources, converterSetups, null );
+		return new BigWarpData();
 	}
 
 	/**

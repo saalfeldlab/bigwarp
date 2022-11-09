@@ -1,7 +1,6 @@
 package bigwarp;
 
 import bdv.export.ProgressWriterConsole;
-import bdv.viewer.Source;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimDataException;
@@ -12,11 +11,11 @@ public class BigWarpTransformedSourcesTest
 
 	public static void main( String[] args ) throws SpimDataException
 	{
-//		final ImagePlus mr = IJ.openImage("/home/john/tmp/mri-stack.tif");
-//		final ImagePlus t1 = IJ.openImage("/home/john/tmp/t1-head.tif");
+		final ImagePlus mr = IJ.openImage("/home/john/tmp/mri-stack.tif");
+		final ImagePlus t1 = IJ.openImage("/home/john/tmp/t1-head.tif");
 
-		final ImagePlus mr = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif");
-		final ImagePlus t1 = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/t1-head.tif");
+//		final ImagePlus mr = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif");
+//		final ImagePlus t1 = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/t1-head.tif");
 
 		int id = 0;
 		final BigWarpData< ? > data = BigWarpInit.initData();
@@ -34,23 +33,9 @@ public class BigWarpTransformedSourcesTest
 		data.setTransform( 2, translation );
 		data.applyTransformations();
 
-//		System.out.println("before");
-//		data.testColorSettings();
-//		System.out.println("");
-
-		data.applyTransformations();
-
-//		System.out.println("after");
-//		data.testColorSettings();
-
-//		Source< ? > tsrc = data.applyFixedTransform( data.getTargetSource( 0 ).getSpimSource(), translation );
-//		System.out.println( tsrc );
-
 		final BigWarp<?> bw = new BigWarp<>( data, "Big Warp", new ProgressWriterConsole());
-//		bw.loadLandmarks( "/home/john/tmp/bw_tformTest_landmarks.csv" );
-		bw.loadLandmarks( "/groups/saalfeld/home/bogovicj/tmp/bw_tformTest_landmarks.csv" );
-
-//		bw.getViewerFrameP().getConverterSetups()
+		bw.loadLandmarks( "/home/john/tmp/bw_tformTest_landmarks_simple.csv" );
+//		bw.loadLandmarks( "/groups/saalfeld/home/bogovicj/tmp/bw_tformTest_landmarks.csv" );
 
 	}
 

@@ -158,6 +158,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 	 */
 	public int updateGrouping()
 	{
+		// TODO consider deprecating in favor of Bigwarp.createMovingTargetGroups
+
 		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{
@@ -201,8 +203,10 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-//		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( bwData.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
-		return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
+		if( bwData.numMovingSources() < 1 )
+			return true;
+		else
+			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
 	}
 
 	public boolean doUpdateOnDrag()

@@ -21,10 +21,6 @@
  */
 package bigwarp;
 
-import bdv.viewer.ConverterSetups;
-import bdv.viewer.DisplayMode;
-import bdv.viewer.TransformListener;
-import bdv.viewer.ViewerState;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -36,6 +32,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -68,12 +65,10 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
-import mpicbg.spim.data.SpimData;
-import mpicbg.spim.data.XmlIoSpimData;
-import mpicbg.spim.data.registration.ViewTransformAffine;
-
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.utility.geom.BoundingSphereRitter;
+import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -84,6 +79,8 @@ import org.jdom2.output.XMLOutputter;
 import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.stream.JsonReader;
 
 import bdv.BigDataViewer;
 import bdv.export.ProgressWriter;
@@ -114,14 +111,18 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.ConverterSetups;
+import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.SourceGroup;
 import bdv.viewer.SynchronizedViewerState;
+import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.VisibilityAndGrouping;
+import bdv.viewer.ViewerState;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
@@ -129,7 +130,6 @@ import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
@@ -139,12 +139,10 @@ import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.transforms.io.TransformWriterJson;
 import bigwarp.util.BigWarpUtils;
-import com.google.gson.stream.JsonReader;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import java.io.FileReader;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
@@ -159,7 +157,10 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
+import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.XmlIoSpimData;
+import mpicbg.spim.data.registration.ViewTransformAffine;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
@@ -168,20 +169,17 @@ import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.RealTransformFiniteDerivatives;
-import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
-import org.janelia.utility.geom.BoundingSphereRitter;
-import org.janelia.utility.geom.Sphere;
 
 public class BigWarp< T >
 {
-
 	protected static final int DEFAULT_WIDTH = 600;
 
 	protected static final int DEFAULT_HEIGHT = 400;
@@ -297,6 +295,8 @@ public class BigWarp< T >
 	private SolveThread solverThread;
 
 	private BigWarpTransform bwTransform;
+
+	protected SourceGroup mvgGrp, tgtGrp;
 
 	private BoundingBoxEstimation bboxOptions;
 
@@ -477,7 +477,6 @@ public class BigWarp< T >
 
 		bwTransform = new BigWarpTransform( landmarkModel );
 		bwTransform.initializeInverseParameters(data);
-		bwTransform.setLambda( transformMask.getRandomAccessible() );
 
 		solverThread = new SolveThread( this );
 		solverThread.start();
@@ -529,7 +528,6 @@ public class BigWarp< T >
 
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
-		addMaskMouseListener();
 
 		// have to be safe here and use 3dim point for both 3d and 2d
 		currentLandmark = new RealPoint( 3 );
@@ -583,25 +581,38 @@ public class BigWarp< T >
 		wrapMovingSources( ndims, data );
 
 		// starting view
-		data.sources.get( data.targetSourceIndexList.get(0) ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
-		List< SourceAndConverter< T > > dSrcs = data.sources;
+		if( data.numTargetSources() > 0 )
+			data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
-		viewerP.state().clearSources();
-		final SynchronizedViewerState pState = viewerP.state();
+		baselineModelIndex = 0;
+		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
 
-		viewerQ.state().clearSources();
-		final SynchronizedViewerState qState = viewerQ.state();
+//		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
+//		jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
+//		gridSource = addGridSource( data, "GridSource" );
+//		setGridType( GridSource.GRID_TYPE.LINE );
+//
+//		transformMaskSource = addTransformMaskSource( data, ndims, "Transform mask" );
+//		bwTransform.setLambda( transformMask.getRandomAccessible() );
+//		addMaskMouseListener();
+//
+//		// set warp mag source to inactive at the start
+//		viewerP.state().setSourceActive( warpMagSource, false );
+//		viewerQ.state().setSourceActive( warpMagSource, false );
+//		data.sourceColorSettings.put( warpMagSource, new ImagePlusLoader.ColorSettings( -1, 0, 15, white ));
+//
+//		// set warp grid source to inactive at the start
+//		viewerP.state().setSourceActive( gridSource, false );
+//		viewerQ.state().setSourceActive( gridSource, false );
+//		data.sourceColorSettings.put( gridSource, new ImagePlusLoader.ColorSettings( -1, 0, 255, white ));
 
-		for( int i = 0; i < dSrcs.size(); i++ )
-		{
-			final SourceAndConverter<T> sac = dSrcs.get( i );
-			pState.addSource( sac );
-			qState.addSource( sac );
+		// set jacobian determinant source to inactive at the start
+//		viewerP.state().setSourceActive( jacDetSource, false );
+//		viewerQ.state().setSourceActive( jacDetSource, false );
+//		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
 
-			// update the viewer converter setups too
-			viewerFrameP.getConverterSetups().put( sac, data.converterSetups.get( i ) );
-			viewerFrameQ.getConverterSetups().put( sac, data.converterSetups.get( i ) );
-		}
+
+		synchronizeSources();
 
 		SwingUtilities.invokeLater( new Runnable()
 		{
@@ -613,34 +624,74 @@ public class BigWarp< T >
 			}
 		} );
 
-		baselineModelIndex = 0;
-		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "WarpMagnitudeSource" );
-		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
-		gridSource = addGridSource( data, "GridSource" );
-		setGridType( GridSource.GRID_TYPE.LINE );
-
-		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
-		// set warp mag source to inactive at the start
-		viewerP.state().setSourceActive( warpMagSource, false );
-		viewerQ.state().setSourceActive( warpMagSource, false );
-		data.sourceColorSettings.put( warpMagSource, new ImagePlusLoader.ColorSettings( -1, 0, 15, white ));
-
-		// set warp grid source to inactive at the start
-		viewerP.state().setSourceActive( gridSource, false );
-		viewerQ.state().setSourceActive( gridSource, false );
-		data.sourceColorSettings.put( gridSource, new ImagePlusLoader.ColorSettings( -1, 0, 255, white ));
-
-		// set jacobian determinant source to inactive at the start
-		viewerP.state().setSourceActive( jacDetSource, false );
-		viewerQ.state().setSourceActive( jacDetSource, false );
-		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
-
 		updateSourceBoundingBoxEstimators();
 
 		// set initial transforms so data are visible
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
 
+		createMovingTargetGroups();
+		viewerP.state().setCurrentGroup( mvgGrp );
+		viewerP.state().setCurrentGroup( tgtGrp );
+	}
+
+	public void synchronizeSources()
+	{
+		viewerP.state().clearSources();
+		viewerQ.state().clearSources();
+		final SynchronizedViewerState pState = viewerP.state();
+		final SynchronizedViewerState qState = viewerQ.state();
+		for ( int i = 0; i < data.sources.size(); i++ )
+		{
+			final SourceAndConverter< T > sac = data.sources.get( i );
+			pState.addSource( sac );
+			qState.addSource( sac );
+
+			// update the viewer converter setups too
+			viewerFrameP.getConverterSetups().put( sac, data.converterSetups.get( i ) );
+			viewerFrameQ.getConverterSetups().put( sac, data.converterSetups.get( i ) );
+		}
+	}
+
+	/**
+	 * Create two source groups - one for moving images,
+	 * and the other for target images, for both viewer frames.
+	 * 
+	 * Ensure sources are synchronized with {@link synchronizeSources}
+	 * before calling this method.
+	 */
+	public void createMovingTargetGroups()
+	{
+		mvgGrp = new SourceGroup();
+		tgtGrp = new SourceGroup();
+
+		final SynchronizedViewerState pState = viewerP.state();
+		final SynchronizedViewerState qState = viewerP.state();
+
+		pState.addGroup( mvgGrp );
+		pState.addGroup( tgtGrp );
+
+		qState.addGroup( mvgGrp );
+		qState.addGroup( tgtGrp );
+
+		pState.setGroupName( mvgGrp, "moving images" );
+		pState.setGroupName( tgtGrp, "target images" );
+		qState.setGroupName( mvgGrp, "moving images" );
+		qState.setGroupName( tgtGrp, "target images" );
+
+		for ( SourceAndConverter< ? > sac : data.sources )
+		{
+			if ( data.isMoving( sac ) )
+			{
+				viewerP.state().addSourceToGroup( sac, mvgGrp );
+				viewerQ.state().addSourceToGroup( sac, mvgGrp );
+			}
+			else
+			{
+				viewerP.state().addSourceToGroup( sac, tgtGrp );
+				viewerQ.state().addSourceToGroup( sac, tgtGrp );
+			}
+		}
 	}
 
 	public int numDimensions()
@@ -673,11 +724,18 @@ public class BigWarp< T >
 	public void addSource( Source<T> source, boolean moving )
 	{
 		data.addSource( source, moving );
+		synchronizeSources();
 	}
 
 	public void addSource( Source<T> source )
 	{
 		addSource( source, false );
+	}
+
+	public void removeSource( int i )
+	{
+		data.remove( i );
+		synchronizeSources();
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
@@ -2024,28 +2082,27 @@ public class BigWarp< T >
 		landmarkModel.copyLandmarks( p, q );
 		Arrays.fill( w, 1.0 );
 
-		try
+		if( warpMagSource != null )
 		{
-			final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
+			try
+			{
+				final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
+				baseline.fit( p, q, w );  // FITBASELINE
+				WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform(
+						(InvertibleCoordinateTransform)baseline, ndims );
 
-			baseline.fit( p, q, w );  // FITBASELINE
-			WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform(
-					(InvertibleCoordinateTransform)baseline, ndims );
+				// the transform to compare is the inverse (because we use it for rendering)
+				// so need to give the inverse transform for baseline as well
+				( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() ).setBaseline( baselineTransform.inverse() );
+			}
+			catch ( final IllDefinedDataPointsException | NotEnoughDataPointsException e )
+			{
+				e.printStackTrace();
+			}
 
-			// the transform to compare is the inverse (because we use it for rendering)
-			// so need to give the inverse transform for baseline as well
-			( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() ).setBaseline( baselineTransform.inverse() );
+			getViewerFrameP().getViewerPanel().requestRepaint();
+			getViewerFrameQ().getViewerPanel().requestRepaint();
 		}
-		catch ( final NotEnoughDataPointsException e )
-		{
-			e.printStackTrace();
-		}
-		catch ( final IllDefinedDataPointsException e )
-		{
-			e.printStackTrace();
-		}
-		getViewerFrameP().getViewerPanel().requestRepaint();
-		getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
 	public void setMovingSpimData( SpimData movingSpimData, File movingImageXml )
@@ -2289,29 +2346,37 @@ public class BigWarp< T >
 	{
 		setTransformationMovingSourceOnly( transform );
 
-		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() );
-		final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) jacDetSource.getSpimSource() );
-		final GridSource< ? > gSrc = ( ( GridSource< ? > ) gridSource.getSpimSource() );
-
-		wmSrc.setWarp( transform );
-		fitBaselineWarpMagModel();
-	
-		if( transform instanceof ThinplateSplineTransform )
+		if( warpMagSource != null )
 		{
-			jdSrc.setTransform( (ThinplateSplineTransform)transform );
+			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() );
+			wmSrc.setWarp( transform );
+			fitBaselineWarpMagModel();
 		}
-		else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
+
+		if( jacDetSource != null )
 		{
-			RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
-			if( xfm instanceof ThinplateSplineTransform )
-				jdSrc.setTransform( (ThinplateSplineTransform) xfm );
+			final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) jacDetSource.getSpimSource() );
+			if( transform instanceof ThinplateSplineTransform )
+			{
+				jdSrc.setTransform( (ThinplateSplineTransform)transform );
+			}
+			else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
+			{
+				RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
+				if( xfm instanceof ThinplateSplineTransform )
+					jdSrc.setTransform( (ThinplateSplineTransform) xfm );
+				else
+					jdSrc.setTransform( new RealTransformFiniteDerivatives( xfm ));
+			}
 			else
-				jdSrc.setTransform( new RealTransformFiniteDerivatives( xfm ));
+				jdSrc.setTransform( null );
 		}
-		else
-			jdSrc.setTransform( null );
 
-		gSrc.setWarp( transform );
+		if( gridSource != null )
+		{
+			final GridSource< ? > gSrc = ( ( GridSource< ? > ) gridSource.getSpimSource() );
+			gSrc.setWarp( transform );
+		}
 	}
 
 	public boolean restimateTransformation()
@@ -2383,7 +2448,13 @@ public class BigWarp< T >
 	{
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
 //		return ( ( WarpedSource< ? > ) ( data.sources.get( data.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
-		return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
+
+		// TODO better to explicitly keep track of this
+
+		if( data.sources.size() < 1 )
+			return true;
+		else
+			return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
 	}
 
 	/**
