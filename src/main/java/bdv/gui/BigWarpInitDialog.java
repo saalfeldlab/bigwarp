@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.ExecutorService;
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -67,10 +69,12 @@ public class BigWarpInitDialog extends JFrame
 	private DatasetSelectorDialog selectionDialog;
 
 	private String lastOpenedContainer = "";
+	private String lastBrowsePath = "";
 	private ExecutorService exec;
 
     private Consumer<BigWarpSourceTableModel> okayCallback;
     private Consumer<BigWarpSourceTableModel> cancelCallback;
+	private Consumer< String > imagePathUpdateCallback, transformPathUpdateCallback;
 
 	private static final int DEFAULT_OUTER_PAD = 8;
 	private static final int DEFAULT_BUTTON_PAD = 3;
@@ -91,6 +95,16 @@ public class BigWarpInitDialog extends JFrame
         cancelCallback = x -> {};
 		okayCallback = x -> {
 			runBigWarp( x );
+		};
+		
+		imagePathUpdateCallback = ( p ) -> { 
+			System.out.println( "add image: " + p ); 
+			addPath();
+		};
+
+		transformPathUpdateCallback = ( p ) -> { 
+			System.out.println( "add transform: " + p ); 
+			addTransform();
 		};
 	}
 
@@ -148,7 +162,7 @@ public class BigWarpInitDialog extends JFrame
 		try
 		{
 			data.applyTransformations();
-			BigWarp<?> bw = new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
+			new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
 		}
 		catch ( SpimDataException e )
 		{
@@ -238,7 +252,9 @@ public class BigWarpInitDialog extends JFrame
 		cbrowse.fill = GridBagConstraints.HORIZONTAL;
 		cbrowse.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 		browseBtn = new JButton("Browse");
+		browseBtn.addActionListener( e -> { browseImageDialog(); } );
 		panel.add(browseBtn, cbrowse);
+
 
 		// add image / n5
 		ctxt.gridy = 1;
@@ -274,6 +290,7 @@ public class BigWarpInitDialog extends JFrame
 		panel.add( addTransformButton, cadd );
 
 		browseTransformButton = new JButton("Browse");
+		browseTransformButton.addActionListener( e -> { browseTransformDialog(); } );
 		cbrowse.gridy = 2;
 		panel.add( browseTransformButton, cbrowse );
 
@@ -473,16 +490,84 @@ public class BigWarpInitDialog extends JFrame
 	public static void main( String[] args )
 	{
 		ImageJ ij = new ImageJ();
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
+		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
+		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
 
 //		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
 //		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
 
-		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
 
 		createAndShowGUI();
+	}
+
+	private String browseDialogGeneral()
+	{
+
+		final JFileChooser fileChooser = new JFileChooser();
+		/*
+		 * Need to allow files so h5 containers can be opened, and directories
+		 * so that filesystem n5's and zarrs can be opened.
+		 */
+		fileChooser.setFileSelectionMode( JFileChooser.FILES_AND_DIRECTORIES );
+
+		if ( lastBrowsePath != null && !lastBrowsePath.isEmpty() )
+			fileChooser.setCurrentDirectory( new File( lastBrowsePath ) );
+		else if ( initialPath != null && !initialPath.isEmpty() )
+			fileChooser.setCurrentDirectory( new File( initialPath ) );
+		else if ( IJ.getInstance() != null )
+		{
+			File f = null;
+
+			final String currDir = IJ.getDirectory( "current" );
+			final String homeDir = IJ.getDirectory( "home" );
+			if ( currDir != null )
+				f = new File( currDir );
+			else if ( homeDir != null )
+				f = new File( homeDir );
+
+			fileChooser.setCurrentDirectory( f );
+		}
+
+		final int ret = fileChooser.showOpenDialog( this );
+		if ( ret != JFileChooser.APPROVE_OPTION )
+			return null;
+
+		final String path = fileChooser.getSelectedFile().getAbsolutePath();
+		lastBrowsePath = path;
+
+		return path;
+	}
+
+	public void setImagePathUpdateCallback( final Consumer< String > callback )
+	{
+		this.imagePathUpdateCallback = callback;
+	}
+
+	public void setTransformPathUpdateCallback( final Consumer< String > callback )
+	{
+		this.transformPathUpdateCallback = callback;
+	}
+
+	private String browseImageDialog()
+	{
+		final String s = browseDialogGeneral();
+		containerPathText.setText( s );
+		if ( imagePathUpdateCallback != null )
+			imagePathUpdateCallback.accept( s );
+
+		return s;
+	}
+
+	private String browseTransformDialog()
+	{
+		final String s = browseDialogGeneral();
+		transformPathText.setText( s );
+		if ( transformPathUpdateCallback != null )
+			transformPathUpdateCallback.accept( s );
+
+		return s;
 	}
 
 }
