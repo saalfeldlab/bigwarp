@@ -17,7 +17,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 {
 	private static final long serialVersionUID = 5923947651732788341L;
 
-	protected final static String[] colNames = new String[] { "Name", "Moving", "Transform", "remove" };
+	protected final static String[] colNames = new String[] { "Name", "Moving", "Transform", " " };
 
 	protected final String[] columnNames;
 	protected final ArrayList<SourceRow> sources;
@@ -89,7 +89,8 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	@Override
 	public boolean isCellEditable( int row, int col )
 	{
-		return ( col == movingColIdx ) || ( col == removeColIdx );
+		return true;
+//		return ( col == movingColIdx ) || ( col == removeColIdx );
 	}
 
 	@Override
@@ -198,7 +199,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		private int row;
 		public RemoveRowButton( int row )
 		{
-			super( "-" );
+			super( "remove" );
 			setRow( row );
 		}
 

@@ -54,8 +54,10 @@ public class BigWarpSourceListPanel extends JPanel
 		table.setPreferredScrollableViewportSize( new Dimension( 500, 70 ) );
 		table.setFillsViewportHeight( true );
 
-		table.getColumn( "remove" ).setCellRenderer( new ButtonRenderer() );
-		table.getColumn( "remove" ).setCellEditor( new ButtonEditor( new JCheckBox(), tableModel ) );
+		table.getColumn( " " ).setCellRenderer( new ButtonRenderer() );
+		table.getColumn( " " ).setCellEditor( new ButtonEditor( new JCheckBox(), tableModel ) );
+		table.getColumn( " " ).setPreferredWidth( 24 );
+		table.getColumn( " " ).setWidth( 24 );
 
 		final JScrollPane scrollPane = new JScrollPane( table );
 		add( scrollPane );
