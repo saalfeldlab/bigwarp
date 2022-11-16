@@ -8,6 +8,7 @@ import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.LinkedHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -44,9 +45,11 @@ import bdv.gui.sourceList.BigWarpSourceListPanel;
 import bdv.gui.sourceList.BigWarpSourceTableModel;
 import bdv.gui.sourceList.BigWarpSourceTableModel.SourceRow;
 import bdv.ij.util.ProgressWriterIJ;
+import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
+import bigwarp.source.SourceInfo;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
@@ -144,21 +147,9 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static void addTransform( BigWarpData<?> data, SourceRow tableRow )
+	public static <T> void runBigWarp( BigWarpSourceTableModel sourceTable )
 	{
-		// TODO combine source and transform addition
-		String tformName = tableRow.transformName;
-		if( tformName != null && !tformName.isEmpty() )
-		{
-			// TODO generalize to attributes in n5
-			final RealTransform tform = NgffTransformations.openJson( tformName );
-			data.transforms.set( data.transforms.size() - 1, tform );
-		}
-	}
-
-	public static void runBigWarp( BigWarpSourceTableModel sourceTable )
-	{
-		final BigWarpData< ? > data = BigWarpInit.initData();
+		final BigWarpData< T > data = BigWarpInit.initData();
 		final int N = sourceTable.getRowCount();
 
 		int id = 0;
@@ -168,16 +159,20 @@ public class BigWarpInitDialog extends JFrame
 			if( tableRow.isImagePlus )
 			{
 				final ImagePlus imp = WindowManager.getImage( tableRow.srcName );
-				id += BigWarpInit.add( data, imp, id, 0, tableRow.moving );
-				addTransform( data, tableRow );
+//				id += BigWarpInit.add( data, imp, id, 0, tableRow.moving );
+//				addTransform( data, tableRow );
+				LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
+				BigWarpInit.add( data, infos, tableRow.getTransform() );
 			}
 			else
 			{
 				// TODO deal with exceptions, and possibility of multiple sources per uri
 				try
 				{
-					BigWarpInit.add( data, tableRow.srcName, id, tableRow.moving );
-					addTransform( data, tableRow );
+//					BigWarpInit.add( data, tableRow.srcName, id, tableRow.moving );
+//					addTransform( data, tableRow );
+					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+					BigWarpInit.add( data, infos, tableRow.getTransform() );
 				}
 				catch ( URISyntaxException e )
 				{
@@ -448,7 +443,7 @@ public class BigWarpInitDialog extends JFrame
 	{
 		final String n5RootPath = selectionDialog.getN5RootPath();
 		for( N5Metadata m : selection.metadata )
-			sourceTableModel.add( m.getPath() );
+			sourceTableModel.add( n5RootPath + "?" + m.getPath() );
 
 		repaint();
 	}
