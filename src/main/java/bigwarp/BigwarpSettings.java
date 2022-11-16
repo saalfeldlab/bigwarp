@@ -531,16 +531,18 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		{
 			out.beginObject();
 			out.name( "ConverterSetups" );
-			out.beginArray();
+			out.beginObject();
 			final List< ConverterSetup > converterSetups = value.getConverterSetups();
 			final ConverterSetupAdapter converterSetupAdapter = new ConverterSetupAdapter( value );
 			for ( final ConverterSetup converterSetup : converterSetups )
 			{
+				out.name(Integer.toString( converterSetup.getSetupId() ));
 				out.beginObject();
+				converterSetupAdapter.setSetupId( converterSetup.getSetupId() );
 				converterSetupAdapter.write( out, converterSetup );
 				out.endObject();
 			}
-			out.endArray();
+			out.endObject();
 			final List< MinMaxGroup > minMaxGroups = value.getMinMaxGroups();
 			out.name( "MinMaxGroups" );
 			new MinMaxGroupsAdapter().write( out, minMaxGroups );
@@ -573,15 +575,33 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				switch ( name )
 				{
 				case "ConverterSetups":
-					in.beginArray();
+					final ConverterSetupAdapter converterSetupAdapter = new ConverterSetupAdapter( setupAssignments );
+					in.beginObject();
 					while ( in.hasNext() )
 					{
+						final int id = Integer.parseInt( in.nextName() );
+						converterSetupAdapter.setSetupId( id );
 						in.beginObject();
-						final ConverterSetupDTO dto = ( ConverterSetupDTO ) new ConverterSetupAdapter( setupAssignments ).read( in );
+						final ConverterSetupDTO dto = ( ConverterSetupDTO ) converterSetupAdapter.read( in);
 						converters.add( dto );
+
 						in.endObject();
 					}
-					in.endArray();
+					in.endObject();
+
+					final List< ConverterSetup > converterSetups = setupAssignments.getConverterSetups();
+					final List<Integer> originalSetupIdOrder = converterSetups.stream().map( ConverterSetup::getSetupId ).collect( Collectors.toList());
+					for ( int idx = 0; idx < converters.size(); idx++ )
+					{
+						final ConverterSetupDTO converterSetupDTO = converters.get( idx );
+						final int setupId = converterSetupDTO.getSetupId();
+
+						final int idxOfConverterSetup = originalSetupIdOrder.indexOf( setupId );
+						if (idxOfConverterSetup >= 0 && idx != idxOfConverterSetup) {
+							converters.remove( idx );
+							converters.add( idxOfConverterSetup, converterSetupDTO );
+						}
+					}
 					break;
 				case "MinMaxGroups":
 					minMaxGroups.addAll( new MinMaxGroupsAdapter().read( in ) );
@@ -611,11 +631,11 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		@Override
 		public void write( final JsonWriter out, final List< MinMaxGroup > value ) throws IOException
 		{
-			out.beginArray();
+			out.beginObject();
 			for ( int i = 0; i < value.size(); i++ )
 			{
+				out.name( Integer.toString( i ));
 				out.beginObject();
-				out.name( "id" ).value( i );
 				out.name( "fullRangeMin" ).value( value.get( i ).getFullRangeMin() );
 				out.name( "fullRangeMax" ).value( value.get( i ).getFullRangeMax() );
 				out.name( "rangeMin" ).value( value.get( i ).getRangeMin() );
@@ -624,7 +644,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				out.name( "currentMax" ).value( value.get( i ).getMaxBoundedValue().getCurrentValue() );
 				out.endObject();
 			}
-			out.endArray();
+			out.endObject();
 		}
 
 		@Override
@@ -632,10 +652,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		{
 			final HashMap< Integer, MinMaxGroup > groupMap = new HashMap<>();
 			final ArrayList< MinMaxGroup > groups = new ArrayList<>();
-			in.beginArray();
+			in.beginObject();
 			while ( in.hasNext() )
 			{
-				int id = 0;
+				int id = Integer.parseInt( in.nextName() );
 				double fullRangeMin = 0;
 				double fullRangeMax = 0;
 				double rangeMin = 0;
@@ -647,9 +667,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				{
 					switch ( in.nextName() )
 					{
-					case "id":
-						id = in.nextInt();
-						break;
 					case "fullRangeMin":
 						fullRangeMin = in.nextDouble();
 						break;
@@ -683,7 +700,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				groupMap.put( id, group );
 				in.endObject();
 			}
-			in.endArray();
+			in.endObject();
 			for ( int i = 0; i < groupMap.size(); i++ )
 			{
 				/* We require that the `id` of the deserialized group matches the index of the returned list. */
@@ -706,7 +723,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		public void write( final JsonWriter out, final ConverterSetup value ) throws IOException
 		{
 			final List< MinMaxGroup > minMaxGroups = setupAssignments.getMinMaxGroups();
-			out.name( "id" ).value( value.getSetupId() );
 			out.name( "min" ).value( value.getDisplayRangeMin() );
 			out.name( "max" ).value( value.getDisplayRangeMax() );
 			out.name( "color" ).value( value.getColor().get() );
@@ -716,7 +732,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		@Override
 		public ConverterSetup read( final JsonReader in ) throws IOException
 		{
-			int tmpid = 0;
 			double tmpmin = 0;
 			double tmpmax = 0;
 			int tmpcolor = 0;
@@ -725,9 +740,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			{
 				switch ( in.nextName() )
 				{
-				case "id":
-					tmpid = in.nextInt();
-					break;
 				case "min":
 					tmpmin = in.nextDouble();
 					break;
@@ -743,7 +755,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				}
 			}
 
-			final int id = tmpid;
 			final double min = tmpmin;
 			final double max = tmpmax;
 			final int color = tmpcolor;
