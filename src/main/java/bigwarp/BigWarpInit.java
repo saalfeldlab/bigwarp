@@ -422,14 +422,14 @@ public class BigWarpInit
 		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
 	}
 
-	public static Source< ? > add( final BigWarpData< ? > bwData, String uri,  int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
 		final URI tmpUri = new URI( "TMP", uri, null );
 		String encodedUriString = tmpUri.getRawSchemeSpecificPart();
 		encodedUriString = encodedUriString.replaceAll( "%23", "#" );
 		URI firstUri = new URI( encodedUriString );
 		final int prevSacCount = bwData.sources.size();
-		Source< ? > source = null;
+		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( firstUri.isOpaque() )
 		{
 			URI secondUri = new URI( firstUri.getSchemeSpecificPart() );
@@ -458,8 +458,8 @@ public class BigWarpInit
 				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
 			}
 
-			source = loadN5Source( n5reader, dataset );
-			add( bwData, source, setupId, 0, isMoving);
+			final Source< T > source = loadN5Source( n5reader, dataset );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving ) );
 		}
 		else
 		{
@@ -475,51 +475,80 @@ public class BigWarpInit
 				final N5Reader n5reader = new N5Factory().openReader( firstSchemeAndPath );
 				final String datasetQuery = firstUri.getQuery();
 				final String dataset = datasetQuery == null ? "/" : datasetQuery;
-				source = loadN5Source( n5reader, dataset );
-				add( bwData, source, setupId, 0, isMoving);
+				final Source< T > source = loadN5Source( n5reader, dataset );
+				sourceStateMap.put( source, new SourceInfo( setupId, isMoving ) );
 			}
 			catch ( Exception ignored )
 			{
 			}
-			if (source == null) {
+			if ( sourceStateMap.isEmpty() ) {
 				if ( firstSchemeAndPath.trim().toLowerCase().endsWith( ".xml" ) )
 				{
-					addToData( bwData, isMoving, setupId, firstSchemeAndPath, firstUri.getQuery() );
-					return bwData.sources.get( bwData.sources.size() - 1 ).getSpimSource();
+					sourceStateMap.putAll( createSources( bwData, isMoving, setupId, firstSchemeAndPath, firstUri.getQuery() ) );
 				}
 				else
 				{
 					final ImagePlus ijp;
-					try
+					if ( Objects.equals( firstUri.getScheme(), "imagej" ) )
 					{
-
-						if ( new File( uri ).isDirectory() )
-						{
-							ijp = FolderOpener.open( uri );
-						}
-						else
-						{
-							ijp = IJ.openImage( uri );
-						}
+						final String title = firstUri.getPath();
+						IJ.selectWindow( title );
+						ijp = IJ.getImage();
 					}
-					catch ( Exception e )
+					else if ( new File( uri ).isDirectory() )
 					{
-						return null;
+						ijp = FolderOpener.open( uri );
 					}
-					add( bwData, ijp, setupId, 0, isMoving);
-					source = bwData.sources.get( bwData.sources.size() - 1 ).getSpimSource();
+					else
+					{
+						ijp = IJ.openImage( uri );
+					}
+					sourceStateMap.putAll( createSources( bwData, ijp, setupId, 0, isMoving ) );
 				}
 			}
 
 		}
 
 		/* override any already set urls with the uri we used to load this source. */
-		if (source != null) {
-			final int postSacCount = bwData.sources.size();
-			final List< ? extends SourceAndConverter< ? > > addedSacs = bwData.sources.subList( prevSacCount, postSacCount );
-			bwData.urls.put( setupId, new ValuePair<>( () -> uri, new ArrayList<>(addedSacs) ) );
+		sourceStateMap.forEach( ( source, state ) -> {
+			state.setUriSupplier( () -> uri );
+		} );
+		for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sourceStateMap.entrySet() )
+		{
+			sourceSourceInfoEntry.getValue().setSerializable( true );
+			/* Always break after the first */
+			break;
 		}
-		return source;
+		return sourceStateMap;
+	}
+
+	/**
+	 * @return
+	 *
+	 * @Deprecated Use output froom {@link #createSources(BigWarpData, boolean, int, String, String)} and add with {@link #add(BigWarpData, LinkedHashMap, RealTransform)} instead.
+	 */
+	@Deprecated
+	public static < T > SpimData addToData(
+			final BigWarpData< T > bwdata,
+			final boolean isMoving,
+			final int setupId,
+			final String rootPath,
+			final String dataset )
+	{
+		final AtomicReference< SpimData > returnMovingSpimData = new AtomicReference<>();
+		final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData );
+		add( bwdata, sources );
+		return returnMovingSpimData.get();
+	}
+
+	public static < T > Map< Source< T >, SourceInfo > createSources(
+			final BigWarpData< T > bwdata,
+			final boolean isMoving,
+			final int setupId,
+			final String rootPath,
+			final String dataset )
+	{
+		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
 
 	public static SpimData addToData( final BigWarpData<?> bwdata,
