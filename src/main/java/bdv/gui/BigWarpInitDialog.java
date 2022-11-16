@@ -21,6 +21,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import org.janelia.saalfeldlab.n5.ij.N5Importer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
@@ -46,7 +48,6 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import ij.IJ;
-//import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
@@ -55,20 +56,19 @@ import mpicbg.spim.data.SpimDataException;
 import net.imagej.ImageJ;
 import net.imglib2.realtransform.RealTransform;
 
-//@Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp 8" )
-public class BigWarpInitDialog extends JFrame //implements Command
+public class BigWarpInitDialog extends JFrame
 {
 	private static final long serialVersionUID = -2914972130819029899L;
 
 	private boolean imageJOpen;
 
-	private JTextField containerPathText, transformPathText;
 	private String initialPath;
+	private JTextField projectPathTxt, containerPathText, transformPathText;
 	private JLabel messageLabel;
 	private JButton okBtn, cancelBtn;
 	private JPanel listPanel;
 	private JTable sourceTable;
-	private JButton browseBtn, addN5Button, addN5TransformButton, browseTransformButton;
+	private JButton browseProjectButton, browseBtn, addN5Button, addN5TransformButton, browseTransformButton;
 	private BigWarpSourceTableModel sourceTableModel;
 	private JComboBox<String> imagePlusDropdown;
 	private JButton addImageButton, addPathButton, addTransformButton;
@@ -80,7 +80,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
     private Consumer<BigWarpSourceTableModel> okayCallback;
     private Consumer<BigWarpSourceTableModel> cancelCallback;
-	private Consumer< String > imagePathUpdateCallback, transformPathUpdateCallback;
+	private Consumer< String > imagePathUpdateCallback, transformPathUpdateCallback, projectPathUpdateCallback;
 
 	private static final int DEFAULT_OUTER_PAD = 8;
 	private static final int DEFAULT_BUTTON_PAD = 3;
@@ -104,7 +104,11 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
         initializeImagePlusSources();
 
-        cancelCallback = x -> {};
+		cancelCallback = x -> {
+			setVisible( false );
+			dispose();
+		};
+
 		okayCallback = x -> {
 			macroRecord( x );
 			runBigWarp( x );
@@ -123,21 +127,21 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
 	public static void main( String[] args )
 	{
-		ImageJ ij2 = new ImageJ();
-		ij2.ui().showUI();
+//		ImageJ ij2 = new ImageJ();
+//		ij2.ui().showUI();
 
-//		ImageJ ij = new ImageJ();
+		ImageJ ij = new ImageJ();
 //
 //		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
 //		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
 //
-////		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
-////		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
 //
-////		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-////		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
-//
-//		createAndShowGUI();
+		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
+		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+
+		createAndShow();
 	}
 
 	public static void addTransform( BigWarpData<?> data, SourceRow tableRow )
@@ -213,7 +217,6 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		final JPanel panel = new JPanel(false);
 		panel.setLayout(new GridBagLayout());	
 
-
 		final GridBagConstraints ctxt = new GridBagConstraints();
 		ctxt.gridx = 0;
 		ctxt.gridy = 0;
@@ -224,10 +227,44 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.fill = GridBagConstraints.NONE;
 		ctxt.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
+		panel.add( new JLabel("Open BigWarp project:"), ctxt );
+
+		final GridBagConstraints gbcBar = new GridBagConstraints();
+		gbcBar.gridx = 1;
+		gbcBar.gridy = 0;
+		gbcBar.gridwidth = 6;
+		gbcBar.gridheight = 1;
+		gbcBar.weightx = 1.0;
+		gbcBar.weighty = 0.0;
+		gbcBar.fill = GridBagConstraints.HORIZONTAL;
+		gbcBar.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
+
+		projectPathTxt = new JTextField();
+		projectPathTxt.setPreferredSize( new Dimension( frameSizeX / 3, projectPathTxt.getPreferredSize().height ) );
+		panel.add(projectPathTxt, gbcBar);
+
+		// gbc bars below are width 4
+		gbcBar.gridwidth = 4;
+
+		final GridBagConstraints cProjBrowse = new GridBagConstraints();
+		cProjBrowse.gridx = 7;
+		cProjBrowse.gridy = 0;
+		cProjBrowse.gridwidth = 1;
+		cProjBrowse.weightx = 0.0;
+		cProjBrowse.fill = GridBagConstraints.HORIZONTAL;
+		cProjBrowse.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
+		browseProjectButton = new JButton("Browse");
+		browseProjectButton.addActionListener( e -> { browseProjectDialog(); } );
+		panel.add(browseProjectButton, cProjBrowse);
+
+
+		// Add open imagej image
+		ctxt.gridy = 1;
+		panel.add( new JLabel("Add open image:"), ctxt );
 
 		final GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridx = 1;
-		gbc.gridy = 0;
+		gbc.gridy = 1;
 		gbc.gridwidth = 3;
 		gbc.weightx = 1.0;
 		gbc.weighty = 0.0;
@@ -240,45 +277,37 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
 		final GridBagConstraints cadd = new GridBagConstraints();
 		cadd.gridx = 5;
-		cadd.gridy = 0;
+		cadd.gridy = 1;
 		cadd.gridwidth = 1;
 		cadd.weightx = 0.0;
 		cadd.fill = GridBagConstraints.NONE;
 		cadd.anchor = GridBagConstraints.LINE_START;
 		cadd.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
-		cadd.gridy = 0;
+		cadd.gridy = 1;
 		addImageButton = new JButton("+");
 		panel.add( addImageButton, cadd );
 		addImageButton.addActionListener( e -> { addImagePlus(); });
 		
-		final JLabel addFileLabel = new JLabel( "Add file/folder:");
+		ctxt.gridy = 2;
+		final JLabel addFileLabel = new JLabel( "Add image file/folder:");
 		panel.add(addFileLabel, ctxt);
 
-		final GridBagConstraints gbcBar = new GridBagConstraints();
-		gbcBar.gridx = 1;
-		gbcBar.gridy = 1;
-		gbcBar.gridwidth = 4;
-		gbcBar.gridheight = 1;
-		gbcBar.weightx = 1.0;
-		gbcBar.weighty = 0.0;
-		gbcBar.fill = GridBagConstraints.HORIZONTAL;
-		gbcBar.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
-		
+		gbcBar.gridy = 2;
 		containerPathText = new JTextField();
 		containerPathText.setText( initialPath );
 		containerPathText.setPreferredSize( new Dimension( frameSizeX / 3, containerPathText.getPreferredSize().height ) );
 //		containerPathText.addActionListener( e -> openContainer( n5Fun, () -> getN5RootPath(), pathFun ) );
 		panel.add(containerPathText, gbcBar);
 
-		cadd.gridy = 1;
+		cadd.gridy = 2;
 		addPathButton = new JButton("+");
 		addPathButton.addActionListener( e -> addPath() );
 		panel.add(addPathButton, cadd);
 
 		final GridBagConstraints cbrowse = new GridBagConstraints();
 		cbrowse.gridx = 6;
-		cbrowse.gridy = 1;
+		cbrowse.gridy = 2;
 		cbrowse.gridwidth = 1;
 		cbrowse.weightx = 0.0;
 		cbrowse.fill = GridBagConstraints.HORIZONTAL;
@@ -287,15 +316,9 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		browseBtn.addActionListener( e -> { browseImageDialog(); } );
 		panel.add(browseBtn, cbrowse);
 
-
-		// add image / n5
-		ctxt.gridy = 1;
-		panel.add( new JLabel("Add open image:"), ctxt );
-
-
 		final GridBagConstraints cn5 = new GridBagConstraints();
 		cn5.gridx = 7;
-		cn5.gridy = 1;
+		cn5.gridy = 2;
 		cn5.gridwidth = 1;
 		cn5.weightx = 0.0;
 		cn5.fill = GridBagConstraints.HORIZONTAL;
@@ -308,25 +331,25 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		});
 
 		// add transforms
-		ctxt.gridy = 2;
+		ctxt.gridy = 3;
 		panel.add( new JLabel("Add transformation:"), ctxt );
 
 		transformPathText = new JTextField();
 		transformPathText.setPreferredSize( new Dimension( frameSizeX / 3, transformPathText.getPreferredSize().height ) );
-		gbcBar.gridy = 2;
+		gbcBar.gridy = 3;
 		panel.add( transformPathText, gbcBar );
 
 		addTransformButton = new JButton( "+" );
 		addTransformButton.addActionListener( e -> addTransform() );
-		cadd.gridy = 2;
+		cadd.gridy = 3;
 		panel.add( addTransformButton, cadd );
 
 		browseTransformButton = new JButton("Browse");
 		browseTransformButton.addActionListener( e -> { browseTransformDialog(); } );
-		cbrowse.gridy = 2;
+		cbrowse.gridy = 3;
 		panel.add( browseTransformButton, cbrowse );
 
-		cn5.gridy = 2;
+		cn5.gridy = 3;
 		addN5TransformButton = new JButton( "H5/N5/Zarr" );
 		panel.add( addN5TransformButton, cn5 );
 
@@ -337,7 +360,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		// source list
 		final GridBagConstraints clist = new GridBagConstraints();
 		clist.gridx = 0;
-		clist.gridy = 3;
+		clist.gridy = 4;
 		clist.gridwidth = 8;
 		clist.gridheight = 3;
 		clist.weightx = 1.0;
@@ -354,7 +377,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		// bottom button section
 		final GridBagConstraints cbot = new GridBagConstraints();
 		cbot.gridx = 0;
-		cbot.gridy = 6;
+		cbot.gridy = 7;
 		cbot.gridwidth = 4;
 		cbot.gridheight = 1;
 		cbot.weightx = 1.0;
@@ -441,7 +464,12 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
 	protected void addImagePlus( String title )
 	{
-		if ( !imageJOpen )
+		addImagePlus( title, true );
+	}
+
+	protected void addImagePlus( String title, boolean moving )
+	{
+		if ( IJ.getInstance() == null )
 			return;
 
 		final ImagePlus imp = WindowManager.getImage( title );
@@ -450,7 +478,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		// an image is not added, and / or updating the dropdown menu periodically
 		if( !title.isEmpty() && imp != null )
 		{
-			sourceTableModel.addImagePlus( title );
+			sourceTableModel.addImagePlus( title, moving );
 			repaint();
 		}
 	}
@@ -505,10 +533,16 @@ public class BigWarpInitDialog extends JFrame //implements Command
 	{
 		final int N = imagePlusDropdown.getModel().getSize();
 		if ( N > 0 )
-			addImagePlus( ( String ) imagePlusDropdown.getItemAt( 0 ) );
+			addImagePlus( ( String ) imagePlusDropdown.getItemAt( 0 ), true );
 
 		if ( N > 1 )
-			addImagePlus( ( String ) imagePlusDropdown.getItemAt( 1 ) );
+			addImagePlus( ( String ) imagePlusDropdown.getItemAt( 1 ), false );
+	}
+
+	public void fillTableFromProject()
+	{
+		// TODO implement me
+		System.out.println( "implement me" );
 	}
 
     public static void createAndShow() {
@@ -518,7 +552,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
         frame.setVisible(true);
     }
 
-	private String browseDialogGeneral()
+	private String browseDialogGeneral( final int mode, final FileFilter filefilter )
 	{
 
 		final JFileChooser fileChooser = new JFileChooser();
@@ -526,7 +560,12 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		 * Need to allow files so h5 containers can be opened, and directories
 		 * so that filesystem n5's and zarrs can be opened.
 		 */
-		fileChooser.setFileSelectionMode( JFileChooser.FILES_AND_DIRECTORIES );
+		fileChooser.setFileSelectionMode( mode );
+		if( filefilter == null )
+		{
+			System.out.println( "file filter");
+			fileChooser.setFileFilter( filefilter );
+		}
 
 		if ( lastBrowsePath != null && !lastBrowsePath.isEmpty() )
 			fileChooser.setCurrentDirectory( new File( lastBrowsePath ) );
@@ -566,9 +605,24 @@ public class BigWarpInitDialog extends JFrame //implements Command
 		this.transformPathUpdateCallback = callback;
 	}
 
+	public void setProjectPathUpdateCallback( final Consumer< String > callback )
+	{
+		this.projectPathUpdateCallback = callback;
+	}
+	
+	private String browseProjectDialog()
+	{
+		final String s = browseDialogGeneral( JFileChooser.FILES_ONLY, new FileNameExtensionFilter( "JSON file", "json" ) );
+		projectPathTxt.setText( s );
+		if ( projectPathUpdateCallback != null )
+			projectPathUpdateCallback.accept( s );
+
+		return s;
+	}
+
 	private String browseImageDialog()
 	{
-		final String s = browseDialogGeneral();
+		final String s = browseDialogGeneral( JFileChooser.FILES_AND_DIRECTORIES, null );
 		containerPathText.setText( s );
 		if ( imagePathUpdateCallback != null )
 			imagePathUpdateCallback.accept( s );
@@ -578,7 +632,7 @@ public class BigWarpInitDialog extends JFrame //implements Command
 
 	private String browseTransformDialog()
 	{
-		final String s = browseDialogGeneral();
+		final String s = browseDialogGeneral( JFileChooser.FILES_AND_DIRECTORIES, null );
 		transformPathText.setText( s );
 		if ( transformPathUpdateCallback != null )
 			transformPathUpdateCallback.accept( s );
