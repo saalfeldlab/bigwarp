@@ -671,7 +671,7 @@ public class BigWarpInit
 		}
 	}
 
-	public static Source<?> loadN5Source( final String n5Root, final String n5Dataset )
+	public static < T > Source< T > loadN5Source( final String n5Root, final String n5Dataset )
 	{
 		final N5Reader n5;
 		try
@@ -684,7 +684,7 @@ public class BigWarpInit
 		}
 		return loadN5Source( n5, n5Dataset );
 	}
-	public static Source<?> loadN5Source( final N5Reader n5, final String n5Dataset )
+	public static < T > Source< T > loadN5Source( final N5Reader n5, final String n5Dataset )
 	{
 		final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
 			new ImagePlusLegacyMetadataParser(),
@@ -724,7 +724,7 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static <T extends N5Metadata > Source<?> openAsSource( final N5Reader n5, final T meta, final boolean isVolatile )
+	public static < T, M extends N5Metadata > Source< T > openAsSource( final N5Reader n5, final M meta, final boolean isVolatile )
 	{
 		final RandomAccessibleInterval imageRaw;
 		final RandomAccessibleInterval image;
@@ -766,7 +766,7 @@ public class BigWarpInit
 		return null;
 	}
 
-	public static Source<?> openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
+	public static < T > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
 		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
