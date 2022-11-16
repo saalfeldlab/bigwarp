@@ -71,7 +71,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	BigWarpAutoSaver autoSaver;
 
-	final PlateauSphericalMaskRealRandomAccessible transformMask;
+	boolean overwriteSources = false;
 
 	public BigwarpSettings(
 			final BigWarp<?> bigWarp,
@@ -95,6 +95,11 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.landmarks = landmarks;
 		this.transform = transform;
 		this.sourceInfos = sourceInfos;
+	}
+
+	public void setOverwriteSources( final boolean overwriteSources )
+	{
+		this.overwriteSources = overwriteSources;
 	}
 
 	public void serialize( String jsonFilename ) throws IOException
@@ -140,7 +145,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			switch ( nextName )
 			{
 			case "Sources":
-				new BigWarpSourcesAdapter( bigWarp.data ).read( in );
+				new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).read( in );
 				break;
 			case "ViewerP":
 				new BigWarpViewerPanelAdapter( viewerP ).read( in );

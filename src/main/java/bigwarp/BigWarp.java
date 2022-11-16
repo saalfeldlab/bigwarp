@@ -3602,6 +3602,12 @@ public class BigWarp< T >
 	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
+		loadSettings( jsonOrXmlFilename, false );
+	}
+
+	protected void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
+			JDOMException
+	{
 		if ( jsonOrXmlFilename.endsWith( ".xml" ) )
 		{
 			final SAXBuilder sax = new SAXBuilder();
@@ -3636,7 +3642,9 @@ public class BigWarp< T >
 		}
 		else
 		{
-			getSettings().read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+			final BigwarpSettings settings = getSettings();
+			settings.setOverwriteSources( overwriteSources );
+			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
 		}
