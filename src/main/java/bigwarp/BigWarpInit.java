@@ -451,7 +451,7 @@ public class BigWarpInit
 	public static < T > BigWarpData< T > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
 	{
 		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
-		bwdata.transforms.add( transform );
+//		bwdata.transforms.add( transform );
 		return bwdata;
 	}
 
@@ -465,7 +465,7 @@ public class BigWarpInit
 			if ( transform != null )
 			{
 				info.setTransform( transform );
-				bwdata.transforms.add( transform );
+//				bwdata.transforms.add( transform );
 			}
 			bwdata.sourceInfos.put( info.getId(), info );
 		} );

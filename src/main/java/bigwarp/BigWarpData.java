@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.IntStream;
 
 import bdv.cache.CacheControl;
 import bdv.gui.BigWarpViewerFrame;
@@ -35,8 +34,6 @@ public class BigWarpData< T >
 	public List< SourceAndConverter< T > > sources;
 
 	public final LinkedHashMap< Integer, SourceInfo > sourceInfos = new LinkedHashMap<>();
-
-	public List<RealTransform> transforms;
 
 	public final List< ConverterSetup > converterSetups;
 
@@ -75,14 +72,14 @@ public class BigWarpData< T >
 		this.sources = sources;
 		this.converterSetups = converterSetups;
 
-		if( transforms != null )
-			this.transforms = transforms;
-		else
-		{
-			// fill the initial transform list with nulls
-			this.transforms = new ArrayList<>();
-			IntStream.range( 0, sources.size() ).forEach(  i -> this.transforms.add( null ));
-		}
+//		if( transforms != null )
+//			this.transforms = transforms;
+//		else
+//		{
+//			// fill the initial transform list with nulls
+//			this.transforms = new ArrayList<>();
+//			IntStream.range( 0, sources.size() ).forEach(  i -> this.transforms.add( null ));
+//		}
 
 		if ( cache == null )
 			this.cache = new CacheControl.Dummy();
@@ -276,15 +273,9 @@ public class BigWarpData< T >
 		final int sacId = sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().get();
 		final SourceInfo sourceInfo = sourceInfos.remove( sacId );
 		sources.remove( i );
-		transforms.remove( sourceInfo.getTransform() );
 		setupSettings.remove( sourceInfo.getId() );
 		sourceColorSettings.remove(sac);
 		converterSetups.remove( i  );
-	}
-
-	public void setTransform( int i, RealTransform transform )
-	{
-		transforms.set( i, transform );
 	}
 
 	public void applyTransformations()
@@ -292,11 +283,16 @@ public class BigWarpData< T >
 		int i = 0;
 		for ( final SourceAndConverter<T> sac : sources )
 		{
-			if ( transforms.get( i ) != null )
+			final SourceInfo info = getSourceInfo( sac );
+			final RealTransform transform = info.getTransform();
+			if ( transform != null )
 			{
 				SourceAndConverter<T> newSac = inheritConverter(
-						applyFixedTransform( sac.getSpimSource(), transforms.get( i )),
+						applyFixedTransform( sac.getSpimSource(), transform),
 						sac );
+
+				//final int id = info.getId();
+				info.setSourceAndConverter( newSac );
 
 				sourceColorSettings.put( newSac, sourceColorSettings.get( sac ));
 				sources.set( i, newSac );
