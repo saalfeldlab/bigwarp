@@ -2539,11 +2539,6 @@ public class BigWarp< T >
 			fnP = args[ i++ ];
 			fnQ = args[ i++ ];
 		}
-		else
-		{
-			System.err.println( "Must provide at least 2 inputs for moving and target image files" );
-			System.exit( 1 );
-		}
 
 		if ( args.length > i )
 			fnLandmarks = args[ i++ ];
@@ -2588,7 +2583,7 @@ public class BigWarp< T >
 				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
 				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 			}
-			else
+			else if (!fnP.isEmpty() && !fnQ.isEmpty())
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
@@ -2596,7 +2591,7 @@ public class BigWarp< T >
 				if ( !( impP == null || impQ == null ) )
 				{
 					bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
-					bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+					bw = new BigWarp<>( bwdata, progress );
 				}
 				else
 				{
@@ -2604,8 +2599,11 @@ public class BigWarp< T >
 					return;
 				}
 			}
+			else
+			{
+				bw = new BigWarp<>( new BigWarpData<>(), progress );
+			}
 
-			
 			if ( !fnLandmarks.isEmpty() )
 				bw.loadLandmarks( fnLandmarks );
 
