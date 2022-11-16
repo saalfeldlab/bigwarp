@@ -344,12 +344,23 @@ public class BigWarp< T >
 
 	final int ndims;
 
-	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
+
+	@Deprecated
+	public BigWarp( final BigWarpData< T > data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		this( data, windowTitle, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
+		this( data, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
 	}
 
-	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
+	@Deprecated
+	public BigWarp( final BigWarpData< T > data, final String windowTitle, BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException {
+		this(data, options, progressWriter );
+	}
+
+	public BigWarp( final BigWarpData< T > data, final ProgressWriter progressWriter ) throws SpimDataException {
+		this( data, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
+	}
+
+	public BigWarp( final BigWarpData<T> data,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 

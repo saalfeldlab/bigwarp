@@ -33,7 +33,7 @@ public class BigWarpTransformedSourcesTest
 		data.setTransform( 2, translation );
 		data.applyTransformations();
 
-		final BigWarp<?> bw = new BigWarp<>( data, "Big Warp", new ProgressWriterConsole());
+		final BigWarp<?> bw = new BigWarp<>( data, new ProgressWriterConsole());
 		bw.loadLandmarks( "/home/john/tmp/bw_tformTest_landmarks_simple.csv" );
 //		bw.loadLandmarks( "/groups/saalfeld/home/bogovicj/tmp/bw_tformTest_landmarks.csv" );
 
