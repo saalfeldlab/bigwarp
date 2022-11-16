@@ -361,28 +361,6 @@ public class SerializationTest
 		final JsonElement parse = JsonParser.parseString( json );
 		final JsonObject asJsonObject = parse.getAsJsonObject();
 
-		return prettyPrint( asJsonObject );
 	}
 
-	private static String prettyPrint (JsonObject json) {
-
-		return new GsonBuilder().setPrettyPrinting().create().toJson( json );
-	}
-
-	private static BigWarp< ? > createBigWarp( boolean[] moving ) throws SpimDataException
-	{
-		final BigWarpData< Object > data = BigWarpInit.initData();
-		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
-				3,
-				( l, v ) -> v.setOne(),
-				UnsignedByteType::new );
-		ImagePlus imp = ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32, 1 ) ), "img" );
-		for ( int i = 0; i < moving.length; i++ )
-		{
-			BigWarpInit.add( data, imp, i, 0, moving[ i ] );
-		}
-		data.wrapUp();
-		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
-		return new BigWarp<>( data, "bigwarp", opts, null );
-	}
 }

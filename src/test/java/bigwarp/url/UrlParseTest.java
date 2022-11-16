@@ -26,7 +26,6 @@ import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.scijava.util.FileUtils;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -35,12 +34,11 @@ import static org.junit.Assert.fail;
 
 public class UrlParseTest
 {
+	public static final String TIFF_FILE_3D = BigWarpTestUtils.createTemp3DImage( "img3d", "tif" );
 
-	private static final String TIFF_FILE_3D = "src/test/resources/bigwarp/url/img.tif";
+	public static final String PNG_FILE_2D = BigWarpTestUtils.createTemp2DImage( "img2d", "png" );
 
-	public static final String PNG_FILE_2D = "src/test/resources/bigwarp/url/img2d.png";
-
-	public static final String TIFF_STACK_DIR = "src/test/resources/bigwarp/url/imgDir3d/";
+	public static final String TIFF_STACK_DIR = BigWarpTestUtils.createTemp3DImageStack( "imgDir3d" );
 
 	private Class< N5FSReader > n5Clazz;
 
@@ -55,9 +53,6 @@ public class UrlParseTest
 	@Before
 	public void before() throws IOException
 	{
-		/* Cleanup, to ensure no old test files persist */
-		cleanup();
-
 		n5Clazz = N5FSReader.class;
 		zarrClazz = N5ZarrReader.class;
 		h5Clazz = N5HDF5Reader.class;
@@ -78,22 +73,6 @@ public class UrlParseTest
 		final String zarrRoot = new File( "src/test/resources/bigwarp/url/transformTest.zarr" ).getAbsolutePath();
 		urlToDimensions.put( zarrRoot + "?img", new long[] { 4, 6, 8 } );
 		urlToDimensions.put( zarrRoot + "?img2", new long[] { 8, 12, 16 } );
-
-		ImagePlus img3d = NewImage.createByteImage( "img3d", 8, 8, 4, NewImage.FILL_RAMP );
-		IJ.save( img3d, TIFF_FILE_3D );
-
-		ImagePlus img2d = NewImage.createByteImage( "img2d", 8, 8, 1, NewImage.FILL_RAMP );
-		IJ.save( img2d, PNG_FILE_2D );
-		Files.createDirectory( Paths.get( TIFF_STACK_DIR ) );
-		StackWriter.save( img3d , TIFF_STACK_DIR, "format=tif");
-	}
-
-	@After
-	public void cleanup() throws IOException
-	{
-		Files.deleteIfExists(Paths.get( TIFF_FILE_3D ));
-		Files.deleteIfExists(Paths.get( PNG_FILE_2D ));
-		FileUtils.deleteRecursively( new File(TIFF_STACK_DIR));
 	}
 
 	@Test
