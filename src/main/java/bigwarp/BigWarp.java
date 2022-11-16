@@ -652,6 +652,11 @@ public class BigWarp< T >
 	{
 		viewerP.state().clearSources();
 		viewerQ.state().clearSources();
+
+		final ArrayList<ConverterSetup> converterSetupsToRemove = new ArrayList<>();
+		setupAssignments.getConverterSetups().forEach( converterSetupsToRemove::add );
+		converterSetupsToRemove.forEach( setupAssignments::removeSetup );
+
 		final SynchronizedViewerState pState = viewerP.state();
 		final SynchronizedViewerState qState = viewerQ.state();
 		for ( int i = 0; i < data.sources.size(); i++ )
@@ -661,8 +666,11 @@ public class BigWarp< T >
 			qState.addSource( sac );
 
 			// update the viewer converter setups too
-			viewerFrameP.getConverterSetups().put( sac, data.converterSetups.get( i ) );
-			viewerFrameQ.getConverterSetups().put( sac, data.converterSetups.get( i ) );
+			final ConverterSetup setup = data.converterSetups.get( i );
+
+			viewerFrameP.getConverterSetups().put( sac, setup );
+			viewerFrameQ.getConverterSetups().put( sac, setup );
+			setupAssignments.addSetup( setup );
 		}
 	}
 
