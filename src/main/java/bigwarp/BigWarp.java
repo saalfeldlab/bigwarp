@@ -197,12 +197,7 @@ public class BigWarp< T >
 
 	protected BigWarpData< T > data;
 
-	protected HashSet< SourceAndConverter< T >> movingSources;
-
 	protected final SetupAssignments setupAssignments;
-
-	protected final BrightnessDialog brightnessDialog;
-
 	protected final WarpVisFrame warpVisDialog;
 
 	protected final HelpDialog helpDialog;
@@ -1268,7 +1263,7 @@ public class BigWarp< T >
 	public void exportWarpField()
 	{
 		BigWarpToDeformationFieldPlugIn dfieldExporter = new BigWarpToDeformationFieldPlugIn();
-		dfieldExporter.runFromBigWarpInstance( landmarkModel, data.sources, data.targetSourceIndexList );
+		dfieldExporter.runFromBigWarpInstance( landmarkModel, data.getTargetSource( 0 ) );
 	}
 
 	protected void setUpLandmarkMenus()

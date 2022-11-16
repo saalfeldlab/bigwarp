@@ -905,8 +905,7 @@ public abstract class BigWarpExporter <T>
 			final Interpolation interp,
 			final ProgressWriter progressWriter )
 	{
-		List<Integer> movingSourceIndexList = bwData.movingSourceIndexList;
-//		List<Integer> targetSourceIndexList = bwData.targetSourceIndexList;
+		List<Integer> movingSourceIndexList = bwData.getMovingSourceIndices();
 
 		//TODO Caleb: Consider a method that just takes a list of all moving sources
 		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )

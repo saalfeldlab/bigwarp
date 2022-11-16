@@ -112,7 +112,7 @@ public class BigWarpViewerFrame extends JFrame
 				setups.put( source, setup );
 		}
 
-		if ( !isMoving && bw.getData().targetSourceIndexList.size() > 0 )
+		if ( !isMoving && bw.getData().numTargetSources() > 0 )
 			viewer.state().setCurrentSource( bw.getData().getTargetSource( 0 ) );
 
 		keybindings = new InputActionBindings();
