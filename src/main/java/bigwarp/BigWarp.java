@@ -616,6 +616,7 @@ public class BigWarp< T >
 
 		SwingUtilities.invokeLater( new Runnable()
 		{
+			@Override
 			public void run()
 			{
 				data.transferChannelSettings( viewerFrameP );
@@ -657,7 +658,7 @@ public class BigWarp< T >
 	 * Create two source groups - one for moving images,
 	 * and the other for target images, for both viewer frames.
 	 * 
-	 * Ensure sources are synchronized with {@link synchronizeSources}
+	 * Ensure sources are synchronized with {@link #synchronizeSources()}
 	 * before calling this method.
 	 */
 	public void createMovingTargetGroups()

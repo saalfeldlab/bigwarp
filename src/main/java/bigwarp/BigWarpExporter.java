@@ -107,7 +107,7 @@ public abstract class BigWarpExporter <T>
 
 	public enum ParallelizationPolicy {
 		SLICE, ITER
-	};
+	}
 
 	public ParallelizationPolicy policy = ParallelizationPolicy.ITER;
 
@@ -480,6 +480,7 @@ public abstract class BigWarpExporter <T>
 
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try
@@ -561,6 +562,7 @@ public abstract class BigWarpExporter <T>
 			final int offset = i;
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try

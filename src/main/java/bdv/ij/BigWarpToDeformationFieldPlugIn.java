@@ -637,6 +637,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try

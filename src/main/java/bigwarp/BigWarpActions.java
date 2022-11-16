@@ -684,6 +684,7 @@ public class BigWarpActions
 			this.bw = bw;
 		}
 		
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			bw.resetView();
@@ -694,8 +695,8 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -7023242695323421450L;
 		
-		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE };
-		
+		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE }
+
 		private BigWarp< ? >bw;
 		private TYPE type;
 		
@@ -706,6 +707,7 @@ public class BigWarpActions
 			this.type = type;
 		}
 		
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			if( type == TYPE.ACTIVE_TO_OTHER )
