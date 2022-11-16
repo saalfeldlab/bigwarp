@@ -197,12 +197,12 @@ public class BigWarpData< T >
 		updateIsMovingMap();
 	}
 
-	public void addSource( Source<T> src, boolean isMoving )
+	void addSource( Source<T> src, boolean isMoving )
 	{
-		addSource( src, isMoving );
+		addSource( src, isMoving, null );
 	}
 
-	public void addSource( Source<T> src, boolean isMoving, RealTransform transform )
+	void addSource( Source<T> src, boolean isMoving, RealTransform transform )
 	{
 		// find an unused id
 		int id = 0;
@@ -212,37 +212,30 @@ public class BigWarpData< T >
 				id++;
 		}
 		BigWarpInit.add( this, src, id, 0, isMoving, transform );
+		final SourceInfo sourceInfo =
+				sourceInfos.getOrDefault( id,  new SourceInfo( id, isMoving, src.getName(), null, transform ));
+
+		sourceInfo.setSourceAndConverter( sources.get( sources.size() -1 ) );
+		sourceInfos.putIfAbsent( id, sourceInfo);
 	}
 
-	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving )
+	int remove( SourceInfo sourceInfo)
 	{
-		addSourceAndConverter( sac, isMoving, null );
+		final int idx = sources.indexOf( sourceInfo.getSourceAndConverter() );
+		remove( idx );
+		return idx;
 	}
 
-	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving, RealTransform transform )
-	{
-		sources.add( sac );
-		isMovingMap.put( sac, isMoving );
-		transforms.add( transform ); // transform may be null
-
-		if( isMoving )
-			movingSourceIndexList.add( sources.size() - 1 );
-		else
-			targetSourceIndexList.add( sources.size() - 1 );
-	}
-
-	public void remove( int i )
+	void remove( int i )
 	{
 		SourceAndConverter< T > sac = sources.get( i );
-		System.out.println( sac );
-		System.out.println( isMovingMap );
-		if( isMovingMap.remove( sac ) != null )
-			movingSourceIndexList.remove( movingSourceIndexList.indexOf( i ) );
-		else
-			targetSourceIndexList.remove( targetSourceIndexList.indexOf( i ) );
-
+		final int sacId = sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().get();
+		final SourceInfo sourceInfo = sourceInfos.remove( sacId );
 		sources.remove( i );
-		transforms.remove( i );
+		transforms.remove( sourceInfo.getTransform() );
+		setupSettings.remove( sourceInfo.getId() );
+		sourceColorSettings.remove(sac);
+		converterSetups.remove( i  );
 	}
 
 	public void setTransform( int i, RealTransform transform )
