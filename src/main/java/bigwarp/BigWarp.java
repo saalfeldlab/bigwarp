@@ -3541,6 +3541,33 @@ public class BigWarp< T >
 		}
 	}
 
+	private void addInternalSource(int id) {
+		final boolean sourceWithIdPresent = data.sources.stream().map( it -> it.getConverter()).filter( it -> it instanceof ConverterSetup ).filter( it -> ( ( ConverterSetup ) it ).getSetupId() == id ).findAny().isPresent();
+		if (sourceWithIdPresent) {
+			return;
+		}
+		switch ( id )
+		{
+		case GRID_SOURCE_ID:
+			gridSource = addGridSource( data, "GridSource" );
+			setGridType( GridSource.GRID_TYPE.LINE );
+			break;
+		case WARPMAG_SOURCE_ID:
+			warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
+			break;
+		case JACDET_SOURCE_ID:
+			jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
+			break;
+		case TRANSFORM_MASK_SOURCE_ID:
+			transformMaskSource = addTransformMaskSource( data, ndims, "Transform mask" );
+			bwTransform.setLambda( transformMask.getRandomAccessible() );
+			addMaskMouseListener();
+			break;
+		default:
+			break;
+		}
+	}
+
 	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
@@ -3549,6 +3576,16 @@ public class BigWarp< T >
 			final SAXBuilder sax = new SAXBuilder();
 			final Document doc = sax.build( jsonOrXmlFilename );
 			final Element root = doc.getRootElement();
+
+			/* add default sources if present */
+			final List< Element > converterSetups = root.getChild( "SetupAssignments" ).getChild( "ConverterSetups" ).getChildren( "ConverterSetup" );
+			for ( Element converterSetup : converterSetups )
+			{
+				final int id = Integer.parseInt( converterSetup.getChild( "id" ).getText() );
+				addInternalSource( id );
+			}
+			synchronizeSources();
+
 			viewerP.stateFromXml( root.getChild( "viewerP" ) );
 			viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
 			setupAssignments.restoreFromXml( root );
