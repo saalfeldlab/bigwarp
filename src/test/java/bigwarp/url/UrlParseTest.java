@@ -1,21 +1,16 @@
 package bigwarp.url;
 
-import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
-import ij.IJ;
-import ij.ImagePlus;
-import ij.gui.NewImage;
-import ij.plugin.StackWriter;
+import bigwarp.BigWarpTestUtils;
+import bigwarp.source.SourceInfo;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import mpicbg.spim.data.SpimDataException;
@@ -23,7 +18,6 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -92,7 +86,7 @@ public class UrlParseTest
 	}
 
 	@Test
-	public void testUrlSources()
+	public void testUrlSources() throws SpimDataException, URISyntaxException, IOException
 	{
 		final String bdvXmlUrl = new File( "src/test/resources/mri-stack.xml" ).getAbsolutePath();
 
@@ -137,7 +131,7 @@ public class UrlParseTest
 	}
 
 	@Test
-	public void n5FileEquivalencyTest() throws IOException
+	public void n5FileUrlEquivalencyTest() throws IOException, SpimDataException, URISyntaxException
 	{
 		final String relativePath = "src/test/resources/bigwarp/url/transformTest.n5";
 		final String absolutePath = Paths.get( relativePath ).toAbsolutePath().toFile().getCanonicalPath();
@@ -165,20 +159,12 @@ public class UrlParseTest
 		};
 
 		final BigWarpData< Object > data = BigWarpInit.initData();
-		try
+		final AtomicInteger id = new AtomicInteger( 1 );
+		for ( String uri : variants )
 		{
-
-			final AtomicInteger id = new AtomicInteger( 1 );
-			for ( String uri :  variants)
-			{
-				final int setupId = id.getAndIncrement();
-				BigWarpInit.add( data, uri, setupId, new Random().nextBoolean() );
-				assertEquals( uri, data.urls.get(setupId ).getA().get());
-			}
-		}
-		catch ( URISyntaxException | IOException | SpimDataException e )
-		{
-			throw new RuntimeException( e );
+			final int setupId = id.getAndIncrement();
+			BigWarpInit.add( data, BigWarpInit.createSources( data, uri, setupId, new Random().nextBoolean() ) );
+			assertEquals( uri, data.sourceInfos.get( setupId ).getUri() );
 		}
 	}
 
@@ -188,22 +174,15 @@ public class UrlParseTest
 		return null;
 	}
 
-	private Source< ? > loadSourceFromUri( String uri )
+	private < T > Source< ? > loadSourceFromUri( String uri ) throws SpimDataException, URISyntaxException, IOException
 	{
 
+		final BigWarpData< T > data = BigWarpInit.initData();
+		final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, uri, 0, true );
+		BigWarpInit.add( data, sources );
+		data.wrapUp();
+		return (Source<?>) sources.keySet().toArray()[ 0 ];
 
-		final BigWarpData< Object > data = BigWarpInit.initData();
-		try
-		{
-			final Source< ? > source = BigWarpInit.add( data, uri, 0, true );
-			data.wrapUp();
-			return source;
-		}
-		catch ( URISyntaxException | IOException | SpimDataException e )
-		{
-			throw new RuntimeException( e );
-		}
 	}
-
 
 }

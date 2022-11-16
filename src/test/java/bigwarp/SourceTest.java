@@ -61,7 +61,7 @@ public class SourceTest
 
 
 		BigWarpData< ? > datasrc = BigWarpInit.createBigWarpData( new Source[] { tsrc }, new Source[] { tsrc }, new String[] { "mvg", "tgt" } );
-		BigWarp< ? > bw = new BigWarp<>( datasrc, "bw", BigWarpViewerOptions.options(), new ProgressWriterConsole() );
+		BigWarp< ? > bw = new BigWarp<>( datasrc, BigWarpViewerOptions.options(), new ProgressWriterConsole() );
 		bw.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/mr_landmarks_p2p2p4-111.csv" ));
 	}
 }
