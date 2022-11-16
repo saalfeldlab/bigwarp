@@ -908,6 +908,7 @@ public abstract class BigWarpExporter <T>
 		List<Integer> movingSourceIndexList = bwData.movingSourceIndexList;
 //		List<Integer> targetSourceIndexList = bwData.targetSourceIndexList;
 
+		//TODO Caleb: Consider a method that just takes a list of all moving sources
 		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )
 		{
 			Object baseType = transformedSources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();

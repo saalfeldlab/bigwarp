@@ -1,11 +1,12 @@
 package bigwarp;
 
+import bigwarp.source.SourceInfo;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import bdv.cache.CacheControl;
@@ -28,13 +29,12 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
-import net.imglib2.util.Pair;
 
 public class BigWarpData< T >
 {
 	public List< SourceAndConverter< T > > sources;
 
-	public final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> urls = new HashMap<>();
+	public final LinkedHashMap< Integer, SourceInfo > sourceInfos = new LinkedHashMap<>();
 
 	public List<RealTransform> transforms;
 
@@ -112,10 +112,13 @@ public class BigWarpData< T >
 		this.sources = sources;
 		this.converterSetups = converterSetups;
 
-		this.movingSourceIndexList = movingIndexes;
-		this.targetSourceIndexList = targetIndexes;
-		isMovingMap = new HashMap<>();
-		updateIsMovingMap();
+		for ( int i = 0; i < sources.size(); i++ )
+		{
+			final SourceAndConverter< T > sourceAndConverter = sources.get( i );
+			final SourceInfo sourceInfo = new SourceInfo( i, movingIndexes.contains( i ), sourceAndConverter.getSpimSource().getName() );
+			sourceInfo.setSourceAndConverter( sourceAndConverter );
+			sourceInfos.put( i, sourceInfo );
+		}
 
 		if ( cache == null )
 			this.cache = new CacheControl.Dummy();
@@ -181,6 +184,22 @@ public class BigWarpData< T >
 			out.add( converterSetups.get( i ) );
 
 		return out;
+	}
+
+	public SourceInfo getSourceInfo( int id )
+	{
+		return sourceInfos.get( id );
+	}
+
+	public SourceInfo getSourceInfo( SourceAndConverter< ? > sac )
+	{
+		for ( final SourceInfo info : sourceInfos.values() )
+		{
+			if (info.getSourceAndConverter() == sac) {
+				return info;
+			}
+		}
+		return null;
 	}
 
 	public boolean isMoving( SourceAndConverter<?> sac ) {

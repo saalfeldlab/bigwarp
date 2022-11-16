@@ -319,25 +319,43 @@ public class BigWarpInit
 	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )
 	{
 		BigWarpData data = initData();
-
+		int nameIdx = 0;
 		int setupId = 0;
 		// moving
 		for ( Source< ? > mvgSource : movingSourceList )
 		{
-			add( data, mvgSource, setupId++, 1, true );
+			add( data, mvgSource, setupId, 1, true );
+			final SourceAndConverter<?> addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
+			final SourceInfo info = new SourceInfo( setupId, true, names[ nameIdx++ ] );
+			info.setSourceAndConverter( addedSource );
+			data.sourceInfos.put( setupId++, info );
 		}
 
 		// target
 		for ( Source< ? > fxdSource : fixedSourceList )
 		{
 			add( data, fxdSource, setupId, 1, false );
+			final SourceAndConverter<?> addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
+			final SourceInfo info = new SourceInfo( setupId, false, names[ nameIdx++ ] );
+			info.setSourceAndConverter( addedSource);
+			data.sourceInfos.put( setupId++, info);
 		}
 
 		data.wrapUp();
 
-		if ( names != null ) { return new BigWarpData( 
-				wrapSourcesAsRenamable( data.sources, names ), data.converterSetups, data.cache, 
-					data.movingSourceIndexList, data.targetSourceIndexList ); }
+		if ( names != null )
+		{
+			final ArrayList wrappedSources = wrapSourcesAsRenamable( data.sources, names );
+			final AtomicInteger sourceInfoIdx = new AtomicInteger();
+
+			final BigWarpData< ? > typedData = data;
+			typedData.sourceInfos.forEach((id, info) -> {
+				info.setSourceAndConverter( typedData.sources.get( sourceInfoIdx.getAndIncrement() ) );
+			});
+
+			return new BigWarpData( wrappedSources, data.converterSetups, data.cache );
+
+		}
 
 		return data;
 	}

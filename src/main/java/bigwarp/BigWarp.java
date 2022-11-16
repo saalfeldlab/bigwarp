@@ -133,6 +133,7 @@ import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.PlateauSphericalMaskSource;
+import bigwarp.source.SourceInfo;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
@@ -142,6 +143,7 @@ import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import java.util.LinkedHashMap;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
@@ -336,6 +338,7 @@ public class BigWarp< T >
 
 	protected static Logger logger = LoggerFactory.getLogger( BigWarp.class );
 
+	//TODO Caleb: John, can this be replaced by info from BigWarpData/SourceInfo url?
 	private SpimData movingSpimData;
 
 	private File movingImageXml;
@@ -731,7 +734,17 @@ public class BigWarp< T >
 		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
 	}
 
-	public void addSource( Source<T> source, boolean moving )
+	/**
+	 * @param sources to add; typically the output of a {#{@link BigWarpInit#createSources(BigWarpData, String, int, boolean)}} call
+	 */
+	public void addSources( LinkedHashMap<Source< T >, SourceInfo> sources)
+	{
+
+		BigWarpInit.add( data, sources);
+		synchronizeSources();
+	}
+
+	public void addSource( Source< T > source, boolean moving )
 	{
 		data.addSource( source, moving );
 		synchronizeSources();
@@ -740,6 +753,13 @@ public class BigWarp< T >
 	public void addSource( Source<T> source )
 	{
 		addSource( source, false );
+	}
+
+	public int removeSource( SourceInfo info )
+	{
+		final int removedIdx = data.remove( info );
+		synchronizeSources();
+		return removedIdx;
 	}
 
 	public void removeSource( int i )
@@ -1894,52 +1914,51 @@ public class BigWarp< T >
 		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( method );
 	}
 
-	public static <T> void wrapMovingSources( final int ndims, final BigWarpData<T> data )
+	@SuppressWarnings( "unchecked" )
+	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
 	{
-		final List<Integer> warpUsIndices = data.movingSourceIndexList;
 		final HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
 //		System.out.println( "before " + colorSettings.keySet().size());
 
 		int i = 0;
-		for ( final SourceAndConverter<T> sac : data.sources )
+
+		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
 		{
-//			int idx = Arrays.binarySearch( warpUsIndices, i );
-			int idx = warpUsIndices.indexOf( i );
-			if ( idx >= 0 )
+			if ( sourceInfo.isMoving() )
 			{
-				SourceAndConverter<T> newSac = wrapSourceAsTransformed( sac, "xfm_" + i, ndims );
-				colorSettings.put( newSac, colorSettings.get( sac ));
-				data.sources.set( i, newSac );
+				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
+				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
+				sourceInfo.setSourceAndConverter( newSac );
+				colorSettings.put( newSac, sourceInfo.getColorSettings());
+				data.sources.set( sourceIdx, newSac );
 			}
 			i++;
 		}
 //		System.out.println( "after " + colorSettings.keySet().size());
 	}
 
-	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources,
+	@SuppressWarnings( "unchecked" )
+	public static < T > List< SourceAndConverter< T > > wrapSourcesAsTransformed( final LinkedHashMap< Integer, SourceInfo > sources,
 			final int ndims,
-			final BigWarpData<?> data )
+			final BigWarpData< T > data )
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		final List<Integer> warpUsIndices = data.movingSourceIndexList;
 		final HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
 //		System.out.println( "before " + colorSettings.keySet().size());
 
 		int i = 0;
-		for ( final SourceAndConverter<T> sac : sources )
+		for ( final SourceInfo sourceInfo : sources.values() )
 		{
-//			int idx = Arrays.binarySearch( warpUsIndices, i );
-			int idx = warpUsIndices.indexOf( i );
-			if ( idx >= 0 )
+			if ( sourceInfo.isMoving() )
 			{
-				SourceAndConverter<T> newSac = wrapSourceAsTransformed( sac, "xfm_" + i, ndims );
+				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				wrappedSource.add( newSac );
-				colorSettings.put( newSac, colorSettings.get( sac ));
+				colorSettings.put( newSac, sourceInfo.getColorSettings() );
 			}
 			else
 			{
-				wrappedSource.add( sac );
+				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
 			}
 
 			i++;
@@ -2310,36 +2329,36 @@ public class BigWarp< T >
 	{
 		this.currentTransform = transform;
 
-		for ( int i = 0; i < data.movingSourceIndexList.size(); i++ )
-		{
-			final int idx = data.movingSourceIndexList.get( i );
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				// the xfm must always be 3d for bdv to be happy.
+				// when bigwarp has 2d images though, the z- component will be left unchanged
+				// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
-			// the xfm must always be 3d for bdv to be happy.
-			// when bigwarp has 2d images though, the z- component will be left unchanged
-			// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
-
-			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( data.sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
-			if ( data.sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( data.sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( transform );
-		}
+				// the updateTransform method creates a copy of the transform
+				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).updateTransform( transform );
+				if ( data.sources.get( 0 ).asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
+			}
+		} );
 	}
 
 	public void updateSourceBoundingBoxEstimators()
 	{
-		for ( int i = 0; i < data.movingSourceIndexList.size(); i++ )
-		{
-			final int idx = data.movingSourceIndexList.get( i );
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				// the xfm must always be 3d for bdv to be happy.
+				// when bigwarp has 2d images though, the z- component will be left unchanged
+				//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
-			// the xfm must always be 3d for bdv to be happy.
-			// when bigwarp has 2d images though, the z- component will be left unchanged
-			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
-
-			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( data.sources.get( idx ).getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
-			if ( data.sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( data.sources.get( idx ).asVolatile().getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
-		}
+				// the updateTransform method creates a copy of the transform
+				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).setBoundingBoxEstimator( bboxOptions.copy() );
+				if ( data.sources.get( 0 ).asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).setBoundingBoxEstimator( bboxOptions.copy() );
+			}
+		} );
 	}
 
 	private synchronized void notifyTransformListeners( )
@@ -2420,15 +2439,17 @@ public class BigWarp< T >
 
 	public synchronized void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
-		for( int i = 0 ; i < data.movingSourceIndexList.size(); i ++ )
-		{
-			final int movingSourceIndex = data.movingSourceIndexList.get( 0 );
 
-			( ( WarpedSource< ? > ) ( data.sources.get( movingSourceIndex ).getSpimSource() ) ).setIsTransformed( isTransformed );
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				final SourceAndConverter< ? > sourceAndConverter = sourceInfo.getSourceAndConverter();
+				( ( WarpedSource< ? > ) sourceAndConverter.getSpimSource() ).setIsTransformed( isTransformed );
 
-			if ( data.sources.get( movingSourceIndex ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( data.sources.get( movingSourceIndex ).asVolatile().getSpimSource() ) ).setIsTransformed( isTransformed );
-		}
+				if ( sourceAndConverter.asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceAndConverter.asVolatile().getSpimSource() ).setIsTransformed( isTransformed );
+			}
+		} );
 
 		overlayP.setIsTransformed( isTransformed );
 
@@ -3525,10 +3546,9 @@ public class BigWarp< T >
 				setupAssignments,
 				bookmarks,
 				autoSaver,
-				transformMask.getRandomAccessible(),
 				landmarkModel,
 				bwTransform,
-				data.urls
+				data.sourceInfos
 		);
 	}
 

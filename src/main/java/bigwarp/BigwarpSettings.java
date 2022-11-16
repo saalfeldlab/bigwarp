@@ -7,6 +7,7 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
@@ -15,7 +16,7 @@ import bdv.viewer.state.SourceState;
 import bdv.viewer.state.ViewerState;
 import bdv.viewer.state.XmlIoViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.io.TransformWriterJson;
 import com.google.gson.Gson;
@@ -29,16 +30,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.ARGBType;
-import net.imglib2.util.Pair;
 import org.scijava.listeners.Listeners;
 
 import static bdv.viewer.Interpolation.NEARESTNEIGHBOR;
@@ -57,7 +59,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	private final BigWarpTransform transform;
 
-	private final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> sourceUrls;
+	private final Map< Integer, SourceInfo> sourceInfos;
 
 	BigWarpViewerPanel viewerP;
 
@@ -78,10 +80,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final SetupAssignments setupAssignments,
 			final Bookmarks bookmarks,
 			final BigWarpAutoSaver autoSaver,
-			final PlateauSphericalMaskRealRandomAccessible transformMask,
 			final LandmarkTableModel landmarks,
 			final BigWarpTransform transform,
-			final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> sourceUrls
+			final Map< Integer, SourceInfo > sourceInfos
 	)
 	{
 
@@ -91,10 +92,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.setupAssignments = setupAssignments;
 		this.bookmarks = bookmarks;
 		this.autoSaver = autoSaver;
-		this.transformMask = transformMask;
 		this.landmarks = landmarks;
 		this.transform = transform;
-		this.sourceUrls = sourceUrls;
+		this.sourceInfos = sourceInfos;
 	}
 
 	public void serialize( String jsonFilename ) throws IOException
@@ -111,7 +111,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		out.beginObject();
 		out.name( "Sources" );
-		new BigWarpSourcesAdapter( bigWarp.getData() ).write( out, sourceUrls );
+		new BigWarpSourcesAdapter( bigWarp, overwriteSources ).write( out, sourceInfos );
 		out.name( "ViewerP" );
 		new BigWarpViewerPanelAdapter( viewerP ).write( out, viewerP );
 		out.name( "ViewerQ" );
@@ -171,46 +171,59 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		return this;
 	}
 
-	public static class BigWarpSourcesAdapter extends TypeAdapter<Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>>> {
+	public static class BigWarpSourcesAdapter< T > extends TypeAdapter< Map< Integer, SourceInfo > >
+	{
 
-		private final BigWarpData<?> data;
+		private BigWarp< T > bigwarp;
 
-		public BigWarpSourcesAdapter( final BigWarpData<?> data )
+		private boolean overwriteExisting;
+
+		public BigWarpSourcesAdapter( final BigWarp< T > bigwarp, boolean overwriteSources )
 		{
-			this.data = data;
+
+			this.bigwarp = bigwarp;
+			this.overwriteExisting = overwriteSources;
 		}
 
 		@Override
-		public void write( final JsonWriter out, final Map< Integer, Pair< Supplier< String >, List< SourceAndConverter< ? > > > > value ) throws IOException
+		public void write( final JsonWriter out, final Map< Integer, SourceInfo > value ) throws IOException
 		{
 			out.beginObject();
-			for ( Map.Entry< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> entry : value.entrySet() )
+
+			/* We only want the lowest setupId with the same url*/
+
+			for ( Map.Entry< Integer, SourceInfo > entry : value.entrySet() )
 			{
-				Integer id = entry.getKey();
-				final Supplier<String> urlSupplier = entry.getValue().getA();
-				/* currently we only care about the first source when a single `add` call creates multiple sources.
-				 * This is because they will deserialzie to multiple sources from one url next time as well. */
-				final SourceAndConverter< ? > source = entry.getValue().getB().get( 0 );
+				if ( !entry.getValue().isSerializable() )
+					continue;
+
+				SourceInfo sourceInfo = entry.getValue();
+				int id = sourceInfo.getId();
+				URI uriObj;
+				String uri = sourceInfo.getUri();
+				final String name = sourceInfo.getName();
 				out.name( "" + id );
-
 				out.beginObject();
-
-				final int sourceIdx = data.sources.indexOf( source );
-				final boolean isMoving = data.movingSourceIndexList.contains( sourceIdx );
-
-				final String url = urlSupplier.get();
-				if ( url != null )
+				if ( uri == null && name != null && !name.trim().isEmpty() )
 				{
-					out.name( "url" ).value( url );
+					uri = "imagej:///" + name;
 				}
-				out.name( "isMoving" ).value( isMoving );
+				if ( uri != null )
+				{
+					out.name( "uri" ).value( uri );
+				}
+				if ( sourceInfo.getName() != null )
+				{
+					out.name( "name" ).value( sourceInfo.getName() );
+				}
+				out.name( "isMoving" ).value( sourceInfo.isMoving() );
 				out.endObject();
 			}
 			out.endObject();
 		}
 
 		@Override
-		public Map< Integer, Pair< Supplier< String >, List< SourceAndConverter< ? > > > > read( final JsonReader in ) throws IOException
+		public Map< Integer, SourceInfo > read( final JsonReader in ) throws IOException
 		{
 			in.beginObject();
 			while ( in.hasNext() )
@@ -218,36 +231,62 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				//TODO Caleb: What to do if `data` alrread has a source for this `id`?
 				int id = Integer.parseInt( in.nextName() );
 				in.beginObject();
-				String url = null;
+				String uri = null;
+				String name = null;
 				Boolean isMoving = null;
 				while ( in.hasNext() )
 				{
-					switch ( in.nextName() )
+					final String key = in.nextName();
+					switch ( key )
 					{
-					case "url":
-						url = in.nextString();
+					case "uri":
+						uri = in.nextString();
+						break;
+					case "name":
+						name = in.nextString();
 						break;
 					case "isMoving":
 						isMoving = in.nextBoolean();
 						break;
 					}
 				}
-				try
+				/* Only add if we either are told to override (in which case remove previous) or don't have. */
+				SourceInfo existingInfo = bigwarp.data.sourceInfos.get( id );
+				int targetIdx = -1;
+				if ( existingInfo != null && overwriteExisting )
 				{
-					if (url != null) {
-						BigWarpInit.add( data, url, id, isMoving );
-					} else {
-						//TODO Caleb: Prompt? Error?
-					}
+					targetIdx = bigwarp.data.remove( existingInfo );
+					existingInfo = null;
 				}
-				catch ( URISyntaxException | SpimDataException e )
+				if ( existingInfo == null && uri != null )
 				{
-					throw new IOException("Error Parsing Source by URI", e );
+
+					final LinkedHashMap< Source< T >, SourceInfo > sources;
+					try
+					{
+						//TODO Transform
+						sources = BigWarpInit.createSources( bigwarp.data, uri, id, isMoving );
+					}
+					catch ( URISyntaxException | SpimDataException e )
+					{
+						throw new RuntimeException( e );
+					}
+					BigWarpInit.add( bigwarp.data, sources );
+					if ( targetIdx >= 0 )
+					{
+						/* move the source and converterSetup to the correct idx */
+						final SourceAndConverter< T > sacToMove = bigwarp.data.sources.remove( bigwarp.data.sources.size() - 1 );
+						bigwarp.data.sources.add( targetIdx, sacToMove );
+
+						final ConverterSetup setupToMove = bigwarp.data.converterSetups.remove( bigwarp.data.converterSetups.size() - 1 );
+						bigwarp.data.converterSetups.add( targetIdx, setupToMove );
+					}
 				}
 				in.endObject();
 			}
 			in.endObject();
-			return data.urls;
+			bigwarp.synchronizeSources();
+			return bigwarp.data.sourceInfos;
 		}
 	}
 

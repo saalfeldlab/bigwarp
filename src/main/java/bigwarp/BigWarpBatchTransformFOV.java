@@ -334,7 +334,7 @@ public class BigWarpBatchTransformFOV
 		
 		@SuppressWarnings("unchecked")
 		List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-				data.sources, 
+				data.sourceInfos,
 				ltm.getNumdims(),
 				data );
 
