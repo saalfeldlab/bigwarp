@@ -305,7 +305,18 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		public BigWarpViewerPanelAdapter( final BigWarpViewerPanel viewerP )
 		{
 			this.panel = viewerP;
-			this.state = panel.getState();
+
+			final Field deprecatedState;
+			try
+			{
+				deprecatedState = ViewerPanel.class.getDeclaredField( "deprecatedState" );
+				deprecatedState.setAccessible( true );
+				this.state = ( ViewerState ) deprecatedState.get( panel );
+			}
+			catch ( NoSuchFieldException | IllegalAccessException e )
+			{
+				throw new RuntimeException( e );
+			}
 		}
 
 		@Override
