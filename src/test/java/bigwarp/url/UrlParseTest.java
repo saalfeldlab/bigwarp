@@ -1,21 +1,16 @@
 package bigwarp.url;
 
-import bdv.tools.transformation.TransformedSource;
 import bdv.viewer.Source;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
-import ij.IJ;
-import ij.ImagePlus;
-import ij.gui.NewImage;
-import ij.plugin.StackWriter;
+import bigwarp.BigWarpTestUtils;
+import bigwarp.source.SourceInfo;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import mpicbg.spim.data.SpimDataException;
@@ -23,10 +18,8 @@ import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.scijava.util.FileUtils;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -35,12 +28,11 @@ import static org.junit.Assert.fail;
 
 public class UrlParseTest
 {
+	public static final String TIFF_FILE_3D = BigWarpTestUtils.createTemp3DImage( "img3d", "tif" );
 
-	private static final String TIFF_FILE_3D = "src/test/resources/bigwarp/url/img.tif";
+	public static final String PNG_FILE_2D = BigWarpTestUtils.createTemp2DImage( "img2d", "png" );
 
-	public static final String PNG_FILE_2D = "src/test/resources/bigwarp/url/img2d.png";
-
-	public static final String TIFF_STACK_DIR = "src/test/resources/bigwarp/url/imgDir3d/";
+	public static final String TIFF_STACK_DIR = BigWarpTestUtils.createTemp3DImageStack( "imgDir3d" );
 
 	private Class< N5FSReader > n5Clazz;
 
@@ -55,9 +47,6 @@ public class UrlParseTest
 	@Before
 	public void before() throws IOException
 	{
-		/* Cleanup, to ensure no old test files persist */
-		cleanup();
-
 		n5Clazz = N5FSReader.class;
 		zarrClazz = N5ZarrReader.class;
 		h5Clazz = N5HDF5Reader.class;
@@ -78,22 +67,6 @@ public class UrlParseTest
 		final String zarrRoot = new File( "src/test/resources/bigwarp/url/transformTest.zarr" ).getAbsolutePath();
 		urlToDimensions.put( zarrRoot + "?img", new long[] { 4, 6, 8 } );
 		urlToDimensions.put( zarrRoot + "?img2", new long[] { 8, 12, 16 } );
-
-		ImagePlus img3d = NewImage.createByteImage( "img3d", 8, 8, 4, NewImage.FILL_RAMP );
-		IJ.save( img3d, TIFF_FILE_3D );
-
-		ImagePlus img2d = NewImage.createByteImage( "img2d", 8, 8, 1, NewImage.FILL_RAMP );
-		IJ.save( img2d, PNG_FILE_2D );
-		Files.createDirectory( Paths.get( TIFF_STACK_DIR ) );
-		StackWriter.save( img3d , TIFF_STACK_DIR, "format=tif");
-	}
-
-	@After
-	public void cleanup() throws IOException
-	{
-		Files.deleteIfExists(Paths.get( TIFF_FILE_3D ));
-		Files.deleteIfExists(Paths.get( PNG_FILE_2D ));
-		FileUtils.deleteRecursively( new File(TIFF_STACK_DIR));
 	}
 
 	@Test
@@ -113,7 +86,7 @@ public class UrlParseTest
 	}
 
 	@Test
-	public void testUrlSources()
+	public void testUrlSources() throws SpimDataException, URISyntaxException, IOException
 	{
 		final String bdvXmlUrl = new File( "src/test/resources/mri-stack.xml" ).getAbsolutePath();
 
@@ -158,7 +131,7 @@ public class UrlParseTest
 	}
 
 	@Test
-	public void n5FileEquivalencyTest() throws IOException
+	public void n5FileUrlEquivalencyTest() throws IOException, SpimDataException, URISyntaxException
 	{
 		final String relativePath = "src/test/resources/bigwarp/url/transformTest.n5";
 		final String absolutePath = Paths.get( relativePath ).toAbsolutePath().toFile().getCanonicalPath();
@@ -186,20 +159,12 @@ public class UrlParseTest
 		};
 
 		final BigWarpData< Object > data = BigWarpInit.initData();
-		try
+		final AtomicInteger id = new AtomicInteger( 1 );
+		for ( String uri : variants )
 		{
-
-			final AtomicInteger id = new AtomicInteger( 1 );
-			for ( String uri :  variants)
-			{
-				final int setupId = id.getAndIncrement();
-				BigWarpInit.add( data, uri, setupId, new Random().nextBoolean() );
-				assertEquals( uri, data.urls.get(setupId ).getA().get());
-			}
-		}
-		catch ( URISyntaxException | IOException | SpimDataException e )
-		{
-			throw new RuntimeException( e );
+			final int setupId = id.getAndIncrement();
+			BigWarpInit.add( data, BigWarpInit.createSources( data, uri, setupId, new Random().nextBoolean() ) );
+			assertEquals( uri, data.sourceInfos.get( setupId ).getUri() );
 		}
 	}
 
@@ -209,22 +174,15 @@ public class UrlParseTest
 		return null;
 	}
 
-	private Source< ? > loadSourceFromUri( String uri )
+	private < T > Source< ? > loadSourceFromUri( String uri ) throws SpimDataException, URISyntaxException, IOException
 	{
 
+		final BigWarpData< T > data = BigWarpInit.initData();
+		final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, uri, 0, true );
+		BigWarpInit.add( data, sources );
+		data.wrapUp();
+		return (Source<?>) sources.keySet().toArray()[ 0 ];
 
-		final BigWarpData< Object > data = BigWarpInit.initData();
-		try
-		{
-			final Source< ? > source = BigWarpInit.add( data, uri, 0, true );
-			data.wrapUp();
-			return source;
-		}
-		catch ( URISyntaxException | IOException | SpimDataException e )
-		{
-			throw new RuntimeException( e );
-		}
 	}
-
 
 }

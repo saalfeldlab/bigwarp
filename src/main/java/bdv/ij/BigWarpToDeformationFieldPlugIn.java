@@ -114,10 +114,22 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		new BigWarpToDeformationFieldPlugIn().run( null );
 	}
 
+
+	/**
+	 * @deprecated not necessary access thedesired source this way anymore, use {@link #runFromBigWarpInstance(LandmarkTableModel, SourceAndConverter)}
+	 * 	on the result of {@link bigwarp.BigWarpData#getTargetSource(int)}
+	 */
+	@Deprecated
 	public <T> void runFromBigWarpInstance(
 			final LandmarkTableModel landmarkModel,
 			final List<SourceAndConverter<T>> sources,
 			final List<Integer> targetSourceIndexList )
+	{
+		runFromBigWarpInstance( landmarkModel, sources.get(targetSourceIndexList.get( 0 )));
+	}
+
+	public <T> void runFromBigWarpInstance(
+			final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
 	{
 		System.out.println( "run from instance." );
 		ImageJ ij = IJ.getInstance();
@@ -129,7 +141,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( params == null )
 			return;
 
-		final RandomAccessibleInterval< ? > tgtInterval = sources.get( targetSourceIndexList.get( 0 ) ).getSpimSource().getSource( 0, 0 );
+		final RandomAccessibleInterval< ? > tgtInterval = sourceAndConverter.getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
 		// dimensions of the output image plus
@@ -153,7 +165,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		long[] dims = tgtInterval.dimensionsAsLongArray();
 
 		double[] spacing = new double[ 3 ];
-		VoxelDimensions voxelDim = sources.get( targetSourceIndexList.get( 0 ) ).getSpimSource().getVoxelDimensions();
+		VoxelDimensions voxelDim = sourceAndConverter.getSpimSource().getVoxelDimensions();
 		voxelDim.dimensions( spacing );
 
 		if( params.spacing != null )
@@ -637,6 +649,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try

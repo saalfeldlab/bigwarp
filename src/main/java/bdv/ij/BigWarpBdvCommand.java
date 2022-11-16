@@ -63,7 +63,7 @@ public class BigWarpBdvCommand implements Command
 			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageXml.getAbsolutePath() );
 			new RepeatingReleasedEventsFixer().install();
 			final BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
-			bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
+			bw = new BigWarp( bigWarpData,  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();

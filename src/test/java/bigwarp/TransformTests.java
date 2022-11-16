@@ -62,7 +62,7 @@ public class TransformTests
 		BigWarpData<?> data = BigWarpInit.createBigWarpDataFromImages( imp, imp );
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		BigWarp<?> bw = new BigWarp( data, "bigwarp", opts, null );
+		BigWarp<?> bw = new BigWarp( data, opts, null );
 
 		LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 
@@ -104,7 +104,7 @@ public class TransformTests
 		BigWarpData<?> data = BigWarpInit.createBigWarpDataFromImages( imp, imp );
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		BigWarp<?> bw = new BigWarp( data, "bigwarp", opts, null );
+		BigWarp<?> bw = new BigWarp( data, opts, null );
 
 		LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 

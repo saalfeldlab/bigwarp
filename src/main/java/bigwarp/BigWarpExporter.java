@@ -107,7 +107,7 @@ public abstract class BigWarpExporter <T>
 
 	public enum ParallelizationPolicy {
 		SLICE, ITER
-	};
+	}
 
 	public ParallelizationPolicy policy = ParallelizationPolicy.ITER;
 
@@ -480,6 +480,7 @@ public abstract class BigWarpExporter <T>
 
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try
@@ -561,6 +562,7 @@ public abstract class BigWarpExporter <T>
 			final int offset = i;
 			jobs.add( new Callable<Boolean>()
 			{
+				@Override
 				public Boolean call()
 				{
 					try
@@ -903,9 +905,9 @@ public abstract class BigWarpExporter <T>
 			final Interpolation interp,
 			final ProgressWriter progressWriter )
 	{
-		List<Integer> movingSourceIndexList = bwData.movingSourceIndexList;
-//		List<Integer> targetSourceIndexList = bwData.targetSourceIndexList;
+		List<Integer> movingSourceIndexList = bwData.getMovingSourceIndices();
 
+		//TODO Caleb: Consider a method that just takes a list of all moving sources
 		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )
 		{
 			Object baseType = transformedSources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();

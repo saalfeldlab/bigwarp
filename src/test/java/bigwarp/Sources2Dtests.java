@@ -23,7 +23,7 @@ package bigwarp;
 
 import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
-import bigwarp.BigWarpData;
+import bigwarp.source.SourceInfo;
 import ij.IJ;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimDataException;
@@ -53,10 +53,18 @@ public class Sources2Dtests {
 
 		BigWarpData<T> bwdata = BigWarpInit.initData();
 		BigWarpInit.add(bwdata, mvg, 0, 0, true);
+		final SourceInfo mvgInfo = new SourceInfo( 0, true, "mvg", () -> "https://imagej.nih.gov/ij/images/boats.gif" );
+		mvgInfo.setSourceAndConverter( bwdata.sources.get( bwdata.sources.size() - 1 ) );
+		bwdata.sourceInfos.put( 0, mvgInfo );
+
 		BigWarpInit.add(bwdata, tgt, 1, 0, false);
+		final SourceInfo tgtInfo = new SourceInfo( 1, true, "tgt", () -> "https://imagej.nih.gov/ij/images/boats.gif" );
+		bwdata.sourceInfos.put( 1, tgtInfo );
+		tgtInfo.setSourceAndConverter( bwdata.sources.get( bwdata.sources.size() - 1 ) );
+
 		bwdata.wrapUp();
 
-		BigWarp bw = new BigWarp(bwdata, "bw test", null);
+		BigWarp bw = new BigWarp(bwdata, null);
 	}
 
 	public static <T extends NativeType<T> & RealType<T>> Source<T> loadSource( String path, double zOffset )

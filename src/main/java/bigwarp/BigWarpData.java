@@ -1,11 +1,12 @@
 package bigwarp;
 
+import bigwarp.source.SourceInfo;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import bdv.cache.CacheControl;
@@ -28,26 +29,18 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
-import net.imglib2.util.Pair;
 
 public class BigWarpData< T >
 {
 	public List< SourceAndConverter< T > > sources;
 
-	public final Map< Integer, Pair<Supplier <String>, List<SourceAndConverter<?>>>> urls = new HashMap<>();
+	public final LinkedHashMap< Integer, SourceInfo > sourceInfos = new LinkedHashMap<>();
 
 	public List<RealTransform> transforms;
 
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
-
-	public final List< Integer > movingSourceIndexList;
-
-	public final List< Integer > targetSourceIndexList;
-	
-	public final HashMap< SourceAndConverter<T>, Boolean > isMovingMap;
-
 	public final HashMap< Integer, ColorSettings > setupSettings;
 
 	public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
@@ -91,10 +84,6 @@ public class BigWarpData< T >
 			IntStream.range( 0, sources.size() ).forEach(  i -> this.transforms.add( null ));
 		}
 
-		this.movingSourceIndexList = new ArrayList<>();
-		this.targetSourceIndexList = new ArrayList<>();
-		isMovingMap = new HashMap<>();
-
 		if ( cache == null )
 			this.cache = new CacheControl.Dummy();
 		else
@@ -112,10 +101,13 @@ public class BigWarpData< T >
 		this.sources = sources;
 		this.converterSetups = converterSetups;
 
-		this.movingSourceIndexList = movingIndexes;
-		this.targetSourceIndexList = targetIndexes;
-		isMovingMap = new HashMap<>();
-		updateIsMovingMap();
+		for ( int i = 0; i < sources.size(); i++ )
+		{
+			final SourceAndConverter< T > sourceAndConverter = sources.get( i );
+			final SourceInfo sourceInfo = new SourceInfo( i, movingIndexes.contains( i ), sourceAndConverter.getSpimSource().getName() );
+			sourceInfo.setSourceAndConverter( sourceAndConverter );
+			sourceInfos.put( i, sourceInfo );
+		}
 
 		if ( cache == null )
 			this.cache = new CacheControl.Dummy();
@@ -126,16 +118,6 @@ public class BigWarpData< T >
 		sourceColorSettings = new HashMap<>();
 	}
 	
-	private void updateIsMovingMap()
-	{
-		isMovingMap.clear();
-		for( Integer i : movingSourceIndexList )
-			isMovingMap.put( sources.get( i ), true );
-
-		for( Integer i : targetSourceIndexList )
-			isMovingMap.put( sources.get( i ), false );	
-	}
-
 	private static ArrayList<Integer> listOf( int[] x )
 	{
 		final ArrayList< Integer > out = new ArrayList<Integer>();
@@ -147,62 +129,124 @@ public class BigWarpData< T >
 
 	public int numMovingSources()
 	{
-		return movingSourceIndexList.size();
+		final AtomicInteger movingCount = new AtomicInteger();
+		sourceInfos.forEach( (id, info) -> {
+			if (info.isMoving()) movingCount.incrementAndGet();
+		} );
+		return movingCount.get();
 	}
 
+	@SuppressWarnings( "unchecked" )
 	public SourceAndConverter< T > getMovingSource( int i )
 	{
-		return sources.get( movingSourceIndexList.get( i ) );
+		int curIdx = 0;
+		for ( final Map.Entry< Integer, SourceInfo > idToInfo : sourceInfos.entrySet() )
+		{
+			final SourceInfo info = idToInfo.getValue();
+			if (info.isMoving()) {
+				if (curIdx == i) return ( SourceAndConverter< T > ) info.getSourceAndConverter();
+				curIdx++;
+			}
+		}
+		return null;
 	}
 
 	public int numTargetSources()
 	{
-		return targetSourceIndexList.size();
+		return sourceInfos.size() - numMovingSources();
+	}
+
+	public List< Integer > getMovingSourceIndices() {
+		final ArrayList<Integer> indices = new ArrayList<>();
+		int idx = 0;
+		for ( final SourceInfo sourceInfo : sourceInfos.values() )
+		{
+			if ( sourceInfo.isMoving()){
+				indices.add( idx );
+			}
+			idx++;
+		}
+		return indices;
 	}
 
 	public SourceAndConverter< T > getTargetSource( int i )
 	{
-		return sources.get( targetSourceIndexList.get( i ) );
+		int curIdx = 0;
+		for ( final Map.Entry< Integer, SourceInfo > idToInfo : sourceInfos.entrySet() )
+		{
+			final SourceInfo info = idToInfo.getValue();
+			if (!info.isMoving()) {
+				if (curIdx == i) return ( SourceAndConverter< T > ) info.getSourceAndConverter();
+				curIdx++;
+			}
+		}
+		return null;
 	}
 	
 	public List<ConverterSetup> getMovingConverterSetups()
 	{
 		final ArrayList<ConverterSetup> out = new ArrayList<>();
-		for( int i : movingSourceIndexList )
-			out.add( converterSetups.get( i ) );
 
+		final SourceInfo[] infos = sourceInfos.values().toArray(new SourceInfo[]{} );
+		for ( int i = 0; i < infos.length; i++ )
+		{
+			final SourceInfo info = infos[ i ];
+			if (info.isMoving()) {
+				out.add( converterSetups.get( i ) );
+			}
+		}
 		return out;
 	}
 	
 	public List<ConverterSetup> getTargetConverterSetups()
 	{
 		final ArrayList<ConverterSetup> out = new ArrayList<>();
-		for( int i : targetSourceIndexList )
-			out.add( converterSetups.get( i ) );
 
+		final SourceInfo[] infos = sourceInfos.values().toArray(new SourceInfo[]{} );
+		for ( int i = 0; i < infos.length; i++ )
+		{
+			final SourceInfo info = infos[ i ];
+			if (!info.isMoving()) {
+				out.add( converterSetups.get( i ) );
+			}
+		}
 		return out;
 	}
 
-	public boolean isMoving( SourceAndConverter<?> sac ) {
-		if( !isMovingMap.containsKey( sac ))
-			return false;
-		else
-			return isMovingMap.get( sac );
+	public SourceInfo getSourceInfo( int id )
+	{
+		return sourceInfos.get( id );
 	}
 
+	public SourceInfo getSourceInfo( SourceAndConverter< ? > sac )
+	{
+		for ( final SourceInfo info : sourceInfos.values() )
+		{
+			if (info.getSourceAndConverter() == sac) {
+				return info;
+			}
+		}
+		return null;
+	}
+
+	public boolean isMoving( SourceAndConverter<?> sac ) {
+		return getSourceInfo( sac ).isMoving();
+	}
+
+	/**
+	 * @Deprecated only handled maintaing the moving lists, now a no-op
+	 */
+	@Deprecated
 	public void wrapUp()
 	{
-		Collections.sort( movingSourceIndexList );
-		Collections.sort( targetSourceIndexList );
-		updateIsMovingMap();
 	}
 
-	public void addSource( Source<T> src, boolean isMoving )
+	void addSource( Source<T> src, boolean isMoving )
 	{
-		addSource( src, isMoving );
+		addSource( src, isMoving, null );
 	}
 
-	public void addSource( Source<T> src, boolean isMoving, RealTransform transform )
+	void addSource( Source<T> src, boolean isMoving, RealTransform transform )
 	{
 		// find an unused id
 		int id = 0;
@@ -212,37 +256,30 @@ public class BigWarpData< T >
 				id++;
 		}
 		BigWarpInit.add( this, src, id, 0, isMoving, transform );
+		final SourceInfo sourceInfo =
+				sourceInfos.getOrDefault( id,  new SourceInfo( id, isMoving, src.getName(), null, transform ));
+
+		sourceInfo.setSourceAndConverter( sources.get( sources.size() -1 ) );
+		sourceInfos.putIfAbsent( id, sourceInfo);
 	}
 
-	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving )
+	int remove( SourceInfo sourceInfo)
 	{
-		addSourceAndConverter( sac, isMoving, null );
+		final int idx = sources.indexOf( sourceInfo.getSourceAndConverter() );
+		remove( idx );
+		return idx;
 	}
 
-	public void addSourceAndConverter( SourceAndConverter<T> sac, boolean isMoving, RealTransform transform )
-	{
-		sources.add( sac );
-		isMovingMap.put( sac, isMoving );
-		transforms.add( transform ); // transform may be null
-
-		if( isMoving )
-			movingSourceIndexList.add( sources.size() - 1 );
-		else
-			targetSourceIndexList.add( sources.size() - 1 );
-	}
-
-	public void remove( int i )
+	void remove( int i )
 	{
 		SourceAndConverter< T > sac = sources.get( i );
-		System.out.println( sac );
-		System.out.println( isMovingMap );
-		if( isMovingMap.remove( sac ) != null )
-			movingSourceIndexList.remove( movingSourceIndexList.indexOf( i ) );
-		else
-			targetSourceIndexList.remove( targetSourceIndexList.indexOf( i ) );
-
+		final int sacId = sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().get();
+		final SourceInfo sourceInfo = sourceInfos.remove( sacId );
 		sources.remove( i );
-		transforms.remove( i );
+		transforms.remove( sourceInfo.getTransform() );
+		setupSettings.remove( sourceInfo.getId() );
+		sourceColorSettings.remove(sac);
+		converterSetups.remove( i  );
 	}
 
 	public void setTransform( int i, RealTransform transform )

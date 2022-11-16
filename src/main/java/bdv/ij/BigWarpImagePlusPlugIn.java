@@ -171,7 +171,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try
         {
         	new RepeatingReleasedEventsFixer().install();
-			final BigWarp<?> bw = new BigWarp<>( bigwarpdata, "Big Warp",  new ProgressWriterIJ() );
+			final BigWarp<?> bw = new BigWarp<>( bigwarpdata, new ProgressWriterIJ() );
 
 			if( landmarkPath != null && !landmarkPath.isEmpty())
 			{

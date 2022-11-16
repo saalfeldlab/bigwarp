@@ -35,7 +35,7 @@ public class TransformPoints2DTest {
 
         BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages( impBlobs, impBlobs );
 
-        BigWarp bigWarp = new BigWarp(bwData, "2D points transform", null);
+        BigWarp bigWarp = new BigWarp(bwData, null);
 //        bigWarp.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/landmarks2d-blobs.csv" ));
         bigWarp.loadLandmarks( "src/test/resources/landmarks2d-blobs.csv" );
 

@@ -30,6 +30,7 @@ import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bigwarp.BigWarpData;
+import bigwarp.source.SourceInfo;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -163,15 +164,19 @@ public class BigWarpViewerPanel extends ViewerPanel
 		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{
-			// TODO: work backwards to find out whether movingSourceIndexList
-			//  and targetSourceIndexList are required, or whether a
-			//  List<SourceAndConverter<?>> can be used directly
 			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
-			for ( int i : bwData.movingSourceIndexList )
-				moving.add( state.getSources().get( i ) );
 			final List< SourceAndConverter< ? > > target = new ArrayList<>();
-			for ( int i : bwData.targetSourceIndexList )
-				target.add( state.getSources().get( i ) );
+
+			int idx = 0;
+			for ( final SourceInfo sourceInfo : bwData.sourceInfos.values() )
+			{
+				if (sourceInfo.isMoving()) {
+					moving.add( state.getSources().get( idx ) );
+				} else {
+					target.add( state.getSources().get( idx ) );
+				}
+				idx++;
+			}
 
 			state.clearGroups();
 
