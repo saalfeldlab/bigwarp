@@ -3527,7 +3527,10 @@ public class BigWarp< T >
 		autoSaveNode.addContent( autoSavePeriod );
 
 		root.addContent( autoSaveNode );
-		root.addContent( transformMask.getRandomAccessible().toXml() );
+		if ( transformMask != null )
+		{
+			root.addContent( transformMask.getRandomAccessible().toXml() );
+		}
 
 		final Document doc = new Document( root );
 		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
