@@ -729,9 +729,16 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	{
 		private final SetupAssignments setupAssignments;
 
+		private int setupId = -1;
+
 		public ConverterSetupAdapter( final SetupAssignments setupAssignments )
 		{
 			this.setupAssignments = setupAssignments;
+		}
+
+		public void setSetupId( final int setupId )
+		{
+			this.setupId = setupId;
 		}
 
 		@Override
@@ -777,6 +784,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 			final ConverterSetup converterSetupDTO = new ConverterSetupDTO()
 			{
+
+				private final int id = setupId;
 
 				@Override
 				public int getGroupId()
