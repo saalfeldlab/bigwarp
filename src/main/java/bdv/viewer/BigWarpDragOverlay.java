@@ -30,32 +30,34 @@ import java.awt.event.MouseMotionListener;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 import bigwarp.BigWarp;
+import bigwarp.BigWarp.SolveService;
 import bigwarp.BigWarp.SolveThread;
 
 public class BigWarpDragOverlay
 {
 	private BigWarp<?> bw;
 	private BigWarpViewerPanel viewer;
-	
+
 	private boolean inProgress  = false;
 	private boolean completedOK = false;
-	
+
 	private final RealPoint movingPoint;
 	private final RealPoint targetPoint;
-	
+
 	private final RealPoint movingPointScreen;
 	private final RealPoint targetPointScreen;
-	
+
 	WarpDragMouseListener mouseListener;
 	private final AffineTransform3D transform = new AffineTransform3D();
-	
+
 	final int ndim;
 
 	private double arad = 4.0;
 	
 	private Color baseColor;
-	
-	public BigWarpDragOverlay( final BigWarp<?> bw, final BigWarpViewerPanel viewer, final SolveThread solveThread )
+
+//	public BigWarpDragOverlay( final BigWarp<?> bw, final BigWarpViewerPanel viewer, final SolveThread solveThread )
+	public BigWarpDragOverlay( final BigWarp<?> bw, final BigWarpViewerPanel viewer, final SolveService solveService )
 	{
 		this.bw = bw;
 		this.viewer = viewer;
@@ -68,7 +70,8 @@ public class BigWarpDragOverlay
 		arad = viewer.getSettings().getSpotSize();
 		baseColor = viewer.getSettings().getSpotColor();
 
-		mouseListener = new WarpDragMouseListener( bw, viewer, solveThread );
+//		mouseListener = new WarpDragMouseListener( bw, viewer, solveThread );
+		mouseListener = new WarpDragMouseListener( bw, viewer, solveService );
 	}
 	
 	public void reset()
@@ -117,15 +120,18 @@ public class BigWarpDragOverlay
 		private int index;
 		double[] targetPtArray = new double[ ndim ];
 
-		final private SolveThread solverThread;
+//		final private SolveThread solverThread;
+		final private SolveService solveService;
 
-		public WarpDragMouseListener( final BigWarp bw, final BigWarpViewerPanel thisViewer, SolveThread solverThread )
+//		public WarpDragMouseListener( final BigWarp bw, final BigWarpViewerPanel thisViewer, SolveThread solverThread )
+		public WarpDragMouseListener( final BigWarp bw, final BigWarpViewerPanel thisViewer, SolveService solveService )
 		{
 			this.bw = bw;
 			setViewer( thisViewer );
 			thisViewer.getDisplay().addHandler( this );
 
-			this.solverThread = solverThread;
+//			this.solverThread = solverThread;
+			this.solveService = solveService;
 		}
 		
 		protected void setViewer( BigWarpViewerPanel thisViewer )
@@ -211,7 +217,8 @@ public class BigWarpDragOverlay
 				if( bw.isMovingDisplayTransformed() &&
 						bw.getLandmarkPanel().getTableModel().isActive( index ) )
 				{
-					solverThread.requestResolve( false, index, targetPtArray );
+//					solverThread.requestResolve( false, index, targetPtArray );
+					solveService.requestResolve( false, index, targetPtArray );
 				}
 
 				thisViewer.requestRepaint();

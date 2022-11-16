@@ -21,7 +21,6 @@
  */
 package bigwarp.transforms;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
 import bdv.gui.TransformTypeSelectDialog;
@@ -208,8 +207,17 @@ public class BigWarpTransform
 			invXfm = new InvertibleWrapped2DTransformAs3D( invXfm );
 		}
 
-		currentTransform = invXfm;
 		return invXfm;
+	}
+
+	public InvertibleRealTransform getCurrentTransformation()
+	{
+		return currentTransform;
+	}
+
+	public synchronized void setTransformation( InvertibleRealTransform invXfm )
+	{
+		currentTransform = invXfm;
 	}
 
 	public void fitModel( final Model<?> model )

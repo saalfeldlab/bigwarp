@@ -45,8 +45,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -256,8 +261,6 @@ public class BigWarp< T >
 
 	protected LandmarkTableModel landmarkModel;
 
-	protected InvertibleRealTransform currentTransform;
-
 	protected JTable landmarkTable;
 
 	protected LandmarkTableListener landmarkModellistener;
@@ -293,6 +296,8 @@ public class BigWarp< T >
 	private final double[] ptBack;
 
 	private SolveThread solverThread;
+
+	private SolveService solveService;
 
 	private BigWarpTransform bwTransform;
 
@@ -478,13 +483,17 @@ public class BigWarp< T >
 		bwTransform = new BigWarpTransform( landmarkModel );
 		bwTransform.initializeInverseParameters(data);
 
-		solverThread = new SolveThread( this );
-		solverThread.start();
+//		solverThread = new SolveThread( this );
+//		solverThread.start();
+
+		solveService = new SolveService( this );
 
 		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
 
-		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
-		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
+//		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
+//		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
+		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solveService );
+		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solveService );
 		viewerP.addDragOverlay( dragOverlayP );
 		viewerQ.addDragOverlay( dragOverlayQ );
 
@@ -998,18 +1007,23 @@ public class BigWarp< T >
 		return proposedFile;
 	}
 
+	public InvertibleRealTransform getCurrentTransform()
+	{
+		return getBwTransform().getCurrentTransformation();
+	}
+
 	public AffineTransform3D getMovingToFixedTransformAsAffineTransform3D()
 	{
 		double[][] affine3DMatrix = new double[ 3 ][ 4 ];
 		double[][] affine2DMatrix = new double[ 2 ][ 3 ];
 
-		if ( currentTransform == null )
+		if ( getCurrentTransform() == null )
 		{
 			return null;
 		}
 
 		final InvertibleCoordinateTransform transform =
-				( ( WrappedCoordinateTransform ) currentTransform ).getTransform().createInverse();
+				( ( WrappedCoordinateTransform ) getCurrentTransform() ).getTransform().createInverse();
 
 		if ( transform instanceof AffineModel3D )
 		{
@@ -1179,7 +1193,7 @@ public class BigWarp< T >
 		final double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
 
 		final List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data, 
-				this.landmarkModel, this.currentTransform,
+				this.landmarkModel, getCurrentTransform(),
 				fieldOfViewOption, fieldOfViewPointFilter, bboxOptions, fovSpec, offsetSpec, res );
 
 		final List<String> matchedPtNames = new ArrayList<>();
@@ -1370,7 +1384,7 @@ public class BigWarp< T >
 		// TODO avoid duplicate effort and comment this section
 		if ( landmarkModel.getTransform() == null || !isMovingViewerXfm )
 		{
-			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false, currentTransform );
+			landmarkModel.setPoint( selectedPointIndex, isMoving, ptarray, false, getCurrentTransform() );
 
 			if ( !isMoving && !landmarkModel.isWarped( selectedPointIndex ) )
 				landmarkModel.updateWarpedPoint( selectedPointIndex, ptarray );
@@ -1480,10 +1494,10 @@ public class BigWarp< T >
 		final boolean isWarped = ( isMoving && landmarkModel.getTransform() != null && BigWarp.this.isMovingDisplayTransformed() );
 
 		InvertibleRealTransform transform; 
-		if( options.values.is2D()  && currentTransform != null )
-			transform = ((InvertibleWrapped2DTransformAs3D)currentTransform).getTransform();
+		if( options.values.is2D()  && getCurrentTransform() != null )
+			transform = ((InvertibleWrapped2DTransformAs3D)getCurrentTransform()).getTransform();
 		else
-			transform = currentTransform;
+			transform = getCurrentTransform();
 
 		// TODO check this (current transform part)
 		final boolean didAdd = BigWarp.this.landmarkModel.pointEdit( -1, ptarray, false, isMoving, isWarped, true, transform ); 
@@ -2302,8 +2316,6 @@ public class BigWarp< T >
 
 	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
 	{
-		this.currentTransform = transform;
-
 		for ( int i = 0; i < data.movingSourceIndexList.size(); i++ )
 		{
 			final int idx = data.movingSourceIndexList.get( i );
@@ -2339,7 +2351,7 @@ public class BigWarp< T >
 	private synchronized void notifyTransformListeners( )
 	{
 		for ( final TransformListener< InvertibleRealTransform > l : transformListeners )
-			l.transformChanged( currentTransform );
+			l.transformChanged( getCurrentTransform() );
 	}
 
 	private void setTransformationAll( final InvertibleRealTransform transform )
@@ -2394,7 +2406,8 @@ public class BigWarp< T >
 //		else
 //			landmarkModel.transferUpdatesToModel();
 
-		solverThread.requestResolve( true, -1, null );
+//		solverThread.requestResolve( true, -1, null );
+		solveService.requestResolve( true, -1, null );
 
 		// display the warped version automatically if this is the first
 		// time the transform was computed
@@ -2782,7 +2795,7 @@ public class BigWarp< T >
 				else
 				{
 					final boolean isWarped = isMovingLocal && ( landmarkModel.getTransform() != null ) && ( BigWarp.this.isMovingDisplayTransformed() );
-					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true, currentTransform );
+					wasNewRowAdded = BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMovingLocal, isWarped, true, getCurrentTransform() );
 				}
 
 				if ( updateWarpOnPtChange && !wasNewRowAdded )
@@ -2819,7 +2832,8 @@ public class BigWarp< T >
 						BigWarp.this.landmarkModel.isActive( selectedPointIndex ) )
 				{
 					logger.trace("Drag resolve");
-					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
+//					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
+					solveService.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
 				else
 				{
@@ -2841,7 +2855,7 @@ public class BigWarp< T >
 					{
 						logger.trace("Drag default");
 						// The fixed image
-						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false, currentTransform );
+						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false, getCurrentTransform() );
 						thisViewer.requestRepaint();
 					}
 				}
@@ -3151,6 +3165,104 @@ public class BigWarp< T >
 //		return invXfm;
 //	}
 
+	public static class SolveTask implements Runnable {
+		private final int index;
+		private final boolean isMoving;
+		private final double[] pt;
+		private final BigWarp<?> bw;
+
+		public SolveTask( int index, boolean isMoving, double[] pt, BigWarp<?> bw )
+		{
+			this.bw = bw;
+			this.index = index;
+			this.pt = pt;
+			this.isMoving = isMoving;
+		}
+
+		@Override
+		public void run()
+		{
+			try
+			{
+				final InvertibleRealTransform invXfm = bw.bwTransform.getTransformation( index );
+				if ( invXfm == null )
+					return;
+
+				// updates current transform
+				bw.bwTransform.setTransformation( invXfm.copy() );
+
+				if ( index < 0 )
+				{
+					// reset active warped points
+					bw.landmarkModel.resetWarpedPoints();
+
+					// re-compute all warped points for non-active points
+					bw.landmarkModel.updateAllWarpedPoints( bw.getCurrentTransform() );
+
+					// update sources with the new transformation
+					bw.setTransformationAll( invXfm );
+					bw.fitBaselineWarpMagModel();
+				}
+				else
+				{
+					// update the transform and warped point
+					bw.setTransformationMovingSourceOnly( bw.getCurrentTransform() );
+				}
+
+				// update fixed point - but don't allow undo/redo
+				// and update warped point
+				// both for rendering purposes
+				if ( !isMoving )
+				{
+					bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false, bw.getCurrentTransform() );
+				}
+
+				/*
+				 * repaint both panels so that: 
+				 * 1) new transform is displayed
+				 * 2) points are rendered
+				 */
+				bw.getViewerFrameP().getViewerPanel().requestRepaint();
+				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
+			}
+
+			catch ( final RejectedExecutionException e )
+			{
+				// this happens when the rendering threadpool
+				// is killed before the painter thread.
+			}
+		}
+
+	}
+
+	public static class SolveService {
+
+		private BigWarp<?> bw;
+		private ExecutorService exec;
+
+		public SolveService( BigWarp<?> bw )
+		{
+			this.bw = bw;
+			final int poolSize = 1;
+			final int queueSize = 1;
+			RejectedExecutionHandler handler = new ThreadPoolExecutor.DiscardOldestPolicy();
+			exec = new ThreadPoolExecutor(poolSize, poolSize,
+			    0L, TimeUnit.MILLISECONDS,
+			    new LinkedBlockingQueue<>(queueSize),
+			    handler);
+		}
+
+		public void requestResolve( boolean isMoving, int index, double[] pt )
+		{
+			exec.submit( new SolveTask( index, isMoving, pt, bw ) );
+		}
+
+		public void shutdown()
+		{
+			exec.shutdown();
+		}
+	}
+
 	public static class SolveThread extends Thread
 	{
 		private boolean pleaseResolve;
@@ -3185,7 +3297,6 @@ public class BigWarp< T >
 					try
 					{
 						InvertibleRealTransform invXfm = bw.bwTransform.getTransformation( index );
-
 						if ( invXfm == null )
 							return;
 
@@ -3195,7 +3306,7 @@ public class BigWarp< T >
 							bw.landmarkModel.resetWarpedPoints();
 
 							// re-compute all warped points for non-active points
-							bw.landmarkModel.updateAllWarpedPoints( bw.currentTransform );
+							bw.landmarkModel.updateAllWarpedPoints( bw.getCurrentTransform() );
 
 							// update sources with the new transformation
 							bw.setTransformationAll( invXfm );
@@ -3204,7 +3315,8 @@ public class BigWarp< T >
 						else
 						{
 							// update the transform and warped point
-							bw.setTransformationMovingSourceOnly( invXfm );
+//							bw.setTransformationMovingSourceOnly( invXfm );
+							bw.setTransformationMovingSourceOnly( invXfm.copy() );
 						}
 
 						// update fixed point - but don't allow undo/redo
@@ -3212,7 +3324,7 @@ public class BigWarp< T >
 						// both for rendering purposes
 						if ( !isMoving )
 						{
-							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false, bw.currentTransform );
+							bw.getLandmarkPanel().getTableModel().setPoint( index, isMoving, pt, false, bw.getCurrentTransform() );
 						}
 
 						/*
