@@ -60,6 +60,7 @@ import bdv.img.RenamableSource;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
+import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
@@ -67,7 +68,12 @@ import bdv.viewer.SourceAndConverter;
 import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.Loader;
 import bigwarp.loader.XMLLoader;
+import bigwarp.source.SourceInfo;
 import ij.ImagePlus;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.XmlIoSpimData;
@@ -336,72 +342,134 @@ public class BigWarpInit
 		return data;
 	}
 
+	/**
+	 * @return
+	 *
+	 * @Deprecated Use {@link #createSources(BigWarpData, ImagePlus, int, int, boolean)} instaed, and pass output to {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
+	 */
 	@SuppressWarnings( { "rawtypes" } )
-	public static < T > int add( BigWarpData bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	@Deprecated
+	public static < T > int add( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	{
+		final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, ip, setupId, numTimepoints, isMoving );
+		add( bwdata, sources );
+		return sources.size();
+	}
+
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
 		ImagePlusLoader loader = new ImagePlusLoader( ip );
 		SpimDataMinimal[] dataList = loader.loadAll( setupId );
-		final int startSetupId = setupId;
-		final int prevSacCount = bwdata.sources.size();
+
+		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		for ( SpimDataMinimal data : dataList )
 		{
-			add( bwdata, data, setupId, numTimepoints, isMoving );
-			setupId++;
+			final LinkedHashMap< Source< T >, SourceInfo > map = createSources( bwdata, data, setupId, isMoving );
+			sourceInfoMap.putAll( map );
+			setupId += map.values().stream().map( SourceInfo::getId ).max( Integer::compare ).orElseGet( () -> 0 );
 		}
 
-		final int postSacCount = bwdata.sources.size();
-		final List<SourceAndConverter<?>> addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
-		final BigWarpData< ? > bigwarpData = bwdata;
-		bigwarpData.urls.put( startSetupId, new ValuePair<>(() -> {
-			final FileInfo originalFileInfo = ip.getOriginalFileInfo();
-			if (originalFileInfo != null) {
-				final String url = originalFileInfo.url;
-				if ( url != null && !url.isEmpty() )
-				{
-					return url;
-				} else  {
-					return originalFileInfo.getFilePath();
+		sourceInfoMap.forEach( ( sac, state ) -> {
+			state.setUriSupplier(() -> {
+				final FileInfo originalFileInfo = ip.getOriginalFileInfo();
+				if (originalFileInfo != null) {
+					final String url = originalFileInfo.url;
+					if ( url != null && !url.isEmpty() )
+					{
+						return url;
+					} else  {
+						return originalFileInfo.getFilePath();
+					}
 				}
-			}
-			return null;
-		}, new ArrayList<>(addedSacs)) );
+				return null;
+			} );
+			final ImagePlusLoader.ColorSettings colorSettings = bwdata.setupSettings.get( state.getId() );
+			state.setColorSettings( colorSettings );
+		} );
 
-
-		loader.update(bwdata);
-		return loader.numSources();
+		for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sourceInfoMap.entrySet() )
+		{
+			sourceSourceInfoEntry.getValue().setSerializable( true );
+			/* Always break after the first */
+			break;
+		}
+		return sourceInfoMap;
 	}
 
+	/**
+	 * @return
+	 *
+	 * @Deprecated Use the output from one of the {{@link #createSources(BigWarpData, String, int, boolean)}} to call {{@link #add(BigWarpData, LinkedHashMap)}} instead
+	 */
 	@SuppressWarnings( { "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
+	@Deprecated
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
 		return add( bwdata, src, setupId, numTimepoints, isMoving, null );
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo ) {
+		return add( bwdata, source, sourceInfo );
+	}
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform) {
+		final LinkedHashMap< Source< T >, SourceInfo > sourceToInfo = new LinkedHashMap<>();
+		sourceToInfo.put( source, sourceInfo );
+		return add(bwdata, sourceToInfo, transform);
+	}
+
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources )
 	{
-		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
-		bwdata.transforms.add( transform );
-
-		int N = bwdata.sources.size();
-		if ( isMoving )
-			bwdata.movingSourceIndexList.add( N - 1 );
-		else
-			bwdata.targetSourceIndexList.add( N - 1 );
-
+		add( bwdata, sources, null );
 		return bwdata;
 	}
 
+	/**
+	 * @return
+	 *
+	 * @Deprecated Use the output from one of the {{@link #createSources(BigWarpData, String, int, boolean)}} to call {{@link #add(BigWarpData, LinkedHashMap, RealTransform)}} instead
+	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, int numTimepoints, boolean isMoving )
+	@Deprecated
+	public static < T > BigWarpData< T > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
+	{
+		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
+		bwdata.transforms.add( transform );
+		return bwdata;
+	}
+
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform )
+	{
+		sources.forEach( ( source, info ) -> {
+			addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
+			final SourceAndConverter<T> addedSource = bwdata.sources.get( bwdata.sources.size() -1  );
+			info.setSourceAndConverter( addedSource );
+
+			if ( transform != null )
+			{
+				info.setTransform( transform );
+				bwdata.transforms.add( transform );
+			}
+			bwdata.sourceInfos.put( info.getId(), info );
+		} );
+		return bwdata;
+	}
+
+	@SuppressWarnings( { "rawtypes" } )
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, final boolean isMoving )
 	{
 		final List<SourceAndConverter<?>> tmpSources = new ArrayList<>();
 		final List<ConverterSetup> tmpConverterSetups = new ArrayList<>();
 		initSetups( data, tmpConverterSetups, tmpSources );
 
+		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		int setupId = baseId;
-		for( SourceAndConverter sac : tmpSources )
-			add( bwdata, sac.getSpimSource(), setupId++, numTimepoints, isMoving );
+		for ( SourceAndConverter sac : tmpSources )
+		{
+			final Source<T> source = sac.getSpimSource();
+			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
+		}
+
+		return sourceInfoMap;
 
 //		int N = bwdata.sources.size();
 //		final ArrayList<Integer > idxList;
@@ -412,10 +480,7 @@ public class BigWarpInit
 //
 //		for( int i = startSize; i < N; i++ )
 //			idxList.add( i );
-//
-		return bwdata;
 	}
-
 
 	private static String schemeSpecificPartWithoutQuery( URI uri )
 	{
@@ -551,46 +616,58 @@ public class BigWarpInit
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
 
-	public static SpimData addToData( final BigWarpData<?> bwdata,
-			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
+	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources(
+			final BigWarpData< T > bwdata,
+			final boolean isMoving,
+			final int setupId,
+			final String rootPath,
+			final String dataset,
+			final AtomicReference< SpimData > returnMovingSpimData )
 	{
 		if( rootPath.endsWith( "xml" ))
 		{
 			SpimData spimData;
 			try
 			{
-				final int prevSacCount = bwdata.sources.size();
 				spimData = new XmlIoSpimData().load( rootPath );
-				add( bwdata, spimData, setupId, 0, isMoving );
-				final int postSacCount = bwdata.sources.size();
+				if ( returnMovingSpimData != null && isMoving )
+				{
+					returnMovingSpimData.set( spimData );
+				}
+				final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, spimData, setupId, isMoving );
 
-				final List< ? extends SourceAndConverter< ? > > addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
-				bwdata.urls.put( setupId, new ValuePair<>( () -> {
-					try
-					{
-						return spimData.getBasePath().getCanonicalPath();
-					}
-					catch ( IOException e )
-					{
-						return null;
-					}
-				}, new ArrayList<>(addedSacs) ) );
+				sources.forEach( ( source, state ) -> {
+					state.setUriSupplier( () -> {
+						try
+						{
+							return spimData.getBasePath().getCanonicalPath();
+						}
+						catch ( IOException e )
+						{
+							return null;
+						}
+					} );
+				} );
 
-				if ( isMoving )
-					return spimData;
+				for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sources.entrySet() )
+				{
+					sourceSourceInfoEntry.getValue().setSerializable( true );
+					/* Always break after the first */
+					break;
+				}
+				return sources;
 			}
 			catch ( SpimDataException e ) { e.printStackTrace(); }
 			return null;
 		}
 		else
 		{
-			final int prevSacCount = bwdata.sources.size();
-			BigWarpInit.add(bwdata, loadN5Source(rootPath, dataset), setupId, 0, isMoving);
-			final int postSacCount = bwdata.sources.size();
-			final List< ? extends SourceAndConverter< ? > > addedSacs = bwdata.sources.subList( prevSacCount, postSacCount );
-			//TODO Caleb: Canonicalize the URL?
-			bwdata.urls.put( setupId, new ValuePair<>(() -> rootPath + "?" + dataset, new ArrayList<>(addedSacs)));
-			return null;
+			final LinkedHashMap< Source< T >, SourceInfo > map = new LinkedHashMap<>();
+			final Source< T > source = loadN5Source( rootPath, dataset );
+			final SourceInfo info = new SourceInfo( setupId, isMoving, dataset, () -> rootPath + "$" + dataset );
+			info.setSerializable( true );
+			map.put( source, info );
+			return map;
 		}
 	}
 
