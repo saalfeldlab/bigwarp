@@ -418,23 +418,27 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		private void readGroups( final JsonReader in ) throws IOException
 		{
 			in.beginArray();
+			final SynchronizedViewerState state = panel.state();
+			state.setGroupsActive( state.getActiveGroups(), false );
+			state.removeGroups( state.getGroups() );
 			int i = 0;
 			while ( in.hasNext() )
 			{
 				in.beginObject();
-				final SynchronizedViewerState state = panel.state();
-				final bdv.viewer.SourceGroup group = state.getGroups().get( i++ );
-
+				final bdv.viewer.SourceGroup group = new bdv.viewer.SourceGroup();
+				state.addGroup( group );
 				while ( in.hasNext() )
 				{
 
 					switch ( in.nextName() )
 					{
 					case XmlIoViewerState.VIEWERSTATE_GROUP_ACTIVE_TAG:
-						state.setGroupActive( group, in.nextBoolean() );
+						final boolean active = in.nextBoolean();
+						state.setGroupActive( group, active );
 						break;
 					case XmlIoViewerState.VIEWERSTATE_GROUP_NAME_TAG:
-						state.setGroupName( group, in.nextString() );
+						final String name = in.nextString();
+						state.setGroupName( group, name );
 						break;
 					case XmlIoViewerState.VIEWERSTATE_GROUP_SOURCEID_TAG:
 						state.removeSourcesFromGroup( new ArrayList<>( state.getSourcesInGroup( group ) ), group );
