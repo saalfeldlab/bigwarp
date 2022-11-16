@@ -69,7 +69,6 @@ public class BigWarpActions
 
 	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
-	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
 	public static final String SHOW_HELP = "help";
 	public static final String SHOW_SOURCE_INFO = "show source info";
@@ -248,7 +247,6 @@ public class BigWarpActions
 //		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
 //		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
 
-		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
@@ -309,7 +307,6 @@ public class BigWarpActions
 
 		new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ).put( actionMap );
 
-		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_SOURCE_INFO, bw.sourceInfoDialog ).put( actionMap );
 

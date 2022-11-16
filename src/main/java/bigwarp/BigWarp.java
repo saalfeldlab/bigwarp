@@ -102,7 +102,6 @@ import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
-import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.Bounds;
@@ -493,7 +492,6 @@ public class BigWarp< T >
 
 		setupAssignments = new SetupAssignments( new ArrayList<>( data.converterSetups ), 0, 65535 );
 
-		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
 		sourceInfoDialog = new SourceInfoDialog( landmarkFrame, data );
 
@@ -881,10 +879,6 @@ public class BigWarp< T >
 
 		toggleAlwaysWarpMenu.setText( "Toggle warp on drag" );
 		settingsMenu.add( toggleAlwaysWarpMenu );
-
-		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
-		miBrightness.setText( "Brightness & Color" );
-		settingsMenu.add( miBrightness );
 
 		/* */
 		final JMenuItem transformTypeMenu = new JMenuItem( actionMap.get( BigWarpActions.TRANSFORM_TYPE ) );
