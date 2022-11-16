@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.concurrent.ExecutorService;
@@ -14,6 +15,7 @@ import java.util.function.Consumer;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -30,6 +32,9 @@ import org.janelia.saalfeldlab.n5.metadata.canonical.CanonicalDatasetMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
 import org.janelia.saalfeldlab.n5.ui.N5DatasetTreeCellRenderer;
+import org.scijava.command.Command;
+import org.scijava.plugin.Plugin;
+import org.scijava.plugin.SciJavaPlugin;
 
 import com.formdev.flatlaf.util.UIScale;
 
@@ -41,20 +46,23 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import ij.IJ;
-import ij.ImageJ;
+//import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Prefs;
 import ij.WindowManager;
+import ij.plugin.frame.Recorder;
 import mpicbg.spim.data.SpimDataException;
+import net.imagej.ImageJ;
 import net.imglib2.realtransform.RealTransform;
 
-
-public class BigWarpInitDialog extends JFrame
+//@Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp 8" )
+public class BigWarpInitDialog extends JFrame //implements Command
 {
-
 	private static final long serialVersionUID = -2914972130819029899L;
-	private JTextField containerPathText, transformPathText;
 
+	private boolean imageJOpen;
+
+	private JTextField containerPathText, transformPathText;
 	private String initialPath;
 	private JLabel messageLabel;
 	private JButton okBtn, cancelBtn;
@@ -67,19 +75,27 @@ public class BigWarpInitDialog extends JFrame
 	private DatasetSelectorDialog selectionDialog;
 
 	private String lastOpenedContainer = "";
+	private String lastBrowsePath = "";
 	private ExecutorService exec;
 
     private Consumer<BigWarpSourceTableModel> okayCallback;
     private Consumer<BigWarpSourceTableModel> cancelCallback;
+	private Consumer< String > imagePathUpdateCallback, transformPathUpdateCallback;
 
 	private static final int DEFAULT_OUTER_PAD = 8;
 	private static final int DEFAULT_BUTTON_PAD = 3;
 	private static final int DEFAULT_MID_PAD = 5;
+	
+	public BigWarpInitDialog()
+	{
+//		this( "BigWarp" );
+	}
 
 	public BigWarpInitDialog( final String title )
 	{
 		super( title );
 		initialPath = "";
+		imageJOpen = IJ.getInstance() != null;
 
 		buildN5SelectionDialog();
         final Container content = getContentPane();
@@ -90,8 +106,38 @@ public class BigWarpInitDialog extends JFrame
 
         cancelCallback = x -> {};
 		okayCallback = x -> {
+			macroRecord( x );
 			runBigWarp( x );
 		};
+		
+		imagePathUpdateCallback = ( p ) -> { 
+			System.out.println( "add image: " + p ); 
+			addPath();
+		};
+
+		transformPathUpdateCallback = ( p ) -> { 
+			System.out.println( "add transform: " + p ); 
+			addTransform();
+		};
+	}
+
+	public static void main( String[] args )
+	{
+		ImageJ ij2 = new ImageJ();
+		ij2.ui().showUI();
+
+//		ImageJ ij = new ImageJ();
+//
+//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
+//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
+//
+////		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
+////		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
+//
+////		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
+////		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+//
+//		createAndShowGUI();
 	}
 
 	public static void addTransform( BigWarpData<?> data, SourceRow tableRow )
@@ -148,7 +194,7 @@ public class BigWarpInitDialog extends JFrame
 		try
 		{
 			data.applyTransformations();
-			BigWarp<?> bw = new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
+			new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
 		}
 		catch ( SpimDataException e )
 		{
@@ -238,7 +284,9 @@ public class BigWarpInitDialog extends JFrame
 		cbrowse.fill = GridBagConstraints.HORIZONTAL;
 		cbrowse.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 		browseBtn = new JButton("Browse");
+		browseBtn.addActionListener( e -> { browseImageDialog(); } );
 		panel.add(browseBtn, cbrowse);
+
 
 		// add image / n5
 		ctxt.gridy = 1;
@@ -274,6 +322,7 @@ public class BigWarpInitDialog extends JFrame
 		panel.add( addTransformButton, cadd );
 
 		browseTransformButton = new JButton("Browse");
+		browseTransformButton.addActionListener( e -> { browseTransformDialog(); } );
 		cbrowse.gridy = 2;
 		panel.add( browseTransformButton, cbrowse );
 
@@ -383,7 +432,7 @@ public class BigWarpInitDialog extends JFrame
 
 	protected void addImagePlus()
 	{
-		if ( IJ.getInstance() == null )
+		if ( !imageJOpen )
 			return;
 
 		final String title = (String)(imagePlusDropdown.getSelectedItem());
@@ -392,7 +441,7 @@ public class BigWarpInitDialog extends JFrame
 
 	protected void addImagePlus( String title )
 	{
-		if ( IJ.getInstance() == null )
+		if ( !imageJOpen )
 			return;
 
 		final ImagePlus imp = WindowManager.getImage( title );
@@ -429,7 +478,7 @@ public class BigWarpInitDialog extends JFrame
 
 	protected void updateImagePlusDropdown()
 	{
-		if( IJ.getInstance() == null )
+		if( !imageJOpen )
 			return;
 
 		// don't need any open windows if we're using N5
@@ -462,27 +511,114 @@ public class BigWarpInitDialog extends JFrame
 			addImagePlus( ( String ) imagePlusDropdown.getItemAt( 1 ) );
 	}
 
-    private static void createAndShowGUI() {
+    public static void createAndShow() {
         //Create and set up the window.
         BigWarpInitDialog frame = new BigWarpInitDialog("BigWarp");
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
- 
         frame.setVisible(true);
     }
 
-	public static void main( String[] args )
+	private String browseDialogGeneral()
 	{
-		ImageJ ij = new ImageJ();
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
 
-//		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
-//		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
+		final JFileChooser fileChooser = new JFileChooser();
+		/*
+		 * Need to allow files so h5 containers can be opened, and directories
+		 * so that filesystem n5's and zarrs can be opened.
+		 */
+		fileChooser.setFileSelectionMode( JFileChooser.FILES_AND_DIRECTORIES );
 
-		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+		if ( lastBrowsePath != null && !lastBrowsePath.isEmpty() )
+			fileChooser.setCurrentDirectory( new File( lastBrowsePath ) );
+		else if ( initialPath != null && !initialPath.isEmpty() )
+			fileChooser.setCurrentDirectory( new File( initialPath ) );
+		else if ( imageJOpen )
+		{
+			File f = null;
 
-		createAndShowGUI();
+			final String currDir = IJ.getDirectory( "current" );
+			final String homeDir = IJ.getDirectory( "home" );
+			if ( currDir != null )
+				f = new File( currDir );
+			else if ( homeDir != null )
+				f = new File( homeDir );
+
+			fileChooser.setCurrentDirectory( f );
+		}
+
+		final int ret = fileChooser.showOpenDialog( this );
+		if ( ret != JFileChooser.APPROVE_OPTION )
+			return null;
+
+		final String path = fileChooser.getSelectedFile().getAbsolutePath();
+		lastBrowsePath = path;
+
+		return path;
+	}
+
+	public void setImagePathUpdateCallback( final Consumer< String > callback )
+	{
+		this.imagePathUpdateCallback = callback;
+	}
+
+	public void setTransformPathUpdateCallback( final Consumer< String > callback )
+	{
+		this.transformPathUpdateCallback = callback;
+	}
+
+	private String browseImageDialog()
+	{
+		final String s = browseDialogGeneral();
+		containerPathText.setText( s );
+		if ( imagePathUpdateCallback != null )
+			imagePathUpdateCallback.accept( s );
+
+		return s;
+	}
+
+	private String browseTransformDialog()
+	{
+		final String s = browseDialogGeneral();
+		transformPathText.setText( s );
+		if ( transformPathUpdateCallback != null )
+			transformPathUpdateCallback.accept( s );
+
+		return s;
+	}
+
+	public String macroRecord( BigWarpSourceTableModel sourceTable )
+	{
+		// make source list
+		StringBuffer sourceList = new StringBuffer();
+		StringBuffer movingList = new StringBuffer();
+		StringBuffer transformList = new StringBuffer();
+
+		final int N = sourceTable.getRowCount();
+		for( int i = 0; i < N; i++ )
+		{
+			sourceList.append( sourceTable.get( i ).srcName );
+			movingList.append( sourceTable.get( i ).moving );
+			transformList.append( sourceTable.get( i ).transformName );
+			if( i < N -1 )
+			{
+				sourceList.append( "," );
+				movingList.append( "," );
+				transformList.append( "," );
+			}
+		}
+
+//		if ( imageJOpen && Recorder.record )
+//		{
+//			Recorder.resetCommandOptions();
+//
+////			Recorder.recordOption(n5PathKey, n5RootAndDataset);
+////
+////			if (virtual)
+////			  Recorder.recordOption(virtualKey);
+//
+//			return Recorder.getCommandOptions();
+//		}
+		return "";
 	}
 
 }
