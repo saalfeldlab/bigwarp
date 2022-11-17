@@ -265,7 +265,8 @@ public class ImagePlusLoader implements Loader
 		for ( int s = 0; s < numSetups; ++s )
 		{
 			final int id = setupIdOffset + s;
-			final BasicViewSetup setup = new BasicViewSetup( setupIdOffset + s, String.format( "%s channel %d", imp.getTitle(), id + 1 ), size, voxelSize );
+			final String title = numSetups > 1 ? String.format( "%s channel %d", imp.getTitle(), id + 1 ) : imp.getTitle();
+			final BasicViewSetup setup = new BasicViewSetup( setupIdOffset + s, title, size, voxelSize );
 			setup.setAttribute( new Channel( id + 1 ) );
 			setups.put( id, setup );
 
