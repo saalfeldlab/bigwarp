@@ -29,12 +29,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import ij.io.FileInfo;
 import java.util.Objects;
-import net.imglib2.util.ValuePair;
 import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
@@ -509,7 +506,6 @@ public class BigWarpInit
 		String encodedUriString = tmpUri.getRawSchemeSpecificPart();
 		encodedUriString = encodedUriString.replaceAll( "%23", "#" );
 		URI firstUri = new URI( encodedUriString );
-		final int prevSacCount = bwData.sources.size();
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( firstUri.isOpaque() )
 		{
@@ -540,7 +536,7 @@ public class BigWarpInit
 			}
 
 			final Source< T > source = loadN5Source( n5reader, dataset );
-			sourceStateMap.put( source, new SourceInfo( setupId, isMoving ) );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset) );
 		}
 		else
 		{
@@ -557,7 +553,7 @@ public class BigWarpInit
 				final String datasetQuery = firstUri.getQuery();
 				final String dataset = datasetQuery == null ? "/" : datasetQuery;
 				final Source< T > source = loadN5Source( n5reader, dataset );
-				sourceStateMap.put( source, new SourceInfo( setupId, isMoving ) );
+				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset ) );
 			}
 			catch ( Exception ignored )
 			{
