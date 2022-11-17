@@ -35,7 +35,6 @@ public class BigWarpData< T >
 	public List< SourceAndConverter< T > > sources;
 
 	public final LinkedHashMap< Integer, SourceInfo > sourceInfos = new LinkedHashMap<>();
-
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
@@ -245,11 +244,9 @@ public class BigWarpData< T >
 				id++;
 		}
 		BigWarpInit.add( this, src, id, 0, isMoving, transform );
-		final SourceInfo sourceInfo =
-				sourceInfos.getOrDefault( id,  new SourceInfo( id, isMoving, src.getName(), null, transform ));
-
+		final SourceInfo sourceInfo = new SourceInfo( id, isMoving, src.getName(), null, transform );
 		sourceInfo.setSourceAndConverter( sources.get( sources.size() -1 ) );
-		sourceInfos.putIfAbsent( id, sourceInfo);
+		sourceInfos.put( id, sourceInfo);
 	}
 
 	int remove( SourceInfo sourceInfo)
