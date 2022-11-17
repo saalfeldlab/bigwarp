@@ -290,7 +290,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				in.endObject();
 			}
 			in.endObject();
-			bigwarp.synchronizeSources();
+			bigwarp.initialize();
 			return bigwarp.data.sourceInfos;
 		}
 	}

@@ -577,8 +577,13 @@ public class BigWarp< T >
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
 
+		baselineModelIndex = 0;
 		if( data.sources.size() > 0 )
 			initialize();
+
+		createMovingTargetGroups();
+		viewerP.state().setCurrentGroup( mvgGrp );
+		viewerP.state().setCurrentGroup( tgtGrp );
 	}
 
 	public void initialize()
@@ -591,9 +596,11 @@ public class BigWarp< T >
 		if( data.numTargetSources() > 0 )
 			data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
 
-		baselineModelIndex = 0;
-		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
 
+//TODO Expose adding these sources via UI
+
+//		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
+//
 //		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
 //		jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
 //		gridSource = addGridSource( data, "GridSource" );
@@ -638,9 +645,6 @@ public class BigWarp< T >
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
 
-		createMovingTargetGroups();
-		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerP.state().setCurrentGroup( tgtGrp );
 	}
 
 	public void synchronizeSources()
@@ -1923,7 +1927,7 @@ public class BigWarp< T >
 		int i = 0;
 		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
 		{
-			if ( sourceInfo.isMoving() )
+			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
 			{
 				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );

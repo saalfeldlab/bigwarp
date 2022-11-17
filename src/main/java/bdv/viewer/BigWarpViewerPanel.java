@@ -211,7 +211,17 @@ public class BigWarpViewerPanel extends ViewerPanel
 		if( bwData.numMovingSources() < 1 )
 			return true;
 		else
+		{
+			// final Source< ? > spimSource = bwData.getMovingSource( 0 ).getSpimSource();
+			// final boolean isTransformed;
+			// if (spimSource instanceof  WarpedSource<?>) {
+			// 	isTransformed = ( ( WarpedSource< ? > ) spimSource ).isTransformed();
+			// } else {
+			// 	isTransformed = false;
+			// }
+			// return !isMoving || isTransformed;
 			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
+		}
 	}
 
 	public boolean doUpdateOnDrag()
