@@ -568,7 +568,7 @@ public class BigWarpInit
 					final ImagePlus ijp;
 					if ( Objects.equals( firstUri.getScheme(), "imagej" ) )
 					{
-						final String title = firstUri.getPath();
+						final String title = schemeSpecificPartWithoutQuery( firstUri );
 						IJ.selectWindow( title );
 						ijp = IJ.getImage();
 					}
