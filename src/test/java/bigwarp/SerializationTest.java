@@ -13,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
+import ij.ImagePlus;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -21,7 +22,10 @@ import java.io.PipedReader;
 import java.io.PipedWriter;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.FinalInterval;
 import net.imglib2.RealPoint;
@@ -221,7 +225,7 @@ public class SerializationTest
 	}
 
 	@Test
-	public void sourceSerializationTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	public void sourceFromFileTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp( "/tmp/img8270806677315563879.tif" );
 		bw.loadSettings("src/test/resources/settings/expected.json");
@@ -237,6 +241,93 @@ public class SerializationTest
 			Assert.assertEquals("Name Mismatch", "img8270806677315563879.tif channel " + (id + 1), info.getName());
 			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
 		} );
+	}
+
+	@Test
+	public void sourceFromImageJTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	{
+		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
+		img.show();
+
+		final String imagejUri = "imagej://generated image";
+		final Path xmlSourceSettings = createNewSettingsWithReplacement(
+				"src/test/resources/settings/expected.json",
+				"/tmp/img8270806677315563879.tif",
+				imagejUri );
+
+		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
+		// Grab the sources
+		// Compare the ids, urls, isMoving status, and isActive
+		Assert.assertEquals("Wrong Number of Sources", 4, bw.data.sources.size());
+		Assert.assertEquals("Wrong Number of Moving Sources", 2, bw.data.numMovingSources());
+		Assert.assertEquals("Wrong Number of Target Sources", 2, bw.data.numTargetSources());
+		final boolean[] movingById = { true, true, false, false };
+		bw.data.sourceInfos.forEach( (id, info) -> {
+
+			Assert.assertEquals("URI Mismatch", imagejUri, info.getUri());
+			Assert.assertEquals("Name Mismatch", "generated image", info.getName());
+			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
+		} );
+	}
+
+	@Test
+	public void sourceFromXmlTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	{
+		final String xmlUri = "src/test/resources/mri-stack.xml";
+		final Path xmlSourceSettings = createNewSettingsWithReplacement(
+				"src/test/resources/settings/expected.json",
+				"/tmp/img8270806677315563879.tif",
+				xmlUri );
+
+		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
+		// Grab the sources
+		// Compare the ids, urls, isMoving status, and isActive
+		Assert.assertEquals("Wrong Number of Sources", 4, bw.data.sources.size());
+		Assert.assertEquals("Wrong Number of Moving Sources", 2, bw.data.numMovingSources());
+		Assert.assertEquals("Wrong Number of Target Sources", 2, bw.data.numTargetSources());
+		final boolean[] movingById = { true, true, false, false };
+		bw.data.sourceInfos.forEach( (id, info) -> {
+
+			Assert.assertEquals("URI Mismatch", xmlUri, info.getUri());
+			Assert.assertEquals("Name Mismatch", "channel 1", info.getName());
+			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
+		} );
+	}
+
+	@Test
+	public void sourceFromN5Test() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	{
+		final String n5Uri = "src/test/resources/bigwarp/url/transformTest.n5?img";
+		final Path xmlSourceSettings = createNewSettingsWithReplacement(
+				"src/test/resources/settings/expected.json",
+				"/tmp/img8270806677315563879.tif",
+				n5Uri );
+
+		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
+		// Grab the sources
+		// Compare the ids, urls, isMoving status, and isActive
+		Assert.assertEquals("Wrong Number of Sources", 4, bw.data.sources.size());
+		Assert.assertEquals("Wrong Number of Moving Sources", 2, bw.data.numMovingSources());
+		Assert.assertEquals("Wrong Number of Target Sources", 2, bw.data.numTargetSources());
+		final boolean[] movingById = { true, true, false, false };
+		bw.data.sourceInfos.forEach( (id, info) -> {
+
+			Assert.assertEquals("URI Mismatch", n5Uri, info.getUri());
+			Assert.assertEquals("Name Mismatch", "img", info.getName());
+			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
+		} );
+	}
+
+	private static Path createNewSettingsWithReplacement( final String baseSettings, final String toReplace, final String replaceWith ) throws IOException
+	{
+		/* Load expected.json and replace source path with desired uri */
+		final Path settings = Paths.get( baseSettings );
+		final List< String > newLines = Files.readAllLines( settings ).stream().map( line -> line.replaceAll( toReplace, replaceWith ) ).collect( Collectors.toList());
+		final Path newSettings = Files.createTempFile( "settings", "json" );
+		return Files.write( newSettings, newLines );
 	}
 
 	/* When creating and closing multiple BigWarp instances, occassionally the comparison test fails.
