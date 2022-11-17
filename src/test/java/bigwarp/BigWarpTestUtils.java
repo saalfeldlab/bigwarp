@@ -32,7 +32,6 @@ import net.imglib2.position.FunctionRandomAccessible;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.view.Views;
 import org.junit.Assert;
-import org.scijava.util.FileUtils;
 
 public class BigWarpTestUtils
 {
@@ -44,6 +43,7 @@ public class BigWarpTestUtils
 		try
 		{
 			tmpImgPath = Files.createTempFile( title, "." + format );
+			//noinspection ResultOfMethodCallIgnored
 			tmpImgPath.toFile().delete();
 		}
 		catch ( IOException e )
@@ -62,6 +62,7 @@ public class BigWarpTestUtils
 		}
 		catch ( Exception e )
 		{
+			//noinspection ResultOfMethodCallIgnored
 			tmpImgPath.toFile().delete();
 			throw new RuntimeException( e );
 		}
@@ -90,12 +91,14 @@ public class BigWarpTestUtils
 		try
 		{
 			tmpImg = Files.createTempFile( title, "." + format );
+			//noinspection ResultOfMethodCallIgnored
 			tmpImg.toFile().delete();
 			return create2DImage( tmpImg);
 		}
 		catch ( Exception e )
 		{
 			if (tmpImg != null) {
+				//noinspection ResultOfMethodCallIgnored
 				tmpImg.toFile().delete();
 			}
 			throw new RuntimeException( e );
@@ -107,7 +110,7 @@ public class BigWarpTestUtils
 
 		final ImagePlus img3d = NewImage.createByteImage( title, 8, 8, 4, NewImage.FILL_RAMP );
 
-		Path tmpStackDir = null;
+		Path tmpStackDir;
 		try
 		{
 
@@ -117,9 +120,6 @@ public class BigWarpTestUtils
 		}
 		catch ( IOException e )
 		{
-			if (tmpStackDir != null) {
-				FileUtils.deleteRecursively( tmpStackDir.toFile() );
-			}
 			throw new RuntimeException( e );
 		}
 	}
@@ -127,6 +127,7 @@ public class BigWarpTestUtils
 	public static void assertJsonDiff( final JsonElement expectedJson, final JsonElement actualJson )
 	{
 		final Gson gson = new Gson();
+		//noinspection UnstableApiUsage
 		Type mapType = new TypeToken< Map< String, Object > >()
 		{
 		}.getType();
@@ -213,12 +214,6 @@ public class BigWarpTestUtils
 	static < T > BigWarp< T > createBigWarp(String sourcePath, boolean... moving ) throws SpimDataException, URISyntaxException, IOException
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
-		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
-				3,
-				( l, v ) -> v.setOne(),
-				UnsignedByteType::new );
-		ImagePlus imp = ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32, 1 ) ), "img" );
-
 		if (sourcePath != null) {
 			createTemp3DImage( Paths.get(sourcePath) );
 		}
@@ -230,9 +225,17 @@ public class BigWarpTestUtils
 			final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, tmpPath, i, moving[ i ] );
 			BigWarpInit.add( data, sources );
 		}
-		data.wrapUp();
 		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
 		return new BigWarp<>( data, opts, null );
+	}
+
+	static ImagePlus generateImagePlus( final String title )
+	{
+		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
+				3,
+				( l, v ) -> v.setOne(),
+				UnsignedByteType::new );
+		return ImageJFunctions.wrap( Views.interval( fimg, new FinalInterval( 32, 32, 1 ) ), title );
 	}
 
 	public static void main( String[] args ) throws SpimDataException, URISyntaxException, IOException
