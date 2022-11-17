@@ -28,7 +28,7 @@ import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
 import bdv.ij.util.ProgressWriterIJ;
 import bigwarp.BigWarp;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
@@ -171,7 +171,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
         try
         {
         	new RepeatingReleasedEventsFixer().install();
-			final BigWarp<?> bw = new BigWarp<>( bigwarpdata, "Big Warp",  new ProgressWriterIJ() );
+			final BigWarp<?> bw = new BigWarp<>( bigwarpdata, new ProgressWriterIJ() );
 
 			if( landmarkPath != null && !landmarkPath.isEmpty())
 			{

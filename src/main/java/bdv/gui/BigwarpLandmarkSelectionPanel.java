@@ -45,7 +45,7 @@ import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import net.imglib2.Interval;
 
 public class BigwarpLandmarkSelectionPanel<T> extends JPanel
@@ -138,11 +138,7 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				System.out.println("ok");
 				filterPoints( matchedPtNames, outputIntervalList, selectionTable );
-
-				System.out.println( matchedPtNames );
-				System.out.println( outputIntervalList );
 
 				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
@@ -158,7 +154,6 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				//System.out.println("cancel");
 				frame.dispatchEvent(new WindowEvent(frame, WindowEvent.WINDOW_CLOSING));
 			}
 		});

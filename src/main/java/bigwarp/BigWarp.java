@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -21,22 +21,18 @@
  */
 package bigwarp;
 
-import bdv.viewer.ConverterSetups;
-import bdv.viewer.DisplayMode;
-import bdv.viewer.TransformListener;
-import bdv.viewer.ViewerState;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.FileDialog;
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
-import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -69,12 +65,10 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
-import mpicbg.spim.data.SpimData;
-import mpicbg.spim.data.XmlIoSpimData;
-import mpicbg.spim.data.registration.ViewTransformAffine;
-
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.utility.geom.BoundingSphereRitter;
+import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 import org.jdom2.Document;
 import org.jdom2.Element;
@@ -86,8 +80,9 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.stream.JsonReader;
+
 import bdv.BigDataViewer;
-import bdv.cache.CacheControl;
 import bdv.export.ProgressWriter;
 import bdv.export.ProgressWriterConsole;
 import bdv.gui.BigWarpLandmarkPanel;
@@ -96,6 +91,7 @@ import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
@@ -106,7 +102,6 @@ import bdv.tools.InitializeViewerState;
 import bdv.tools.VisibilityAndGroupingDialog;
 import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
-import bdv.tools.brightness.BrightnessDialog;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.Bounds;
@@ -115,32 +110,40 @@ import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
+import bdv.viewer.ConverterSetups;
+import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.SourceGroup;
 import bdv.viewer.SynchronizedViewerState;
+import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerPanel;
-import bdv.viewer.VisibilityAndGrouping;
+import bdv.viewer.ViewerState;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bdv.viewer.overlay.BigWarpSourceOverlayRenderer;
 import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.loader.ImagePlusLoader;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
+import bigwarp.source.PlateauSphericalMaskSource;
+import bigwarp.source.SourceInfo;
 import bigwarp.source.WarpMagnitudeSource;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.WrappedCoordinateTransform;
+import bigwarp.transforms.io.TransformWriterJson;
 import bigwarp.util.BigWarpUtils;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import java.util.LinkedHashMap;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
@@ -155,7 +158,11 @@ import mpicbg.models.RigidModel3D;
 import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
+import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.XmlIoSpimData;
+import mpicbg.spim.data.registration.ViewTransformAffine;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -163,15 +170,17 @@ import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ThinplateSplineTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.inverse.RealTransformFiniteDerivatives;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.ARGBType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarp< T >
 {
-
 	protected static final int DEFAULT_WIDTH = 600;
 
 	protected static final int DEFAULT_HEIGHT = 400;
@@ -182,21 +191,13 @@ public class BigWarp< T >
 
 	public static final int JACDET_SOURCE_ID = 1006827158;
 
+	public static final int TRANSFORM_MASK_SOURCE_ID = 33872301;
+
 	protected BigWarpViewerOptions options;
 
 	protected BigWarpData< T > data;
 
-	// descriptive names for indexing sources
-	protected int[] movingSourceIndexList;
-
-	protected int[] targetSourceIndexList;
-
-	protected List< SourceAndConverter< T > > sources;
-	
 	protected final SetupAssignments setupAssignments;
-
-	protected final BrightnessDialog brightnessDialog;
-
 	protected final WarpVisFrame warpVisDialog;
 
 	protected final HelpDialog helpDialog;
@@ -209,7 +210,7 @@ public class BigWarp< T >
 
 	final AffineTransform3D fixedViewXfm;
 
-	private final Bookmarks bookmarks;
+	private Bookmarks bookmarks;
 
 	protected final BookmarksEditor bookmarkEditorP;
 
@@ -263,17 +264,25 @@ public class BigWarp< T >
 
 	protected MouseLandmarkTableListener landmarkTableListener;
 
+	protected MaskedSourceEditorMouseListener maskSourceMouseListenerP;
+
+	protected MaskedSourceEditorMouseListener maskSourceMouseListenerQ;
+
 	protected BigWarpMessageAnimator message;
 
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
 
 	private final RepeatingReleasedEventsFixer repeatedKeyEventsFixer;
 
-	protected final SourceAndConverter< FloatType > gridSource;
+	protected SourceAndConverter< FloatType > gridSource;
 
-	protected final SourceAndConverter< FloatType > warpMagSource;
+	protected SourceAndConverter< FloatType > warpMagSource;
 
-	protected final SourceAndConverter< FloatType > jacDetSource;
+	protected SourceAndConverter< FloatType > jacDetSource;
+
+	protected SourceAndConverter< DoubleType > transformMaskSource;
+
+	protected PlateauSphericalMaskSource transformMask;
 
 	protected final AbstractModel< ? >[] baseXfmList;
 
@@ -282,6 +291,8 @@ public class BigWarp< T >
 	private SolveThread solverThread;
 
 	private BigWarpTransform bwTransform;
+
+	protected SourceGroup mvgGrp, tgtGrp;
 
 	private BoundingBoxEstimation bboxOptions;
 
@@ -304,8 +315,6 @@ public class BigWarp< T >
 
 	final FileDialog fileDialog;
 
-	protected File autoSaveDirectory;
-
 	protected File lastDirectory;
 
 	protected File lastLandmarks;
@@ -324,6 +333,7 @@ public class BigWarp< T >
 
 	protected static Logger logger = LoggerFactory.getLogger( BigWarp.class );
 
+	//TODO Caleb: John, can this be replaced by info from BigWarpData/SourceInfo url?
 	private SpimData movingSpimData;
 
 	private File movingImageXml;
@@ -332,12 +342,23 @@ public class BigWarp< T >
 
 	final int ndims;
 
-	public BigWarp( final BigWarpData<T> data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
+
+	@Deprecated
+	public BigWarp( final BigWarpData< T > data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
 	{
-		this( data, windowTitle, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
+		this( data, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
 	}
 
-	public BigWarp( final BigWarpData<T> data, final String windowTitle,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
+	@Deprecated
+	public BigWarp( final BigWarpData< T > data, final String windowTitle, BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException {
+		this(data, options, progressWriter );
+	}
+
+	public BigWarp( final BigWarpData< T > data, final ProgressWriter progressWriter ) throws SpimDataException {
+		this( data, BigWarpViewerOptions.options().is2D( detectNumDims( data.sources ) == 2 ), progressWriter );
+	}
+
+	public BigWarp( final BigWarpData<T> data,  BigWarpViewerOptions options, final ProgressWriter progressWriter ) throws SpimDataException
 	{
 		repeatedKeyEventsFixer = RepeatingReleasedEventsFixer.installAnyTime();
 
@@ -379,25 +400,6 @@ public class BigWarp< T >
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
 		fixedViewXfm = new AffineTransform3D();
-		//sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
-		data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
-
-		baselineModelIndex = 0;
-		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "WarpMagnitudeSource" );
-		jacDetSource = addJacobianDeterminantSource( data, "JacobianDeterminantSource" );
-		gridSource = addGridSource( data, "GridSource" );
-
-		this.sources = this.data.sources;
-		final List< ConverterSetup > converterSetups = data.converterSetups;
-		this.movingSourceIndexList = data.movingSourceIndices;
-		this.targetSourceIndexList = data.targetSourceIndices;
-		Arrays.sort( movingSourceIndexList );
-		Arrays.sort( targetSourceIndexList );
-
-		sources = wrapSourcesAsTransformed( data.sources, ndims, data );
-
-		setGridType( GridSource.GRID_TYPE.LINE );
-
 		viewerSettings = new BigWarpViewerSettings();
 
 		// key properties
@@ -405,14 +407,14 @@ public class BigWarp< T >
 		options = options.inputTriggerConfig( keyProperties );
 
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
-				data.cache, options, "Bigwarp moving image", true, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, data.converterSetups, viewerSettings,
+				data.cache, options, "Bigwarp moving image", true );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, (List)sources, converterSetups, viewerSettings,
-				data.cache, options, "Bigwarp fixed image", false, movingSourceIndexList, targetSourceIndexList );
+		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, data.converterSetups, viewerSettings,
+				data.cache, options, "Bigwarp fixed image", false );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
 
@@ -476,22 +478,6 @@ public class BigWarp< T >
 		activeSourcesDialogQ = new VisibilityAndGroupingDialog( viewerFrameQ, viewerQ.getVisibilityAndGrouping() );
 		activeSourcesDialogQ.setTitle( "visibility and grouping ( fixed )" );
 
-		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
-		// set warp mag source to inactive at the start
-		viewerP.state().setSourceActive( warpMagSource, false );
-		viewerQ.state().setSourceActive( warpMagSource, false );
-		data.sourceColorSettings.put( warpMagSource, new ImagePlusLoader.ColorSettings( -1, 0, 15, white ));
-
-		// set warp grid source to inactive at the start
-		viewerP.state().setSourceActive( gridSource, false );
-		viewerQ.state().setSourceActive( gridSource, false );
-		data.sourceColorSettings.put( gridSource, new ImagePlusLoader.ColorSettings( -1, 0, 255, white ));
-
-		// set jacobian determinant source to inactive at the start
-		viewerP.state().setSourceActive( jacDetSource, false );
-		viewerQ.state().setSourceActive( jacDetSource, false );
-		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
-
 		overlayP = new BigWarpOverlay( viewerP, landmarkPanel );
 		overlayQ = new BigWarpOverlay( viewerQ, landmarkPanel );
 		viewerP.addOverlay( overlayP );
@@ -504,7 +490,6 @@ public class BigWarp< T >
 		solverThread.start();
 
 		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
-		updateSourceBoundingBoxEstimators();
 
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
@@ -514,9 +499,8 @@ public class BigWarp< T >
 		landmarkPopupMenu = new LandmarkPointMenu( this );
 		landmarkPopupMenu.setupListeners();
 
-		setupAssignments = new SetupAssignments( new ArrayList<>( converterSetups ), 0, 65535 );
+		setupAssignments = new SetupAssignments( new ArrayList<>( data.converterSetups ), 0, 65535 );
 
-		brightnessDialog = new BrightnessDialog( landmarkFrame, setupAssignments );
 		helpDialog = new HelpDialog( landmarkFrame );
 		sourceInfoDialog = new SourceInfoDialog( landmarkFrame, data );
 
@@ -524,6 +508,7 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
+		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
@@ -542,11 +527,11 @@ public class BigWarp< T >
 		setUpLandmarkMenus();
 
 		/* Set the locations of frames */
-		final Point viewerFramePloc = getViewerFrameP().getLocation();
-		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
-		getViewerFrameQ().setLocation( viewerFramePloc );
-		viewerFramePloc.setLocation( viewerFramePloc.x + DEFAULT_WIDTH, viewerFramePloc.y );
-		landmarkFrame.setLocation( viewerFramePloc );
+		viewerFrameP.setLocation( 0, 0 );
+		viewerFrameP.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+		viewerFrameQ.setLocation( DEFAULT_WIDTH, 0 );
+		viewerFrameQ.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
+		landmarkFrame.setLocation( 2 * DEFAULT_WIDTH, 0 );
 
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
@@ -567,20 +552,6 @@ public class BigWarp< T >
 
 		landmarkFrame.pack();
 		landmarkFrame.setVisible( true );
-
-		SwingUtilities.invokeLater( new Runnable()
-		{
-			public void run()
-			{
-				data.transferChannelSettings( viewerFrameP );
-				data.transferChannelSettings( viewerFrameQ );
-
-			}
-		} );
-
-		// set initial transforms so data are visible
-		InitializeViewerState.initTransform( viewerP );
-		InitializeViewerState.initTransform( viewerQ );
 
 		checkBoxInputMaps();
 
@@ -605,6 +576,142 @@ public class BigWarp< T >
 
 		// add landmark mode listener
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
+
+		baselineModelIndex = 0;
+		if( data.sources.size() > 0 )
+			initialize();
+
+		createMovingTargetGroups();
+		viewerP.state().setCurrentGroup( mvgGrp );
+		viewerP.state().setCurrentGroup( tgtGrp );
+	}
+
+	public void initialize()
+	{
+		// TODO JOHN CHECK THIS!!
+//		data.sources = wrapSourcesAsTransformed( data.sources, ndims, data );
+		wrapMovingSources( ndims, data );
+
+		// starting view
+		if( data.numTargetSources() > 0 )
+			data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
+
+
+//TODO Expose adding these sources via UI
+
+//		final ARGBType white = new ARGBType( ARGBType.rgba( 255, 255, 255, 255 ));
+//
+//		warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
+//		jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
+//		gridSource = addGridSource( data, "GridSource" );
+//		setGridType( GridSource.GRID_TYPE.LINE );
+//
+//		transformMaskSource = addTransformMaskSource( data, ndims, "Transform mask" );
+//		bwTransform.setLambda( transformMask.getRandomAccessible() );
+//		addMaskMouseListener();
+//
+//		// set warp mag source to inactive at the start
+//		viewerP.state().setSourceActive( warpMagSource, false );
+//		viewerQ.state().setSourceActive( warpMagSource, false );
+//		data.sourceColorSettings.put( warpMagSource, new ImagePlusLoader.ColorSettings( -1, 0, 15, white ));
+//
+//		// set warp grid source to inactive at the start
+//		viewerP.state().setSourceActive( gridSource, false );
+//		viewerQ.state().setSourceActive( gridSource, false );
+//		data.sourceColorSettings.put( gridSource, new ImagePlusLoader.ColorSettings( -1, 0, 255, white ));
+
+		// set jacobian determinant source to inactive at the start
+//		viewerP.state().setSourceActive( jacDetSource, false );
+//		viewerQ.state().setSourceActive( jacDetSource, false );
+//		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
+
+
+		synchronizeSources();
+
+		SwingUtilities.invokeLater( new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				data.transferChannelSettings( viewerFrameP );
+				data.transferChannelSettings( viewerFrameQ );
+
+			}
+		} );
+
+		updateSourceBoundingBoxEstimators();
+
+		// set initial transforms so data are visible
+		InitializeViewerState.initTransform( viewerP );
+		InitializeViewerState.initTransform( viewerQ );
+
+	}
+
+	public void synchronizeSources()
+	{
+		viewerP.state().clearSources();
+		viewerQ.state().clearSources();
+
+		final ArrayList<ConverterSetup> converterSetupsToRemove = new ArrayList<>();
+		setupAssignments.getConverterSetups().forEach( converterSetupsToRemove::add );
+		converterSetupsToRemove.forEach( setupAssignments::removeSetup );
+
+		final SynchronizedViewerState pState = viewerP.state();
+		final SynchronizedViewerState qState = viewerQ.state();
+		for ( int i = 0; i < data.sources.size(); i++ )
+		{
+			final SourceAndConverter< T > sac = data.sources.get( i );
+			pState.addSource( sac );
+			qState.addSource( sac );
+
+			// update the viewer converter setups too
+			final ConverterSetup setup = data.converterSetups.get( i );
+
+			viewerFrameP.getConverterSetups().put( sac, setup );
+			viewerFrameQ.getConverterSetups().put( sac, setup );
+			setupAssignments.addSetup( setup );
+		}
+	}
+
+	/**
+	 * Create two source groups - one for moving images,
+	 * and the other for target images, for both viewer frames.
+	 * 
+	 * Ensure sources are synchronized with {@link #synchronizeSources()}
+	 * before calling this method.
+	 */
+	public void createMovingTargetGroups()
+	{
+		mvgGrp = new SourceGroup();
+		tgtGrp = new SourceGroup();
+
+		final SynchronizedViewerState pState = viewerP.state();
+		final SynchronizedViewerState qState = viewerP.state();
+
+		pState.addGroup( mvgGrp );
+		pState.addGroup( tgtGrp );
+
+		qState.addGroup( mvgGrp );
+		qState.addGroup( tgtGrp );
+
+		pState.setGroupName( mvgGrp, "moving images" );
+		pState.setGroupName( tgtGrp, "target images" );
+		qState.setGroupName( mvgGrp, "moving images" );
+		qState.setGroupName( tgtGrp, "target images" );
+
+		for ( SourceAndConverter< ? > sac : data.sources )
+		{
+			if ( data.isMoving( sac ) )
+			{
+				viewerP.state().addSourceToGroup( sac, mvgGrp );
+				viewerQ.state().addSourceToGroup( sac, mvgGrp );
+			}
+			else
+			{
+				viewerP.state().addSourceToGroup( sac, tgtGrp );
+				viewerQ.state().addSourceToGroup( sac, tgtGrp );
+			}
+		}
 	}
 
 	public int numDimensions()
@@ -632,6 +739,40 @@ public class BigWarp< T >
 		final Bounds bounds = InitializeViewerState.estimateSourceRange( source, timepoint, cumulativeMinCutoff, cumulativeMaxCutoff );
 		final ConverterSetup setup = converterSetups.getConverterSetup( current );
 		setup.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
+	}
+
+	/**
+	 * @param sources to add; typically the output of a {#{@link BigWarpInit#createSources(BigWarpData, String, int, boolean)}} call
+	 */
+	public void addSources( LinkedHashMap<Source< T >, SourceInfo> sources)
+	{
+
+		BigWarpInit.add( data, sources);
+		synchronizeSources();
+	}
+
+	public void addSource( Source< T > source, boolean moving )
+	{
+		data.addSource( source, moving );
+		synchronizeSources();
+	}
+
+	public void addSource( Source<T> source )
+	{
+		addSource( source, false );
+	}
+
+	public int removeSource( SourceInfo info )
+	{
+		final int removedIdx = data.remove( info );
+		synchronizeSources();
+		return removedIdx;
+	}
+
+	public void removeSource( int i )
+	{
+		data.remove( i );
+		synchronizeSources();
 	}
 
 	public void addKeyEventPostProcessor( final KeyEventPostProcessor ke )
@@ -777,9 +918,10 @@ public class BigWarp< T >
 		toggleAlwaysWarpMenu.setText( "Toggle warp on drag" );
 		settingsMenu.add( toggleAlwaysWarpMenu );
 
-		final JMenuItem miBrightness = new JMenuItem( actionMap.get( BigWarpActions.BRIGHTNESS_SETTINGS ) );
-		miBrightness.setText( "Brightness & Color" );
-		settingsMenu.add( miBrightness );
+		/* */
+		final JMenuItem transformTypeMenu = new JMenuItem( actionMap.get( BigWarpActions.TRANSFORM_TYPE ) );
+		transformTypeMenu.setText( "Transformation Options" );
+		settingsMenu.add( transformTypeMenu );
 
 		/* Warp Visualization */
 		final JMenuItem warpVisMenu = new JMenuItem( actionMap.get( BigWarpActions.SHOW_WARPTYPE_DIALOG ) );
@@ -822,7 +964,7 @@ public class BigWarp< T >
 	public void saveMovingImageToFile()
 	{
 		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedFile = new File( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getName() );
+		File proposedFile = new File( data.getMovingSource( 0 ).getSpimSource().getName() );
 
 		fileChooser.setSelectedFile( proposedFile );
 		final int returnVal = fileChooser.showSaveDialog( null );
@@ -1083,7 +1225,7 @@ public class BigWarp< T >
 		if( matchedPtNames.size() > 0 )
 		{
 			BigwarpLandmarkSelectionPanel<T> selection = new BigwarpLandmarkSelectionPanel<>( 
-					data, sources, fieldOfViewOption,
+					data, data.sources, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
 					offsetSpec, res, isVirtual, nThreads,
 					progressWriter );
@@ -1096,10 +1238,11 @@ public class BigWarp< T >
 				// export async
 				new Thread()
 				{
+					@Override
 					public void run()
 					{
 						progressWriter.setProgress( 0.01 );
-						ApplyBigwarpPlugin.runN5Export( data, sources, fieldOfViewOption,
+						ApplyBigwarpPlugin.runN5Export( data, data.sources, fieldOfViewOption,
 								outputIntervalList.get( 0 ), interp,
 								offsetSpec, res, unit, 
 								progressWriter, writeOpts, 
@@ -1113,7 +1256,7 @@ public class BigWarp< T >
 			{
 				// export
 				final boolean show = ( writeOpts.pathOrN5Root == null  || writeOpts.pathOrN5Root.isEmpty() );
-				ApplyBigwarpPlugin.runExport( data, sources, fieldOfViewOption,
+				ApplyBigwarpPlugin.runExport( data, data.sources, fieldOfViewOption,
 						outputIntervalList, matchedPtNames, interp,
 						offsetSpec, res, isVirtual, nThreads, 
 						progressWriter, show, false, writeOpts );
@@ -1124,7 +1267,7 @@ public class BigWarp< T >
 	public void exportWarpField()
 	{
 		BigWarpToDeformationFieldPlugIn dfieldExporter = new BigWarpToDeformationFieldPlugIn();
-		dfieldExporter.runFromBigWarpInstance( landmarkModel, sources, targetSourceIndexList );
+		dfieldExporter.runFromBigWarpInstance( landmarkModel, data.getTargetSource( 0 ) );
 	}
 
 	protected void setUpLandmarkMenus()
@@ -1201,7 +1344,7 @@ public class BigWarp< T >
 
 	public List< SourceAndConverter< T > > getSources()
 	{
-		return sources;
+		return data.sources;
 	}
 
 	public BigWarpLandmarkFrame getLandmarkFrame()
@@ -1371,7 +1514,7 @@ public class BigWarp< T >
 
 		InvertibleRealTransform transform; 
 		if( options.values.is2D()  && currentTransform != null )
-			transform = ((Wrapped2DTransformAs3D)currentTransform).getTransform();
+			transform = ((InvertibleWrapped2DTransformAs3D)currentTransform).getTransform();
 		else
 			transform = currentTransform;
 
@@ -1744,10 +1887,33 @@ public class BigWarp< T >
 		return success;
 	}
 
+	public void toggleMaskOverlayVisibility()
+	{
+		getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
+	}
+
+	public void setMaskOverlayVisibility( final boolean visible )
+	{
+		getViewerFrameQ().getViewerPanel().getMaskOverlay().setVisible( visible );
+	}
+
 	protected void addDefaultTableMouseListener()
 	{
 		landmarkTableListener = new MouseLandmarkTableListener();
 		landmarkPanel.getJTable().addMouseListener( landmarkTableListener );
+	}
+
+	protected void addMaskMouseListener()
+	{
+		final Color[] maskColors = new Color[]{ Color.ORANGE, Color.YELLOW };
+		// only render mask overlay on target window
+		viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
+
+		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
+		maskSourceMouseListenerQ.setActive( false );
+		maskSourceMouseListenerQ.setMask( transformMask.getRandomAccessible() );
+
+		transformMask.getRandomAccessible().setOverlays( Arrays.asList( viewerQ.getMaskOverlay() ));
 	}
 
 	public void setGridType( final GridSource.GRID_TYPE method )
@@ -1755,28 +1921,41 @@ public class BigWarp< T >
 		( ( GridSource< ? > ) gridSource.getSpimSource() ).setMethod( method );
 	}
 
-	public static <T> List< SourceAndConverter<T> > wrapSourcesAsTransformed( final List< SourceAndConverter<T> > sources,
+	@SuppressWarnings( "unchecked" )
+	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
+	{
+		int i = 0;
+		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
+		{
+			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
+			{
+				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
+				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
+				sourceInfo.setSourceAndConverter( newSac );
+				data.sources.set( sourceIdx, newSac );
+			}
+			i++;
+		}
+	}
+
+	@SuppressWarnings( "unchecked" )
+	public static < T > List< SourceAndConverter< T > > wrapSourcesAsTransformed( final LinkedHashMap< Integer, SourceInfo > sources,
 			final int ndims,
-			final BigWarpData<?> data )
+			final BigWarpData< T > data )
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		int[] warpUsIndices = data.movingSourceIndices;
-		HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
-
 		int i = 0;
-		for ( final SourceAndConverter<T>sac : sources )
+		for ( final SourceInfo sourceInfo : sources.values() )
 		{
-			int idx = Arrays.binarySearch( warpUsIndices, i );
-			if ( idx >= 0 )
+			if ( sourceInfo.isMoving() )
 			{
-				SourceAndConverter<T> newSac = wrapSourceAsTransformed( sac, "xfm_" + i, ndims );
+				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				wrappedSource.add( newSac );
-				colorSettings.put( newSac, colorSettings.get( sac ));
 			}
 			else
 			{
-				wrappedSource.add( sac );
+				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
 			}
 
 			i++;
@@ -1798,7 +1977,7 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource(  final BigWarpData< T > data, final boolean is2D, final String name )
+	private static < T > SourceAndConverter< FloatType > addWarpMagnitudeSource( final BigWarpData< T > data, final boolean is2D, final String name )
 	{
 		// TODO think about whether its worth it to pass a type parameter.
 		final WarpMagnitudeSource< FloatType > magSource = new WarpMagnitudeSource<>( name, data, new FloatType() );
@@ -1821,6 +2000,28 @@ public class BigWarp< T >
 		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, GRID_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
 		return soc;
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	private SourceAndConverter< DoubleType > addTransformMaskSource( final BigWarpData< T > data, final int ndims, final String name )
+	{
+		// TODO think about whether its worth it to pass a type parameter.
+		// or should we just stick with Floats?
+//		FinalInterval itvl = new FinalInterval( data.sources.get( data.targetSourceIndices[0] ).getSpimSource().getSource( 0, 0 ));
+		FinalInterval itvl = new FinalInterval( data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ));
+		transformMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
+
+		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
+		converter.setColor( new ARGBType( 0xffffffff ) );
+		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( transformMask, converter, null );
+		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TRANSFORM_MASK_SOURCE_ID ) );
+		data.sources.add( ( SourceAndConverter ) soc );
+		return soc;
+	}
+
+	public PlateauSphericalMaskSource getTransformMaskSource()
+	{
+		return transformMask;
 	}
 
 	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
@@ -1861,6 +2062,11 @@ public class BigWarp< T >
 		viewerQ.requestRepaint();
 	}
 
+	public void setAutoSaver( final BigWarpAutoSaver autoSaver )
+	{
+		this.autoSaver = autoSaver;
+	}
+
 	protected void setupWarpMagBaselineOptions( final CoordinateTransform[] xfm, final int ndim )
 	{
 		if ( ndim == 2 )
@@ -1897,28 +2103,27 @@ public class BigWarp< T >
 		landmarkModel.copyLandmarks( p, q );
 		Arrays.fill( w, 1.0 );
 
-		try
+		if( warpMagSource != null )
 		{
-			final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
+			try
+			{
+				final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
+				baseline.fit( p, q, w );  // FITBASELINE
+				WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform(
+						(InvertibleCoordinateTransform)baseline, ndims );
 
-			baseline.fit( p, q, w );  // FITBASELINE
-			WrappedCoordinateTransform baselineTransform = new WrappedCoordinateTransform(
-					(InvertibleCoordinateTransform)baseline, ndims );
+				// the transform to compare is the inverse (because we use it for rendering)
+				// so need to give the inverse transform for baseline as well
+				( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() ).setBaseline( baselineTransform.inverse() );
+			}
+			catch ( final IllDefinedDataPointsException | NotEnoughDataPointsException e )
+			{
+				e.printStackTrace();
+			}
 
-			// the transform to compare is the inverse (because we use it for rendering)
-			// so need to give the inverse transform for baseline as well
-			( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() ).setBaseline( baselineTransform.inverse() );
+			getViewerFrameP().getViewerPanel().requestRepaint();
+			getViewerFrameQ().getViewerPanel().requestRepaint();
 		}
-		catch ( final NotEnoughDataPointsException e )
-		{
-			e.printStackTrace();
-		}
-		catch ( final IllDefinedDataPointsException e )
-		{
-			e.printStackTrace();
-		}
-		getViewerFrameP().getViewerPanel().requestRepaint();
-		getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
 	public void setMovingSpimData( SpimData movingSpimData, File movingImageXml )
@@ -1927,10 +2132,33 @@ public class BigWarp< T >
 		this.movingImageXml = movingImageXml;
 	}
 
+	public void setBookmarks( final Bookmarks bookmarks )
+	{
+		this.bookmarks = bookmarks;
+	}
+
+	public void setAutoEstimateMask( final boolean selected )
+	{
+		warpVisDialog.maskOptionsPanel.getAutoEstimateMaskButton().setSelected( selected );
+	}
+
+	public void autoEstimateMask()
+	{
+		if( landmarkModel.numActive() < 4 )
+			return;
+
+		if( warpVisDialog.autoEstimateMask() && bwTransform.isMasked() )
+		{
+			final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
+			transformMask.getRandomAccessible().setCenter(sph.getCenter());
+			transformMask.getRandomAccessible().setRadius(sph.getRadius());
+		}
+	}
+
 	public enum WarpVisType
 	{
 		NONE, WARPMAG, JACDET, GRID
-	};
+	}
 
 	public void setWarpVisMode( final WarpVisType type, BigWarpViewerFrame viewerFrame, final boolean both )
 	{
@@ -2076,6 +2304,7 @@ public class BigWarp< T >
 		else // warp mag is invisible, turn it on
 		{
 			state.setSourceActive( warpMagSource, true );
+
 //			vg.setSourceActive( offImgIndex, false );
 
 			// estimate the max warp
@@ -2096,36 +2325,36 @@ public class BigWarp< T >
 	{
 		this.currentTransform = transform;
 
-		for ( int i = 0; i < movingSourceIndexList.length; i++ )
-		{
-			int idx = movingSourceIndexList [ i ];
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				// the xfm must always be 3d for bdv to be happy.
+				// when bigwarp has 2d images though, the z- component will be left unchanged
+				// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
-			// the xfm must always be 3d for bdv to be happy.
-			// when bigwarp has 2d images though, the z- component will be left unchanged
-			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
-
-			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).updateTransform( transform );
-			if ( sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).updateTransform( transform );
-		}
+				// the updateTransform method creates a copy of the transform
+				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).updateTransform( transform );
+				if ( data.sources.get( 0 ).asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
+			}
+		} );
 	}
 
 	public void updateSourceBoundingBoxEstimators()
 	{
-		for ( int i = 0; i < movingSourceIndexList.length; i++ )
-		{
-			int idx = movingSourceIndexList [ i ];
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				// the xfm must always be 3d for bdv to be happy.
+				// when bigwarp has 2d images though, the z- component will be left unchanged
+				//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
-			// the xfm must always be 3d for bdv to be happy.
-			// when bigwarp has 2d images though, the z- component will be left unchanged
-			//InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
-
-			// the updateTransform method creates a copy of the transform
-			( ( WarpedSource< ? > ) ( sources.get( idx ).getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
-			if ( sources.get( 0 ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( sources.get( idx ).asVolatile().getSpimSource() ) ).setBoundingBoxEstimator(bboxOptions.copy());
-		}
+				// the updateTransform method creates a copy of the transform
+				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).setBoundingBoxEstimator( bboxOptions.copy() );
+				if ( data.sources.get( 0 ).asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).setBoundingBoxEstimator( bboxOptions.copy() );
+			}
+		} );
 	}
 
 	private synchronized void notifyTransformListeners( )
@@ -2138,25 +2367,37 @@ public class BigWarp< T >
 	{
 		setTransformationMovingSourceOnly( transform );
 
-		final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() );
-		final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) jacDetSource.getSpimSource() );
-		final GridSource< ? > gSrc = ( ( GridSource< ? > ) gridSource.getSpimSource() );
-
-		wmSrc.setWarp( transform );
-		fitBaselineWarpMagModel();
-	
-		if( transform instanceof ThinplateSplineTransform )
+		if( warpMagSource != null )
 		{
-			jdSrc.setTransform( (ThinplateSplineTransform)transform );
+			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) warpMagSource.getSpimSource() );
+			wmSrc.setWarp( transform );
+			fitBaselineWarpMagModel();
 		}
-		else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
-		{
-			jdSrc.setTransform( (ThinplateSplineTransform)((WrappedIterativeInvertibleRealTransform)transform).getTransform() );
-		}
-		else
-			jdSrc.setTransform( null );
 
-		gSrc.setWarp( transform );
+		if( jacDetSource != null )
+		{
+			final JacobianDeterminantSource< ? > jdSrc = ( ( JacobianDeterminantSource< ? > ) jacDetSource.getSpimSource() );
+			if( transform instanceof ThinplateSplineTransform )
+			{
+				jdSrc.setTransform( (ThinplateSplineTransform)transform );
+			}
+			else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
+			{
+				RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
+				if( xfm instanceof ThinplateSplineTransform )
+					jdSrc.setTransform( (ThinplateSplineTransform) xfm );
+				else
+					jdSrc.setTransform( new RealTransformFiniteDerivatives( xfm ));
+			}
+			else
+				jdSrc.setTransform( null );
+		}
+
+		if( gridSource != null )
+		{
+			final GridSource< ? > gSrc = ( ( GridSource< ? > ) gridSource.getSpimSource() );
+			gSrc.setWarp( transform );
+		}
 	}
 
 	public boolean restimateTransformation()
@@ -2194,15 +2435,17 @@ public class BigWarp< T >
 
 	public synchronized void setIsMovingDisplayTransformed( final boolean isTransformed )
 	{
-		for( int i = 0 ; i < movingSourceIndexList.length; i ++ )
-		{
-			int movingSourceIndex = movingSourceIndexList[ i ];
 
-			( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).getSpimSource() ) ).setIsTransformed( isTransformed );
+		data.sourceInfos.values().forEach( sourceInfo -> {
+			if ( sourceInfo.isMoving() )
+			{
+				final SourceAndConverter< ? > sourceAndConverter = sourceInfo.getSourceAndConverter();
+				( ( WarpedSource< ? > ) sourceAndConverter.getSpimSource() ).setIsTransformed( isTransformed );
 
-			if ( sources.get( movingSourceIndex ).asVolatile() != null )
-				( ( WarpedSource< ? > ) ( sources.get( movingSourceIndex ).asVolatile().getSpimSource() ) ).setIsTransformed( isTransformed );
-		}
+				if ( sourceAndConverter.asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceAndConverter.asVolatile().getSpimSource() ).setIsTransformed( isTransformed );
+			}
+		} );
 
 		overlayP.setIsTransformed( isTransformed );
 
@@ -2227,7 +2470,14 @@ public class BigWarp< T >
 	public boolean isMovingDisplayTransformed()
 	{
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
-		return ( ( WarpedSource< ? > ) ( sources.get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+//		return ( ( WarpedSource< ? > ) ( data.sources.get( data.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
+
+		// TODO better to explicitly keep track of this
+
+		if( data.sources.size() < 1 )
+			return true;
+		else
+			return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
 	}
 
 	/**
@@ -2236,7 +2486,7 @@ public class BigWarp< T >
 	 */
 	protected int detectNumDims()
 	{
-		return detectNumDims( sources );
+		return detectNumDims( data.sources );
 	}
 
 	/**
@@ -2282,11 +2532,6 @@ public class BigWarp< T >
 			fnP = args[ i++ ];
 			fnQ = args[ i++ ];
 		}
-		else
-		{
-			System.err.println( "Must provide at least 2 inputs for moving and target image files" );
-			System.exit( 1 );
-		}
 
 		if ( args.length > i )
 			fnLandmarks = args[ i++ ];
@@ -2331,15 +2576,22 @@ public class BigWarp< T >
 				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
 				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
 			}
-			else
+			else if (!fnP.isEmpty() && !fnQ.isEmpty())
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
 
+
+				// For testing display and color settings
+//				impP.setDisplayRange( 10, 200 );
+//				impQ.setDisplayRange( 20, 180 );
+//				impP.show();
+//				impQ.show();
+
 				if ( !( impP == null || impQ == null ) )
 				{
 					bwdata = BigWarpInit.createBigWarpDataFromImages( impP, impQ );
-					bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+					bw = new BigWarp<>( bwdata, progress );
 				}
 				else
 				{
@@ -2347,10 +2599,13 @@ public class BigWarp< T >
 					return;
 				}
 			}
+			else
+			{
+				bw = new BigWarp<>( new BigWarpData<>(), progress );
+			}
 
-			
 			if ( !fnLandmarks.isEmpty() )
-				bw.getLandmarkPanel().getTableModel().load( new File( fnLandmarks ) );
+				bw.loadLandmarks( fnLandmarks );
 
 			if ( doInverse )
 				bw.invertPointCorrespondences();
@@ -2366,10 +2621,10 @@ public class BigWarp< T >
 	private void viewerXfmTest()
 	{
 		AffineTransform3D srcTransform0 = new AffineTransform3D();
-		sources.get( 0 ).getSpimSource().getSourceTransform(0, 0, srcTransform0 );
+		data.sources.get( 0 ).getSpimSource().getSourceTransform(0, 0, srcTransform0 );
 
 		AffineTransform3D srcTransform1 = new AffineTransform3D();
-		sources.get( 1 ).getSpimSource().getSourceTransform(0, 0, srcTransform1 );
+		data.sources.get( 1 ).getSpimSource().getSourceTransform(0, 0, srcTransform1 );
 
 		AffineTransform3D viewerTransformM = new AffineTransform3D();
 		viewerP.state().getViewerTransform( viewerTransformM );
@@ -2412,92 +2667,6 @@ public class BigWarp< T >
 		 */
 //		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
 //		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
-	}
-
-	public static class BigWarpData< T >
-	{
-		public final List< SourceAndConverter< T > > sources;
-
-		public final List< ConverterSetup > converterSetups;
-
-		public final CacheControl cache;
-
-		public int[] movingSourceIndices;
-
-		public int[] targetSourceIndices;
-
-		public final ArrayList< Integer > movingSourceIndexList;
-
-		public final ArrayList< Integer > targetSourceIndexList;
-
-		public final HashMap< Integer, ColorSettings > setupSettings;
-
-		public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
-
-		public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, final CacheControl cache, int[] movingSourceIndices, int[] targetSourceIndices )
-		{
-			this.sources = sources;
-			this.converterSetups = converterSetups;
-			this.movingSourceIndices = movingSourceIndices;
-			this.targetSourceIndices = targetSourceIndices;
-
-			this.movingSourceIndexList = new ArrayList<>();
-			this.targetSourceIndexList = new ArrayList<>();
-			
-
-			if ( cache == null )
-				this.cache = new CacheControl.Dummy();
-			else
-				this.cache = cache;
-
-			setupSettings = new HashMap<>();
-			sourceColorSettings = new HashMap<>();
-		}
-
-		public void wrapUp()
-		{
-			movingSourceIndices = movingSourceIndexList.stream().mapToInt( x -> x ).toArray();
-			targetSourceIndices = targetSourceIndexList.stream().mapToInt( x -> x ).toArray();
-
-			Arrays.sort( movingSourceIndices );
-			Arrays.sort( targetSourceIndices );
-		}
-
-		/**
-		 * @deprecated
-		 */
-		public void transferChannelSettings( final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
-		{
-			for( Integer key : setupSettings.keySet() )
-				setupSettings.get( key ).updateSetup( setupAssignments );
-		}
-
-		public void transferChannelSettings( final BigWarpViewerFrame viewer )
-		{
-			SynchronizedViewerState state = viewer.getViewerPanel().state();
-			ConverterSetups setups = viewer.getConverterSetups();
-			synchronized ( state )
-			{
-				for ( SourceAndConverter< ? > sac : state.getSources() )
-				{
-					if ( sourceColorSettings.containsKey( sac ) )
-					{
-						if ( sourceColorSettings.get( sac ) == null )
-							continue;
-
-						sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
-					}
-					else
-					{
-						final int timepoint = state.getCurrentTimepoint();	
-						final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
-						ConverterSetup cs = setups.getConverterSetup(sac);
-						if( cs != null )
-							cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
-					}
-				}
-			}
-		}
 	}
 
 	protected class LandmarkModeListener implements KeyEventPostProcessor
@@ -2764,11 +2933,12 @@ public class BigWarp< T >
 		{
 			// re-estimate if a a point was set to or from active
 			// note - this covers "resetting" points as well
-			if( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
+			if ( e.getColumn() == LandmarkTableModel.ACTIVECOLUMN )
 			{
 				BigWarp.this.restimateTransformation();
 				BigWarp.this.landmarkPanel.repaint();
 			}
+			autoEstimateMask();
 		}
 	}
 
@@ -2895,9 +3065,39 @@ public class BigWarp< T >
 
 	public void setTransformType( final String type )
 	{
-		transformSelector.setTransformType( type );
 		bwTransform.setTransformType( type );
 		this.restimateTransformation();
+	}
+
+	public void setTransformTypeUpdateUI( final String type )
+	{
+		setTransformType( type );
+		updateTransformTypeDialog( type );
+		updateTransformTypePanel( type );
+	}
+
+	/**
+	 * Update the transformation selection dialog to reflect the given transform type selection.
+	 * 
+	 * @param type the transformation type
+	 */
+	public void updateTransformTypeDialog( final String type )
+	{
+		transformSelector.deactivate();
+		transformSelector.setTransformType( type );
+		transformSelector.activate();
+	}
+
+	/**
+	 * Update the transformation selection panel in the options dialog to reflect the given transform type selection.
+	 * 
+	 * @param type the transformation type
+	 */
+	public void updateTransformTypePanel( final String type )
+	{
+		warpVisDialog.transformTypePanel.deactivate();
+		warpVisDialog.transformTypePanel.setType( type );
+		warpVisDialog.transformTypePanel.activate();
 	}
 
 	public String getTransformType()
@@ -3093,32 +3293,13 @@ public class BigWarp< T >
 	}
 
 	/**
-	 * Set the folder where the results of auto-saving will be stored.
-	 * 
-	 * @param autoSaveFolder the destination folder
-	 */
-	public void setAutosaveFolder( final File autoSaveFolder )
-	{
-		boolean exists = autoSaveFolder.exists();
-		if( !exists )
-			exists = autoSaveFolder.mkdir();
-
-		if( exists && autoSaveFolder.isDirectory() )
-		{
-			this.autoSaveDirectory = autoSaveFolder;
-			warpVisDialog.autoSaveFolderText.setText( autoSaveFolder.getAbsolutePath() );
-			warpVisDialog.repaint();
-		}
-	}
-
-	/**
 	 * Saves landmarks to a new File in the user's bigwarp folder.
 	 */
 	public void autoSaveLandmarks()
 	{
 		final File baseFolder;
-		if( autoSaveDirectory != null )
-			baseFolder = autoSaveDirectory;
+		if ( autoSaver.autoSaveDirectory != null )
+			baseFolder = autoSaver.autoSaveDirectory;
 		else
 			baseFolder = getBigwarpSettingsFolder();
 
@@ -3190,7 +3371,7 @@ public class BigWarp< T >
 	{
 		if( autoSaver != null )
 		{
-			autoSaver.stop();;
+			autoSaver.stop();
 			autoSaver = null;
 		}
 	}
@@ -3222,7 +3403,10 @@ public class BigWarp< T >
 
 	protected void saveLandmarks( final String filename ) throws IOException
 	{
-		landmarkModel.save(new File( filename ));
+		if( filename.endsWith("csv"))
+			landmarkModel.save(new File( filename ));
+		else if( filename.endsWith("json"))
+			TransformWriterJson.write(landmarkModel, bwTransform, new File( filename ));
 	}
 
 	protected void loadLandmarks()
@@ -3249,13 +3433,21 @@ public class BigWarp< T >
 	{
 		File file = new File( filename );
 		setLastDirectory( file.getParentFile() );
-		try
+
+		if( filename.endsWith( "csv" ))
 		{
-			landmarkModel.load( file );
+			try
+			{
+				landmarkModel.load( file );
+			}
+			catch ( final IOException e1 )
+			{
+				e1.printStackTrace();
+			}
 		}
-		catch ( final IOException e1 )
+		else if( filename.endsWith( "json" ))
 		{
-			e1.printStackTrace();
+			TransformWriterJson.read( file, this );
 		}
 
 		boolean didCompute = restimateTransformation();
@@ -3265,6 +3457,8 @@ public class BigWarp< T >
 		// image
 		if ( !didCompute )
 			setIsMovingDisplayTransformed( false );
+
+		autoEstimateMask();
 
 		viewerP.requestRepaint();
 		viewerQ.requestRepaint();
@@ -3283,8 +3477,17 @@ public class BigWarp< T >
 			proposedSettingsFile = fileChooser.getSelectedFile();
 			try
 			{
-				saveSettings( proposedSettingsFile.getCanonicalPath() );
-			} catch ( final IOException e )
+				final String canonicalPath = proposedSettingsFile.getCanonicalPath();
+				if ( canonicalPath.endsWith( ".xml" ) )
+				{
+					saveSettings( canonicalPath );
+				}
+				else
+				{
+					saveSettingsJson( canonicalPath );
+				}
+			}
+			catch ( final IOException e )
 			{
 				e.printStackTrace();
 			}
@@ -3309,8 +3512,8 @@ public class BigWarp< T >
 
 		final Element autoSaveNode = new Element( "autosave" );
 		final Element autoSaveLocation = new Element( "location" );
-		if( autoSaveDirectory != null )
-			autoSaveLocation.setText( autoSaveDirectory.getAbsolutePath() ); 
+		if ( autoSaver != null && autoSaver.autoSaveDirectory != null )
+			autoSaveLocation.setText( autoSaver.autoSaveDirectory.getAbsolutePath() );
 		else
 			autoSaveLocation.setText( getBigwarpSettingsFolder().getAbsolutePath() );
 
@@ -3320,12 +3523,37 @@ public class BigWarp< T >
 
 		autoSaveNode.addContent( autoSaveLocation );
 		autoSaveNode.addContent( autoSavePeriod );
-		root.addContent( autoSaveNode );
 
+		root.addContent( autoSaveNode );
+		if ( transformMask != null )
+		{
+			root.addContent( transformMask.getRandomAccessible().toXml() );
+		}
 
 		final Document doc = new Document( root );
 		final XMLOutputter xout = new XMLOutputter( Format.getPrettyFormat() );
 		xout.output( doc, new FileWriter( xmlFilename ) );
+	}
+
+	protected void saveSettingsJson( final String jsonFilename ) throws IOException
+	{
+		BigwarpSettings settings = getSettings();
+		settings.serialize( jsonFilename );
+	}
+
+	public BigwarpSettings getSettings()
+	{
+		return new BigwarpSettings(
+				this,
+				viewerP,
+				viewerQ,
+				setupAssignments,
+				bookmarks,
+				autoSaver,
+				landmarkModel,
+				bwTransform,
+				data.sourceInfos
+		);
 	}
 
 	protected void loadSettings()
@@ -3348,25 +3576,82 @@ public class BigWarp< T >
 		}
 	}
 
-	protected void loadSettings( final String xmlFilename ) throws IOException,
+	private void addInternalSource(int id) {
+		final boolean sourceWithIdPresent = data.sources.stream().map( it -> it.getConverter()).filter( it -> it instanceof ConverterSetup ).filter( it -> ( ( ConverterSetup ) it ).getSetupId() == id ).findAny().isPresent();
+		if (sourceWithIdPresent) {
+			return;
+		}
+		switch ( id )
+		{
+		case GRID_SOURCE_ID:
+			gridSource = addGridSource( data, "GridSource" );
+			setGridType( GridSource.GRID_TYPE.LINE );
+			break;
+		case WARPMAG_SOURCE_ID:
+			warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
+			break;
+		case JACDET_SOURCE_ID:
+			jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
+			break;
+		case TRANSFORM_MASK_SOURCE_ID:
+			transformMaskSource = addTransformMaskSource( data, ndims, "Transform mask" );
+			bwTransform.setLambda( transformMask.getRandomAccessible() );
+			addMaskMouseListener();
+			break;
+		default:
+			break;
+		}
+	}
+
+	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
-		final SAXBuilder sax = new SAXBuilder();
-		final Document doc = sax.build( xmlFilename );
-		final Element root = doc.getRootElement();
-		viewerP.stateFromXml( root.getChild( "viewerP" ) );
-		viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
-		setupAssignments.restoreFromXml( root );
-		bookmarks.restoreFromXml( root );
-		activeSourcesDialogP.update();
-		activeSourcesDialogQ.update();
+		loadSettings( jsonOrXmlFilename, false );
+	}
 
-		// auto-save settings
-		Element autoSaveElem = root.getChild( "autosave" );
-		final String autoSavePath = autoSaveElem.getChild( "location" ).getText();
-		final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText());
-		setAutosaveFolder( new File( autoSavePath ));
-		BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
+	protected void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
+			JDOMException
+	{
+		if ( jsonOrXmlFilename.endsWith( ".xml" ) )
+		{
+			final SAXBuilder sax = new SAXBuilder();
+			final Document doc = sax.build( jsonOrXmlFilename );
+			final Element root = doc.getRootElement();
+
+			/* add default sources if present */
+			final List< Element > converterSetups = root.getChild( "SetupAssignments" ).getChild( "ConverterSetups" ).getChildren( "ConverterSetup" );
+			for ( Element converterSetup : converterSetups )
+			{
+				final int id = Integer.parseInt( converterSetup.getChild( "id" ).getText() );
+				addInternalSource( id );
+			}
+			synchronizeSources();
+
+			viewerP.stateFromXml( root.getChild( "viewerP" ) );
+			viewerQ.stateFromXml( root.getChild( "viewerQ" ) );
+			setupAssignments.restoreFromXml( root );
+			bookmarks.restoreFromXml( root );
+			activeSourcesDialogP.update();
+			activeSourcesDialogQ.update();
+
+			// auto-save settings
+			Element autoSaveElem = root.getChild( "autosave" );
+			final String autoSavePath = autoSaveElem.getChild( "location" ).getText();
+			final long autoSavePeriod = Integer.parseInt( autoSaveElem.getChild( "period" ).getText() );
+			BigWarpAutoSaver.setAutosaveOptions( this, autoSavePeriod, autoSavePath );
+
+			final Element maskSettings = root.getChild( "transform-mask" );
+			if ( maskSettings != null )
+				transformMask.getRandomAccessible().fromXml( maskSettings );
+		}
+		else
+		{
+			final BigwarpSettings settings = getSettings();
+			settings.setOverwriteSources( overwriteSources );
+			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+			activeSourcesDialogP.update();
+			activeSourcesDialogQ.update();
+		}
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();

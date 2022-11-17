@@ -37,8 +37,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
@@ -50,6 +48,7 @@ public class BigWarpActions
 	public static final String LANDMARK_MODE_ON  = "landmark mode on";
 	public static final String LANDMARK_MODE_OFF  = "landmark mode off";
 	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
+	public static final String TRANSFORM_TYPE = "transform type";
 
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
@@ -70,7 +69,6 @@ public class BigWarpActions
 
 	public static final String RESET_VIEWER = "reset active viewer";
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
-	public static final String BRIGHTNESS_SETTINGS = "brightness settings";
 	public static final String VISIBILITY_AND_GROUPING = "visibility and grouping %s";
 	public static final String SHOW_HELP = "help";
 	public static final String SHOW_SOURCE_INFO = "show source info";
@@ -83,6 +81,9 @@ public class BigWarpActions
 	public static final String QUICK_SAVE_LANDMARKS = "quick save landmarks";
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
+
+	public static final String MASK_SIZE_EDIT = "mask edit";
+	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
 
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
@@ -160,7 +161,7 @@ public class BigWarpActions
 		
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F3" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F4" );
-		map.put( "transform type", "F2" );
+		map.put( TRANSFORM_TYPE, "F2" );
 		
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
@@ -188,7 +189,7 @@ public class BigWarpActions
 
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "moving" ), bw.activeSourcesDialogP ).put( actionMap );
 		new ToggleDialogAction( String.format( VISIBILITY_AND_GROUPING, "target" ), bw.activeSourcesDialogQ ).put( actionMap );
-		new ToggleDialogAction( "transform type", bw.transformSelector ).put( actionMap );
+		new ToggleDialogAction( TRANSFORM_TYPE, bw.transformSelector ).put( actionMap );
 
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
@@ -246,12 +247,14 @@ public class BigWarpActions
 //		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
 //		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
 
-		map.put( BRIGHTNESS_SETTINGS, "S" );
 		map.put( SHOW_HELP, "F1", "H" );
 
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
 		map.put( TOGGLE_POINT_NAMES_VISIBLE, "N" );
 		map.put( ESTIMATE_WARP, "C" );
+
+		map.put( MASK_SIZE_EDIT, "M" );
+		map.put( MASK_VIS_TOGGLE, "control M" );
 
 		map.put( UNDO, "control Z" );
 		map.put( REDO, "control Y" );
@@ -304,7 +307,6 @@ public class BigWarpActions
 
 		new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ).put( actionMap );
 
-		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_SOURCE_INFO, bw.sourceInfoDialog ).put( actionMap );
 
@@ -325,6 +327,10 @@ public class BigWarpActions
 		new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ).put( actionMap );
 		new ToggleMovingImageDisplayAction( TOGGLE_MOVING_IMAGE_DISPLAY, bw ).put( actionMap );
 		new EstimateWarpAction( ESTIMATE_WARP, bw ).put( actionMap );
+
+		// MASK
+		new MaskSizeEdit( bw ).put(actionMap);
+		new MaskVisToggle( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -547,21 +553,20 @@ public class BigWarpActions
 			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			BigWarpData< ? > data = bw.getData();
-			for( int mi : data.movingSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "mvg src xfm " + xfm  );
-			}
-
-			for( int ti : data.targetSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "tgt src xfm " + xfm  );
-			}
-
-
-			System.out.println( " " );
+//			BigWarpData< ? > data = bw.getData();
+//			for( int mi : data.movingSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "mvg src xfm " + xfm  );
+//			}
+//
+//			for( int ti : data.targetSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "tgt src xfm " + xfm  );
+//			}
+//
+//			System.out.println( " " );
 		}
 	}
 	
@@ -676,6 +681,7 @@ public class BigWarpActions
 			this.bw = bw;
 		}
 		
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			bw.resetView();
@@ -686,8 +692,8 @@ public class BigWarpActions
 	{
 		private static final long serialVersionUID = -7023242695323421450L;
 		
-		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE };
-		
+		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE }
+
 		private BigWarp< ? >bw;
 		private TYPE type;
 		
@@ -698,6 +704,7 @@ public class BigWarpActions
 			this.type = type;
 		}
 		
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			if( type == TYPE.ACTIVE_TO_OTHER )
@@ -1156,4 +1163,43 @@ public class BigWarpActions
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}
+
+	public static class MaskSizeEdit extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -7918625162439713732L;
+		private final BigWarp< ? > bw;
+
+		public MaskSizeEdit( final BigWarp< ? > bw )
+		{
+			super( MASK_SIZE_EDIT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.maskSourceMouseListenerP.toggleActive();
+			bw.maskSourceMouseListenerQ.toggleActive();
+		}
+	}
+
+	public static class MaskVisToggle extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 493457851797644046L;
+		private final BigWarp< ? > bw;
+
+		public MaskVisToggle( final BigWarp< ? > bw )
+		{
+			super( MASK_VIS_TOGGLE );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
+			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
+		}
+	}
+
 }

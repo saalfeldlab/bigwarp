@@ -38,7 +38,6 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
 import net.imglib2.realtransform.AffineTransform3D;
 
 public class SourceInfoDialog extends JDialog
@@ -58,9 +57,9 @@ public class SourceInfoDialog extends JDialog
 
 		final StringBuffer infoString = new StringBuffer();
 		infoString.append( "MOVING:\n" );
-		for ( int i = 0; i < bwData.movingSourceIndices.length; i++ )
+		for ( int i = 0; i < bwData.numMovingSources(); i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.movingSourceIndices[ i ]);
+			SourceAndConverter< ? > src = bwData.getMovingSource( i);
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||
 				name.equals( "JacobianDeterminantSource" ) ||
@@ -73,9 +72,9 @@ public class SourceInfoDialog extends JDialog
 		}
 
 		infoString.append( "\nTARGET:\n" );
-		for ( int i = 0; i < bwData.targetSourceIndices.length; i++ )
+		for ( int i = 0; i < bwData.numTargetSources(); i++ )
 		{
-			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);
+			SourceAndConverter< ? > src = bwData.getTargetSource( i );
 			final String name =  src.getSpimSource().getName();
 			if( name.equals( "WarpMagnitudeSource" ) ||
 				name.equals( "JacobianDeterminantSource" ) ||

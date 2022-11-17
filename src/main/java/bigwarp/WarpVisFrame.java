@@ -64,6 +64,9 @@ import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import bdv.gui.AutosaveOptionsPanel;
+import bdv.gui.MaskOptionsPanel;
+import bdv.gui.TransformTypePanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 import net.imglib2.realtransform.BoundingBoxEstimation;
@@ -112,11 +115,15 @@ public class WarpVisFrame extends JDialog
 	final JComboBox bboxMethodDropdown;
 	final JSpinner samplesPerDimSpinner;
 
+	// mask
+	final MaskOptionsPanel maskOptionsPanel;
+
+	// transform type
+	final TransformTypePanel transformTypePanel;
+
 	// autosave
-	final SpinnerNumberModel savePeriodModel;
-	final JSpinner autoSavePeriodSpinner;
-	final JCheckBox doAutoSaveBox;
-	final JTextField autoSaveFolderText;
+	private final AutosaveOptionsPanel autoSaveOptionsPanel;
+
 
 	public static final int minGridSpacing = 5;
 	public static final int maxGridSpacing = 400;
@@ -128,7 +135,7 @@ public class WarpVisFrame extends JDialog
 	
 	public WarpVisFrame( final Frame owner, final BigWarp<?> bw )
 	{
-		super( owner, "big warp options", false );
+		super( owner, "Bigwarp options", false );
 		this.bw = bw;
 		this.settings = bw.viewerSettings;
 		
@@ -239,128 +246,6 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( gridWidthSlider );
 		typeOptionPanel.add( noOptionsLabel );
 
-		// autoSave Options panel
-		final JPanel autoSaveOptionsPanel = new JPanel();
-		autoSaveOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
-				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
-				BorderFactory.createCompoundBorder(
-						BorderFactory.createTitledBorder(
-								BorderFactory.createEtchedBorder(),
-								"Auto-save options" ),
-						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-		autoSaveOptionsPanel.setLayout( new GridBagLayout() );
-
-		final JLabel autosaveLabel = new JLabel("Auto-save landmarks");
-		doAutoSaveBox = new JCheckBox();
-
-		final JLabel autoSavePeriodLabel = new JLabel("save frequency (minutes)");
-		autoSavePeriodSpinner = new JSpinner();
-		savePeriodModel = new SpinnerNumberModel( 5, 1, 5000, 1 );
-		autoSavePeriodSpinner.setModel( savePeriodModel );
-		autoSavePeriodSpinner.addChangeListener( new ChangeListener()
-		{
-			@Override
-			public void stateChanged( ChangeEvent e )
-			{
-				if( doAutoSaveBox.isSelected() )
-				{
-					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
-					BigWarpAutoSaver autoSaver = bw.getAutoSaver();
-					if ( autoSaver != null )
-						autoSaver.stop();
-
-					new BigWarpAutoSaver( bw, periodMillis );
-				}
-			}
-		} );
-
-		doAutoSaveBox.addItemListener( new ItemListener()
-		{
-			@Override
-			public void itemStateChanged( ItemEvent e )
-			{
-				bw.stopAutosave();
-
-				if ( doAutoSaveBox.isSelected() )
-				{
-					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
-					new BigWarpAutoSaver( bw, periodMillis );
-				}
-			}
-		});
-
-		final JLabel destDirLabel = new JLabel("Directory");
-		final File startingFolder = bw.getBigwarpSettingsFolder();
-		autoSaveFolderText = new JTextField();
-		autoSaveFolderText.setText( startingFolder.getAbsolutePath() );
-
-		final JButton browseBtn = new JButton( "Browse" );
-		browseBtn.addActionListener( e -> {
-
-			final JFileChooser fileChooser = new JFileChooser();
-			fileChooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
-			fileChooser.setCurrentDirectory( startingFolder );
-
-			final int ret = fileChooser.showOpenDialog(content); 
-			if (ret == JFileChooser.APPROVE_OPTION)
-			{
-				final File folder = fileChooser.getSelectedFile();
-				autoSaveFolderText.setText( folder.getAbsolutePath() );
-				bw.setAutosaveFolder( folder );
-			}
-		});
-
-		final GridBagConstraints gbcAutoSave = new GridBagConstraints();
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridy = 0;
-		gbcAutoSave.gridwidth = 2;
-		gbcAutoSave.gridheight = 1;
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.weighty = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		gbcAutoSave.fill = GridBagConstraints.HORIZONTAL;
-		gbcAutoSave.insets = new Insets( 5, 5, 5, 5 );
-
-		autoSaveOptionsPanel.add( autosaveLabel, gbcAutoSave ); 
-
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.gridwidth = 1;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( doAutoSaveBox, gbcAutoSave );
-
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridwidth = 2;
-		gbcAutoSave.gridy = 1;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( autoSavePeriodLabel, gbcAutoSave );
-
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( autoSavePeriodSpinner, gbcAutoSave );
-
-		gbcAutoSave.gridy = 2;
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridwidth = 1;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( destDirLabel, gbcAutoSave );
-
-		gbcAutoSave.gridy = 2;
-		gbcAutoSave.gridx = 1;
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( autoSaveFolderText, gbcAutoSave );
-
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( browseBtn, gbcAutoSave );
-
-
-
 		final JPanel inverseOptionsPanel = new JPanel();
 		inverseOptionsPanel.setLayout( new BorderLayout( 10, 10 ));
 
@@ -459,6 +344,16 @@ public class WarpVisFrame extends JDialog
 		bboxPanel.add( samplerPerDimPanel, BorderLayout.SOUTH );
 
 
+		// mask options
+		maskOptionsPanel = new MaskOptionsPanel( bw );
+
+		// type options
+		transformTypePanel = new TransformTypePanel( bw );
+
+		// autosaver options
+		autoSaveOptionsPanel = new AutosaveOptionsPanel( bw, content );
+
+		// organize panels
 		content.setLayout( new GridBagLayout() );
 		final GridBagConstraints gbcContent = new GridBagConstraints();
 		gbcContent.gridx = 0;
@@ -469,35 +364,42 @@ public class WarpVisFrame extends JDialog
 		gbcContent.weightx = 1.0;
 		gbcContent.weighty = 1.0;
 		gbcContent.insets = new Insets( 1, 1, 1, 1 );
-		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		content.add( transformTypePanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 1;
+		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 2;
 		gbcContent.gridwidth = 1;
 		gbcContent.anchor = GridBagConstraints.WEST;
 		content.add( visTypePanel, gbcContent );
 
-		gbcContent.gridy = 1;
 		gbcContent.gridx = 1;
 		gbcContent.gridwidth = 2;
 		gbcContent.anchor = GridBagConstraints.EAST;
 		content.add( typeOptionPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 2;
+		gbcContent.gridy = 3;
 		gbcContent.gridwidth = 3;
 		content.add( inverseOptionsPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 3;
+		gbcContent.gridy = 4;
 		gbcContent.gridwidth = 3;
 		content.add( bboxPanel, gbcContent );
 
-		gbcContent.gridy = 4;
-		content.add( autoSaveOptionsPanel , gbcContent );
+		gbcContent.gridy = 5;
+		content.add( maskOptionsPanel, gbcContent );
+
+		gbcContent.gridy = 6;
+		content.add( getAutoSaveOptionsPanel(), gbcContent );
 		
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
-		
+
 		addListeners();
 		updateOptions();
 	}
@@ -573,9 +475,9 @@ public class WarpVisFrame extends JDialog
 		warpGridModButton.setText( "Modulo" );
 		
 		// turn on the default values
-		setWarpVisOffButton.doClick();
-		warpMagAffineButton.doClick();
-		warpGridLineButton.doClick();
+//		setWarpVisOffButton.doClick();
+//		warpMagAffineButton.doClick();
+//		warpGridLineButton.doClick();
 	}
 	
 	public void addListeners()
@@ -697,5 +599,15 @@ public class WarpVisFrame extends JDialog
 		{
 			return size;
 		}
+	}
+
+	public boolean autoEstimateMask()
+	{
+		return maskOptionsPanel.getAutoEstimateMaskButton().isSelected();
+	}
+
+	public AutosaveOptionsPanel getAutoSaveOptionsPanel()
+	{
+		return autoSaveOptionsPanel;
 	}
 }
