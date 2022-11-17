@@ -2,22 +2,22 @@
     "Sources": {
         "0": {
             "uri": "/tmp/img8270806677315563879.tif",
-            "name": "img8270806677315563879.tif channel 1",
+            "name": "img8270806677315563879.tif",
             "isMoving": true
         },
         "1": {
             "uri": "/tmp/img8270806677315563879.tif",
-            "name": "img8270806677315563879.tif channel 2",
+            "name": "img8270806677315563879.tif",
             "isMoving": true
         },
         "2": {
             "uri": "/tmp/img8270806677315563879.tif",
-            "name": "img8270806677315563879.tif channel 3",
+            "name": "img8270806677315563879.tif",
             "isMoving": false
         },
         "3": {
             "uri": "/tmp/img8270806677315563879.tif",
-            "name": "img8270806677315563879.tif channel 4",
+            "name": "img8270806677315563879.tif",
             "isMoving": false
         }
     },
