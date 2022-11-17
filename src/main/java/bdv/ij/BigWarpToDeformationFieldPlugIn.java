@@ -379,7 +379,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					new ThinPlateR2LogRSplineKernelTransform( tps.getSourceLandmarks(), null, null, tps.getKnotWeights() ) );
 		}
 		else
-			return bwXfm.getTransformation();
+			return bwXfm.getTransformation( false );
 	}
 
 	/**

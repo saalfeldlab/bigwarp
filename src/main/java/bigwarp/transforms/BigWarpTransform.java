@@ -111,10 +111,20 @@ public class BigWarpTransform
 
 	public InvertibleRealTransform getTransformation()
 	{
-		return getTransformation( -1 );
+		return getTransformation( -1, true );
 	}
 	
 	public InvertibleRealTransform getTransformation( final int index )
+	{
+		return getTransformation( index, true );
+	}
+
+	public InvertibleRealTransform getTransformation( final boolean force3D )
+	{
+		return getTransformation( -1, force3D );
+	}
+
+	public InvertibleRealTransform getTransformation( final int index, final boolean force3D )
 	{
 		InvertibleRealTransform invXfm = null;
 		if( transformType.equals( TransformTypeSelectDialog.TPS ))
@@ -137,7 +147,7 @@ public class BigWarpTransform
 			invXfm = new ModelTransformSolver( getModelType() ).solve(mvgPts, tgtPts);
 		}
 
-		if( tableModel.getNumdims() == 2 )
+		if( force3D && tableModel.getNumdims() == 2 )
 		{
 			invXfm = new Wrapped2DTransformAs3D( invXfm );
 		}
