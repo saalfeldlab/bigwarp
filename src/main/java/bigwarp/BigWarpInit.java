@@ -401,8 +401,6 @@ public class BigWarpInit
 				}
 				return null;
 			} );
-			final ImagePlusLoader.ColorSettings colorSettings = bwdata.setupSettings.get( state.getId() );
-			state.setColorSettings( colorSettings );
 		} );
 
 		for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sourceInfoMap.entrySet() )

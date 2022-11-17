@@ -159,8 +159,7 @@ public class ImagePlusLoader implements Loader
 		for( Integer key : settingsMap.keySet() )
 		{
 			SourceAndConverter<?> sac = data.sources.get( key.intValue() );
-			data.setupSettings.put( key, settingsMap.get( key ) );
-			data.sourceColorSettings.put( sac, settingsMap.get( key ));
+			data.getSourceInfo( key ).setColorSettings( settingsMap.get( key ) );
 		}
 	}
 

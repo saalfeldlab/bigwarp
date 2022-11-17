@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import bdv.cache.CacheControl;
@@ -38,9 +39,6 @@ public class BigWarpData< T >
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
-	public final HashMap< Integer, ColorSettings > setupSettings;
-
-	public final HashMap< SourceAndConverter<?>, ColorSettings > sourceColorSettings;
 
 	public BigWarpData()
 	{
@@ -85,9 +83,6 @@ public class BigWarpData< T >
 			this.cache = new CacheControl.Dummy();
 		else
 			this.cache = cache;
-
-		setupSettings = new HashMap<>();
-		sourceColorSettings = new HashMap<>();
 	}
 
 	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
@@ -110,9 +105,6 @@ public class BigWarpData< T >
 			this.cache = new CacheControl.Dummy();
 		else
 			this.cache = cache;
-
-		setupSettings = new HashMap<>();
-		sourceColorSettings = new HashMap<>();
 	}
 	
 	private static ArrayList<Integer> listOf( int[] x )
@@ -273,8 +265,6 @@ public class BigWarpData< T >
 		final int sacId = sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().get();
 		final SourceInfo sourceInfo = sourceInfos.remove( sacId );
 		sources.remove( i );
-		setupSettings.remove( sourceInfo.getId() );
-		sourceColorSettings.remove(sac);
 		converterSetups.remove( i  );
 	}
 
@@ -291,10 +281,7 @@ public class BigWarpData< T >
 						applyFixedTransform( sac.getSpimSource(), transform),
 						sac );
 
-				//final int id = info.getId();
 				info.setSourceAndConverter( newSac );
-
-				sourceColorSettings.put( newSac, sourceColorSettings.get( sac ));
 				sources.set( i, newSac );
 			}
 			i++;
@@ -374,38 +361,29 @@ public class BigWarpData< T >
 		}
 	}
 
-	/**
-	 * @deprecated
-	 */
-	public void transferChannelSettings( final SetupAssignments setupAssignments, final VisibilityAndGrouping visibility )
-	{
-		for( Integer key : setupSettings.keySet() )
-			setupSettings.get( key ).updateSetup( setupAssignments );
-	}
-
 	public void transferChannelSettings( final BigWarpViewerFrame viewer )
 	{
-		SynchronizedViewerState state = viewer.getViewerPanel().state();
-		ConverterSetups setups = viewer.getConverterSetups();
-		synchronized ( state )
-		{
-			for ( SourceAndConverter< ? > sac : state.getSources() )
-			{
-				if ( sourceColorSettings.containsKey( sac ) )
-				{
-					if ( sourceColorSettings.get( sac ) == null )
-						continue;
+		final SynchronizedViewerState state = viewer.getViewerPanel().state();
+		final ConverterSetups setups = viewer.getConverterSetups();
 
-					sourceColorSettings.get( sac ).updateSetup( setups.getConverterSetup( sac ) );
-				}
-				else
-				{
-					final int timepoint = state.getCurrentTimepoint();	
-					final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
-					ConverterSetup cs = setups.getConverterSetup(sac);
-					if( cs != null )
-						cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
-				}
+		// TODO does this need synchronization?
+		for( Entry< Integer, SourceInfo > infoEntry : sourceInfos.entrySet() )
+		{
+			final int id = infoEntry.getKey();
+			final SourceInfo info = infoEntry.getValue();
+			final SourceAndConverter< ? > sac = info.getSourceAndConverter();
+			final ConverterSetup cs = setups.getConverterSetup( sac );
+
+			if ( info.getColorSettings() == null )
+			{
+				final int timepoint = state.getCurrentTimepoint();
+				final Bounds bounds = InitializeViewerState.estimateSourceRange( sac.getSpimSource(), timepoint, 0.001, 0.999 );
+				if( cs != null )
+					cs.setDisplayRange( bounds.getMinBound(), bounds.getMaxBound() );
+			}
+			else
+			{
+				info.getColorSettings().updateSetup( cs );
 			}
 		}
 	}

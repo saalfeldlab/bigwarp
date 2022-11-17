@@ -1920,11 +1920,7 @@ public class BigWarp< T >
 	@SuppressWarnings( "unchecked" )
 	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
 	{
-		final HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
-//		System.out.println( "before " + colorSettings.keySet().size());
-
 		int i = 0;
-
 		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
 		{
 			if ( sourceInfo.isMoving() )
@@ -1932,12 +1928,10 @@ public class BigWarp< T >
 				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
 				sourceInfo.setSourceAndConverter( newSac );
-				colorSettings.put( newSac, sourceInfo.getColorSettings());
 				data.sources.set( sourceIdx, newSac );
 			}
 			i++;
 		}
-//		System.out.println( "after " + colorSettings.keySet().size());
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -1947,9 +1941,6 @@ public class BigWarp< T >
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		final HashMap<SourceAndConverter<?>, ColorSettings> colorSettings = data.sourceColorSettings;
-//		System.out.println( "before " + colorSettings.keySet().size());
-
 		int i = 0;
 		for ( final SourceInfo sourceInfo : sources.values() )
 		{
@@ -1957,7 +1948,6 @@ public class BigWarp< T >
 			{
 				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				wrappedSource.add( newSac );
-				colorSettings.put( newSac, sourceInfo.getColorSettings() );
 			}
 			else
 			{
@@ -1966,7 +1956,6 @@ public class BigWarp< T >
 
 			i++;
 		}
-//		System.out.println( "after " + colorSettings.keySet().size());
 		return wrappedSource;
 	}
 
@@ -2587,6 +2576,13 @@ public class BigWarp< T >
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
+
+
+				// For testing display and color settings
+//				impP.setDisplayRange( 10, 200 );
+//				impQ.setDisplayRange( 20, 180 );
+//				impP.show();
+//				impQ.show();
 
 				if ( !( impP == null || impQ == null ) )
 				{
