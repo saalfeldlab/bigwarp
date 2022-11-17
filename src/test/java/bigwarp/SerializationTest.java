@@ -24,7 +24,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.FinalInterval;
@@ -238,7 +240,7 @@ public class SerializationTest
 		bw.data.sourceInfos.forEach( (id, info) -> {
 
 			Assert.assertEquals("URI Mismatch", "/tmp/img8270806677315563879.tif", info.getUri());
-			Assert.assertEquals("Name Mismatch", "img8270806677315563879.tif channel " + (id + 1), info.getName());
+			Assert.assertEquals("Name Mismatch", "img8270806677315563879.tif", info.getName());
 			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
 		} );
 	}
@@ -252,8 +254,13 @@ public class SerializationTest
 		final String imagejUri = "imagej://generated image";
 		final Path xmlSourceSettings = createNewSettingsWithReplacement(
 				"src/test/resources/settings/expected.json",
-				"/tmp/img8270806677315563879.tif",
-				imagejUri );
+				new HashMap< String, String >() {
+					/* Map filled during construction: see: https://stackoverflow.com/questions/6802483/how-to-directly-initialize-a-hashmap-in-a-literal-way */
+					{
+						put( "/tmp/img8270806677315563879.tif", imagejUri);
+						put( "img8270806677315563879.tif", "generated image" );
+					}
+				});
 
 		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
@@ -269,6 +276,20 @@ public class SerializationTest
 			Assert.assertEquals("Name Mismatch", "generated image", info.getName());
 			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
 		} );
+
+
+		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
+	}
+
+	private static void assertExpectedSettingsToCurrent( final Path xmlSourceSettings, final BigWarp< Object > bw ) throws IOException
+	{
+		/* Save the settings and compare with initial to test the deserialization */
+		final Path tempSettings = Files.createTempFile( "deserialization", ".json" );
+		tempSettings.toFile().delete();
+		bw.saveSettingsJson(tempSettings.toFile().getCanonicalPath());
+		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( xmlSourceSettings.toFile() ) );
+		final JsonElement actualJson = JsonParser.parseReader( new FileReader( tempSettings.toFile() ) );
+		BigWarpTestUtils.assertJsonDiff( expectedJson, actualJson );
 	}
 
 	@Test
@@ -277,8 +298,13 @@ public class SerializationTest
 		final String xmlUri = "src/test/resources/mri-stack.xml";
 		final Path xmlSourceSettings = createNewSettingsWithReplacement(
 				"src/test/resources/settings/expected.json",
-				"/tmp/img8270806677315563879.tif",
-				xmlUri );
+				new HashMap< String, String >() {
+					/* Map filled during construction: see: https://stackoverflow.com/questions/6802483/how-to-directly-initialize-a-hashmap-in-a-literal-way */
+					{
+						put( "/tmp/img8270806677315563879.tif", xmlUri);
+						put( "img8270806677315563879.tif", "channel 1" );
+					}
+				});
 
 		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
@@ -294,16 +320,27 @@ public class SerializationTest
 			Assert.assertEquals("Name Mismatch", "channel 1", info.getName());
 			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
 		} );
+
+
+		/* then save the settings, load it, and compare with initial to test the deserialization */
+		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
 	}
 
 	@Test
 	public void sourceFromN5Test() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final String n5Uri = "src/test/resources/bigwarp/url/transformTest.n5?img";
+
+		/* Map filled during construction: see: https://stackoverflow.com/questions/6802483/how-to-directly-initialize-a-hashmap-in-a-literal-way */
 		final Path xmlSourceSettings = createNewSettingsWithReplacement(
 				"src/test/resources/settings/expected.json",
-				"/tmp/img8270806677315563879.tif",
-				n5Uri );
+				new HashMap< String, String >() {
+					{
+						put( "/tmp/img8270806677315563879.tif", n5Uri );
+						put( "img8270806677315563879.tif", "img" );
+					}
+				}
+		);
 
 		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
@@ -319,14 +356,25 @@ public class SerializationTest
 			Assert.assertEquals("Name Mismatch", "img", info.getName());
 			Assert.assertEquals("Moving/Target Mismatch", movingById[id], info.isMoving());
 		} );
+
+		/* then save the settings, load it, and compare with initial to test the deserialization */
+		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
+
 	}
 
-	private static Path createNewSettingsWithReplacement( final String baseSettings, final String toReplace, final String replaceWith ) throws IOException
+	private static Path createNewSettingsWithReplacement( final String baseSettings, final Map<String, String> replacements ) throws IOException
 	{
 		/* Load expected.json and replace source path with desired uri */
 		final Path settings = Paths.get( baseSettings );
-		final List< String > newLines = Files.readAllLines( settings ).stream().map( line -> line.replaceAll( toReplace, replaceWith ) ).collect( Collectors.toList());
-		final Path newSettings = Files.createTempFile( "settings", "json" );
+		final List< String > newLines = Files.readAllLines( settings ).stream().map( line -> {
+			String out = line;
+			for ( final Map.Entry< String, String > replaceWith : replacements.entrySet() )
+			{
+				out = out.replaceAll( replaceWith.getKey(), replaceWith.getValue() );
+			}
+			return out;
+		} ).collect( Collectors.toList());
+		final Path newSettings = Files.createTempFile( "settings", ".json" );
 		return Files.write( newSettings, newLines );
 	}
 
