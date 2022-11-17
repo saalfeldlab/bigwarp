@@ -13,8 +13,6 @@ import javax.swing.UIManager;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
-import org.janelia.saalfeldlab.n5.imglib2.NgffTransformations;
-
 import net.imglib2.realtransform.RealTransform;
 
 public class BigWarpSourceTableModel extends AbstractTableModel 
@@ -200,12 +198,13 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 		public RealTransform getTransform()
 		{
-			if( transformName != null && !transformName.isEmpty() )
-			{
-				// TODO generalize to attributes in n5
-//				final RealTransform tform = NgffTransformations.openJson( transformName );
-				return NgffTransformations.openJson( transformName );
-			}
+			// TODO depends on in progress dependencies - see dfield-dev branch
+//			if( transformName != null && !transformName.isEmpty() )
+//			{
+//				// TODO generalize to attributes in n5
+////				final RealTransform tform = NgffTransformations.openJson( transformName );
+//				return NgffTransformations.openJson( transformName );
+//			}
 			return null;
 		}
 	}

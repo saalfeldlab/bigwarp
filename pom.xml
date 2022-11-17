@@ -302,7 +302,6 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-imglib2</artifactId>
-			<version>5.0.0-SNAPSHOT</version>
 		</dependency>
 
 		<!-- Test scope dependencies -->
