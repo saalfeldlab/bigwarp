@@ -34,6 +34,7 @@ import org.janelia.saalfeldlab.n5.metadata.canonical.CanonicalDatasetMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
 import org.janelia.saalfeldlab.n5.ui.N5DatasetTreeCellRenderer;
+import org.jdom2.JDOMException;
 
 import com.formdev.flatlaf.util.UIScale;
 
@@ -110,7 +111,7 @@ public class BigWarpInitDialog extends JFrame
 
 		okayCallback = x -> {
 			macroRecord( x );
-			runBigWarp( x );
+			runBigWarp( x, projectPathTxt.getText() );
 		};
 		
 		imagePathUpdateCallback = ( p ) -> { 
@@ -143,58 +144,74 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static <T> void runBigWarp( BigWarpSourceTableModel sourceTable )
+	public static <T> void runBigWarp( BigWarpSourceTableModel sourceTable, String projectPath )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final int N = sourceTable.getRowCount();
+		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
 
-		int id = 0;
-		for( int i = 0; i < N; i++ )
+		if( !haveProject )
 		{
-			SourceRow tableRow = sourceTable.get( i );
-			if( tableRow.isImagePlus )
+			int id = 0;
+			for( int i = 0; i < N; i++ )
 			{
-				final ImagePlus imp = WindowManager.getImage( tableRow.srcName );
-//				id += BigWarpInit.add( data, imp, id, 0, tableRow.moving );
-//				addTransform( data, tableRow );
-				LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
-				BigWarpInit.add( data, infos, tableRow.getTransform() );
-			}
-			else
-			{
-				// TODO deal with exceptions, and possibility of multiple sources per uri
-				try
+				SourceRow tableRow = sourceTable.get( i );
+				if( tableRow.isImagePlus )
 				{
-//					BigWarpInit.add( data, tableRow.srcName, id, tableRow.moving );
-//					addTransform( data, tableRow );
-					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+					final ImagePlus imp = WindowManager.getImage( tableRow.srcName );
+	//				id += BigWarpInit.add( data, imp, id, 0, tableRow.moving );
+	//				addTransform( data, tableRow );
+					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform() );
 				}
-				catch ( URISyntaxException e )
+				else
 				{
-					e.printStackTrace();
+					// TODO deal with exceptions, and possibility of multiple sources per uri
+					try
+					{
+	//					BigWarpInit.add( data, tableRow.srcName, id, tableRow.moving );
+	//					addTransform( data, tableRow );
+						LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+						BigWarpInit.add( data, infos, tableRow.getTransform() );
+					}
+					catch ( URISyntaxException e )
+					{
+						e.printStackTrace();
+					}
+					catch ( IOException e )
+					{
+						e.printStackTrace();
+					}
+					catch ( SpimDataException e )
+					{
+						e.printStackTrace();
+					}
+					id++;
 				}
-				catch ( IOException e )
-				{
-					e.printStackTrace();
-				}
-				catch ( SpimDataException e )
-				{
-					e.printStackTrace();
-				}
-				id++;
 			}
 		}
 
+		BigWarp bw;
 		try
 		{
 			data.applyTransformations();
-			new BigWarp<>( data, "BigWarp", new ProgressWriterIJ() );
+			bw = new BigWarp<>( data, new ProgressWriterIJ() );
+			if( haveProject )
+				bw.loadSettings( projectPath );
 		}
 		catch ( SpimDataException e )
 		{
 			e.printStackTrace();
 		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( JDOMException e )
+		{
+			e.printStackTrace();
+		}
+
 	}
 
 	public JPanel createContent()

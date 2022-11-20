@@ -863,14 +863,21 @@ public class BigWarp< T >
 	protected void setUpViewerMenu( final BigWarpViewerFrame vframe )
 	{
 		// TODO setupviewermenu
-
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
-
 		final JMenuBar viewerMenuBar = new JMenuBar();
 
 		JMenu fileMenu = new JMenu( "File" );
 		viewerMenuBar.add( fileMenu );
 
+		final JMenuItem loadProject = new JMenuItem( actionMap.get( BigWarpActions.LOAD_PROJECT ) );
+		loadProject.setText( "Load project" );
+		fileMenu.add( loadProject );
+
+		final JMenuItem saveProject = new JMenuItem( actionMap.get( BigWarpActions.SAVE_PROJECT ) );
+		saveProject.setText( "Save project" );
+		fileMenu.add( saveProject );
+
+		fileMenu.addSeparator();
 		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
 		openItem.setText( "Import landmarks" );
 		fileMenu.add( openItem );
@@ -2557,7 +2564,7 @@ public class BigWarp< T >
 
 
 			ProgressWriterIJ progress = new ProgressWriterIJ();
-			BigWarp<?> bw;
+			BigWarp bw;
 			BigWarpData<?> bwdata; 
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
@@ -3603,13 +3610,13 @@ public class BigWarp< T >
 		}
 	}
 
-	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
+	public void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
 		loadSettings( jsonOrXmlFilename, false );
 	}
 
-	protected void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
+	public void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
 			JDOMException
 	{
 		if ( jsonOrXmlFilename.endsWith( ".xml" ) )

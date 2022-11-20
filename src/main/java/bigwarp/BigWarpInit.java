@@ -1123,9 +1123,33 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static BigWarpData< ? > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
+	public static <T> BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
-		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
+//		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
+		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		try
+		{
+			int id = 0;
+			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
+			id += mvgSrcs.size();
+			BigWarpInit.add( bwdata, mvgSrcs );
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id,  false ));
+		}
+		catch ( URISyntaxException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
+
+		return bwdata;
 	}
 
 	/**
@@ -1137,9 +1161,18 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
+	public static <T> BigWarpData< T > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
-		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), null );
+//		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), null );
+
+		int id = 0;
+		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
+		id += mvgSrcs.size();
+		BigWarpInit.add( bwdata, mvgSrcs );
+		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ));
+
+		return bwdata;
 	}
 
 	/**
@@ -1195,9 +1228,32 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static BigWarpData< ? > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
+	public static <T> BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
-		return createBigWarpData( new XMLLoader( xmlFilenameP ), new ImagePlusLoader( impQ ) );
+		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		try
+		{
+			int id = 0;
+			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
+			id += mvgSrcs.size();
+			BigWarpInit.add( bwdata, mvgSrcs );
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ));
+		}
+		catch ( URISyntaxException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
+
+		return bwdata;
 	}
 
 	/**
@@ -1224,9 +1280,33 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static BigWarpData< ? > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	public static <T> BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
-		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
+//		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
+		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		try
+		{
+			int id = 0;
+			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
+			id += mvgSrcs.size();
+			BigWarpInit.add( bwdata, mvgSrcs );
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id,  false ));
+		}
+		catch ( URISyntaxException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
+
+		return bwdata;
 	}
 
 	/**

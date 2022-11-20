@@ -50,6 +50,9 @@ public class BigWarpActions
 	public static final String TOGGLE_LANDMARK_MODE  = "landmark mode toggle";
 	public static final String TRANSFORM_TYPE = "transform type";
 
+	public static final String LOAD_PROJECT = "load project";
+	public static final String SAVE_PROJECT = "save project";
+
 	public static final String TOGGLE_POINTS_VISIBLE  = "toggle points visible";
 	public static final String TOGGLE_POINT_NAMES_VISIBLE  = "toggle point names visible";
 	public static final String TOGGLE_MOVING_IMAGE_DISPLAY = "toggle moving image display";
@@ -215,6 +218,9 @@ public class BigWarpActions
 
 		new SaveSettingsAction( bw ).put( actionMap );
 		new LoadSettingsAction( bw ).put( actionMap );
+
+		new SaveProjectAction( bw ).put( actionMap );
+		new LoadProjectAction( bw ).put( actionMap );
 
 		return actionMap;
 	}
@@ -900,6 +906,23 @@ public class BigWarpActions
 		private static final long serialVersionUID = 1L;
 	}
 
+	public static class SaveProjectAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -965388576691467002L;
+		BigWarp< ? > bw;
+		public SaveProjectAction( final BigWarp< ? > bw )
+		{
+			super( SAVE_PROJECT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.saveSettings();
+		}
+	}
+
 	public static class LoadSettingsAction extends AbstractNamedAction
 	{
 		BigWarp< ? > bw;
@@ -916,6 +939,23 @@ public class BigWarpActions
 		}
 
 		private static final long serialVersionUID = 1L;
+	}
+
+	public static class LoadProjectAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 1793182816804229398L;
+		BigWarp< ? > bw;
+		public LoadProjectAction( final BigWarp< ? > bw )
+		{
+			super( LOAD_PROJECT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.loadSettings();
+		}
 	}
 
 	public static class WarpToSelectedAction extends AbstractNamedAction
