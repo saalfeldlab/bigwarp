@@ -2569,25 +2569,24 @@ public class BigWarp< T >
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				bwdata = BigWarpInit.createBigWarpDataFromXML( fnP, fnQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if ( fnP.endsWith( "xml" ) && !fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impQ = IJ.openImage( fnQ );
 				bwdata = BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if ( !fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if (!fnP.isEmpty() && !fnQ.isEmpty())
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
-
 
 				// For testing display and color settings
 //				impP.setDisplayRange( 10, 200 );
