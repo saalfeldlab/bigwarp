@@ -32,6 +32,7 @@ import java.util.List;
 
 import ij.io.FileInfo;
 import java.util.Objects;
+
 import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
@@ -60,6 +61,7 @@ import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
+import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.loader.ImagePlusLoader;
@@ -80,6 +82,9 @@ import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 import mpicbg.spim.data.sequence.Angle;
 import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
+import net.imagej.Dataset;
+import net.imagej.axis.Axes;
+import net.imagej.axis.CalibratedAxis;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
@@ -322,7 +327,7 @@ public class BigWarpInit
 		for ( Source< ? > mvgSource : movingSourceList )
 		{
 			add( data, mvgSource, setupId, 1, true );
-			final SourceAndConverter<?> addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
+			final SourceAndConverter< ? > addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
 			final SourceInfo info = new SourceInfo( setupId, true, names[ nameIdx++ ] );
 			info.setSourceAndConverter( addedSource );
 			data.sourceInfos.put( setupId++, info );
@@ -332,10 +337,10 @@ public class BigWarpInit
 		for ( Source< ? > fxdSource : fixedSourceList )
 		{
 			add( data, fxdSource, setupId, 1, false );
-			final SourceAndConverter<?> addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
+			final SourceAndConverter< ? > addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
 			final SourceInfo info = new SourceInfo( setupId, false, names[ nameIdx++ ] );
-			info.setSourceAndConverter( addedSource);
-			data.sourceInfos.put( setupId++, info);
+			info.setSourceAndConverter( addedSource );
+			data.sourceInfos.put( setupId++, info );
 		}
 
 		data.wrapUp();
@@ -346,9 +351,9 @@ public class BigWarpInit
 			final AtomicInteger sourceInfoIdx = new AtomicInteger();
 
 			final BigWarpData< ? > typedData = data;
-			typedData.sourceInfos.forEach((id, info) -> {
+			typedData.sourceInfos.forEach( ( id, info ) -> {
 				info.setSourceAndConverter( typedData.sources.get( sourceInfoIdx.getAndIncrement() ) );
-			});
+			} );
 
 			return new BigWarpData( wrappedSources, data.converterSetups, data.cache );
 
@@ -360,7 +365,10 @@ public class BigWarpInit
 	/**
 	 * @return
 	 *
-	 * @Deprecated Use {@link #createSources(BigWarpData, ImagePlus, int, int, boolean)} instaed, and pass output to {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
+	 * @Deprecated Use
+	 *             {@link #createSources(BigWarpData, ImagePlus, int, int, boolean)}
+	 *             instaed, and pass output to
+	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
 	 */
 	@SuppressWarnings( { "rawtypes" } )
 	@Deprecated
@@ -385,14 +393,17 @@ public class BigWarpInit
 		}
 
 		sourceInfoMap.forEach( ( sac, state ) -> {
-			state.setUriSupplier(() -> {
+			state.setUriSupplier( () -> {
 				final FileInfo originalFileInfo = ip.getOriginalFileInfo();
-				if (originalFileInfo != null) {
+				if ( originalFileInfo != null )
+				{
 					final String url = originalFileInfo.url;
 					if ( url != null && !url.isEmpty() )
 					{
 						return url;
-					} else  {
+					}
+					else
+					{
 						return originalFileInfo.getFilePath();
 					}
 				}
@@ -412,22 +423,26 @@ public class BigWarpInit
 	/**
 	 * @return
 	 *
-	 * @Deprecated Use the output from one of the {{@link #createSources(BigWarpData, String, int, boolean)}} to call {{@link #add(BigWarpData, LinkedHashMap)}} instead
+	 * @Deprecated Use the output from one of the
+	 *             {{@link #createSources(BigWarpData, String, int, boolean)}}
+	 *             to call {{@link #add(BigWarpData, LinkedHashMap)}} instead
 	 */
-	@SuppressWarnings( { "rawtypes" } )
 	@Deprecated
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
 		return add( bwdata, src, setupId, numTimepoints, isMoving, null );
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo ) {
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo )
+	{
 		return add( bwdata, source, sourceInfo );
 	}
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform) {
+
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform )
+	{
 		final LinkedHashMap< Source< T >, SourceInfo > sourceToInfo = new LinkedHashMap<>();
 		sourceToInfo.put( source, sourceInfo );
-		return add(bwdata, sourceToInfo, transform);
+		return add( bwdata, sourceToInfo, transform );
 	}
 
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources )
@@ -439,7 +454,11 @@ public class BigWarpInit
 	/**
 	 * @return
 	 *
-	 * @Deprecated Use the output from one of the {{@link #createSources(BigWarpData, String, int, boolean)}} to call {{@link #add(BigWarpData, LinkedHashMap, RealTransform)}} instead
+	 * @Deprecated Use the output from one of the
+	 *             {{@link #createSources(BigWarpData, String, int, boolean)}}
+	 *             to call
+	 *             {{@link #add(BigWarpData, LinkedHashMap, RealTransform)}}
+	 *             instead
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	@Deprecated
@@ -454,13 +473,12 @@ public class BigWarpInit
 	{
 		sources.forEach( ( source, info ) -> {
 			addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
-			final SourceAndConverter<T> addedSource = bwdata.sources.get( bwdata.sources.size() -1  );
+			final SourceAndConverter< T > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
 			info.setSourceAndConverter( addedSource );
 
 			if ( transform != null )
 			{
 				info.setTransform( transform );
-//				bwdata.transforms.add( transform );
 			}
 			bwdata.sourceInfos.put( info.getId(), info );
 		} );
@@ -468,31 +486,87 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "rawtypes" } )
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, Dataset data, int baseId, final boolean isMoving )
+	{
+		boolean first = true;
+		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+
+		AffineTransform3D res = datasetResolution( data );
+		final long nc = data.getChannels();
+		if ( nc > 1 )
+		{
+			CalibratedAxis[] axes = new CalibratedAxis[ data.numDimensions() ];
+			data.axes( axes );
+			int channelIdx = -1;
+			for ( int i = 0; i < data.numDimensions(); i++ )
+			{
+				if ( axes[ i ].type().equals( Axes.CHANNEL ) )
+				{
+					channelIdx = i;
+					break;
+				}
+			}
+
+			for ( int c = 0; c < nc; c++ )
+			{
+				@SuppressWarnings( "unchecked" )
+				RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( Views.hyperSlice( data, channelIdx, c ), Util.getTypeFromInterval( data ), res, data.getName() );
+
+				final SourceInfo info = new SourceInfo( baseId + c, isMoving, data.getName(), () -> data.getSource() );
+				info.setSerializable( first );
+				if ( first )
+					first = false;
+
+				sourceInfoMap.put( source, info );
+			}
+		}
+		else
+		{
+			@SuppressWarnings( "unchecked" )
+			RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( data, Util.getTypeFromInterval( data ), res, data.getName() );
+
+			final SourceInfo info = new SourceInfo( baseId, isMoving, data.getName(), () -> data.getSource() );
+			info.setSerializable( true );
+			sourceInfoMap.put( source, info );
+		}
+
+		return sourceInfoMap;
+	}
+
+	public static AffineTransform3D datasetResolution( Dataset data )
+	{
+		final AffineTransform3D affine = new AffineTransform3D();
+		final CalibratedAxis[] axes = new CalibratedAxis[ data.numDimensions() ];
+		data.axes( axes );
+
+		for ( int d = 0; d < data.numDimensions(); d++ )
+		{
+			if ( axes[ d ].type().equals( Axes.X ) )
+				affine.set( axes[ d ].calibratedValue( 1 ), 0, 0 );
+			else if ( axes[ d ].type().equals( Axes.Y ) )
+				affine.set( axes[ d ].calibratedValue( 1 ), 1, 1 );
+			else if ( axes[ d ].type().equals( Axes.Z ) )
+				affine.set( axes[ d ].calibratedValue( 1 ), 2, 2 );
+		}
+		return affine;
+	}
+
+	@SuppressWarnings( { "rawtypes" } )
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, final boolean isMoving )
 	{
-		final List<SourceAndConverter<?>> tmpSources = new ArrayList<>();
-		final List<ConverterSetup> tmpConverterSetups = new ArrayList<>();
+		final List< SourceAndConverter< ? > > tmpSources = new ArrayList<>();
+		final List< ConverterSetup > tmpConverterSetups = new ArrayList<>();
 		initSetups( data, tmpConverterSetups, tmpSources );
 
 		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		int setupId = baseId;
 		for ( SourceAndConverter sac : tmpSources )
 		{
-			final Source<T> source = sac.getSpimSource();
+			final Source< T > source = sac.getSpimSource();
 			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
 		}
 
 		return sourceInfoMap;
-
-//		int N = bwdata.sources.size();
-//		final ArrayList<Integer > idxList;
-//		if ( isMoving )
-//			idxList = bwdata.movingSourceIndexList;
-//		else
-//			idxList = bwdata.targetSourceIndexList;
-//
-//		for( int i = startSize; i < N; i++ )
-//			idxList.add( i );
 	}
 
 	private static String schemeSpecificPartWithoutQuery( URI uri )
@@ -536,16 +610,13 @@ public class BigWarpInit
 			}
 
 			final Source< T > source = loadN5Source( n5reader, dataset );
-			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset) );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset ) );
 		}
 		else
 		{
 			firstUri = new URI( encodedUriString.replaceAll( "%23", "#" ) );
 			final String firstSchemeSpecificPartMinusQuery = schemeSpecificPartWithoutQuery( firstUri );
-			final boolean skipScheme = firstUri.getScheme() == null
-					|| firstUri.getScheme().trim().isEmpty()
-					|| firstUri.getScheme().trim().equalsIgnoreCase( "n5" )
-					|| firstUri.getScheme().trim().equalsIgnoreCase( "file" );
+			final boolean skipScheme = firstUri.getScheme() == null || firstUri.getScheme().trim().isEmpty() || firstUri.getScheme().trim().equalsIgnoreCase( "n5" ) || firstUri.getScheme().trim().equalsIgnoreCase( "file" );
 			final String firstSchemeAndPath = skipScheme ? firstSchemeSpecificPartMinusQuery : firstUri.getScheme() + "://" + firstSchemeSpecificPartMinusQuery;
 			try
 			{
@@ -556,9 +627,9 @@ public class BigWarpInit
 				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset ) );
 			}
 			catch ( Exception ignored )
+			{}
+			if ( sourceStateMap.isEmpty() )
 			{
-			}
-			if ( sourceStateMap.isEmpty() ) {
 				if ( firstSchemeAndPath.trim().toLowerCase().endsWith( ".xml" ) )
 				{
 					sourceStateMap.putAll( createSources( bwData, isMoving, setupId, firstSchemeAndPath, firstUri.getQuery() ) );
@@ -586,7 +657,10 @@ public class BigWarpInit
 
 		}
 
-		/* override any already set urls with the uri we used to load this source. */
+		/*
+		 * override any already set urls with the uri we used to load this
+		 * source.
+		 */
 		sourceStateMap.forEach( ( source, state ) -> {
 			state.setUriSupplier( () -> uri );
 		} );
@@ -602,15 +676,14 @@ public class BigWarpInit
 	/**
 	 * @return
 	 *
-	 * @Deprecated Use output froom {@link #createSources(BigWarpData, boolean, int, String, String)} and add with {@link #add(BigWarpData, LinkedHashMap, RealTransform)} instead.
+	 * @Deprecated Use output froom
+	 *             {@link #createSources(BigWarpData, boolean, int, String, String)}
+	 *             and add with
+	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
+	 *             instead.
 	 */
 	@Deprecated
-	public static < T > SpimData addToData(
-			final BigWarpData< T > bwdata,
-			final boolean isMoving,
-			final int setupId,
-			final String rootPath,
-			final String dataset )
+	public static < T > SpimData addToData( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		final AtomicReference< SpimData > returnMovingSpimData = new AtomicReference<>();
 		final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData );
@@ -618,25 +691,14 @@ public class BigWarpInit
 		return returnMovingSpimData.get();
 	}
 
-	public static < T > Map< Source< T >, SourceInfo > createSources(
-			final BigWarpData< T > bwdata,
-			final boolean isMoving,
-			final int setupId,
-			final String rootPath,
-			final String dataset )
+	public static < T > Map< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
 
-	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources(
-			final BigWarpData< T > bwdata,
-			final boolean isMoving,
-			final int setupId,
-			final String rootPath,
-			final String dataset,
-			final AtomicReference< SpimData > returnMovingSpimData )
+	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
 	{
-		if( rootPath.endsWith( "xml" ))
+		if ( rootPath.endsWith( "xml" ) )
 		{
 			SpimData spimData;
 			try
@@ -669,7 +731,10 @@ public class BigWarpInit
 				}
 				return sources;
 			}
-			catch ( SpimDataException e ) { e.printStackTrace(); }
+			catch ( SpimDataException e )
+			{
+				e.printStackTrace();
+			}
 			return null;
 		}
 		else
@@ -690,34 +755,26 @@ public class BigWarpInit
 		{
 			n5 = new N5Factory().openReader( n5Root );
 		}
-		catch ( IOException e ) { 
+		catch ( IOException e )
+		{
 			e.printStackTrace();
 			return null;
 		}
 		return loadN5Source( n5, n5Dataset );
 	}
+
 	public static < T > Source< T > loadN5Source( final N5Reader n5, final String n5Dataset )
 	{
-		final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
-			new ImagePlusLegacyMetadataParser(),
-			new N5CosemMetadataParser(),
-			new N5SingleScaleMetadataParser(),
-			new CanonicalMetadataParser(),
-			new N5GenericSingleScaleMetadataParser()
+		final N5MetadataParser< ? >[] PARSERS = new N5MetadataParser[] { new ImagePlusLegacyMetadataParser(), new N5CosemMetadataParser(), new N5SingleScaleMetadataParser(), new CanonicalMetadataParser(), new N5GenericSingleScaleMetadataParser()
 		};
 
-		final N5MetadataParser<?>[] GROUP_PARSERS = new N5MetadataParser[]{
-			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
-			new N5ViewerMultiscaleMetadataParser(),
-			new CanonicalMetadataParser(),
+		final N5MetadataParser< ? >[] GROUP_PARSERS = new N5MetadataParser[] { new N5CosemMultiScaleMetadata.CosemMultiScaleParser(), new N5ViewerMultiscaleMetadataParser(), new CanonicalMetadataParser(),
 		};
 
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, 
-					N5DatasetDiscoverer.fromParsers(PARSERS), 
-					N5DatasetDiscoverer.fromParsers(GROUP_PARSERS) );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
 
 			final N5TreeNode node = discoverer.discoverAndParseRecursive( n5Dataset );
 			meta = node.getMetadata();
@@ -725,9 +782,9 @@ public class BigWarpInit
 		catch ( IOException e )
 		{}
 
-		if( meta instanceof MultiscaleMetadata )
+		if ( meta instanceof MultiscaleMetadata )
 		{
-			return openAsSourceMulti( n5, (MultiscaleMetadata<?>)meta, true );
+			return openAsSourceMulti( n5, ( MultiscaleMetadata< ? > ) meta, true );
 		}
 		else
 		{
@@ -742,33 +799,28 @@ public class BigWarpInit
 		final RandomAccessibleInterval image;
 		try
 		{
-			if( isVolatile )
-				imageRaw = to3d( N5Utils.openVolatile( n5, meta.getPath() ));
+			if ( isVolatile )
+				imageRaw = to3d( N5Utils.openVolatile( n5, meta.getPath() ) );
 			else
-				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ));
+				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ) );
 
-			if( meta instanceof N5ImagePlusMetadata 
-					&& ((N5ImagePlusMetadata)meta).getType() == ImagePlus.COLOR_RGB
-					&& Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
+			if ( meta instanceof N5ImagePlusMetadata && ( ( N5ImagePlusMetadata ) meta ).getType() == ImagePlus.COLOR_RGB && Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
 			{
 				image = toColor( imageRaw );
 			}
 			else
 				image = imageRaw;
 
-			if( meta instanceof SpatialMetadata )
+			if ( meta instanceof SpatialMetadata )
 			{
-				final String unit = ((SpatialMetadata)meta).unit();
-				final AffineTransform3D srcXfm = ((SpatialMetadata)meta).spatialTransform3d();
-				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, 
-						new double[]{ srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) });
+				final String unit = ( ( SpatialMetadata ) meta ).unit();
+				final AffineTransform3D srcXfm = ( ( SpatialMetadata ) meta ).spatialTransform3d();
+				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, new double[] { srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) } );
 
-				return new BwRandomAccessibleIntervalSource( image, (NumericType ) Util.getTypeFromInterval( image ),
-						srcXfm, meta.getPath(), voxelDims );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), srcXfm, meta.getPath(), voxelDims );
 			}
 			else
-				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ),
-						new AffineTransform3D(), meta.getPath() );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), new AffineTransform3D(), meta.getPath() );
 		}
 		catch ( IOException e )
 		{
@@ -778,23 +830,23 @@ public class BigWarpInit
 		return null;
 	}
 
-	public static < T > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final boolean isVolatile )
+	public static < T > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
 		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
-		final String unit = multiMeta.units()[0];
+		final String unit = multiMeta.units()[ 0 ];
 
 		@SuppressWarnings( "rawtypes" )
-		final RandomAccessibleInterval[] images = new RandomAccessibleInterval[paths.length];
+		final RandomAccessibleInterval[] images = new RandomAccessibleInterval[ paths.length ];
 		final double[][] mipmapScales = new double[ images.length ][ 3 ];
 		for ( int s = 0; s < images.length; ++s )
 		{
 			try
 			{
-				if( isVolatile )
-					images[ s ] = to3d( N5Utils.openVolatile( n5, paths[s] ));
+				if ( isVolatile )
+					images[ s ] = to3d( N5Utils.openVolatile( n5, paths[ s ] ) );
 				else
-					images[ s ] = to3d( N5Utils.open( n5, paths[s] ));
+					images[ s ] = to3d( N5Utils.open( n5, paths[ s ] ) );
 			}
 			catch ( IOException e )
 			{
@@ -807,37 +859,29 @@ public class BigWarpInit
 		}
 
 		@SuppressWarnings( { "unchecked", "rawtypes" } )
-		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( 
-				images, 
-				(NumericType ) Util.getTypeFromInterval(images[0]),
-				mipmapScales,
-				new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[0]),
-				new AffineTransform3D(),
-				multiMeta.getPaths()[0] + "_group" );
+		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( images, ( NumericType ) Util.getTypeFromInterval( images[ 0 ] ), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
 
 		return source;
 	}
 
-	private static RandomAccessibleInterval<?> to3d( RandomAccessibleInterval<?> img )
+	private static RandomAccessibleInterval< ? > to3d( RandomAccessibleInterval< ? > img )
 	{
-		if( img.numDimensions() == 2 )
+		if ( img.numDimensions() == 2 )
 			return Views.addDimension( img, 0, 0 );
 		else
 			return img;
 	}
 
-	private static RandomAccessibleInterval<ARGBType> toColor( RandomAccessibleInterval<UnsignedIntType> img )
+	private static RandomAccessibleInterval< ARGBType > toColor( RandomAccessibleInterval< UnsignedIntType > img )
 	{
-		return Converters.convertRAI( img,
-				new Converter<UnsignedIntType,ARGBType>()
-				{
-					@Override
-					public void convert( UnsignedIntType input, ARGBType output )
-					{
-						output.set( input.getInt() );
-					}
-				},
-				new ARGBType() );
+		return Converters.convertRAI( img, new Converter< UnsignedIntType, ARGBType >()
+		{
+			@Override
+			public void convert( UnsignedIntType input, ARGBType output )
+			{
+				output.set( input.getInt() );
+			}
+		}, new ARGBType() );
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
@@ -867,11 +911,7 @@ public class BigWarpInit
 	 *            be added.
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > void addSourceToListsGenericType(
-			final Source< T > source,
-			final int setupId,
-			final List< ConverterSetup > converterSetups,
-			final List< SourceAndConverter< T > > sources )
+	private static < T > void addSourceToListsGenericType( final Source< T > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< T > > sources )
 	{
 		final T type = source.getType();
 		if ( type instanceof RealType || type instanceof ARGBType || type instanceof VolatileARGBType )
@@ -897,15 +937,10 @@ public class BigWarpInit
 	 *            list of {@link SourceAndConverter}s to which the source should
 	 *            be added.
 	 */
-	private static < T extends NumericType< T > > void addSourceToListsNumericType(
-			final Source< T > source,
-			final int setupId,
-			final List< ConverterSetup > converterSetups,
-			final List< SourceAndConverter< T > > sources )
+	private static < T extends NumericType< T > > void addSourceToListsNumericType( final Source< T > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< T > > sources )
 	{
 		final T type = source.getType();
-		final SourceAndConverter< T > soc = BigDataViewer.wrapWithTransformedSource(
-				new SourceAndConverter<>( source, BigDataViewer.createConverterToARGB( type ) ) );
+		final SourceAndConverter< T > soc = BigDataViewer.wrapWithTransformedSource( new SourceAndConverter<>( source, BigDataViewer.createConverterToARGB( type ) ) );
 		converterSetups.add( BigDataViewer.createConverterSetup( soc, setupId ) );
 		sources.add( soc );
 	}
@@ -1012,7 +1047,6 @@ public class BigWarpInit
 //		List<Integer> movingSourceIndices = IntStream.range( 0, numMovingSources ).collect( Collectors.toList());
 //		List<Integer> targetSourceIndices = IntStream.range( numMovingSources, numTargetSources + numMovingSources )
 //				.collect( Collectors.toList());
-		
 
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
@@ -1025,8 +1059,7 @@ public class BigWarpInit
 		return createBigWarpData( loaderP, loaderQ, null );
 	}
 
-	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, 
-			final String[] names )
+	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, final String[] names )
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
@@ -1075,29 +1108,29 @@ public class BigWarpInit
 	{
 		/* Load the moving sources */
 		final AbstractSpimData< ? >[] spimDataP;
-		if( loaderP instanceof ImagePlusLoader  )
+		if ( loaderP instanceof ImagePlusLoader )
 			spimDataP = loaderP.load();
-		else 
+		else
 			spimDataP = loaderP.load();
 
 		/* Load the fixed sources */
 		final AbstractSpimData< ? >[] spimDataQ;
-		if( loaderQ instanceof ImagePlusLoader  )
-			spimDataQ = ((ImagePlusLoader)loaderQ).loadAll( spimDataP.length );
+		if ( loaderQ instanceof ImagePlusLoader )
+			spimDataQ = ( ( ImagePlusLoader ) loaderQ ).loadAll( spimDataP.length );
 		else
 			spimDataQ = loaderQ.load();
 
 		int N = loaderP.numSources() + loaderQ.numSources();
 
 		String[] names;
-		if( namesIn == null || namesIn.length != N )
+		if ( namesIn == null || namesIn.length != N )
 		{
 			names = new String[ N ];
 			int j = 0;
-			for( int i = 0; i < loaderP.numSources(); i++ )
+			for ( int i = 0; i < loaderP.numSources(); i++ )
 				names[ j++ ] = loaderP.name( i );
 
-			for( int i = 0; i < loaderQ.numSources(); i++ )
+			for ( int i = 0; i < loaderQ.numSources(); i++ )
 				names[ j++ ] = loaderQ.name( i );
 		}
 		else
@@ -1105,11 +1138,11 @@ public class BigWarpInit
 
 		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
 
-		if( loaderP instanceof ImagePlusLoader  )
-			((ImagePlusLoader)loaderP).update( data );
+		if ( loaderP instanceof ImagePlusLoader )
+			( ( ImagePlusLoader ) loaderP ).update( data );
 
-		if( loaderQ instanceof ImagePlusLoader  )
-			((ImagePlusLoader)loaderQ).update( data );
+		if ( loaderQ instanceof ImagePlusLoader )
+			( ( ImagePlusLoader ) loaderQ ).update( data );
 
 		return data;
 	}
@@ -1123,7 +1156,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static <T> BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
+	public static < T > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
 //		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
@@ -1134,7 +1167,7 @@ public class BigWarpInit
 			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
-			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id,  false ));
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id, false ) );
 		}
 		catch ( URISyntaxException e )
 		{
@@ -1161,7 +1194,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static <T> BigWarpData< T > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
+	public static < T > BigWarpData< T > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
 //		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), null );
 
@@ -1170,7 +1203,7 @@ public class BigWarpInit
 		LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 		id += mvgSrcs.size();
 		BigWarpInit.add( bwdata, mvgSrcs );
-		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ));
+		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
 
 		return bwdata;
 	}
@@ -1228,7 +1261,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static <T> BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
+	public static < T > BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
@@ -1238,7 +1271,7 @@ public class BigWarpInit
 			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
-			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ));
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
 		}
 		catch ( URISyntaxException e )
 		{
@@ -1280,7 +1313,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static <T> BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	public static < T > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
 //		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
@@ -1291,7 +1324,7 @@ public class BigWarpInit
 			mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
-			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id,  false ));
+			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id, false ) );
 		}
 		catch ( URISyntaxException e )
 		{
