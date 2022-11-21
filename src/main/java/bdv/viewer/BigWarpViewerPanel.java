@@ -67,9 +67,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	final protected int[] targetSourceIndexList;
 
-	protected boolean boxOverlayVisible = true;
-
-	protected boolean textOverlayVisible = true;
+//	protected boolean boxOverlayVisible = true;
+//
+//	protected boolean textOverlayVisible = true;
 
 	protected ArrayList< AffineTransform3D > orthoTransforms;
 
@@ -132,15 +132,15 @@ public class BigWarpViewerPanel extends ViewerPanel
 		}
 	}
 
-	public void toggleTextOverlayVisible()
-	{
-		textOverlayVisible = !textOverlayVisible;
-	}
-
-	public void toggleBoxOverlayVisible()
-	{
-		boxOverlayVisible = !boxOverlayVisible;
-	}
+//	public void toggleTextOverlayVisible()
+//	{
+//		textOverlayVisible = !textOverlayVisible;
+//	}
+//
+//	public void toggleBoxOverlayVisible()
+//	{
+//		boxOverlayVisible = !boxOverlayVisible;
+//	}
 
 	public void setHoveredIndex( int index )
 	{
@@ -389,12 +389,12 @@ public class BigWarpViewerPanel extends ViewerPanel
 		final boolean prefsShowTextOverlay = Prefs.showTextOverlay();
 		final boolean prefsShowMultibox = Prefs.showMultibox();
 
-		Prefs.showTextOverlay( textOverlayVisible );
-		Prefs.showMultibox( boxOverlayVisible );
+//		Prefs.showTextOverlay( textOverlayVisible );
+//		Prefs.showMultibox( boxOverlayVisible );
 		super.drawOverlays( g );
 
-		// restore Prefs settings
-		Prefs.showTextOverlay( prefsShowTextOverlay );
-		Prefs.showMultibox( prefsShowMultibox );
+//		// restore Prefs settings
+//		Prefs.showTextOverlay( prefsShowTextOverlay );
+//		Prefs.showMultibox( prefsShowMultibox );
 	}
 }

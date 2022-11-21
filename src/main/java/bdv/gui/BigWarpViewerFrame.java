@@ -42,15 +42,16 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 import org.scijava.ui.behaviour.util.TriggerBehaviourBindings;
 
 import bdv.cache.CacheControl;
-import bdv.tools.brightness.ConverterSetup;
 import bdv.ui.BdvDefaultCards;
 import bdv.ui.CardPanel;
+import bdv.ui.appearance.AppearanceManager;
 import bdv.ui.splitpanel.SplitPanel;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;
+import bigwarp.ui.keymap.KeymapManager;
 
 public class BigWarpViewerFrame extends JFrame
 {
@@ -67,7 +68,13 @@ public class BigWarpViewerFrame extends JFrame
 
 	private CardPanel cards;
 
+	private final Behaviours transformBehaviours;
+
 	private final ConverterSetups setups;
+
+	private final KeymapManager keymapManager;
+
+	private final AppearanceManager appearanceManager;
 
 	private static final long serialVersionUID = -7630931733043185034L;
 
@@ -75,7 +82,6 @@ public class BigWarpViewerFrame extends JFrame
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
-			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
 			final String title,
@@ -83,16 +89,20 @@ public class BigWarpViewerFrame extends JFrame
 			final int[] movingIndexList,
 			final int[] targetIndexList )
 	{
-		this( bw, width, height, sources, converterSetups, viewerSettings, cache, BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
+		this( bw, width, height, sources, viewerSettings, cache, 
+				new KeymapManager( BigWarp.configDir ),
+				new AppearanceManager( BigWarp.configDir ),
+				BigWarpViewerOptions.options(), title, isMoving, movingIndexList, targetIndexList );
 	}
 	
 	public BigWarpViewerFrame(
 			BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
-			final List< ConverterSetup > converterSetups,
 			final BigWarpViewerSettings viewerSettings,
 			final CacheControl cache,
+			final KeymapManager keymapManager,
+			final AppearanceManager appearanceManager,
 			final BigWarpViewerOptions optional,
 			final String title,
 			final boolean isMoving,
@@ -101,20 +111,24 @@ public class BigWarpViewerFrame extends JFrame
 	{
 		super( title, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL ) );
 		this.bw = bw;
-		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width,  height ), isMoving, movingIndexList, targetIndexList );
+		this.keymapManager = keymapManager;
+		this.appearanceManager = appearanceManager;
+
+		viewer = new BigWarpViewerPanel( sources, viewerSettings, cache, optional.size( width / 2,  height ), isMoving, movingIndexList, targetIndexList );
 		setups = new ConverterSetups( viewer.state() );
 		setups.listeners().add( s -> viewer.requestRepaint() );
 
-		if ( converterSetups.size() != sources.size() )
-			System.err.println( "WARNING! Constructing BigWarp with converterSetups.size() that is not the same as sources.size()." );
-		final int numSetups = Math.min( converterSetups.size(), sources.size() );
-		for ( int i = 0; i < numSetups; ++i )
-		{
-			final SourceAndConverter< ? > source = sources.get( i );
-			final ConverterSetup setup = converterSetups.get( i );
-			if ( setup != null )
-				setups.put( source, setup );
-		}
+//		if ( converterSetups.size() != sources.size() )
+//			System.err.println( "WARNING! Constructing BigWarp with converterSetups.size() that is not the same as sources.size()." );
+//
+//		final int numSetups = Math.min( converterSetups.size(), sources.size() );
+//		for ( int i = 0; i < numSetups; ++i )
+//		{
+//			final SourceAndConverter< ? > source = sources.get( i );
+//			final ConverterSetup setup = converterSetups.get( i );
+//			if ( setup != null )
+//				setups.put( source, setup );
+//		}
 
 		if ( !isMoving )
 		{
@@ -154,16 +168,16 @@ public class BigWarpViewerFrame extends JFrame
 			}
 		});
 
-		SwingUtilities.replaceUIActionMap( getRootPane(), keybindings.getConcatenatedActionMap() );
-		SwingUtilities.replaceUIInputMap( getRootPane(), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
+		SwingUtilities.replaceUIActionMap( viewer, keybindings.getConcatenatedActionMap() );
+		SwingUtilities.replaceUIInputMap( viewer, JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT, keybindings.getConcatenatedInputMap() );
 
 		final MouseAndKeyHandler mouseAndKeyHandler = new MouseAndKeyHandler();
 		mouseAndKeyHandler.setInputMap( triggerbindings.getConcatenatedInputTriggerMap() );
 		mouseAndKeyHandler.setBehaviourMap( triggerbindings.getConcatenatedBehaviourMap() );
+		mouseAndKeyHandler.setKeypressManager( optional.values.getKeyPressedManager(), viewer.getDisplayComponent() );
 		viewer.getDisplay().addHandler( mouseAndKeyHandler );
 
-		// TODO: should be a field?
-		final Behaviours transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bdv" );
+		transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bigwarp", "navigation" );
 		transformBehaviours.install( triggerbindings, "transform" );
 
 		final TransformEventHandler tfHandler = viewer.getTransformEventHandler();
@@ -220,4 +234,15 @@ public class BigWarpViewerFrame extends JFrame
 		else
 			triggerbindings.addInputTriggerMap( "block_transform", new InputTriggerMap(), "transform" );
 	}
+
+	/**
+	 * Get {@code Behaviours} hook where TransformEventHandler behaviours are installed.
+	 * This is installed in {@link #getTriggerbindings} with the id "transform".
+	 * The hook can be used to update the keymap and install additional behaviours.
+	 */
+	public Behaviours getTransformBehaviours()
+	{
+		return transformBehaviours;
+	}
+
 }

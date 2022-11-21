@@ -1,0 +1,497 @@
+---
+- !mapping
+  action: close dialog window
+  contexts: [bigwarp, bw-table]
+  triggers: [not mapped]
+- !mapping
+  action: Preferences
+  contexts: [bigwarp, bw-table]
+  triggers: [ctrl COMMA, meta COMMA]
+- !mapping
+  action: brightness settings
+  contexts: [bigwarp, bw-table]
+  triggers: [S]
+- !mapping
+  action: go to bookmark
+  contexts: [bigwarp, bw-table]
+  triggers: [B]
+- !mapping
+  action: go to bookmark rotation
+  contexts: [bigwarp, bw-table]
+  triggers: [shift ctrl B]
+- !mapping
+  action: help
+  contexts: [bigwarp, bw-table]
+  triggers: [F1]
+- !mapping
+  action: landmark mode toggle
+  contexts: [bigwarp, bw-table]
+  triggers: [SPACE]
+- !mapping
+  action: set bookmark
+  contexts: [bigwarp, bw-table]
+  triggers: [shift B]
+- !mapping
+  action: visibility and grouping moving
+  contexts: [bigwarp, bw-table]
+  triggers: [F3]
+- !mapping
+  action: visibility and grouping target
+  contexts: [bigwarp, bw-table]
+  triggers: [F4]
+- !mapping
+  action: save settings
+  contexts: [bigwarp, bw-table]
+  triggers: [not mapped]
+- !mapping
+  action: load settings
+  contexts: [bigwarp, bw-table]
+  triggers: [not mapped]
+- !mapping
+  action: activate selected landmarks
+  contexts: [bw-table]
+  triggers: [ctrl BACK_SPACE]
+- !mapping
+  action: table activate selected
+  contexts: [bw-table]
+  triggers: [not mapped]
+- !mapping
+  action: align XY plane
+  contexts: [bigwarp, navigation]
+  triggers: [shift Z]
+- !mapping
+  action: align XZ plane
+  contexts: [bigwarp, navigation ]
+  triggers: [shift A, shift Y]
+- !mapping
+  action: align ZY plane
+  contexts: [bigwarp, navigation]
+  triggers: [shift X]
+- !mapping
+  action: align view transforms ACTIVE_TO_OTHER
+  contexts: [bigwarp, navigation]
+  triggers: [W]
+- !mapping
+  action: align view transforms OTHER_TO_ACTIVE
+  contexts: [bigwarp, navigation]
+  triggers: [Q]
+- !mapping
+  action: center on nearest landmark
+  contexts: [bigwarp, navigation]
+  triggers: [Y]
+- !mapping
+  action: center on next landmark
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl D]
+- !mapping
+  action: center on prev landmark
+  contexts: [bigwarp, navigation]
+  triggers: [shift ctrl D]
+- !mapping
+  action: center on selected landmark
+  contexts: [bigwarp, navigation]
+  triggers: [E]
+- !mapping
+  action: expand and focus cards panel
+  contexts: [bigwarp]
+  triggers: [P]
+- !mapping
+  action: collapse cards panel
+  contexts: [bigwarp]
+  triggers: [shift ESCAPE, shift P]
+- !mapping
+  action: deactivate selected landmarks
+  contexts: [bw-table]
+  triggers: [BACK_SPACE]
+- !mapping
+  action: delete selected landmarks
+  contexts: [bw-table]
+  triggers: [DELETE]
+- !mapping
+  action: deselect all landmarks
+  contexts: [bw-table]
+  triggers: [ESCAPE]
+- !mapping
+  action: export affine
+  contexts: [bigwarp]
+  triggers: [ctrl A]
+- !mapping
+  action: export imageplus
+  contexts: [bigwarp]
+  triggers: [shift ctrl W]
+- !mapping
+  action: export warp field
+  contexts: [bigwarp]
+  triggers: [ctrl W]
+- !mapping
+  action: load landmarks
+  contexts: [bw-table, bigwarp]
+  triggers: [ctrl O]
+- !mapping
+  action: next timepoint
+  contexts: [bigwarp, navigation]
+  triggers: [CLOSE_BRACKET]
+- !mapping
+  action: previous timepoint
+  contexts: [bigwarp, navigation]
+  triggers: [OPEN_BRACKET]
+- !mapping
+  action: quick save landmarks
+  contexts: [bw-table, bigwarp]
+  triggers: [ctrl Q]
+- !mapping
+  action: redo
+  contexts: [bw-table, bigwarp]
+  triggers: [ctrl Y, shift ctrl Z]
+- !mapping
+  action: reset active viewer
+  contexts: [bigwarp, navigation]
+  triggers: [R]
+- !mapping
+  action: save landmarks
+  contexts: [bw-table, bigwarp]
+  triggers: [ctrl S]
+- !mapping
+  action: save warped xml
+  contexts: [bigwarp, bw-table]
+  triggers: [ctrl E]
+- !mapping
+  action: select all landmarks
+  contexts: [bigwarp, bw-table]
+  triggers: [ctrl A]
+- !mapping
+  action: select all landmarks above
+  contexts: [bw-table]
+  triggers: [shift ctrl UP]
+- !mapping
+  action: select all landmarks below
+  contexts: [bw-table]
+  triggers: [shift ctrl DOWN]
+- !mapping
+  action: select landmark above
+  contexts: [bw-table]
+  triggers: [ctrl UP]
+- !mapping
+  action: select landmark below
+  contexts: [bw-table]
+  triggers: [ctrl DOWN]
+- !mapping
+  action: set current source 0
+  contexts: [bigwarp, navigation]
+  triggers: ['1']
+- !mapping
+  action: set current source 1
+  contexts: [bigwarp, navigation]
+  triggers: ['2']
+- !mapping
+  action: set current source 2
+  contexts: [bigwarp, navigation]
+  triggers: ['3']
+- !mapping
+  action: set current source 3
+  contexts: [bigwarp, navigation]
+  triggers: ['4']
+- !mapping
+  action: set current source 4
+  contexts: [bigwarp, navigation]
+  triggers: ['5']
+- !mapping
+  action: set current source 5
+  contexts: [bigwarp, navigation]
+  triggers: ['6']
+- !mapping
+  action: set current source 6
+  contexts: [bigwarp, navigation]
+  triggers: ['7']
+- !mapping
+  action: set current source 7
+  contexts: [bigwarp, navigation]
+  triggers: ['8']
+- !mapping
+  action: set current source 8
+  contexts: [bigwarp, navigation]
+  triggers: ['9']
+- !mapping
+  action: set current source 9
+  contexts: [bigwarp, navigation]
+  triggers: ['0']
+- !mapping
+  action: show warp vis dialog
+  contexts: [bigwarp, bw-table]
+  triggers: [U]
+- !mapping
+  action: toggle fused mode
+  contexts: [bigwarp]
+  triggers: [F]
+- !mapping
+  action: toggle grouping
+  contexts: [bigwarp]
+  triggers: [G]
+- !mapping
+  action: toggle interpolation
+  contexts: [bigwarp]
+  triggers: [I]
+- !mapping
+  action: toggle moving image display
+  contexts: [bigwarp]
+  triggers: [T]
+- !mapping
+  action: toggle point names visible
+  contexts: [bigwarp]
+  triggers: [N]
+- !mapping
+  action: toggle points visible
+  contexts: [bigwarp]
+  triggers: [V]
+- !mapping
+  action: toggle source visibility 0
+  contexts: [bigwarp]
+  triggers: [shift 0]
+- !mapping
+  action: toggle source visibility 1
+  contexts: [bigwarp]
+  triggers: [shift 1]
+- !mapping
+  action: toggle source visibility 2
+  contexts: [bigwarp]
+  triggers: [shift 2]
+- !mapping
+  action: toggle source visibility 3
+  contexts: [bigwarp]
+  triggers: [shift 3]
+- !mapping
+  action: toggle source visibility 4
+  contexts: [bigwarp]
+  triggers: [shift 4]
+- !mapping
+  action: toggle source visibility 5
+  contexts: [bigwarp]
+  triggers: [shift 5]
+- !mapping
+  action: toggle source visibility 6
+  contexts: [bigwarp]
+  triggers: [shift 6]
+- !mapping
+  action: toggle source visibility 7
+  contexts: [bigwarp]
+  triggers: [shift 7]
+- !mapping
+  action: toggle source visibility 8
+  contexts: [bigwarp]
+  triggers: [shift 8]
+- !mapping
+  action: toggle source visibility 9
+  contexts: [bigwarp]
+  triggers: [shift 9]
+- !mapping
+  action: undo
+  contexts: [bigwarp, bw-table]
+  triggers: [ctrl Z]
+- !mapping
+  action: drag translate
+  contexts: [bigwarp, navigation]
+  triggers: [button2, button3]
+- !mapping
+  action: scroll zoom
+  contexts: [bigwarp, navigation]
+  triggers: [meta scroll, shift ctrl scroll]
+- !mapping
+  action: axis x
+  contexts: [bigwarp, navigation]
+  triggers: [X]
+- !mapping
+  action: axis y
+  contexts: [bigwarp, navigation]
+  triggers: [Y]
+- !mapping
+  action: axis z
+  contexts: [bigwarp, navigation]
+  triggers: [Z]
+- !mapping
+  action: drag rotate
+  contexts: [bigwarp, navigation]
+  triggers: [button1]
+- !mapping
+  action: scroll browse z
+  contexts: [bigwarp, navigation]
+  triggers: [scroll]
+- !mapping
+  action: rotate left
+  contexts: [bigwarp, navigation]
+  triggers: [LEFT]
+- !mapping
+  action: rotate right
+  contexts: [bigwarp, navigation]
+  triggers: [RIGHT]
+- !mapping
+  action: zoom in
+  contexts: [bigwarp, navigation]
+  triggers: [UP]
+- !mapping
+  action: zoom out
+  contexts: [bigwarp, navigation]
+  triggers: [DOWN]
+- !mapping
+  action: forward z
+  contexts: [bigwarp, navigation]
+  triggers: [COMMA]
+- !mapping
+  action: backward z
+  contexts: [bigwarp, navigation]
+  triggers: [PERIOD]
+- !mapping
+  action: drag rotate fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift button1]
+- !mapping
+  action: scroll browse z fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift scroll]
+- !mapping
+  action: rotate left fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift LEFT]
+- !mapping
+  action: rotate right fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift RIGHT]
+- !mapping
+  action: zoom in fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift UP]
+- !mapping
+  action: zoom out fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift DOWN]
+- !mapping
+  action: forward z fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift COMMA]
+- !mapping
+  action: backward z fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift PERIOD]
+- !mapping
+  action: drag rotate slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl button1]
+- !mapping
+  action: scroll browse z slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl scroll]
+- !mapping
+  action: rotate left slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl LEFT]
+- !mapping
+  action: rotate right slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl RIGHT]
+- !mapping
+  action: zoom in slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl UP]
+- !mapping
+  action: zoom out slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl DOWN]
+- !mapping
+  action: forward z slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl COMMA]
+- !mapping
+  action: backward z slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl PERIOD]
+- !mapping
+  action: 2d drag translate
+  contexts: [bigwarp, navigation]
+  triggers: [button2, button3]
+- !mapping
+  action: 2d drag rotate
+  contexts: [bigwarp, navigation]
+  triggers: [button1]
+- !mapping
+  action: 2d scroll zoom
+  contexts: [bigwarp, navigation]
+  triggers: [meta scroll, scroll, shift ctrl scroll]
+- !mapping
+  action: 2d scroll zoom fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift scroll]
+- !mapping
+  action: 2d scroll zoom slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl scroll]
+- !mapping
+  action: 2d scroll translate
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
+- !mapping
+  action: 2d scroll translate fast
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
+- !mapping
+  action: 2d scroll translate slow
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
+- !mapping
+  action: 2d rotate left
+  contexts: [bigwarp, navigation]
+  triggers: [LEFT]
+- !mapping
+  action: 2d rotate right
+  contexts: [bigwarp, navigation]
+  triggers: [RIGHT]
+- !mapping
+  action: 2d zoom in
+  contexts: [bigwarp, navigation]
+  triggers: [UP]
+- !mapping
+  action: 2d zoom out
+  contexts: [bigwarp, navigation]
+  triggers: [DOWN]
+- !mapping
+  action: 2d rotate left fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift LEFT]
+- !mapping
+  action: 2d rotate right fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift RIGHT]
+- !mapping
+  action: 2d zoom in fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift UP]
+- !mapping
+  action: 2d zoom out fast
+  contexts: [bigwarp, navigation]
+  triggers: [shift DOWN]
+- !mapping
+  action: 2d rotate left slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl LEFT]
+- !mapping
+  action: 2d rotate right slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl RIGHT]
+- !mapping
+  action: 2d zoom in slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl UP]
+- !mapping
+  action: 2d zoom out slow
+  contexts: [bigwarp, navigation]
+  triggers: [ctrl DOWN]
+- !mapping
+  action: 2d scroll rotate
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
+- !mapping
+  action: 2d scroll rotate fast
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
+- !mapping
+  action: 2d scroll rotate slow
+  contexts: [bigwarp, navigation]
+  triggers: [not mapped]
