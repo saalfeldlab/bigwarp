@@ -751,12 +751,6 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( bw.isInLandmarkMode() )
-			{
-				bw.message.showMessage( "Undo/Redo not allowed in landmark mode" );
-				return;
-			}
-
 			// I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
 //			if( isRedo && manager.canRedo() ){
@@ -795,8 +789,6 @@ public class BigWarpActions extends Actions
 				{
 					bw.message.showMessage("Can't undo");
 				}
-				//System.err.println( " Undo / redo error, or nothing to do " );
-				//ex.printStackTrace();
 			}
 		}
 	}
@@ -1581,16 +1573,5 @@ public class BigWarpActions extends Actions
 			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
 		}
 	}
-	
-//	public synchronized void discoverCommandDescriptions()
-//	{
-//		final CommandDescriptionsBuilder builder = new CommandDescriptionsBuilder();
-//		final Context context = new Context( PluginService.class );
-//		context.inject( builder );
-//		builder.discoverProviders( KeyConfigScopes.BIGDATAVIEWER );
-//		builder.discoverProviders( "bw" );
-//		context.dispose();
-//		setCommandDescriptions( builder.build() );
-//	}
 
 }
