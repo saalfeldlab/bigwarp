@@ -6,8 +6,10 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.behaviour.KeyStrokeAdder.Factory;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptionProvider;
 import org.scijava.ui.behaviour.io.gui.CommandDescriptions;
+import org.scijava.ui.behaviour.util.Actions;
 
 import bdv.TransformEventHandler3D;
+import bdv.viewer.AbstractViewerPanel;
 import bdv.viewer.NavigationActions;
 import bigwarp.BigWarpActions;
 
@@ -116,6 +118,14 @@ public class NavigationKeys extends NavigationActions
 //			descriptions.add( TransformEventHandler2D.SCROLL_ROTATE_FAST, TransformEventHandler2D.SCROLL_ROTATE_FAST_KEYS, "Rotate by scrolling (fast). Active in 2D mode." );
 //			descriptions.add( TransformEventHandler2D.SCROLL_ROTATE_SLOW, TransformEventHandler2D.SCROLL_ROTATE_SLOW_KEYS, "Rotate by scrolling (slow). Active in 2D mode." );
 		}
+	}
+
+	public static void install( final Actions actions, final AbstractViewerPanel viewer, final boolean is2D )
+	{
+		installModeActions( actions, viewer.state() );
+		installSourceActions( actions, viewer.state() );
+		installTimeActions( actions, viewer.state() );
+		// align plane actions need to be moved to bigwarp actions due to tricky two-viewer issue
 	}
 
 

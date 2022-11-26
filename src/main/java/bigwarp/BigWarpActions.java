@@ -44,6 +44,7 @@ import bdv.tools.ToggleDialogAction;
 import bdv.util.Prefs;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.SourceAndConverter;
+import bdv.viewer.AbstractViewerPanel.AlignPlane;
 import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
@@ -208,8 +209,8 @@ public class BigWarpActions extends Actions
 	public static final String LANDMARK_DEACTIVATE_SELECTED = "deactivate selected landmarks";
 	public static final String[] LANDMARK_DEACTIVATE_SELECTED_KEYS = new String[]{ "BACK_SPACE" };
 
-	public static final String LANDMARK_ACTIVATE_SELECTED = "activate selected landmarks";
 	public static final String[] LANDMARK_ACTIVATE_SELECTED_KEYS = new String[]{ "ctrl BACK_SPACE" };
+	public static final String LANDMARK_ACTIVATE_SELECTED = "activate selected landmarks";
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
@@ -230,24 +231,23 @@ public class BigWarpActions extends Actions
 	public static final String EXPORT_AFFINE = "export affine";
 	public static final String[] EXPORT_AFFINE_KEYS = new String[] { "ctrl A" };
 
-
 	public static final String CLEAR_MOVING = "table clear moving";
-	public static final String[] CLEAR_MOVING_KEYS = new String[] { NOT_MAPPED };
+	public static final String[] CLEAR_MOVING_KEYS = new String[] { "BACK_SPACE" };
 
 	public static final String CLEAR_FIXED = "table clear fixed";
-	public static final String[] CLEAR_FIXED_KEYS = new String[] { NOT_MAPPED };
+	public static final String[] CLEAR_FIXED_KEYS = new String[] { "ctrl BACK_SPACE" };
 
 	public static final String CLEAR_SELECTED_MOVING = "table clear selected moving";
-	public static final String[] CLEAR_SELECTED_MOVING_KEYS = new String[] { NOT_MAPPED };
+	public static final String[] CLEAR_SELECTED_MOVING_KEYS = new String[] { "ctrl BACK_SPACE" };
 
 	public static final String CLEAR_SELECTED_FIXED = "table clear selected fixed";
-	public static final String[] CLEAR_SELECTED_FIXED_KEYS = new String[] { NOT_MAPPED };
+	public static final String[] CLEAR_SELECTED_FIXED_KEYS = new String[] { "ctrl BACK_SPACE" };
 
 	public static final String DELETE = "table delete";
 	public static final String[] DELETE_KEYS = new String[] { NOT_MAPPED };
 
 	public static final String DELETE_SELECTED = "table delete selected ";
-	public static final String[] DELETE_SELECTED_KEYS = new String[] { NOT_MAPPED };
+	public static final String[] DELETE_SELECTED_KEYS = new String[] { "DELETE" };
 
 	public static final String ACTIVATE_SELECTED = "table activate selected";
 	public static final String[] ACTIVATE_SELECTED_KEYS = new String[] { NOT_MAPPED };
@@ -255,9 +255,17 @@ public class BigWarpActions extends Actions
 	public static final String DEACTIVATE_SELECTED = "table deactivate selected ";
 	public static final String[] DEACTIVATE_SELECTED_KEYS = new String[]{ NOT_MAPPED };
 
-
 	public static final String DEBUG = "debug";
 	public static final String GARBAGE_COLLECTION = "garbage collection";
+
+	public static final String XYPLANE = "xyPlane";
+	public static final String[] XYPLANE_KEYS = new String[] { "shift Z" };
+
+	public static final String YZPLANE = "yzPlane";
+	public static final String[] YZPLANE_KEYS = new String[] { "shift X" };
+
+	public static final String XZPLANE = "xzPlane";
+	public static final String[] XZPLANE_KEYS = new String[] { "shift Y", "shift A" };
 
 	public BigWarpActions( final KeyStrokeAdder.Factory keyConfig, String name )
 	{
@@ -331,6 +339,17 @@ public class BigWarpActions extends Actions
 			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmarks." );
 			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS , "Toggle visibility of landmark names." );
 
+			descriptions.add( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE_KEYS, "Toggle visibility of bounding box and source information." );
+			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmark points." );
+			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS, "Toggle visibility of landmark point names." );
+
+			descriptions.add( LANDMARK_ACTIVATE_SELECTED, LANDMARK_ACTIVATE_SELECTED_KEYS, "Activate selected landmarks." );
+			descriptions.add( LANDMARK_DEACTIVATE_SELECTED, LANDMARK_DEACTIVATE_SELECTED_KEYS, "Deactivate selected landmarks." );
+
+			// alignment
+			descriptions.add( XYPLANE, XYPLANE_KEYS, "xy plane" );
+			descriptions.add( XZPLANE, XZPLANE_KEYS, "xz plane" );
+			descriptions.add( YZPLANE, YZPLANE_KEYS, "yz plane" );
 		}
 	}
 	
@@ -374,6 +393,9 @@ public class BigWarpActions extends Actions
 
 			descriptions.add( UNDO, UNDO_KEYS, "Undo the last landmark change." );
 			descriptions.add( REDO, REDO_KEYS, "Redo the last landmark change." );
+
+			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmark points." );
+			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS, "Toggle visibility of landmark point names." );
 		}
 	}
 
@@ -389,6 +411,9 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
 		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
 		actions.runnableAction( bw::toggleMovingImageDisplay, TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS );
+
+		actions.namedAction( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ), TOGGLE_POINTS_VISIBLE_KEYS);
+		actions.namedAction( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ), TOGGLE_POINT_NAMES_VISIBLE_KEYS);
 
 		// navigation
 		actions.runnableAction( bw::resetView, RESET_VIEWER, RESET_VIEWER_KEYS);
@@ -441,6 +466,13 @@ public class BigWarpActions extends Actions
 		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
 		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
 
+		actions.namedAction( new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ), TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE_KEYS);
+		actions.namedAction( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ),  TOGGLE_POINTS_VISIBLE_KEYS );
+		actions.namedAction( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ), TOGGLE_POINT_NAMES_VISIBLE_KEYS);
+
+		actions.runnableAction( () -> bw.alignActive( AlignPlane.XY ), XYPLANE, XYPLANE_KEYS );
+		actions.runnableAction( () -> bw.alignActive( AlignPlane.XZ ), XZPLANE, XZPLANE_KEYS );
+		actions.runnableAction( () -> bw.alignActive( AlignPlane.ZY ), YZPLANE, YZPLANE_KEYS );
 	}
 
 	public static void installTableActions(
@@ -504,6 +536,10 @@ public class BigWarpActions extends Actions
 
 		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
 		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
+
+		actions.namedAction( new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ), NOT_MAPPED );
+		actions.namedAction( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ),  TOGGLE_POINTS_VISIBLE_KEYS );
+		actions.namedAction( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ), TOGGLE_POINT_NAMES_VISIBLE_KEYS);
 	}
 
 	/**
@@ -537,7 +573,7 @@ public class BigWarpActions extends Actions
 	{
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
-		
+
 		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
 		Component c = celled.getTableCellEditorComponent(landmarkTable, Boolean.TRUE, true, 0, 1 );
 
@@ -619,6 +655,7 @@ public class BigWarpActions extends Actions
 
 	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties )
 	{
+		System.out.println( "create input map" );
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
@@ -647,9 +684,9 @@ public class BigWarpActions extends Actions
 //		map.put( SAVE_WARPED, "control alt shift E" );
 		map.put( SAVE_WARPED_XML, "control shift E" );
 
-		map.put( LandmarkPointMenu.CLEAR_SELECTED_MOVING, "BACK_SPACE" );
-		map.put( LandmarkPointMenu.CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
-		map.put( LandmarkPointMenu.DELETE_SELECTED, "DELETE" );
+		map.put( CLEAR_SELECTED_MOVING, "BACK_SPACE" );
+		map.put( CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
+		map.put( DELETE_SELECTED, "DELETE" );
 
 		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
@@ -811,7 +848,6 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-//			System.out.println( "LM MODE : " + isOn );
 			bw.setInLandmarkMode( isOn );
 		}
 	}
@@ -831,7 +867,6 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-//			System.out.println( "TOGGLE LM MODE" );
 			bw.setInLandmarkMode( !bw.inLandmarkMode );
 		}
 	}

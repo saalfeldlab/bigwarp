@@ -44,16 +44,16 @@ public class LandmarkPointMenu extends JPopupMenu
 	public static final boolean MOVING = true;
 	public static final boolean FIXED = false;
 
-	public static final String CLEAR_MOVING = "table clear moving";
-	public static final String CLEAR_FIXED = "table clear fixed";
-	public static final String CLEAR_SELECTED_MOVING = "table clear selected moving";
-	public static final String CLEAR_SELECTED_FIXED = "table clear selected fixed";
-
-	public static final String DELETE = "table delete";
-	public static final String DELETE_SELECTED = "table delete selected ";
-
-	public static final String ACTIVATE_SELECTED = "table activate selected";
-	public static final String DEACTIVATE_SELECTED = "table deactivate selected ";
+//	public static final String CLEAR_MOVING = "table clear moving";
+//	public static final String CLEAR_FIXED = "table clear fixed";
+//	public static final String CLEAR_SELECTED_MOVING = "table clear selected moving";
+//	public static final String CLEAR_SELECTED_FIXED = "table clear selected fixed";
+//
+//	public static final String DELETE = "table delete";
+//	public static final String DELETE_SELECTED = "table delete selected ";
+//
+//	public static final String ACTIVATE_SELECTED = "table activate selected";
+//	public static final String DEACTIVATE_SELECTED = "table deactivate selected ";
 
 	private static final long serialVersionUID = -3676180390835767585L;
 	
@@ -92,12 +92,12 @@ public class LandmarkPointMenu extends JPopupMenu
 	{
 		this.landmarkPanel = landmarkPanel;
 
-		deleteSelectedHandler = new DeleteSelectedHandler( DELETE_SELECTED );
-		activateSelectedHandler = new ActivateSelectedHandler( ACTIVATE_SELECTED );
-		deactivateSelectedHandler = new DeactivateSelectedHandler( DEACTIVATE_SELECTED );
+		deleteSelectedHandler = new DeleteSelectedHandler( BigWarpActions.DELETE_SELECTED );
+		activateSelectedHandler = new ActivateSelectedHandler( BigWarpActions.ACTIVATE_SELECTED );
+		deactivateSelectedHandler = new DeactivateSelectedHandler( BigWarpActions.DEACTIVATE_SELECTED );
 
-		clearSelectedMoving = new ClearSelectedHandler( CLEAR_SELECTED_MOVING, MOVING );
-		clearSelectedFixed = new ClearSelectedHandler( CLEAR_SELECTED_FIXED, FIXED );
+		clearSelectedMoving = new ClearSelectedHandler( BigWarpActions.CLEAR_SELECTED_MOVING, MOVING );
+		clearSelectedFixed = new ClearSelectedHandler( BigWarpActions.CLEAR_SELECTED_FIXED, FIXED );
 
 		addAboveHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_ABOVE, true, false );
 		addAllAboveHandler = new AddToSelection( BigWarpActions.LANDMARK_SELECT_ALL_ABOVE, true, true );

@@ -115,6 +115,7 @@ import bdv.ui.appearance.AppearanceSettingsPage;
 import bdv.ui.keymap.Keymap;
 import bdv.ui.keymap.KeymapSettingsPage;
 import bdv.util.Bounds;
+import bdv.viewer.AbstractViewerPanel.AlignPlane;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
@@ -125,6 +126,7 @@ import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.MultiBoxOverlay2d;
+import bdv.viewer.NavigationActions;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.TransformListener;
@@ -606,21 +608,18 @@ public class BigWarp< T >
 		final Actions navigationActions = new Actions( inputTriggerConfig, "navigation" );
 		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );
 		NavigationKeys.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
-
 		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
 		NavigationKeys.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
 		final BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bigwarp" );
 		BigWarpActions.installViewerActions( bwActions, getViewerFrameP(), this );
 		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ(), this );
-
 		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
-		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
+//		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
 		keymap.updateListeners().add( () -> {
 
-			navigationActions.updateKeyConfig( keymap.getConfig() );
 			bwActions.updateKeyConfig( keymap.getConfig() );
 			tableActions.updateKeyConfig( keymap.getConfig() );
 
@@ -1627,6 +1626,18 @@ public class BigWarp< T >
 		System.out.println( "tgt viewer xfm: " + xfm );
 		System.out.println( "    det   = " + BigWarpUtils.det( xfm ));
 		System.out.println( "    dotxy = " + BigWarpUtils.dotXy( xfm ));
+	}
+
+	protected void alignActive( final AlignPlane plane )
+	{
+		if ( viewerFrameP.isActive() )
+		{
+			viewerFrameP.getViewerPanel().align( plane );
+		}
+		else if ( viewerFrameQ.isActive() )
+		{
+			viewerFrameQ.getViewerPanel().align( plane );
+		}
 	}
 
 	/**
