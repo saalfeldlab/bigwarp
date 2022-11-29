@@ -138,7 +138,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public void addImagePlus( String srcName, boolean isMoving )
 	{
-		add( srcName, isMoving, SourceType.DATASET );
+		add( srcName, isMoving, SourceType.IMAGEPLUS );
 	}
 
 	public void addDataset( String srcName )

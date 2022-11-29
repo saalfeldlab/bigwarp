@@ -9,32 +9,24 @@ import org.scijava.plugin.Plugin;
 import bdv.gui.BigWarpInitDialog;
 import ij.Macro;
 import ij.plugin.PlugIn;
-import net.imagej.DatasetService;
 
 @Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp Command" )
 public class BigWarpCommand implements Command, PlugIn
 {
 
-	@Parameter
-	private DatasetService datasets;
-	
 	@Override
 	public void run( String args )
 	{
-		System.out.println( "BigWarpCommand" );
-
 		final String macroOptions = Macro.getOptions();
 		String options = args;
 		if ( options == null || options.isEmpty() )
 			options = macroOptions;
 
-		System.out.println( "macro options : " + macroOptions );
 		final boolean isMacro = (options != null && !options.isEmpty());
-
 		if ( isMacro )
 			BigWarpInitDialog.runMacro( macroOptions );
 		else
-			BigWarpInitDialog.createAndShow( datasets );
+			BigWarpInitDialog.createAndShow( null );
 	}
 
 	@Override
@@ -45,6 +37,16 @@ public class BigWarpCommand implements Command, PlugIn
 
 	public static void main( String[] a ) throws IOException
 	{
+//		String options = "images=mri-stack.tif,mri-stack.tif moving=true,false transforms=,";
+//
+//		String images = Macro.getValue(options, "images", "");
+//		String moving = Macro.getValue(options, "moving", "");
+//		String transforms = Macro.getValue(options, "transforms", "");
+//
+//		System.out.println( images );
+//		System.out.println( moving );
+//		System.out.println( transforms );
+
 //		ImageJ ij2 = new ImageJ();
 //		ij2.ui().showUI();
 //
