@@ -8,7 +8,10 @@ import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -48,6 +51,7 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import bigwarp.source.SourceInfo;
+import bigwarp.util.BigWarpUtils;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.Prefs;
@@ -90,6 +94,13 @@ public class BigWarpInitDialog extends JFrame
 	private static final int DEFAULT_BUTTON_PAD = 3;
 	private static final int DEFAULT_MID_PAD = 5;
 	
+	private static final String commandName = "BigWarp";
+	private static final String imagesKey = "images";
+	private static final String movingKey = "moving";
+	private static final String transformsKey = "transforms";
+
+	private String projectPath;
+
 	private String imageList;
 
 	private String movingList;
@@ -127,7 +138,7 @@ public class BigWarpInitDialog extends JFrame
 
 		okayCallback = x -> {
 			macroRecord();
-			runBigWarp( x, projectPathTxt.getText(), datasetService );
+			runBigWarp( projectPathTxt.getText(), x, datasetService );
 		};
 		
 		imagePathUpdateCallback = ( p ) -> { 
@@ -160,15 +171,83 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static <T> void runBigWarp( BigWarpSourceTableModel sourceTable, String projectPath, DatasetService datasetService )
+	public static <T> void runBigWarp( String projectPath, String[] images, String[] moving, String[] transforms )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
-		final int N = sourceTable.getRowCount();
 		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
 
 		if( !haveProject )
 		{
 			int id = 0;
+			final int N = images.length;
+			for( int i = 0; i < N; i++ )
+			{
+				// TODO deal with exceptions?
+				try
+				{
+					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
+//					BigWarpInit.add( data, infos, transforms[ i ] );
+
+					// TODO fix transforms
+					BigWarpInit.add( data, infos );
+
+					id += infos.size();
+				}
+				catch ( URISyntaxException e )
+				{
+					e.printStackTrace();
+				}
+				catch ( IOException e )
+				{
+					e.printStackTrace();
+				}
+				catch ( SpimDataException e )
+				{
+					e.printStackTrace();
+				}
+			}
+		}
+
+		BigWarp<?> bw;
+		try
+		{
+			data.applyTransformations();
+			bw = new BigWarp<>( data, new ProgressWriterIJ() );
+			if( haveProject )
+				bw.loadSettings( projectPath );
+		}
+		catch ( SpimDataException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( IOException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( JDOMException e )
+		{
+			e.printStackTrace();
+		}
+
+	}
+
+	public <T> void runBigWarp()
+	{
+		if (Recorder.record)
+		{
+			System.out.println( "record" );
+			Recorder.setCommand(commandName);
+			macroRecord();
+			Recorder.saveCommand();
+		}
+
+		final BigWarpData< T > data = BigWarpInit.initData();
+		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
+
+		if( !haveProject )
+		{
+			int id = 0;
+			final int N = sourceTable.getRowCount();
 			for( int i = 0; i < N; i++ )
 			{
 				System.out.println( "id : " + id );
@@ -714,7 +793,8 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public void setParameters( String images, String moving, String transforms ) {
+	public void setParameters( String projectPath, String images, String moving, String transforms ) {
+		this.projectPath = projectPath;
 		this.imageList = images;
 		this.movingList = moving;
 		this.transformList = transforms;
@@ -725,9 +805,9 @@ public class BigWarpInitDialog extends JFrame
 		for( int i = 0; i < sourceTableModel.getRowCount(); i++ )
 			sourceTableModel.remove( i );
 
-		final String[] imageParams = imageList.split( listSeparator );
-		final String[] movingParams = movingList.split( listSeparator );
-		final String[] transformParams = transformList.split( listSeparator );
+		final String[] imageParams = imageList.split( listSeparator, -1 );
+		final String[] movingParams = movingList.split( listSeparator, -1 );
+		final String[] transformParams = transformList.split( listSeparator, -1 );
 
 		final int N = imageParams.length;
 		if( movingParams.length != N || transformParams.length != N )
@@ -772,8 +852,52 @@ public class BigWarpInitDialog extends JFrame
 	public String macroRecord()
 	{
 		updateParametersFromTable();
-		return String.format( "images=[%s], moving=[%s], transformations=[%s]",
-				imageList.toString(), movingList.toString(), transformList.toString() );
+//		return String.format( "images=[%s], moving=[%s], transformations=[%s]",
+//				imageList.toString(), movingList.toString(), transformList.toString() );
+
+		Recorder.resetCommandOptions();
+		Recorder.recordOption(imagesKey, imageList.toString());
+		Recorder.recordOption(movingKey, movingList.toString());
+
+		if( transformList != null )
+			Recorder.recordOption(transformsKey, transformList.toString());
+
+		return Recorder.getCommandOptions();
+	}
+
+	public static void runMacro( String args )
+	{
+		final HashMap< String, String > keyVals = BigWarpUtils.parseMacroArguments( args );
+		final Set< String > keys = keyVals.keySet();
+
+		if( keys.contains("project"))
+		{
+			runBigWarp( keyVals.get( "project" ), null, null, null );
+		}
+		else
+		{
+			if( !keys.contains( "images" ) || !keys.contains( "moving" ))
+			{
+				System.out.println( "images and moving keys required" );
+				return;
+			}
+
+			final String[] images = keyVals.get( "images" ).split( ",", -1 );
+			final String[] moving = keyVals.get( "moving" ).split( ",", -1 );
+
+//			final Boolean[] moving = Arrays.stream( keyVals.get( "moving" ).split( ",", -1 ) ).map( x -> {
+//						return x.equals( "true" );
+//					} ).toArray( Boolean[]::new );
+
+//			final String transforms;
+//			if( keys.contains( "transforms" ) )
+//				transforms = keyVals.get( "transforms" );
+//			else
+//				transforms = "";
+
+			// TOD fix transforms
+			runBigWarp( null, images, moving, null );
+		}
 	}
 
 }
