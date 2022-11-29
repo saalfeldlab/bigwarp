@@ -84,6 +84,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		this.name = name;
 		this.isTransformed = false;
 		this.boundingBoxCullingSupplier = doBoundingBoxCulling;
+		bboxEst = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
 
 		this.xfm = null;
 
@@ -145,7 +146,16 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private Interval estimateBoundingInterval( final int t, final int level )
 	{
-		return bboxEst.estimatePixelInterval( xfm, source.getSource( t, level ) );
+		if( xfm == null )
+		{
+			return source.getSource( t, level );
+		}
+		else
+		{
+			// getSource can be called by multiple threads, so need ensure application of 
+			// the transform is thread safe here by copying
+			return bboxEst.estimatePixelInterval( xfm.copy(), source.getSource( t, level ) );
+		}
 	}
 
 	@Override
@@ -184,7 +194,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			if( xfm == null )
 				return srcRaTransformed;
 			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm.copy() );
+				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm);
 		}
 		else
 		{

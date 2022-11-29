@@ -490,6 +490,7 @@ public class BigWarp< T >
 		solverThread.start();
 
 		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
+//		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.CORNERS, 5 );
 
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
@@ -588,8 +589,6 @@ public class BigWarp< T >
 
 	public void initialize()
 	{
-		// TODO JOHN CHECK THIS!!
-//		data.sources = wrapSourcesAsTransformed( data.sources, ndims, data );
 		wrapMovingSources( ndims, data );
 
 		// starting view
@@ -1934,7 +1933,8 @@ public class BigWarp< T >
 		int i = 0;
 		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
 		{
-			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
+//			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
+			if ( sourceInfo.isMoving() )
 			{
 				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
@@ -2331,7 +2331,6 @@ public class BigWarp< T >
 	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
 	{
 		this.currentTransform = transform;
-
 		data.sourceInfos.values().forEach( sourceInfo -> {
 			if ( sourceInfo.isMoving() )
 			{
@@ -2340,8 +2339,10 @@ public class BigWarp< T >
 				// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
 				// the updateTransform method creates a copy of the transform
-				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).updateTransform( transform );
-				if ( data.sources.get( 0 ).asVolatile() != null )
+				final SourceAndConverter< ? > sac = sourceInfo.getSourceAndConverter();
+				final WarpedSource< ? > wsrc = ( WarpedSource< ? > ) sac.getSpimSource();
+				wsrc.updateTransform( transform );
+				if ( sac.asVolatile() != null )
 					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
 			}
 		} );
@@ -3238,7 +3239,8 @@ public class BigWarp< T >
 						else
 						{
 							// update the transform and warped point
-							bw.setTransformationMovingSourceOnly( invXfm );
+//							bw.setTransformationMovingSourceOnly( invXfm );
+							bw.data.updateEditableTransformation( invXfm );
 						}
 
 						// update fixed point - but don't allow undo/redo
