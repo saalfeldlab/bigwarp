@@ -9,7 +9,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -62,6 +61,8 @@ public class BigWarpInitDialog extends JFrame
 {
 	private static final long serialVersionUID = -2914972130819029899L;
 
+	public static String listSeparator = ",";
+
 	private boolean imageJOpen;
 	private DatasetService datasetService;
 
@@ -89,6 +90,12 @@ public class BigWarpInitDialog extends JFrame
 	private static final int DEFAULT_BUTTON_PAD = 3;
 	private static final int DEFAULT_MID_PAD = 5;
 	
+	private String imageList;
+
+	private String movingList;
+
+	private String transformList;
+
 	public BigWarpInitDialog()
 	{
 //		this( "BigWarp" );
@@ -119,7 +126,7 @@ public class BigWarpInitDialog extends JFrame
 		};
 
 		okayCallback = x -> {
-			macroRecord( x );
+			macroRecord();
 			runBigWarp( x, projectPathTxt.getText(), datasetService );
 		};
 		
@@ -605,17 +612,18 @@ public class BigWarpInitDialog extends JFrame
 		System.out.println( "implement me" );
 	}
 
-	public static void createAndShow()
+	public static BigWarpInitDialog createAndShow()
 	{
-		createAndShow( null );
+		return createAndShow( null );
 	}
 
-	public static void createAndShow( DatasetService datasets )
+	public static BigWarpInitDialog createAndShow( DatasetService datasets )
 	{
 		// Create and set up the window.
 		BigWarpInitDialog frame = new BigWarpInitDialog( "BigWarp", datasets );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 		frame.setVisible( true );
+		return frame;
 	}
 
 	private String browseDialogGeneral( final int mode, final FileFilter filefilter )
@@ -706,39 +714,66 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public String macroRecord( BigWarpSourceTableModel sourceTable )
+	public void setParameters( String images, String moving, String transforms ) {
+		this.imageList = images;
+		this.movingList = moving;
+		this.transformList = transforms;
+	}
+
+	public void updateTableFromParameters()
+	{
+		for( int i = 0; i < sourceTableModel.getRowCount(); i++ )
+			sourceTableModel.remove( i );
+
+		final String[] imageParams = imageList.split( listSeparator );
+		final String[] movingParams = movingList.split( listSeparator );
+		final String[] transformParams = transformList.split( listSeparator );
+
+		final int N = imageParams.length;
+		if( movingParams.length != N || transformParams.length != N )
+		{
+			System.err.println("Parameter arrays must have identical lengths");
+			return;
+		}
+
+		for( int i = 0; i < N; i++ )
+		{
+			sourceTableModel.add( imageParams[ i ], movingParams[ i ].trim().equals( "true" ) );
+			sourceTableModel.setTransform( i, transformParams[ i ] );
+		}
+	}
+
+	public void updateParametersFromTable()
 	{
 		// make source list
-		StringBuffer sourceList = new StringBuffer();
-		StringBuffer movingList = new StringBuffer();
-		StringBuffer transformList = new StringBuffer();
+		final StringBuffer imageList = new StringBuffer();
+		final StringBuffer movingList = new StringBuffer();
+		final StringBuffer transformList = new StringBuffer();
 
 		final int N = sourceTable.getRowCount();
 		for( int i = 0; i < N; i++ )
 		{
-			sourceList.append( sourceTable.get( i ).srcName );
-			movingList.append( sourceTable.get( i ).moving );
-			transformList.append( sourceTable.get( i ).transformName );
+			imageList.append( sourceTableModel.get( i ).srcName );
+			movingList.append( sourceTableModel.get( i ).moving );
+			transformList.append( sourceTableModel.get( i ).transformName );
 			if( i < N -1 )
 			{
-				sourceList.append( "," );
-				movingList.append( "," );
-				transformList.append( "," );
+				imageList.append( listSeparator );
+				movingList.append( listSeparator );
+				transformList.append( listSeparator );
 			}
 		}
+		
+		this.imageList = imageList.toString();
+		this.movingList = movingList.toString(); 
+		this.transformList = transformList.toString();
+	}
 
-//		if ( imageJOpen && Recorder.record )
-//		{
-//			Recorder.resetCommandOptions();
-//
-////			Recorder.recordOption(n5PathKey, n5RootAndDataset);
-////
-////			if (virtual)
-////			  Recorder.recordOption(virtualKey);
-//
-//			return Recorder.getCommandOptions();
-//		}
-		return "";
+	public String macroRecord()
+	{
+		updateParametersFromTable();
+		return String.format( "images=[%s], moving=[%s], transformations=[%s]",
+				imageList.toString(), movingList.toString(), transformList.toString() );
 	}
 
 }
