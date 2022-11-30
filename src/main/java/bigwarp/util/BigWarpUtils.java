@@ -22,6 +22,7 @@
 package bigwarp.util;
 
 import java.awt.Dimension;
+import java.util.HashMap;
 
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.Source;
@@ -226,6 +227,46 @@ public class BigWarpUtils
 			x[ i ] /= magSqr;
 	}
 
+	public static HashMap<String,String> parseMacroArguments( String input )
+	{
+		return parseMacroArguments( input, "=", "[", "]" );
+	}
+
+	public static HashMap<String,String> parseMacroArguments( String input, String keyDelim, String startDelim, String endDelim )
+	{
+		final HashMap<String,String> output = new HashMap<>();
+
+		String arguments = input.trim();
+		boolean done = false;
+		while( !done )
+		{
+			int i = arguments.indexOf( keyDelim );
+			final String key = arguments.substring( 0, i );
+			output.put( key, parse( arguments, startDelim, endDelim ));
+
+			i = arguments.indexOf( endDelim );
+			if( i < 0 || i +1 > arguments.length() )
+				done = true;
+
+			arguments = arguments.substring( i + 1 ).trim();
+			if( arguments.length() == 0 )
+				done = true;
+			else 
+				arguments = arguments.substring( 1 ).trim(); // remove comma
+		}
+
+		return output;
+	}
+
+	public static String parse( String arg, String start, String end )
+	{
+		final int startIdx = arg.indexOf( start ) + 1;
+		final int endIdx = arg.indexOf( end );
+		if ( startIdx < 0 || endIdx < 0 )
+			return null;
+
+		return arg.substring( startIdx, endIdx );
+	}
 
 //	/**
 //	 * Computes the angle of rotation between the two input quaternions,

@@ -2,7 +2,6 @@ package bigwarp;
 
 import bigwarp.source.SourceInfo;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +21,6 @@ import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.VisibilityAndGrouping;
-import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
@@ -68,15 +66,6 @@ public class BigWarpData< T >
 	{
 		this.sources = sources;
 		this.converterSetups = converterSetups;
-
-//		if( transforms != null )
-//			this.transforms = transforms;
-//		else
-//		{
-//			// fill the initial transform list with nulls
-//			this.transforms = new ArrayList<>();
-//			IntStream.range( 0, sources.size() ).forEach(  i -> this.transforms.add( null ));
-//		}
 
 		if ( cache == null )
 			this.cache = new CacheControl.Dummy();
@@ -299,6 +288,17 @@ public class BigWarpData< T >
 		}
 	}
 
+	/**
+	 * Returns a source that applies the given {@link RealTransform} to the given {@link Source}.
+	 * <p>
+	 * The returned source will be a new instance than unless the transform
+	 * is a instance of {@link AffineGet} and source is an instance of {@link TransformedSource}.
+	 * 
+	 * @param <T> the type
+	 * @param src the original source
+	 * @param transform the transformation 
+	 * @return the transformed source
+	 */
 	public <T> Source<T> applyFixedTransform( final Source<T> src, final RealTransform transform )
 	{
 		RealTransform tform = transform;
@@ -313,16 +313,6 @@ public class BigWarpData< T >
 		if( transform instanceof AffineGet )
 		{
 			// can use TransformedSource
-			TransformedSource<?> tsrc;
-
-			/*
-			 * UNSURE WHAT TO DO IN THIS CASE
-			 */
-//			if( (src instanceof WarpedSource ))
-//			{
-//				Source< ? > wsrc = ( ( WarpedSource< ? > ) src ).getWrappedSource();
-//			}
-
 			final AffineTransform3D affine3d;
 			if( transform instanceof AffineTransform3D )
 				affine3d = ( AffineTransform3D ) transform;
@@ -332,6 +322,8 @@ public class BigWarpData< T >
 				affine3d.preConcatenate( ( AffineGet ) transform );
 			}
 
+			// could perhaps try to be clever if its a warped source (?), maybe later
+			TransformedSource<?> tsrc;
 			if ( src instanceof TransformedSource )
 			{
 				tsrc = ( TransformedSource ) ( src );
@@ -346,15 +338,44 @@ public class BigWarpData< T >
 		else
 		{
 			// need to use WarpedSource
-			WarpedSource<?> wsrc;
-			if( !(src instanceof WarpedSource ))
-				wsrc = new WarpedSource( src, src.getName() );
-			else
-				wsrc = (WarpedSource<?>)src;
-
+			final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
 			wsrc.updateTransform( tform );
 			wsrc.setIsTransformed( true );
 			return ( Source< T > ) wsrc;
+		}
+	}
+
+	/**
+	 * Updates the moving sources' transformation with the transform currently
+	 * being edited by BigWarp.
+	 * 
+	 * @param transform the transformation
+	 */
+	public void updateEditableTransformation( RealTransform transform )
+	{
+		for ( final SourceInfo sourceInfo : sourceInfos.values() )
+		{
+			// could be extra careful and ensure the source is a WarpedSource, but hopefully not necessary
+			if ( sourceInfo.isMoving() )
+			{
+				final SourceAndConverter< ? > sac = sourceInfo.getSourceAndConverter();
+				final WarpedSource< ? > wsrc = ( WarpedSource< ? > ) sac.getSpimSource();
+				wsrc.updateTransform( transform );
+				if ( sac.asVolatile() != null )
+					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
+
+				wsrc.updateTransform( transform );
+
+				/*
+				 * There was a time when I had a single WarpedSource manage a RealTransformSequence
+				 * instead of a WarpedSource wrapping a different WarpedSource as I'm doing now.
+				 * 
+				 * But I decided against having a single source because warped sources can toggle their transforms.
+				 * That toggling makes sense for the editable transform, but the fixex should be "on" 
+				 * always, and therefore be handled by either a TransformedSource or a different
+				 * WarpedSource instance.
+				 */
+			}
 		}
 	}
 

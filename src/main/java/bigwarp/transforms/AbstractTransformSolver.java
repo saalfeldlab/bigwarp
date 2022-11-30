@@ -26,8 +26,8 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 
 public abstract class AbstractTransformSolver<T extends InvertibleRealTransform> implements TransformSolver<T>
 {
-	protected double[][] mvgPts;
-	protected double[][] tgtPts;
+//	protected double[][] mvgPts;
+//	protected double[][] tgtPts;
 
 	public T solve( final LandmarkTableModel landmarkTable )
 	{
@@ -36,22 +36,29 @@ public abstract class AbstractTransformSolver<T extends InvertibleRealTransform>
 
 	public T solve( final LandmarkTableModel landmarkTable, final int indexChanged )
 	{
-		synchronized( landmarkTable )
-		{
 			int numActive = landmarkTable.numActive();
 			int ndims = landmarkTable.getNumdims();
+			double[][] mvgPts = new double[ ndims ][ numActive ];
+			double[][] tgtPts = new double[ ndims ][ numActive ];
+			landmarkTable.copyLandmarks( mvgPts, tgtPts );
 
-			if( mvgPts == null || mvgPts[0].length != numActive )
-			{
-				mvgPts = new double[ ndims ][ numActive ];
-				tgtPts = new double[ ndims ][ numActive ];
-				landmarkTable.copyLandmarks( mvgPts, tgtPts );
-			}
-			else if( indexChanged >= 0 )
-			{
-				landmarkTable.copyLandmarks( indexChanged, mvgPts, tgtPts );
-			}
-		}
+			/*
+			 * The optimization below causes problems because the landmark arrays are used directly by transformations,
+			 * and they are modified below.
+			 */
+//		synchronized( landmarkTable )
+//		{
+//			mvgPts;
+//			double[][] tgtPts;
+//			if( mvgPts == null || mvgPts[0].length != numActive )
+//			{
+//				landmarkTable.copyLandmarks( mvgPts, tgtPts );
+//			}
+//			else if( indexChanged >= 0 )
+//			{
+//				landmarkTable.copyLandmarks( indexChanged, mvgPts, tgtPts );
+//			}
+//		}
 
 		return solve( mvgPts, tgtPts );
 	}

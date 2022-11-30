@@ -32,6 +32,9 @@ import javax.swing.JTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import bdv.gui.BigWarpLandmarkPanel.JTableChecking;
+import bdv.gui.BigWarpLandmarkPanel.TextFieldCell;
+import bdv.gui.BigWarpLandmarkPanel.TextFieldCellEditor;
 import bdv.gui.sourceList.BigWarpSourceTableModel.ButtonEditor;
 import bdv.gui.sourceList.BigWarpSourceTableModel.ButtonRenderer;
 
@@ -41,23 +44,16 @@ public class BigWarpSourceListPanel extends JPanel
 
 	protected BigWarpSourceTableModel tableModel;
 
-	protected JTable table;
+	protected JTableChecking table;
 
 	public final Logger logger = LoggerFactory.getLogger( BigWarpSourceListPanel.class );
 
 	public BigWarpSourceListPanel( BigWarpSourceTableModel tableModel )
 	{
 		super( new GridLayout( 1, 0 ) );
+
+		// set table model re-generates the table
 		setTableModel( tableModel );
-
-		table = new JTable( tableModel );
-		table.setPreferredScrollableViewportSize( new Dimension( 500, 70 ) );
-		table.setFillsViewportHeight( true );
-
-		table.getColumn( " " ).setCellRenderer( new ButtonRenderer() );
-		table.getColumn( " " ).setCellEditor( new ButtonEditor( new JCheckBox(), tableModel ) );
-		table.getColumn( " " ).setPreferredWidth( 24 );
-		table.getColumn( " " ).setWidth( 24 );
 
 		final JScrollPane scrollPane = new JScrollPane( table );
 		add( scrollPane );
@@ -70,11 +66,18 @@ public class BigWarpSourceListPanel extends JPanel
 
 	public void genJTable()
 	{
-		table = new JTable( getTableModel() );
-
-		table.setPreferredScrollableViewportSize( new Dimension( 400, 800 ) );
+		table = new JTableChecking( tableModel );
+		table.setPreferredScrollableViewportSize( new Dimension( 500, 70 ) );
 		table.setFillsViewportHeight( true );
 		table.setShowVerticalLines( false );
+
+		table.setDefaultEditor( String.class,
+				new TextFieldCellEditor( new TextFieldCell(table), String.class ));
+
+		table.getColumn( " " ).setCellRenderer( new ButtonRenderer() );
+		table.getColumn( " " ).setCellEditor( new ButtonEditor( new JCheckBox(), tableModel ) );
+		table.getColumn( " " ).setPreferredWidth( 24 );
+		table.getColumn( " " ).setWidth( 24 );
 	}
 
 	public void setTableModel( BigWarpSourceTableModel tableModel )
@@ -87,6 +90,6 @@ public class BigWarpSourceListPanel extends JPanel
 	{
 		return table;
 	}
-
+	
 
 }

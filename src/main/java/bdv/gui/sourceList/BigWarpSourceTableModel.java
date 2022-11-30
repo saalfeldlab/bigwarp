@@ -13,21 +13,23 @@ import javax.swing.UIManager;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
-import org.janelia.saalfeldlab.n5.imglib2.NgffTransformations;
-
 import net.imglib2.realtransform.RealTransform;
 
 public class BigWarpSourceTableModel extends AbstractTableModel 
 {
+
 	private static final long serialVersionUID = 5923947651732788341L;
 
+	public static enum SourceType { IMAGEPLUS, DATASET, URL };
 	protected final static String[] colNames = new String[] { "Name", "Moving", "Transform", " " };
 
 	protected final String[] columnNames;
 	protected final ArrayList<SourceRow> sources;
 	protected final ArrayList<RemoveRowButton> rmRowButtons;
 
+	protected static int imageColIdx = 0;
 	protected static int movingColIdx = 1;
+	protected static int transformColIdx = 2;
 	protected static int removeColIdx = 3;
 
 	private Component container;
@@ -94,7 +96,6 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public boolean isCellEditable( int row, int col )
 	{
 		return true;
-//		return ( col == movingColIdx ) || ( col == removeColIdx );
 	}
 
 	@Override
@@ -102,9 +103,13 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	{
 		if( col == movingColIdx )
 			sources.get( row ).moving = (Boolean)value;
+		if( col == imageColIdx )
+			sources.get( row ).srcName = (String)value;
+		if( col == transformColIdx )
+			sources.get( row ).transformName = (String)value;
 	}
 
-	public void add( String srcName, boolean moving, boolean isImagePlus )
+	public void add( String srcName, boolean moving, SourceType type )
 	{
 		final RemoveRowButton rmButton = new RemoveRowButton( sources.size() );
 //		rmButton.addActionListener( e -> {
@@ -113,7 +118,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 //		});
 
 		rmRowButtons.add( rmButton );
-		sources.add( new SourceRow( srcName, moving, "", isImagePlus ));
+		sources.add( new SourceRow( srcName, moving, "", type ));
 	}
 
 	public void setTransform( int i, String transform )
@@ -123,7 +128,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public void add( String srcName, boolean moving )
 	{
-		add( srcName, moving, false );
+		add( srcName, moving, SourceType.URL );
 	}
 
 	public void add( String srcName )
@@ -138,14 +143,24 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public void addImagePlus( String srcName, boolean isMoving )
 	{
-		add( srcName, isMoving, true );
+		add( srcName, isMoving, SourceType.IMAGEPLUS );
+	}
+
+	public void addDataset( String srcName )
+	{
+		addImagePlus( srcName, false );
+	}
+
+	public void addDataset( String srcName, boolean isMoving )
+	{
+		add( srcName, isMoving, SourceType.DATASET );
 	}
 
 	public boolean remove( int i )
 	{
 		if( i >= sources.size() )
 		{
-			System.out.println( "NOT REMOVED - SHOULD NEVER BE CALLED" );
+			//System.out.println( "NOT REMOVED - SHOULD NEVER BE CALLED" );
 			return false;
 		}
 
@@ -171,19 +186,19 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		public boolean moving;
 		public String transformName;
 		
-		public boolean isImagePlus;
+		public SourceType type;
 		
-		public SourceRow( String srcName, boolean moving, String transformName, boolean isImagePlus )
+		public SourceRow( String srcName, boolean moving, String transformName, SourceType type )
 		{
 			this.srcName = srcName;
 			this.moving = moving;
 			this.transformName = transformName;
-			this.isImagePlus = isImagePlus;
+			this.type = type;
 		}
 
 		public SourceRow( String srcName, boolean moving, String transformName )
 		{
-			this( srcName, moving, transformName, false );
+			this( srcName, moving, transformName, SourceType.URL );
 		}
 
 		public Object get( int c )
@@ -200,12 +215,13 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 		public RealTransform getTransform()
 		{
-			if( transformName != null && !transformName.isEmpty() )
-			{
-				// TODO generalize to attributes in n5
-//				final RealTransform tform = NgffTransformations.openJson( transformName );
-				return NgffTransformations.openJson( transformName );
-			}
+			// TODO depends on in progress dependencies - see dfield-dev branch
+//			if( transformName != null && !transformName.isEmpty() )
+//			{
+//				// TODO generalize to attributes in n5
+////				final RealTransform tform = NgffTransformations.openJson( transformName );
+//				return NgffTransformations.openJson( transformName );
+//			}
 			return null;
 		}
 	}

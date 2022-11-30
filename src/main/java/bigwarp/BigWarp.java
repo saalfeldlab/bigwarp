@@ -24,9 +24,11 @@ package bigwarp;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -236,7 +238,7 @@ public class BigWarp< T >
 
 	protected final LandmarkPointMenu landmarkPopupMenu;
 
-	protected final BigWarpLandmarkFrame landmarkFrame;
+	protected BigWarpLandmarkFrame landmarkFrame;
 
 	protected final BigWarpViewerSettings viewerSettings;
 
@@ -340,8 +342,7 @@ public class BigWarp< T >
 
 	private CopyOnWriteArrayList< TransformListener< InvertibleRealTransform > > transformListeners = new CopyOnWriteArrayList<>( );
 
-	final int ndims;
-
+	int ndims;
 
 	@Deprecated
 	public BigWarp( final BigWarpData< T > data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
@@ -382,19 +383,10 @@ public class BigWarp< T >
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
 		 * LandmarkPanel
 		 */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModellistener = new LandmarkTableListener();
-		landmarkModel.addTableModelListener( landmarkModellistener );
-		addTransformListener( landmarkModel );
+
 
 		/* Set up landmark panel */
-		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
-		landmarkPanel.setOpaque( true );
-		landmarkTable = landmarkPanel.getJTable();
-		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
-		addDefaultTableMouseListener();
-
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+		setupLandmarkFrame();
 
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
@@ -490,6 +482,7 @@ public class BigWarp< T >
 		solverThread.start();
 
 		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
+//		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.CORNERS, 5 );
 
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
@@ -588,8 +581,6 @@ public class BigWarp< T >
 
 	public void initialize()
 	{
-		// TODO JOHN CHECK THIS!!
-//		data.sources = wrapSourcesAsTransformed( data.sources, ndims, data );
 		wrapMovingSources( ndims, data );
 
 		// starting view
@@ -645,6 +636,48 @@ public class BigWarp< T >
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
 
+	}
+
+	protected void setupLandmarkFrame()
+	{
+		Point loc = null;
+		Dimension sz = null;
+		if ( landmarkFrame != null )
+		{
+			loc = landmarkFrame.getLocation();
+			sz = landmarkFrame.getSize();
+
+			landmarkModel = null;
+			landmarkFrame.setVisible( false );
+			landmarkFrame.dispose();
+			landmarkFrame = null;
+			landmarkPanel = null;
+
+		}
+
+		landmarkModel = new LandmarkTableModel( ndims );
+		landmarkModellistener = new LandmarkTableListener();
+		landmarkModel.addTableModelListener( landmarkModellistener );
+		addTransformListener( landmarkModel );
+
+		/* Set up landmark panel */
+		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
+		landmarkPanel.setOpaque( true );
+		landmarkTable = landmarkPanel.getJTable();
+		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
+		addDefaultTableMouseListener();
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+
+		if ( loc != null )
+			landmarkFrame.setLocation( loc );
+
+		if ( sz != null )
+			landmarkFrame.setSize( sz );
+
+		landmarkFrame.pack();
+		landmarkFrame.setVisible( true );
+
+		setUpLandmarkMenus();
 	}
 
 	public void synchronizeSources()
@@ -863,14 +896,21 @@ public class BigWarp< T >
 	protected void setUpViewerMenu( final BigWarpViewerFrame vframe )
 	{
 		// TODO setupviewermenu
-
 		final ActionMap actionMap = vframe.getKeybindings().getConcatenatedActionMap();
-
 		final JMenuBar viewerMenuBar = new JMenuBar();
 
 		JMenu fileMenu = new JMenu( "File" );
 		viewerMenuBar.add( fileMenu );
 
+		final JMenuItem loadProject = new JMenuItem( actionMap.get( BigWarpActions.LOAD_PROJECT ) );
+		loadProject.setText( "Load project" );
+		fileMenu.add( loadProject );
+
+		final JMenuItem saveProject = new JMenuItem( actionMap.get( BigWarpActions.SAVE_PROJECT ) );
+		saveProject.setText( "Save project" );
+		fileMenu.add( saveProject );
+
+		fileMenu.addSeparator();
 		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
 		openItem.setText( "Import landmarks" );
 		fileMenu.add( openItem );
@@ -1927,7 +1967,8 @@ public class BigWarp< T >
 		int i = 0;
 		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
 		{
-			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
+//			if ( sourceInfo.isMoving() && !(sourceInfo.getSourceAndConverter().getSpimSource() instanceof WarpedSource<?>))
+			if ( sourceInfo.isMoving() )
 			{
 				SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
 				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
@@ -2324,7 +2365,6 @@ public class BigWarp< T >
 	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
 	{
 		this.currentTransform = transform;
-
 		data.sourceInfos.values().forEach( sourceInfo -> {
 			if ( sourceInfo.isMoving() )
 			{
@@ -2333,8 +2373,10 @@ public class BigWarp< T >
 				// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
 
 				// the updateTransform method creates a copy of the transform
-				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().getSpimSource() ).updateTransform( transform );
-				if ( data.sources.get( 0 ).asVolatile() != null )
+				final SourceAndConverter< ? > sac = sourceInfo.getSourceAndConverter();
+				final WarpedSource< ? > wsrc = ( WarpedSource< ? > ) sac.getSpimSource();
+				wsrc.updateTransform( transform );
+				if ( sac.asVolatile() != null )
 					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
 			}
 		} );
@@ -2557,30 +2599,29 @@ public class BigWarp< T >
 
 
 			ProgressWriterIJ progress = new ProgressWriterIJ();
-			BigWarp<?> bw;
+			BigWarp bw;
 			BigWarpData<?> bwdata; 
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				bwdata = BigWarpInit.createBigWarpDataFromXML( fnP, fnQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if ( fnP.endsWith( "xml" ) && !fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impQ = IJ.openImage( fnQ );
 				bwdata = BigWarpInit.createBigWarpDataFromXMLImagePlus( fnP, impQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if ( !fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				bwdata = BigWarpInit.createBigWarpDataFromImagePlusXML( impP, fnQ );
-				bw = new BigWarp<>( bwdata, new File( fnP ).getName(), progress );
+				bw = new BigWarp<>( bwdata, progress );
 			}
 			else if (!fnP.isEmpty() && !fnQ.isEmpty())
 			{
 				final ImagePlus impP = IJ.openImage( fnP );
 				final ImagePlus impQ = IJ.openImage( fnQ );
-
 
 				// For testing display and color settings
 //				impP.setDisplayRange( 10, 200 );
@@ -3232,7 +3273,8 @@ public class BigWarp< T >
 						else
 						{
 							// update the transform and warped point
-							bw.setTransformationMovingSourceOnly( invXfm );
+//							bw.setTransformationMovingSourceOnly( invXfm );
+							bw.data.updateEditableTransformation( invXfm );
 						}
 
 						// update fixed point - but don't allow undo/redo
@@ -3603,13 +3645,13 @@ public class BigWarp< T >
 		}
 	}
 
-	protected void loadSettings( final String jsonOrXmlFilename ) throws IOException,
+	public void loadSettings( final String jsonOrXmlFilename ) throws IOException,
 			JDOMException
 	{
 		loadSettings( jsonOrXmlFilename, false );
 	}
 
-	protected void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
+	public void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
 			JDOMException
 	{
 		if ( jsonOrXmlFilename.endsWith( ".xml" ) )
@@ -3651,6 +3693,12 @@ public class BigWarp< T >
 			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
+
+			//ndims = detec data.sources
+			ndims = detectNumDims( data.sources );
+			setupLandmarkFrame();
+			viewerP.setNumDim( ndims );
+			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();
