@@ -46,11 +46,14 @@ import mpicbg.models.SimilarityModel2D;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
 import net.imglib2.RealRandomAccessible;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InverseRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.MaskedSimilarityTransform.Interpolators;
 import net.imglib2.realtransform.ThinplateSplineTransform;
+import net.imglib2.realtransform.Translation2D;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.type.numeric.RealType;
@@ -334,7 +337,7 @@ public class BigWarpTransform
 			}
 		}
 	}
-	
+
 	public ThinPlateR2LogRSplineKernelTransform getTpsBase()
 	{
 		ThinplateSplineTransform tps = getTps();
@@ -525,6 +528,24 @@ public class BigWarpTransform
 		return out;
 	}
 
+	public static AffineTransform2D affine2d( AbstractAffineModel2D model2d, AffineTransform2D out )
+	{
+		double[][] mtx = new double[2][3];
+		model2d.toMatrix( mtx );
+
+		double[] affine = new double[ 6 ];
+		affine[ 0 ] = mtx[ 0 ][ 0 ];
+		affine[ 1 ] = mtx[ 0 ][ 1 ];
+		affine[ 2 ] = mtx[ 0 ][ 2 ];
+
+		affine[ 4 ] = mtx[ 1 ][ 0 ];
+		affine[ 5 ] = mtx[ 1 ][ 1 ];
+		affine[ 6 ] = mtx[ 1 ][ 2 ];
+
+		out.set( affine );
+		return out;
+	}
+
 	public static AffineTransform3D affine3d( AbstractAffineModel3D model3d, AffineTransform3D out )
 	{
 		double[][] mtx = new double[3][4];
@@ -594,4 +615,32 @@ public class BigWarpTransform
 		return out;
 	}
 
+	public AffineGet toImglib2( Model< ? > model )
+	{
+		if ( tableModel.getNumdims() == 2 )
+			return toImglib2( ( AbstractAffineModel2D ) model );
+		else
+			return toImglib2( ( AbstractAffineModel3D ) model );
+	}
+
+	public AffineGet toImglib2( AbstractAffineModel2D model ) 
+	{
+		if( model instanceof TranslationModel2D )
+		{
+			final TranslationModel2D t = (TranslationModel2D)model;
+			return new Translation2D( t.getTranslation() );
+		}
+		else 
+		{
+			// affine, rigid, and similarity
+			// TODO split out rigid?
+			AffineTransform2D out = new AffineTransform2D();
+			return affine2d( model, out );
+		}
+	}
+
+	public AffineGet toImglib2( AbstractAffineModel3D model ) 
+	{
+		return affine3d( model, new AffineTransform3D() );
+	}
 }
