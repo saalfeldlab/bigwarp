@@ -109,6 +109,8 @@ public class BigWarpInitDialog extends JFrame
 
 	private String transformList;
 
+	private boolean initialRecorderState;
+
 	public BigWarpInitDialog()
 	{
 //		this( "BigWarp" );
@@ -136,11 +138,14 @@ public class BigWarpInitDialog extends JFrame
 		cancelCallback = x -> {
 			setVisible( false );
 			dispose();
+			Recorder.record = initialRecorderState;
 		};
 
 		okayCallback = x -> {
 			macroRecord();
 			runBigWarp();
+			Recorder.record = initialRecorderState;
+			setVisible( false );
 		};
 		
 		imagePathUpdateCallback = ( p ) -> { 
@@ -152,6 +157,11 @@ public class BigWarpInitDialog extends JFrame
 			System.out.println( "add transform: " + p ); 
 			addTransform();
 		};
+	}
+
+	public void setInitialRecorderState( boolean initialRecorderState )
+	{
+		this.initialRecorderState = initialRecorderState;
 	}
 
 	public static void main( String[] args ) throws IOException
@@ -856,6 +866,9 @@ public class BigWarpInitDialog extends JFrame
 
 	public String macroRecord()
 	{
+		if( !Recorder.record )
+			return "";
+
 		updateParametersFromTable();
 //		return String.format( "images=[%s], moving=[%s], transformations=[%s]",
 //				imageList.toString(), movingList.toString(), transformList.toString() );

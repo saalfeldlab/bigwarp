@@ -9,14 +9,23 @@ import org.scijava.plugin.Plugin;
 import bdv.gui.BigWarpInitDialog;
 import ij.Macro;
 import ij.plugin.PlugIn;
+import ij.plugin.frame.Recorder;
 
 @Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp Command" )
 public class BigWarpCommand implements Command, PlugIn
 {
+	private boolean initialRecorderState;
+
+	public BigWarpCommand()
+	{
+		initialRecorderState = Recorder.record;
+		Recorder.record = false;
+	}
 
 	@Override
 	public void run( String args )
 	{
+		Recorder.record = initialRecorderState;
 		final String macroOptions = Macro.getOptions();
 		String options = args;
 		if ( options == null || options.isEmpty() )
@@ -26,7 +35,11 @@ public class BigWarpCommand implements Command, PlugIn
 		if ( isMacro )
 			BigWarpInitDialog.runMacro( macroOptions );
 		else
-			BigWarpInitDialog.createAndShow( null );
+		{
+			final BigWarpInitDialog dialog = BigWarpInitDialog.createAndShow( null );
+			// dialog sets recorder to its initial state on cancel or execution
+			dialog.setInitialRecorderState( initialRecorderState );
+		}
 	}
 
 	@Override
