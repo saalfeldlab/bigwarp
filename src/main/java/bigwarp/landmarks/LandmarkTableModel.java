@@ -1214,6 +1214,29 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			fromJson( f );
 	}
 
+	public static LandmarkTableModel loadFromCsv( File f, boolean invert ) throws IOException
+	{
+		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ) );
+		List< String[] > rows = null;
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch ( CsvException e ) {}
+
+		LandmarkTableModel ltm = null;
+		if ( rows.get( 0 ).length == 6 )
+			ltm = new LandmarkTableModel( 2 );
+		else if ( rows.get( 0 ).length == 8 )
+			ltm = new LandmarkTableModel( 3 );
+
+		if( ltm != null )
+			ltm.loadCsvHelper( invert, rows );
+
+		return ltm;
+	}
+
 	/**
 	 * Loads this table from a file
 	 * @param f the file
@@ -1222,17 +1245,29 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public void loadCsv( File f, boolean invert ) throws IOException
 	{
+		CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
+		List< String[] > rows = null;
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch( CsvException e ){}
+
+		loadCsvHelper( invert, rows );
+	}
+
+	/**
+	 * Loads this table from a file
+	 * @param f the file
+	 * @param invert invert the moving and target point sets
+	 * @throws IOException an exception
+	 */
+	protected void loadCsvHelper( boolean invert, final List<String[]> rows ) throws IOException
+	{
 		synchronized(this) {
 			clear();
 
-			CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
-			List< String[] > rows = null;
-			try
-			{
-				rows = reader.readAll();
-				reader.close();
-			}
-			catch( CsvException e ){}
 			if( rows == null || rows.size() < 1 )
 			{
 				System.err.println("Error reading csv");
