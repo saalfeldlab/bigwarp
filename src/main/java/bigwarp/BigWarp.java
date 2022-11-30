@@ -24,9 +24,11 @@ package bigwarp;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.KeyEventPostProcessor;
 import java.awt.KeyboardFocusManager;
+import java.awt.Point;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -236,7 +238,7 @@ public class BigWarp< T >
 
 	protected final LandmarkPointMenu landmarkPopupMenu;
 
-	protected final BigWarpLandmarkFrame landmarkFrame;
+	protected BigWarpLandmarkFrame landmarkFrame;
 
 	protected final BigWarpViewerSettings viewerSettings;
 
@@ -340,8 +342,7 @@ public class BigWarp< T >
 
 	private CopyOnWriteArrayList< TransformListener< InvertibleRealTransform > > transformListeners = new CopyOnWriteArrayList<>( );
 
-	final int ndims;
-
+	int ndims;
 
 	@Deprecated
 	public BigWarp( final BigWarpData< T > data, final String windowTitle, final ProgressWriter progressWriter ) throws SpimDataException
@@ -382,19 +383,10 @@ public class BigWarp< T >
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
 		 * LandmarkPanel
 		 */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModellistener = new LandmarkTableListener();
-		landmarkModel.addTableModelListener( landmarkModellistener );
-		addTransformListener( landmarkModel );
+
 
 		/* Set up landmark panel */
-		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
-		landmarkPanel.setOpaque( true );
-		landmarkTable = landmarkPanel.getJTable();
-		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
-		addDefaultTableMouseListener();
-
-		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+		setupLandmarkFrame();
 
 		baseXfmList = new AbstractModel< ? >[ 3 ];
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
@@ -644,6 +636,48 @@ public class BigWarp< T >
 		InitializeViewerState.initTransform( viewerP );
 		InitializeViewerState.initTransform( viewerQ );
 
+	}
+
+	protected void setupLandmarkFrame()
+	{
+		Point loc = null;
+		Dimension sz = null;
+		if ( landmarkFrame != null )
+		{
+			loc = landmarkFrame.getLocation();
+			sz = landmarkFrame.getSize();
+
+			landmarkModel = null;
+			landmarkFrame.setVisible( false );
+			landmarkFrame.dispose();
+			landmarkFrame = null;
+			landmarkPanel = null;
+
+		}
+
+		landmarkModel = new LandmarkTableModel( ndims );
+		landmarkModellistener = new LandmarkTableListener();
+		landmarkModel.addTableModelListener( landmarkModellistener );
+		addTransformListener( landmarkModel );
+
+		/* Set up landmark panel */
+		landmarkPanel = new BigWarpLandmarkPanel( landmarkModel );
+		landmarkPanel.setOpaque( true );
+		landmarkTable = landmarkPanel.getJTable();
+		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
+		addDefaultTableMouseListener();
+		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+
+		if ( loc != null )
+			landmarkFrame.setLocation( loc );
+
+		if ( sz != null )
+			landmarkFrame.setSize( sz );
+
+		landmarkFrame.pack();
+		landmarkFrame.setVisible( true );
+
+		setUpLandmarkMenus();
 	}
 
 	public void synchronizeSources()
@@ -3659,6 +3693,12 @@ public class BigWarp< T >
 			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
+
+			//ndims = detec data.sources
+			ndims = detectNumDims( data.sources );
+			setupLandmarkFrame();
+			viewerP.setNumDim( ndims );
+			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();
