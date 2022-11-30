@@ -13,6 +13,7 @@ import javax.swing.UIManager;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableCellRenderer;
 
+import bigwarp.transforms.NgffTransformations;
 import net.imglib2.realtransform.RealTransform;
 
 public class BigWarpSourceTableModel extends AbstractTableModel 
@@ -106,7 +107,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		if( col == imageColIdx )
 			sources.get( row ).srcName = (String)value;
 		if( col == transformColIdx )
-			sources.get( row ).transformName = (String)value;
+			sources.get( row ).transformUrl = (String)value;
 	}
 
 	public void add( String srcName, boolean moving, SourceType type )
@@ -123,7 +124,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public void setTransform( int i, String transform )
 	{
-		sources.get( i ).transformName = transform;
+		sources.get( i ).transformUrl = transform;
 	}
 
 	public void add( String srcName, boolean moving )
@@ -184,15 +185,15 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	{
 		public String srcName;
 		public boolean moving;
-		public String transformName;
+		public String transformUrl;
 		
 		public SourceType type;
 		
-		public SourceRow( String srcName, boolean moving, String transformName, SourceType type )
+		public SourceRow( String srcName, boolean moving, String transformUrl, SourceType type )
 		{
 			this.srcName = srcName;
 			this.moving = moving;
-			this.transformName = transformName;
+			this.transformUrl = transformUrl;
 			this.type = type;
 		}
 
@@ -208,21 +209,18 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			else if( c == 1 )
 				return moving;
 			else if ( c == 2 )
-				return transformName;
+				return transformUrl;
 			else
 				return null;
 		}
 
 		public RealTransform getTransform()
 		{
-			// TODO depends on in progress dependencies - see dfield-dev branch
-//			if( transformName != null && !transformName.isEmpty() )
-//			{
-//				// TODO generalize to attributes in n5
-////				final RealTransform tform = NgffTransformations.openJson( transformName );
-//				return NgffTransformations.openJson( transformName );
-//			}
-			return null;
+			RealTransform transform = null;
+			if( transformUrl!= null && !transformUrl.isEmpty() )
+				transform = NgffTransformations.open( transformUrl );
+
+			return transform;
 		}
 	}
 

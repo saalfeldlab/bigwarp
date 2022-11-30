@@ -48,6 +48,7 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import bigwarp.source.SourceInfo;
+import bigwarp.transforms.NgffTransformations;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -58,6 +59,7 @@ import ij.plugin.frame.Recorder;
 import mpicbg.spim.data.SpimDataException;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
+import net.imglib2.realtransform.RealTransform;
 
 public class BigWarpInitDialog extends JFrame
 {
@@ -198,11 +200,17 @@ public class BigWarpInitDialog extends JFrame
 				// TODO deal with exceptions?
 				try
 				{
-					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
-//					BigWarpInit.add( data, infos, transforms[ i ] );
+					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
 
-					// TODO fix transforms
-					BigWarpInit.add( data, infos );
+					final String transformUrl = transforms[ i ];
+					RealTransform transform = null;
+					if( transformUrl!= null && !transformUrl.isEmpty() )
+						transform = NgffTransformations.open( transformUrl );
+
+					if( transform != null )
+						BigWarpInit.add( data, infos, transform );
+					else
+						BigWarpInit.add( data, infos );
 
 					id += infos.size();
 				}
@@ -845,7 +853,7 @@ public class BigWarpInitDialog extends JFrame
 		{
 			imageList.append( sourceTableModel.get( i ).srcName );
 			movingList.append( sourceTableModel.get( i ).moving );
-			transformList.append( sourceTableModel.get( i ).transformName );
+			transformList.append( sourceTableModel.get( i ).transformUrl );
 			if( i < N -1 )
 			{
 				imageList.append( listSeparator );
