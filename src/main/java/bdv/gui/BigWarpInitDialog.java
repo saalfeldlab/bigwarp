@@ -8,9 +8,7 @@ import java.awt.Insets;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -50,7 +48,6 @@ import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import bigwarp.source.SourceInfo;
-import bigwarp.util.BigWarpUtils;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -101,19 +98,17 @@ public class BigWarpInitDialog extends JFrame
 	private static final String movingKey = "moving";
 	private static final String transformsKey = "transforms";
 
+	public static final String ImageJPrefix = "imagej://";
+
 	private String projectPath;
-
 	private String imageList;
-
 	private String movingList;
-
 	private String transformList;
 
 	private boolean initialRecorderState;
 
 	public BigWarpInitDialog()
 	{
-//		this( "BigWarp" );
 	}
 
 	public BigWarpInitDialog( final String title )
@@ -181,12 +176,12 @@ public class BigWarpInitDialog extends JFrame
 //		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
 
 		new ImageJ();
-		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-		String macroOptions = "images=imagej://mri-stack.tif,imagej://mri-stack.tif moving=true,false transforms=,";
-		runMacro( macroOptions );
+//		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
+//		String macroOptions = "images=imagej://mri-stack.tif,imagej://mri-stack.tif moving=true,false transforms=,";
+//		runMacro( macroOptions );
 
-//		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
-//		createAndShow();
+		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+		createAndShow();
 	}
 
 	public static <T> void runBigWarp( String projectPath, String[] images, String[] moving, String[] transforms )
@@ -270,7 +265,8 @@ public class BigWarpInitDialog extends JFrame
 				SourceRow tableRow = sourceTableModel.get( i );
 				if( tableRow.type.equals( SourceType.IMAGEPLUS )  )
 				{
-					final ImagePlus imp = WindowManager.getImage( tableRow.srcName );
+					// strip off prefix if present
+					final ImagePlus imp = WindowManager.getImage( tableRow.srcName.replaceAll( "^"+ImageJPrefix, "" ) );
 					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform() );
 					id += infos.size();
@@ -338,8 +334,7 @@ public class BigWarpInitDialog extends JFrame
 		final int BUTTON_PAD = DEFAULT_BUTTON_PAD;
 		final int MID_PAD = DEFAULT_MID_PAD;
 
-		final int frameSizeX = getSize().width;
-
+		final int frameSizeX = UIScale.scale( 600 );
 		final JPanel panel = new JPanel(false);
 		panel.setLayout(new GridBagLayout());	
 
@@ -618,7 +613,7 @@ public class BigWarpInitDialog extends JFrame
 		// an image is not added, and / or updating the dropdown menu periodically
 		if( !title.isEmpty() && imp != null )
 		{
-			sourceTableModel.addImagePlus( title, moving );
+			sourceTableModel.addImagePlus( ImageJPrefix + title, moving );
 			repaint();
 		}
 	}
