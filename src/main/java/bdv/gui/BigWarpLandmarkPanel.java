@@ -37,6 +37,7 @@ import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.AbstractTableModel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,11 +154,11 @@ public class BigWarpLandmarkPanel extends JPanel {
 	 * while editing cells. This prevents hotkeys from being activated.
 	 *
 	 */
-    public class JTableChecking extends JTable
+    public static class JTableChecking extends JTable
     {
 		private static final long serialVersionUID = 1437406384583869710L;
 
-		public JTableChecking( LandmarkTableModel tableModel )
+		public JTableChecking( AbstractTableModel tableModel )
 		{
 			super( tableModel );
 		}
@@ -175,7 +176,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 		}
     }
 
-    public class TextFieldCell extends JTextField
+    public static class TextFieldCell extends JTextField
     {
 		private static final long serialVersionUID = -4327183047476876882L;
 
@@ -211,7 +212,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 		}
     }
 
-    public class TextFieldCellEditor extends DefaultCellEditor
+    public static class TextFieldCellEditor extends DefaultCellEditor
     {
 		private static final long serialVersionUID = 9185738725311357320L;
 
