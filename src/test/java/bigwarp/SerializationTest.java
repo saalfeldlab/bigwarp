@@ -40,6 +40,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.xml.sax.SAXException;
 
+import static bigwarp.BigWarpTestUtils.createTemp3DImage;
+
 public class SerializationTest
 {
 
@@ -136,7 +138,7 @@ public class SerializationTest
 		bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
 
 		final PipedWriter writer = new PipedWriter();
-		final PipedReader in = new PipedReader( writer, 10000 );
+		final PipedReader in = new PipedReader( writer, 1000 );
 
 		final JsonWriter out = new JsonWriter( writer );
 		new BigwarpSettings.SetupAssignmentsAdapter( bw.setupAssignments ).write( out, bw.setupAssignments );
@@ -487,4 +489,13 @@ public class SerializationTest
 
 	}
 
+	public static void main( String[] args ) throws SpimDataException, URISyntaxException, IOException, JDOMException, InterruptedException
+	{
+		BigWarp<?> bw = BigWarpTestUtils.createBigWarp("/tmp/img8270806677315563879.tif", true, true, false, false);
+		bw.saveSettingsJson( "/tmp/3d-settings.json" );
+		bw.closeAll();
+		Thread.sleep( 1000 );
+		bw = BigWarpTestUtils.createBigWarp();
+		bw.loadSettings("/tmp/3d-settings.json");
+	}
 }
