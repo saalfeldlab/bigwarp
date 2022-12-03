@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -42,12 +43,17 @@ import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.janelia.saalfeldlab.n5.metadata.omengff.NgffAffineTransformation;
+import org.janelia.saalfeldlab.n5.metadata.omengff.NgffDisplacementsTransformation;
+import org.janelia.saalfeldlab.n5.metadata.omengff.NgffSequenceTransformation;
 
-import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
@@ -73,9 +79,9 @@ import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.DisplacementFieldTransform;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.Scale2D;
-import net.imglib2.realtransform.Scale3D;
+import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
@@ -84,6 +90,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
 import net.imglib2.view.composite.GenericComposite;
+import ome.ngff.transformations.CoordinateTransformation;
 
 /**
  * ImageJ plugin to convert the thin plate spline to a deformation field.
@@ -100,6 +107,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				N5Exporter.LZ4_COMPRESSION,
 				N5Exporter.XZ_COMPRESSION,
 				N5Exporter.BLOSC_COMPRESSION };
+
+	public static final String flattenOption = "Flat";
+	public static final String sequenceOption = "Sequence";
 
 	public static void main( final String[] args )
 	{
@@ -121,21 +131,21 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 */
 	@Deprecated
 	public <T> void runFromBigWarpInstance(
+			final BigWarpData<?> data,
 			final LandmarkTableModel landmarkModel,
 			final List<SourceAndConverter<T>> sources,
 			final List<Integer> targetSourceIndexList )
 	{
-		runFromBigWarpInstance( landmarkModel, sources.get(targetSourceIndexList.get( 0 )));
+		runFromBigWarpInstance( data, landmarkModel, data.getTargetSource( 0 ) );
 	}
 
 	public <T> void runFromBigWarpInstance(
-			final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
+			final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
 	{
 		System.out.println( "run from instance." );
 		ImageJ ij = IJ.getInstance();
 		if ( ij == null )
 			return;
-
 
 		final DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( false, false );
 		if( params == null )
@@ -144,45 +154,35 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final RandomAccessibleInterval< ? > tgtInterval = sourceAndConverter.getSpimSource().getSource( 0, 0 );
 
 		int ndims = landmarkModel.getNumdims();
-		// dimensions of the output image plus
-//		long[] dims;
-//		if ( ndims <= 2 )
-//		{
-//			dims = new long[ 3 ];
-//			dims[ 0 ] = tgtInterval.dimension( 0 );
-//			dims[ 1 ] = tgtInterval.dimension( 1 );
-//			dims[ 2 ] = 2;
-//		}
-//		else
-//		{
-//			dims = new long[ 4 ];
-//			dims[ 0 ] = tgtInterval.dimension( 0 );
-//			dims[ 1 ] = tgtInterval.dimension( 1 );
-//			dims[ 2 ] = 3;
-//			dims[ 3 ] = tgtInterval.dimension( 2 );
-//		}
-
 		long[] dims = tgtInterval.dimensionsAsLongArray();
 
 		double[] spacing = new double[ 3 ];
+		double[] offset = new double[ 3 ];
+		String unit = "pix";
 		VoxelDimensions voxelDim = sourceAndConverter.getSpimSource().getVoxelDimensions();
 		voxelDim.dimensions( spacing );
 
 		if( params.spacing != null )
 			spacing = params.spacing;
 
+		if( params.offset != null )
+			offset = params.offset;
+
+		if( params.unit != null )
+			unit = params.unit;
+
 		if( params.size != null )
 			dims = params.size;
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( landmarkModel, params.ignoreAffine, params.virtual, dims, spacing, params.nThreads );
+			toImagePlus( data, landmarkModel, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, landmarkModel, dims, spacing, params.blockSize, params.compression, params.nThreads, params.ignoreAffine );
+				writeN5( params.n5Base, params.n5Dataset, landmarkModel, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -214,13 +214,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( ltm, params.ignoreAffine, params.virtual, params.size, params.spacing, params.nThreads );
+			toImagePlus( null, ltm, params.ignoreAffine, params.flatten(), params.virtual, params.size, params.spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, ltm, params.size, params.spacing, params.blockSize, params.compression, params.nThreads, params.ignoreAffine );
+				writeN5( params.n5Base, params.n5Dataset, ltm, null, params.size, params.spacing, params.offset, params.unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -229,15 +229,17 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 	}
 	public static ImagePlus toImagePlus(
+			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
 			final boolean ignoreAffine,
+			final boolean flatten,
 			final boolean virtual,
 			final long[] dims,
 			final double[] spacing,
 			final int nThreads )
 	{
 		final double[] offset = new double[ spacing.length ];
-		return toImagePlus( ltm, ignoreAffine, virtual, dims, spacing, offset, nThreads );
+		return toImagePlus( data, ltm, ignoreAffine, flatten, virtual, dims, spacing, offset, nThreads );
 	}
 
 	/**
@@ -253,20 +255,22 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @return an image holding the displacement field
 	 */
 	public static ImagePlus toImagePlus(
+			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
 			final boolean ignoreAffine,
+			final boolean flatten,
 			final boolean virtual,
 			final long[] dims,
 			final double[] spacing,
 			final double[] offset,
 			final int nThreads )
 	{
-		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
-		final RealTransform tps = getTpsAffineToggle( bwXfm, ignoreAffine );
-		
-		int nd = dims.length;
+		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+		final RealTransform startingTransform = getTransformation( data, bwXfm, flatten );
+
+		int nd = ltm.getNumdims();
 		long[] ipDims = null;
-		if ( nd == 2)
+		if ( nd == 2 )
 		{
 			ipDims = new long[ 4 ];
 			ipDims[ 0 ] = dims[ 0 ];
@@ -285,7 +289,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		else
 			return null;
 
-		final RandomAccessibleInterval< DoubleType > dfieldVirt = DisplacementFieldTransform.createDisplacementField( tps, new FinalInterval( dims ), spacing, offset );
+		final RandomAccessibleInterval< DoubleType > dfieldVirt = DisplacementFieldTransform.createDisplacementField( startingTransform, new FinalInterval( dims ), spacing, offset );
 
 		ImagePlus dfieldIp;
 		if( virtual )
@@ -328,47 +332,91 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return dfieldIp;
 	}
 
+	protected static RealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concat )
+	{
+		InvertibleRealTransform tps = transform.getTransformation( false );
+		if( data == null || !concat )
+			return tps;
+
+		RealTransform preTransform = null;
+		for( Entry< Integer, SourceInfo > entry : data.sourceInfos.entrySet())
+		{
+			if( entry.getValue().getTransform() != null )
+			{
+				preTransform = entry.getValue().getTransform();
+				break;
+			}
+		}
+
+		final RealTransform startingTransform;
+		if(preTransform != null )
+		{
+			System.out.println( "flattening with transform");;
+			final RealTransformSequence seq = new RealTransformSequence();
+			seq.add( tps );
+			seq.add( preTransform );
+			startingTransform = seq;
+		}
+		else
+			startingTransform = tps;
+
+		return startingTransform;
+	}
+
 	public static void writeN5( 
 			final String n5BasePath, 
 			final LandmarkTableModel ltm,
+			final BigWarpData<?> data,
 			final long[] dims,
 			final double[] spacing,
-			final int[] spatialBlockSize,
-			final Compression compression,
-			final int nThreads ) throws IOException 
-	{
-		writeN5( n5BasePath, "dfield", ltm, dims, spacing, spatialBlockSize, compression, nThreads );
-	}
-
-	public static void writeN5(
-			final String n5BasePath,
-			final String n5Dataset,
-			final LandmarkTableModel ltm,
-			final long[] dims,
-			final double[] spacing,
-			final int[] spatialBlockSize,
-			final Compression compression,
-			final int nThreads ) throws IOException
-	{
-		writeN5( n5BasePath, n5Dataset, ltm, dims, spacing, spatialBlockSize, compression, nThreads, false );
-	}
-
-	public static void writeN5(
-			final String n5BasePath,
-			final String n5Dataset,
-			final LandmarkTableModel ltm,
-			final long[] dims,
-			final double[] spacing,
+			final double[] offset,
+			final String unit,
 			final int[] spatialBlockSize,
 			final Compression compression,
 			final int nThreads,
-			final boolean splitAffine ) throws IOException
+			final boolean flatten ) throws IOException 
+	{
+		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, flatten );
+	}
+
+	public static void writeN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final LandmarkTableModel ltm,
+			final BigWarpData<?> data,
+			final long[] dims,
+			final double[] spacing,
+			final double[] offset,
+			final String unit,
+			final int[] spatialBlockSize,
+			final Compression compression,
+			final int nThreads,
+			final boolean flatten ) throws IOException
+	{
+		writeN5( n5BasePath, n5Dataset, ltm, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, false, flatten  );
+	}
+
+	public static void writeN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final LandmarkTableModel ltm,
+			final BigWarpData<?> data,
+			final long[] dims,
+			final double[] spacing,
+			final double[] offset,
+			final String unit,
+			final int[] spatialBlockSize,
+			final Compression compression,
+			final int nThreads,
+			final boolean splitAffine,
+			final boolean flatten ) throws IOException
 	{
 
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
-		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, TransformTypeSelectDialog.TPS );
-		final RealTransform tpsTotal = getTpsAffineToggle( bwXfm, splitAffine );
+		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+//		final RealTransform tpsTotal = bwXfm.getTransformation( false );
+		final RealTransform totalTransform = getTransformation( data, bwXfm, flatten );
 
 		AffineGet affine = null;
 		if ( splitAffine )
@@ -388,15 +436,39 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 
-		RandomAccessibleInterval< DoubleType > dfield = DisplacementFieldTransform.createDisplacementField(
-				tpsTotal, new FinalInterval( dims ), spacing );
-
 		int[] blockSize = new int[ spatialBlockSize.length + 1 ];
 		blockSize[ 0 ] = spatialBlockSize.length;
 		System.arraycopy( spatialBlockSize, 0, blockSize, 1, spatialBlockSize.length );
 
 		final N5Writer n5 = new N5Factory().openWriter( n5BasePath );
-		N5DisplacementField.save( n5, dataset, affine, dfield, spacing, blockSize, compression );
+//		N5DisplacementField.save( n5, dataset, affine, dfield, spacing, blockSize, compression );
+
+		final RandomAccessibleInterval< DoubleType > dfield;
+		if( affine != null )
+		{
+			// the affine part
+			NgffAffineTransformation ngffAffine = new NgffAffineTransformation( affine.getRowPackedCopy() );
+
+			// displacement field (with the affine removed)
+			RealTransformSequence totalNoAffine = new RealTransformSequence();
+			totalNoAffine.add( totalTransform );
+			totalNoAffine.add( affine.inverse() );
+			dfield = DisplacementFieldTransform.createDisplacementField( totalNoAffine, new FinalInterval( dims ), spacing );
+			NgffDisplacementsTransformation dfieldTform = NgffTransformations.save( n5, dataset, dfield, "in", "out", spacing, offset, unit, blockSize, compression, nThreads );
+
+			// the total transform
+			NgffSequenceTransformation totalTform = new NgffSequenceTransformation( "in", "out",
+					new CoordinateTransformation[]{ dfieldTform, ngffAffine  });
+
+			N5DisplacementField.addCoordinateTransformations( n5, "/", totalTform );
+		}
+		else
+		{
+			dfield = DisplacementFieldTransform.createDisplacementField( totalTransform, new FinalInterval( dims ), spacing );
+			NgffDisplacementsTransformation ngffTform = NgffTransformations.save( n5, dataset, dfield, "in", "out", spacing, offset, unit, blockSize, compression, nThreads );
+			N5DisplacementField.addCoordinateTransformations( n5, "/", ngffTform );
+		}
+
 		n5.close();
 	}
 
@@ -486,18 +558,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		long[] dims;
 		if( ref_imp.getNSlices() < 2 )
 		{
-			dims = new long[ 3 ];
+			dims = new long[ 2 ];
 			dims[ 0 ] = ref_imp.getWidth();
 			dims[ 1 ] = ref_imp.getHeight();
-			dims[ 2 ] = 2;
 		} 
 		else
 		{
-			dims = new long[ 4 ];
+			dims = new long[ 3 ];
 			dims[ 0 ] = ref_imp.getWidth();
 			dims[ 1 ] = ref_imp.getHeight();
-			dims[ 2 ] = 3;
-			dims[ 3 ] = ref_imp.getNSlices();
+			dims[ 2 ] = ref_imp.getNSlices();
 		}
 		return dims;
 	}
@@ -743,11 +813,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		public final String landmarkPath;
 		public final boolean ignoreAffine;
+		public final String option;
 		public final boolean virtual;
 		public final int nThreads;
 
 		public final long[] size;
 		public final double[] spacing;
+		public final double[] offset;
+		public final String unit;
 
 		public final String n5Base;
 		public final String n5Dataset;
@@ -757,10 +830,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public DeformationFieldExportParameters(
 				final String landmarkPath,
 				final boolean ignoreAffine,
+				final String option,
 				final boolean virtual,
 				final int nThreads,
 				final long[] size,
 				final double[] spacing,
+				final double[] offset,
+				final String unit,
 				final String n5Base,
 				final String n5Dataset,
 				final int[] blockSize, 
@@ -768,16 +844,24 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			this.landmarkPath = landmarkPath;
 			this.ignoreAffine = ignoreAffine;
+			this.option = option;
 			this.virtual = virtual;
 			this.nThreads = nThreads;
 
 			this.size = size;
 			this.spacing = spacing;
+			this.offset = offset;
+			this.unit = unit;
 
 			this.n5Base = n5Base;
 			this.n5Dataset = n5Dataset;
 			this.blockSize  = blockSize;
 			this.compression = compression;
+		}
+
+		public boolean flatten()
+		{
+			return option.equals( flattenOption );
 		}
 
 		public static DeformationFieldExportParameters fromDialog( 
@@ -791,7 +875,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				gd.addFileField( "landmarks_image_file", "" );
 			}
 
-			gd.addCheckbox( "Ignore affine part", false );
+			gd.addCheckbox( "Split affine part", false );
+
+			final String[] choices = new String[] { flattenOption, sequenceOption };
+			gd.addChoice( "type", choices, flattenOption );
+
 			gd.addCheckbox( "virtual", false );
 			gd.addNumericField( "threads", 1, 0 );
 			gd.addMessage( "Size and spacing" );
@@ -811,10 +899,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			gd.addStringField( "output size", "");
 			gd.addStringField( "output spacing", "");
+			gd.addStringField( "output offset", "");
+			gd.addStringField( "output unit", "pixel");
 
 			gd.addMessage( "Leave n5 path empty to export as ImagePlus" );
 			gd.addDirectoryOrFileField( "n5 root path", "" );
-			gd.addStringField( "n5 dataset", "");
+			gd.addStringField( "n5 dataset", N5DisplacementField.FORWARD_ATTR );
 			gd.addStringField( "n5 block size", "32,32,32");
 			gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
 			gd.showDialog();
@@ -827,6 +917,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				landmarkPath = gd.getNextString();
 
 			final boolean ignoreAffine = gd.getNextBoolean();
+			final String option = gd.getNextChoice();
 			final boolean virtual = gd.getNextBoolean();
 			final int nThreads = ( int ) gd.getNextNumber();
 
@@ -840,6 +931,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			final String sizeString = gd.getNextString();
 			final String spacingString = gd.getNextString();
+			final String offsetString = gd.getNextString();
+			final String unitString = gd.getNextString();
 
 			final String n5Base = gd.getNextString();
 			final String n5Dataset = gd.getNextString();
@@ -852,6 +945,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			final long[] size;
 			final double[] spacing;
+			final double[] offset;
+			String unit = "pixel";
 			if( ref_imp == null )
 			{
 				if( !sizeString.isEmpty())
@@ -863,6 +958,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					spacing = Arrays.stream( spacingString.split( "," ) ).mapToDouble( Double::parseDouble ).toArray();
 				else
 					spacing = null;
+
+				if( !offsetString.isEmpty() )
+					offset = Arrays.stream( offsetString.split( "," ) ).mapToDouble( Double::parseDouble ).toArray();
+				else
+					offset = null;
+
+				if( !unitString.isEmpty() )
+					unit = unitString;
 			}
 			else
 			{
@@ -872,11 +975,18 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 				// account for physical units of reference image
 				spacing = new double[ nd ];
+				offset = new double[ nd ];
 				spacing[ 0 ] = ref_imp.getCalibration().pixelWidth;
 				spacing[ 1 ] = ref_imp.getCalibration().pixelHeight;
 
+				offset[ 0 ] = ref_imp.getCalibration().xOrigin;
+				offset[ 1 ] = ref_imp.getCalibration().yOrigin;
+
 				if ( nd > 2 )
+				{
 					spacing[ 2 ] = ref_imp.getCalibration().pixelDepth;
+					offset[ 2 ] = ref_imp.getCalibration().zOrigin;
+				}
 
 				size = BigWarpToDeformationFieldPlugIn.dimensionsFromImagePlus( ref_imp );
 			}
@@ -884,10 +994,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return new DeformationFieldExportParameters( 
 					landmarkPath,
 					ignoreAffine,
+					option,
 					virtual,
 					nThreads,
 					size,
 					spacing,
+					offset,
+					unit,
 					n5Base,
 					n5Dataset,
 					blockSize,

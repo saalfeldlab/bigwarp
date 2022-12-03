@@ -9,16 +9,23 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
+import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URL;
+import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
+import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.metadata.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.metadata.graph.TransformPath;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffCoordinateTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffCoordinateTransformationAdapter;
+import org.janelia.saalfeldlab.n5.metadata.omengff.NgffDisplacementsTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffTranslationTransformation;
 
 import com.google.gson.Gson;
@@ -26,6 +33,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.stream.JsonWriter;
 
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.IntArray;
@@ -34,6 +42,7 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.TransformUtils;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.Intervals;
@@ -60,8 +69,8 @@ public class NgffTransformations
 		final String bijPath = "/home/john/projects/ngff/dfieldTest/jrc18_example.n5";
 
 		final N5URL url = new N5URL( bijPath );
-		System.out.println( url.getDataset());
-		System.out.println( url.getAttribute());
+		System.out.println( url.getGroupPath());
+		System.out.println( url.getAttributePath());
 
 		Pair< NgffCoordinateTransformation< ? >, N5Reader > bijN5 = openTransformN5( bijPath );
 		System.out.println( bijN5.getA() );
@@ -206,7 +215,7 @@ public class NgffTransformations
 		try
 		{
 			final N5URL n5url = new N5URL( url );
-			final String loc = n5url.getLocation();
+			final String loc = n5url.getContainerPath();
 			if( loc.endsWith( ".json" ))
 			{
 				return new ValuePair<>( openJson( url ), null);
@@ -214,8 +223,8 @@ public class NgffTransformations
 			else
 			{
 				final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
-				final String dataset = n5url.getDataset() != null ? n5url.getDataset() : "/";
-				final String attribute = n5url.getAttribute() != null ? n5url.getAttribute() : "coordinateTransformations/[0]";
+				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
+				final String attribute = n5url.getAttributePath() != null ? n5url.getAttributePath() : "coordinateTransformations/[0]";
 
 				final CoordinateTransformation ct = n5.getAttribute( dataset, attribute, CoordinateTransformation.class );
 				final NgffCoordinateTransformation< ? > nct = NgffCoordinateTransformation.create( ct );
@@ -228,7 +237,7 @@ public class NgffTransformations
 			return null;
 		}
 	}
-	
+
 	public static NgffCoordinateTransformation openJson( final String url )
 	{
 		final Path path = Paths.get( url );
@@ -257,7 +266,7 @@ public class NgffTransformations
 //
 //		return tform;
 	}
-	
+
 	public static void save( String jsonFile, NgffCoordinateTransformation<?> transform )
 	{
 		final GsonBuilder gb = new GsonBuilder();
@@ -272,6 +281,32 @@ public class NgffTransformations
 		{
 			e.printStackTrace();
 		}
+	}
+
+	public static < T extends NativeType< T > & RealType< T > > NgffDisplacementsTransformation save(
+			final N5Writer n5,
+			final String dataset,
+			final RandomAccessibleInterval< T > dfield,
+			final String inName,
+			final String outName,
+			final double[] spacing,
+			final double[] offset,
+			final String unit,
+			final int[] blockSize,
+			final Compression compression,
+			int nThreads ) throws IOException
+	{
+		final String[] axisNames = ( spacing.length == 2 ) ? new String[] { "x", "y" } : new String[] { "x", "y", "z"};
+		final CoordinateSystem inputCoordinates = new CoordinateSystem( inName, Axis.space( unit, axisNames ) );
+		final CoordinateSystem outputCoordinates = new CoordinateSystem( outName, Axis.space( unit, axisNames ) );
+
+		final ThreadPoolExecutor threadPool = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
+		N5DisplacementField.saveDisplacementFieldNgff( n5, dataset, "/", inputCoordinates, outputCoordinates, 
+				dfield, spacing, offset, blockSize, compression, threadPool );
+
+		final NgffDisplacementsTransformation ngffDfield = new NgffDisplacementsTransformation( dataset, "linear" );
+		return ngffDfield;
+//		N5DisplacementField.addCoordinateTransformations( n5, "/", ngffDfield );
 	}
 
 	/**
