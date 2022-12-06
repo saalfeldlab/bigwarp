@@ -21,6 +21,7 @@
  */
 package bdv.ij;
 
+import java.awt.GridBagLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -32,6 +33,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.GzipCompression;
@@ -47,6 +51,10 @@ import org.janelia.saalfeldlab.n5.metadata.omengff.NgffAffineTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffDisplacementsTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffSequenceTransformation;
 
+import com.formdev.flatlaf.util.UIScale;
+
+import bdv.gui.BigWarpInitDialog;
+import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpExporter;
@@ -168,9 +176,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( params.offset != null )
 			offset = params.offset;
 
-		if( params.unit != null )
-			unit = params.unit;
-
 		if( params.size != null )
 			dims = params.size;
 
@@ -190,6 +195,56 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 	}
+	
+	public static void runFromParameters( final DeformationFieldExportParameters params, final BigWarpData<?> data, final LandmarkTableModel landmarkModel )
+	{
+		String unit = "pixel";
+		LandmarkTableModel ltm;
+		if( landmarkModel == null )
+		{
+			// load
+			try
+			{
+				ltm = LandmarkTableModel.loadFromCsv( new File( params.landmarkPath ), false );
+			}
+			catch ( IOException e )
+			{
+				e.printStackTrace();
+				return;
+			}
+		}
+		else
+			ltm = landmarkModel;
+
+		int ndims = ltm.getNumdims();
+		double[] spacing = new double[ ndims ];
+		double[] offset = new double[ ndims ];
+		long[] dims = new long[ ndims ];
+		if ( params.spacing != null )
+			spacing = params.spacing;
+
+		if ( params.offset != null )
+			offset = params.offset;
+
+		if ( params.size != null )
+			dims = params.size;
+
+		if ( params.n5Base.isEmpty() )
+		{
+			toImagePlus( data, ltm, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
+		}
+		else
+		{
+			try
+			{
+				writeN5( params.n5Base, params.n5Dataset, ltm, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
+			}
+			catch ( IOException e )
+			{
+				e.printStackTrace();
+			}
+		}
+	}
 
 	@Override
 	public void run( final String arg )
@@ -200,6 +255,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( true, true );
 		int nd = params.size.length;
 
+		String unit = "pixel";
 		// load
 		LandmarkTableModel ltm = new LandmarkTableModel( nd );
 		try
@@ -220,7 +276,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, ltm, null, params.size, params.spacing, params.offset, params.unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
+				writeN5( params.n5Base, params.n5Dataset, ltm, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -786,7 +842,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 	}
 
-	private static Compression getCompression( final String compressionArg )
+	public static Compression getCompression( final String compressionArg )
 	{
 		switch (compressionArg) {
 		case N5Exporter.GZIP_COMPRESSION:
@@ -809,7 +865,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * and can prompt the user for these parameters.
 	 * 
 	 */
-	private static class DeformationFieldExportParameters 
+	public static class DeformationFieldExportParameters 
 	{
 		public final String landmarkPath;
 		public final boolean ignoreAffine;
@@ -820,7 +876,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final long[] size;
 		public final double[] spacing;
 		public final double[] offset;
-		public final String unit;
 
 		public final String n5Base;
 		public final String n5Dataset;
@@ -836,7 +891,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final long[] size,
 				final double[] spacing,
 				final double[] offset,
-				final String unit,
 				final String n5Base,
 				final String n5Dataset,
 				final int[] blockSize, 
@@ -851,7 +905,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			this.size = size;
 			this.spacing = spacing;
 			this.offset = offset;
-			this.unit = unit;
 
 			this.n5Base = n5Base;
 			this.n5Dataset = n5Dataset;
@@ -1000,12 +1053,18 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					size,
 					spacing,
 					offset,
-					unit,
 					n5Base,
 					n5Dataset,
 					blockSize,
 					compression );
 		}
+		
+		public JFrame makeDialog()
+		{
+			ExportDisplacementFieldFrame frame = new ExportDisplacementFieldFrame( null );
+			return frame;
+		}
+		
 	}
 
 }

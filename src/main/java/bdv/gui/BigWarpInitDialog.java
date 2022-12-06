@@ -83,16 +83,16 @@ public class BigWarpInitDialog extends JFrame
 	private DatasetSelectorDialog selectionDialog;
 
 	private String lastOpenedContainer = "";
-	private String lastBrowsePath = "";
+	private String lastBrowsePath = null;
 	private ExecutorService exec;
 
     private Consumer<BigWarpSourceTableModel> okayCallback;
     private Consumer<BigWarpSourceTableModel> cancelCallback;
 	private Consumer< String > imagePathUpdateCallback, transformPathUpdateCallback, projectPathUpdateCallback;
 
-	private static final int DEFAULT_OUTER_PAD = 8;
-	private static final int DEFAULT_BUTTON_PAD = 3;
-	private static final int DEFAULT_MID_PAD = 5;
+	public static final int DEFAULT_OUTER_PAD = 8;
+	public static final int DEFAULT_BUTTON_PAD = 3;
+	public static final int DEFAULT_MID_PAD = 5;
 	
 	private static final String commandName = "BigWarp";
 	private static final String projectKey = "project";
@@ -182,7 +182,8 @@ public class BigWarpInitDialog extends JFrame
 //		String macroOptions = "images=imagej://mri-stack.tif,imagej://mri-stack.tif moving=true,false transforms=,";
 //		runMacro( macroOptions );
 
-		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+//		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
+		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
 		createAndShow();
 	}
 
