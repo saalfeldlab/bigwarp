@@ -693,13 +693,13 @@ public class BigWarpInitDialog extends JFrame
 			if( datasetService == null )
 				addImagePlus( ( String ) imagePlusDropdown.getItemAt( 0 ), true );
 			else
-				addDataset( ( String ) imagePlusDropdown.getItemAt( 0 ), false );
+				addDataset( ( String ) imagePlusDropdown.getItemAt( 0 ), true );
 		}
 
 		if ( N > 1 )
 		{
 			if( datasetService == null )
-				addImagePlus( ( String ) imagePlusDropdown.getItemAt( 1 ), true );
+				addImagePlus( ( String ) imagePlusDropdown.getItemAt( 1 ), false );
 			else
 				addDataset( ( String ) imagePlusDropdown.getItemAt( 1 ), false );
 		}
