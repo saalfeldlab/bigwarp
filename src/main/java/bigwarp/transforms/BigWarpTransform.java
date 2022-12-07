@@ -21,7 +21,6 @@
  */
 package bigwarp.transforms;
 
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
 import bdv.gui.TransformTypeSelectDialog;
@@ -618,12 +617,12 @@ public class BigWarpTransform
 	public AffineGet toImglib2( Model< ? > model )
 	{
 		if ( tableModel.getNumdims() == 2 )
-			return toImglib2( ( AbstractAffineModel2D ) model );
+			return toAffine2D( ( AbstractAffineModel2D ) model );
 		else
-			return toImglib2( ( AbstractAffineModel3D ) model );
+			return toAffine3D( ( AbstractAffineModel3D ) model );
 	}
 
-	public AffineGet toImglib2( AbstractAffineModel2D model ) 
+	public AffineGet toAffine2D( AbstractAffineModel2D model ) 
 	{
 		if( model instanceof TranslationModel2D )
 		{
@@ -639,7 +638,7 @@ public class BigWarpTransform
 		}
 	}
 
-	public AffineGet toImglib2( AbstractAffineModel3D model ) 
+	public AffineGet toAffine3D( AbstractAffineModel3D model ) 
 	{
 		return affine3d( model, new AffineTransform3D() );
 	}

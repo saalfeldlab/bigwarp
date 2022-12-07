@@ -21,7 +21,6 @@
  */
 package bdv.ij;
 
-import java.awt.GridBagLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,7 +34,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.GzipCompression;
@@ -53,9 +51,9 @@ import org.janelia.saalfeldlab.n5.metadata.omengff.NgffSequenceTransformation;
 
 import com.formdev.flatlaf.util.UIScale;
 
-import bdv.gui.BigWarpInitDialog;
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.viewer.SourceAndConverter;
+import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpExporter;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -66,8 +64,10 @@ import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
+import ij.Macro;
 import ij.WindowManager;
 import ij.plugin.PlugIn;
+import ij.plugin.frame.Recorder;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
@@ -122,32 +122,44 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static void main( final String[] args )
 	{
 		new ImageJ();
+
+		new Recorder();
+		Recorder.record = true;
+
 //		IJ.run("Boats (356K)");
 //		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
-		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack.tif" );
-		
-//		WindowManager.getActiveWindow();
+//		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack.tif" );
+		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack_mm.tif" );
 		imp.show();
 
 		new BigWarpToDeformationFieldPlugIn().run( null );
 	}
 
+	public <T> void runFromBigWarpInstance( final BigWarp<?> bw )
+	{
+		System.out.println( "run from instance." );
+		ImageJ ij = IJ.getInstance();
+		if ( ij == null )
+			return;
+
+		ExportDisplacementFieldFrame.createAndShow( bw );
+	}
 
 	/**
 	 * @deprecated not necessary access thedesired source this way anymore, use {@link #runFromBigWarpInstance(LandmarkTableModel, SourceAndConverter)}
 	 * 	on the result of {@link bigwarp.BigWarpData#getTargetSource(int)}
 	 */
 	@Deprecated
-	public <T> void runFromBigWarpInstance(
+	public <T> void runFromBigWarpInstanceOld(
 			final BigWarpData<?> data,
 			final LandmarkTableModel landmarkModel,
 			final List<SourceAndConverter<T>> sources,
 			final List<Integer> targetSourceIndexList )
 	{
-		runFromBigWarpInstance( data, landmarkModel, data.getTargetSource( 0 ) );
+		runFromBigWarpInstanceOld( data, landmarkModel, data.getTargetSource( 0 ) );
 	}
 
-	public <T> void runFromBigWarpInstance(
+	public <T> void runFromBigWarpInstanceOld(
 			final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
 	{
 		System.out.println( "run from instance." );
@@ -246,8 +258,25 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 	}
 
-	@Override
-	public void run( final String arg )
+	public void run( final String args )
+	{
+		if ( IJ.versionLessThan( "1.40" ) )
+			return;
+
+		final String macroOptions = Macro.getOptions();
+		String options = args;
+		if( options == null || options.isEmpty())
+			options = macroOptions;
+
+		final boolean isMacro = (options != null && !options.isEmpty());
+
+		if( isMacro )
+			ExportDisplacementFieldFrame.runMacro( macroOptions );
+		else
+			ExportDisplacementFieldFrame.createAndShow();
+	}
+
+	public void runBackup( final String arg )
 	{
 		if ( IJ.versionLessThan( "1.40" ) )
 			return;
@@ -461,7 +490,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final double[] spacing,
 			final double[] offset,
 			final String unit,
-			final int[] spatialBlockSize,
+			final int[] spatialBlockSizeArg,
 			final Compression compression,
 			final int nThreads,
 			final boolean splitAffine,
@@ -492,6 +521,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 
+		int[] spatialBlockSize = fillBlockSize( spatialBlockSizeArg, ltm.getNumdims() );
 		int[] blockSize = new int[ spatialBlockSize.length + 1 ];
 		blockSize[ 0 ] = spatialBlockSize.length;
 		System.arraycopy( spatialBlockSize, 0, blockSize, 1, spatialBlockSize.length );
@@ -526,6 +556,25 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 		n5.close();
+	}
+
+	private static int[] fillBlockSize(int[] blockSize, int N)
+	{
+		if( blockSize.length >= N )
+			return blockSize;
+		else
+		{
+			final int[] out = new int[ N ];
+			int j = blockSize.length - 1;
+			for ( int i = 0; i < N; i++ )
+			{
+				if ( i < blockSize.length )
+					out[ i ] = blockSize[ i ];
+				else
+					out[ i ] = blockSize[ j ];
+			}
+			return out;
+		}
 	}
 
 	private static RealTransform getTpsAffineToggle( BigWarpTransform bwXfm, boolean splitAffine )
@@ -876,6 +925,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final long[] size;
 		public final double[] spacing;
 		public final double[] offset;
+		public final String unit;
 
 		public final String n5Base;
 		public final String n5Dataset;
@@ -891,6 +941,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final long[] size,
 				final double[] spacing,
 				final double[] offset,
+				final String unit,
 				final String n5Base,
 				final String n5Dataset,
 				final int[] blockSize, 
@@ -905,6 +956,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			this.size = size;
 			this.spacing = spacing;
 			this.offset = offset;
+			this.unit = unit;
 
 			this.n5Base = n5Base;
 			this.n5Dataset = n5Dataset;
@@ -1053,6 +1105,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					size,
 					spacing,
 					offset,
+					unit,
 					n5Base,
 					n5Dataset,
 					blockSize,

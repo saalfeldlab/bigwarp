@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JComboBox;
@@ -58,6 +57,7 @@ public class FieldOfViewPanel extends JPanel
 	private long[] pixSize;
 
 	private JComboBox<String> referenceComboBox;
+	private JTextField unitField;
 
 	private ImprovedFormattedTextField[] minFields;
 	private ImprovedFormattedTextField[] sizeFields;
@@ -153,6 +153,16 @@ public class FieldOfViewPanel extends JPanel
 		}
 	}
 
+	public String getUnit()
+	{
+		return unitField.getText();
+	}
+
+	public void setUnit( String unit )
+	{
+		unitField.setText( unit );
+	}
+
 	public void create()
 	{
 		setLayout(new GridBagLayout());	
@@ -179,6 +189,7 @@ public class FieldOfViewPanel extends JPanel
 					ApplyBigwarpPlugin.MOVING_WARPED,
 					ApplyBigwarpPlugin.LANDMARK_POINTS };
 			referenceComboBox = new JComboBox<>( fovOpts );
+			referenceComboBox.setSelectedItem( ApplyBigwarpPlugin.MOVING_WARPED );
 			referenceComboBox.addActionListener( e -> {
 				updateFieldsFromReference();
 			});
@@ -187,7 +198,6 @@ public class FieldOfViewPanel extends JPanel
 			add( referenceComboBox, gbc );
 
 			j = 2;
-			gbc.gridy = 1;
 		}
 		else if( IJ.getInstance() != null )
 		{
@@ -204,6 +214,9 @@ public class FieldOfViewPanel extends JPanel
 				fovOpts[ i + 1 ] = impTitles[ i ];
 
 			referenceComboBox = new JComboBox<>( fovOpts );
+			if( impTitles.length > 0 )
+				referenceComboBox.setSelectedIndex( 1 );
+
 			referenceComboBox.addActionListener( e -> {
 				updateFieldsFromImageJReference();
 			});
@@ -212,14 +225,26 @@ public class FieldOfViewPanel extends JPanel
 			add( referenceComboBox, gbc );
 
 			j = 2;
-			gbc.gridy = 1;
 		}
 
-		JLabel minLabel = new JLabel( "min" );
-		JLabel sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
-		JLabel spacingLabel = new JLabel( "spacing" );
-		JLabel pixelLabel = new JLabel( "size (pixels)" );
+		final JLabel unitLabel = new JLabel( "units:" );
+		gbc.gridx = 2;
+		gbc.anchor = GridBagConstraints.LINE_END;
+		add( unitLabel, gbc );
 
+		gbc.gridx = 3;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.anchor = GridBagConstraints.CENTER;
+		unitField = new JTextField("pixel");
+		add( unitField, gbc );
+
+
+		final JLabel minLabel = new JLabel( "min" );
+		final JLabel sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
+		final JLabel spacingLabel = new JLabel( "spacing" );
+		final JLabel pixelLabel = new JLabel( "size (pixels)" );
+
+		gbc.gridy++;
 		gbc.gridx = 1;
 		add( minLabel, gbc );
 		gbc.gridx = 2;
@@ -356,6 +381,7 @@ public class FieldOfViewPanel extends JPanel
 
 		setPixelSize( itvl.get( 0 ).dimensionsAsLongArray() );
 		setMin( offset );
+		setUnit( ApplyBigwarpPlugin.getUnit( data, referenceOption ));
 
 		for ( int i = 0; i < size.length; i++ )
 			updateSize( i );
@@ -397,28 +423,30 @@ public class FieldOfViewPanel extends JPanel
 					refImp.getHeight(),
 					refImp.getNSlices()
 			});
+
+			setUnit( refImp.getCalibration().getUnit() );
 		}
 	}
 
-	public static void main( String[] args ) throws IOException, URISyntaxException, SpimDataException
-	{
-		final JFrame frame = new JFrame( "fov" );
-		BigWarpData data = new BigWarpData();
-
-		int id = 0;
-		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack_mm.tif", id++, true ) );
-		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack_mm.tif", id++, false ) );
-
-//		LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File("/home/john/tmp/mri-stack-landmarks.csv"), false );
-		LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File("/home/john/tmp/mri-stack-mm-landmarks.csv"), false );
-		BigWarpTransform bwTransform = new BigWarpTransform( ltm, BigWarpTransform.TPS );
-
-		final FieldOfViewPanel panel = new FieldOfViewPanel( data, ltm, bwTransform, "mm", 150,
-				new double[] { 0, 0, 0 }, new double[] { 1, 1, 1 }, new long[] { 300, 200, 100 } );
-
-		frame.add( panel );
-		frame.pack();
-		frame.setVisible( true );
-	}
+//	public static void main( String[] args ) throws IOException, URISyntaxException, SpimDataException
+//	{
+//		final JFrame frame = new JFrame( "fov" );
+//		BigWarpData data = new BigWarpData();
+//
+//		int id = 0;
+//		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack_mm.tif", id++, true ) );
+//		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack_mm.tif", id++, false ) );
+//
+////		LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File("/home/john/tmp/mri-stack-landmarks.csv"), false );
+//		LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File("/home/john/tmp/mri-stack-mm-landmarks.csv"), false );
+//		BigWarpTransform bwTransform = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+//
+//		final FieldOfViewPanel panel = new FieldOfViewPanel( data, ltm, bwTransform, "mm", 150,
+//				new double[] { 0, 0, 0 }, new double[] { 1, 1, 1 }, new long[] { 300, 200, 100 } );
+//
+//		frame.add( panel );
+//		frame.pack();
+//		frame.setVisible( true );
+//	}
 
 }

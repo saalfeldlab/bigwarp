@@ -1307,7 +1307,7 @@ public class BigWarp< T >
 	public void exportWarpField()
 	{
 		BigWarpToDeformationFieldPlugIn dfieldExporter = new BigWarpToDeformationFieldPlugIn();
-		dfieldExporter.runFromBigWarpInstance( data, landmarkModel, data.getTargetSource( 0 ) );
+		dfieldExporter.runFromBigWarpInstance( this );
 	}
 
 	protected void setUpLandmarkMenus()

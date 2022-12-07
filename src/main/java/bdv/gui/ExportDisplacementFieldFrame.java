@@ -6,10 +6,9 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -22,12 +21,9 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import com.formdev.flatlaf.FlatDarculaLaf;
 import com.formdev.flatlaf.util.UIScale;
 
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
@@ -35,17 +31,31 @@ import bdv.ij.BigWarpToDeformationFieldPlugIn.DeformationFieldExportParameters;
 import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
-import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.IJ;
-import ij.ImageJ;
+import ij.Macro;
 import ij.plugin.frame.Recorder;
-import mpicbg.spim.data.SpimDataException;
 
 public class ExportDisplacementFieldFrame extends JFrame
 {
 	private static final long serialVersionUID = -6179153725489981013L;
+
+	// macro recording
+	public static final String commandName = "Big Warp to Displacement field";
+	protected static final String landmarksKey = "landmarks";
+	protected static final String splitAffineKey = "split_affine";
+	protected static final String typeKey = "type";
+	protected static final String virtualKey = "virtual";
+	protected static final String threadsKey = "threads";
+	protected static final String sizeKey = "pixel_size";
+	protected static final String spacingKey = "pixel_spacing";
+	protected static final String minKey = "min";
+	protected static final String unitKey = "unit";
+	protected static final String n5RootKey = "n5_root";
+	protected static final String n5DatasetKey = "n5_dataset";
+	protected static final String n5BlockSizeKey = "n5_block_size";
+	protected static final String n5CompressionKey = "n5_compression";
 
 	private String lastBrowsePath = null;
 	private String initialPath = null;
@@ -86,7 +96,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		super( "Export displacement field" );
 		initialPath = "";
 		imageJOpen = IJ.getInstance() != null;
-		
+
 		this.data = data;
 		this.bwTransform = bwTransform;
 		this.ltm = ltm;
@@ -106,41 +116,9 @@ public class ExportDisplacementFieldFrame extends JFrame
 		};
 	}
 
-	public static void main( String[] args ) throws URISyntaxException, IOException, SpimDataException, UnsupportedLookAndFeelException
-	{
-		UIManager.setLookAndFeel(new FlatDarculaLaf());
-
-//		LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File("/home/john/tmp/mri-stack-mm-landmarks.csv"), false );
-//		BigWarpTransform bwTransform = new BigWarpTransform( ltm, BigWarpTransform.TPS );
-//		try
-//		{
-//			BigWarpData<?> data = makeData();
-////			ExportDisplacementFieldFrame.createAndShow( data, bwTransform, ltm );
-//			ExportDisplacementFieldFrame.createAndShow( null, null, null );
-//		}
-//		catch ( URISyntaxException | IOException | SpimDataException e )
-//		{
-//			e.printStackTrace();
-//		}
-
-		ImageJ ij = new ImageJ();
-		IJ.openImage("/home/john/tmp/mri-stack_mm.tif").show();
-
-		ExportDisplacementFieldFrame.createAndShow( null, null, null );
-	}
-
-	public static < T > BigWarpData< T > makeData() throws URISyntaxException, IOException, SpimDataException
-	{
-		int id = 0;
-		final BigWarpData< T > data = BigWarpInit.initData();
-		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack.tif", id++, true ));
-		BigWarpInit.add( data, BigWarpInit.createSources( data, "/home/john/tmp/mri-stack.tif", id++, false ));
-		return data;
-	}
-
 	public static void createAndShow()
 	{
-		createAndShow( null );
+		createAndShow( null, null, null );
 	}
 
 	public static void createAndShow( final BigWarp< ? > bw )
@@ -189,10 +167,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 			unit = src.getVoxelDimensions().unit();
 		}
 
-		fovPanel = new FieldOfViewPanel( data, ltm, bwTransform, unit, 150, 
-				new double[] { 0, 0, 0 }, 
-				new double[] { 1, 1, 1 }, 
-				new long[] { 300, 200, 100 }
+		fovPanel = new FieldOfViewPanel( data, ltm, bwTransform, unit, 150,
+				new double[] { 0, 0, 0 },
+				new double[] { 1, 1, 1 },
+				new long[] { 256, 256, 128 }
 		);
 
 		fovPanel.setBorder( BorderFactory.createCompoundBorder(
@@ -248,6 +226,11 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 		final Container content = getContentPane();
 		content.add( contentPanel );
+
+		if( data != null )
+			fovPanel.updateFieldsFromReference();
+		else
+			fovPanel.updateFieldsFromImageJReference();
 	}
 
 	public JPanel basicPanel()
@@ -271,7 +254,6 @@ public class ExportDisplacementFieldFrame extends JFrame
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.fill = GridBagConstraints.NONE;
 		ctxt.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
-		panel.add( new JLabel( "Landmarks:" ), ctxt );
 
 		final GridBagConstraints gbcBar = new GridBagConstraints();
 		gbcBar.gridx = 1;
@@ -283,10 +265,6 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcBar.fill = GridBagConstraints.HORIZONTAL;
 		gbcBar.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
 
-		landmarkPathTxt = new JTextField();
-		landmarkPathTxt.setPreferredSize( new Dimension( szX / 3, landmarkPathTxt.getPreferredSize().height ) );
-		panel.add( landmarkPathTxt, gbcBar );
-
 		final GridBagConstraints cProjBrowse = new GridBagConstraints();
 		cProjBrowse.gridx = 7;
 		cProjBrowse.gridy = 0;
@@ -294,11 +272,22 @@ public class ExportDisplacementFieldFrame extends JFrame
 		cProjBrowse.weightx = 0.0;
 		cProjBrowse.fill = GridBagConstraints.HORIZONTAL;
 		cProjBrowse.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
-		browseLandmarksButton = new JButton( "Browse" );
-		browseLandmarksButton.addActionListener( e -> {
-			browseLandmarksDialog();
-		} );
-		panel.add( browseLandmarksButton, cProjBrowse );
+
+		// Don't ask for landmarks if running from a bigwarp instance
+		if( bwTransform == null )
+		{
+			panel.add( new JLabel( "Landmarks:" ), ctxt );
+
+			landmarkPathTxt = new JTextField();
+			landmarkPathTxt.setPreferredSize( new Dimension( szX / 3, landmarkPathTxt.getPreferredSize().height ) );
+			panel.add( landmarkPathTxt, gbcBar );
+
+			browseLandmarksButton = new JButton( "Browse" );
+			browseLandmarksButton.addActionListener( e -> {
+				browseLandmarksDialog();
+			} );
+			panel.add( browseLandmarksButton, cProjBrowse );
+		}
 
 		ctxt.gridy = 1;
 		ctxt.anchor = GridBagConstraints.LINE_END;
@@ -375,7 +364,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcBar.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
 
 		n5RootTxt = new JTextField();
-		n5RootTxt.setPreferredSize( new Dimension( frameSizeX / 3, landmarkPathTxt.getPreferredSize().height ) );
+		n5RootTxt.setPreferredSize( new Dimension( frameSizeX / 3, n5RootTxt.getPreferredSize().height ) );
 		panel.add( n5RootTxt, gbcBar );
 
 		final GridBagConstraints cProjBrowse = new GridBagConstraints();
@@ -396,7 +385,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 		gbcBar.gridy = 1;
 		n5DatasetTxt = new JTextField();
-		n5DatasetTxt.setPreferredSize( new Dimension( frameSizeX / 3, landmarkPathTxt.getPreferredSize().height ) );
+		n5DatasetTxt.setPreferredSize( new Dimension( frameSizeX / 3, n5DatasetTxt.getPreferredSize().height ) );
 		n5DatasetTxt.setText( "dfield" );
 		panel.add( n5DatasetTxt, gbcBar );
 
@@ -405,7 +394,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 		gbcBar.gridy = 2;
 		n5BlockSizeTxt = new JTextField();
-		n5BlockSizeTxt.setPreferredSize( new Dimension( frameSizeX / 3, landmarkPathTxt.getPreferredSize().height ) );
+		n5BlockSizeTxt.setPreferredSize( new Dimension( frameSizeX / 3, n5BlockSizeTxt.getPreferredSize().height ) );
 		n5BlockSizeTxt.setText( "64" );
 		panel.add( n5BlockSizeTxt, gbcBar );
 
@@ -485,7 +474,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
 		
 		return new DeformationFieldExportParameters(
-				landmarkPathTxt.getText(),
+				landmarkPathTxt == null ? "" : landmarkPathTxt.getText(),
 				splitAffineCheckBox.isSelected(),
 				(String)typeComboBox.getSelectedItem(),
 				virtualCheckBox.isSelected(),
@@ -493,6 +482,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 				fovPanel.getPixelSize(),
 				fovPanel.getSpacing(),
 				fovPanel.getMin(),
+				fovPanel.getUnit(),
 				n5RootTxt.getText(),
 				n5DatasetTxt.getText(),
 				blockSize, 
@@ -504,10 +494,69 @@ public class ExportDisplacementFieldFrame extends JFrame
 		BigWarpToDeformationFieldPlugIn.runFromParameters( getParams(), data, ltm );
 	}
 
-	public void macroRecord()
+	public String macroRecord()
 	{
-		// TODO implement
+		if( !Recorder.record )
+			return "";
+
+		Recorder.setCommand( commandName );
+		final String szString = Arrays.stream( fovPanel.getPixelSize() ).mapToObj( Long::toString ).collect( Collectors.joining( "," ) );
+		final String spacingString = Arrays.stream( fovPanel.getSpacing() ).mapToObj( Double::toString ).collect( Collectors.joining( "," ) );
+		final String minString = Arrays.stream( fovPanel.getMin() ).mapToObj( Double::toString ).collect( Collectors.joining( "," ) );
+
+		Recorder.resetCommandOptions();
+		Recorder.recordOption( landmarksKey, landmarkPathTxt.getText().trim() );
+		Recorder.recordOption( splitAffineKey );
+		Recorder.recordOption( virtualKey );
+		Recorder.recordOption( typeKey, ( String ) typeComboBox.getSelectedItem() );
+		Recorder.recordOption( threadsKey, Integer.toString( ( Integer ) nThreadsField.getValue() ) );
+		Recorder.recordOption( sizeKey, szString );
+		Recorder.recordOption( spacingKey, spacingString );
+		Recorder.recordOption( minKey, minString );
+		Recorder.recordOption( unitKey, fovPanel.getUnit() );
+
+		if( !n5RootTxt.getText().isEmpty() )
+		{
+			Recorder.recordOption( n5RootKey, n5RootTxt.getText().trim() );
+			Recorder.recordOption( n5DatasetKey, n5DatasetTxt.getText().trim() );
+			Recorder.recordOption( n5BlockSizeKey, n5BlockSizeTxt.getText().trim() );
+			Recorder.recordOption( n5CompressionKey, ( String ) n5CompressionDropdown.getSelectedItem() );
+		}
+
+		Recorder.saveCommand();
+		return Recorder.getCommandOptions();
 	}
 
+	public static void runMacro( String args )
+	{
+		final String landmarks = Macro.getValue( args, landmarksKey, "" );
+		final String type = Macro.getValue( args, typeKey, "" );
+		final boolean splitAffine =  args.contains(" " + splitAffineKey );
+		final boolean openAsVirtual = args.contains(" " + virtualKey);
+		final int threads = Integer.valueOf( Macro.getValue( args, threadsKey, "1" ));
+
+		final double[] min = Arrays.stream( Macro.getValue( args, minKey, "" ).split( "," ) ).mapToDouble( Double::valueOf ).toArray();
+		final double[] spacing = Arrays.stream( Macro.getValue( args, spacingKey, "" ).split( "," ) ).mapToDouble( Double::valueOf ).toArray();
+		final long[] pixSize = Arrays.stream( Macro.getValue( args, sizeKey, "" ).split( "," ) ).mapToLong( Long::valueOf ).toArray();
+		final String unit = Macro.getValue( args, typeKey, "pixel" );
+
+		final String n5Root = Macro.getValue( args, n5RootKey, "" );
+		final String n5Dataset = Macro.getValue( args, n5DatasetKey, "" );
+		final String n5BlockSizeString = Macro.getValue( args, n5BlockSizeKey, "" );
+		final String n5Compression = Macro.getValue( args, n5CompressionKey, "" );
+
+		final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
+			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
+
+		DeformationFieldExportParameters params = new DeformationFieldExportParameters(
+				landmarks, splitAffine, type, openAsVirtual, threads,
+				pixSize, spacing, min, unit,
+				n5Root,
+				n5Dataset,
+				blockSize,
+				BigWarpToDeformationFieldPlugIn.getCompression( n5Compression ) );
+
+		BigWarpToDeformationFieldPlugIn.runFromParameters( params, null, null );
+	}
 
 }
