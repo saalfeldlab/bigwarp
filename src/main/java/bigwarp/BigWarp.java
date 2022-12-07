@@ -501,7 +501,6 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this ); 
-		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 
 		WarpNavigationActions.installActionBindings( getViewerFrameP().getKeybindings(), viewerFrameP, keyProperties, ( ndims == 2 ) );
 		BigWarpActions.installActionBindings( getViewerFrameP().getKeybindings(), this, keyProperties );
@@ -1934,6 +1933,11 @@ public class BigWarp< T >
 
 	public void setMaskOverlayVisibility( final boolean visible )
 	{
+		if( transformMask == null)
+		{
+			addTransformMaskSource( data, ndims, "Transform mask" );
+		}
+
 		getViewerFrameQ().getViewerPanel().getMaskOverlay().setVisible( visible );
 	}
 
@@ -2046,10 +2050,13 @@ public class BigWarp< T >
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	private SourceAndConverter< DoubleType > addTransformMaskSource( final BigWarpData< T > data, final int ndims, final String name )
 	{
-		// TODO think about whether its worth it to pass a type parameter.
-		// or should we just stick with Floats?
-//		FinalInterval itvl = new FinalInterval( data.sources.get( data.targetSourceIndices[0] ).getSpimSource().getSource( 0, 0 ));
-		FinalInterval itvl = new FinalInterval( data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ));
+		// think about whether its worth it to pass a type parameter. or should we just stick with Floats?
+
+		final BoundingBoxEstimation bbe = new BoundingBoxEstimation();
+		final AffineTransform3D affine = new AffineTransform3D();
+		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
+		final Interval itvl = bbe.estimatePixelInterval(  affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
+
 		transformMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
 
 		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
@@ -2057,6 +2064,13 @@ public class BigWarp< T >
 		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( transformMask, converter, null );
 		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TRANSFORM_MASK_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
+
+		// connect to UI
+		warpVisDialog.maskOptionsPanel.setMask( transformMask );
+		addMaskMouseListener();
+		bwTransform.setLambda( transformMask.getRandomAccessible() );
+		synchronizeSources();
+
 		return soc;
 	}
 

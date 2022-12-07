@@ -1218,7 +1218,6 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.maskSourceMouseListenerP.toggleActive();
 			bw.maskSourceMouseListenerQ.toggleActive();
 		}
 	}
