@@ -137,11 +137,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 	public <T> void runFromBigWarpInstance( final BigWarp<?> bw )
 	{
-		System.out.println( "run from instance." );
-		ImageJ ij = IJ.getInstance();
-		if ( ij == null )
-			return;
-
+//		System.out.println( "run from instance." );
+//		ImageJ ij = IJ.getInstance();
+//		if ( ij == null )
+//			return;
+//
 		ExportDisplacementFieldFrame.createAndShow( bw );
 	}
 
@@ -193,13 +193,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( data, landmarkModel, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
+			toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, landmarkModel, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
+				writeN5( params.n5Base, params.n5Dataset, landmarkModel, null, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -208,7 +208,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 	}
 	
-	public static void runFromParameters( final DeformationFieldExportParameters params, final BigWarpData<?> data, final LandmarkTableModel landmarkModel )
+	public static void runFromParameters( final DeformationFieldExportParameters params, final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final BigWarpTransform bwTransform )
 	{
 		String unit = "pixel";
 		LandmarkTableModel ltm;
@@ -243,13 +243,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if ( params.n5Base.isEmpty() )
 		{
-			toImagePlus( data, ltm, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
+			toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, ltm, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
+				writeN5( params.n5Base, params.n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -299,13 +299,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		if( params.n5Base.isEmpty() )
 		{
-			toImagePlus( null, ltm, params.ignoreAffine, params.flatten(), params.virtual, params.size, params.spacing, params.nThreads );
+			toImagePlus( null, ltm, null, params.ignoreAffine, params.flatten(), params.virtual, params.size, params.spacing, params.nThreads );
 		}
 		else
 		{
 			try
 			{
-				writeN5( params.n5Base, params.n5Dataset, ltm, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
+				writeN5( params.n5Base, params.n5Dataset, ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten() );
 			}
 			catch ( IOException e )
 			{
@@ -316,6 +316,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static ImagePlus toImagePlus(
 			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
 			final boolean ignoreAffine,
 			final boolean flatten,
 			final boolean virtual,
@@ -324,7 +325,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads )
 	{
 		final double[] offset = new double[ spacing.length ];
-		return toImagePlus( data, ltm, ignoreAffine, flatten, virtual, dims, spacing, offset, nThreads );
+		return toImagePlus( data, ltm, bwTransform, ignoreAffine, flatten, virtual, dims, spacing, offset, nThreads );
 	}
 
 	/**
@@ -342,6 +343,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static ImagePlus toImagePlus(
 			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
 			final boolean ignoreAffine,
 			final boolean flatten,
 			final boolean virtual,
@@ -350,7 +352,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final double[] offset,
 			final int nThreads )
 	{
-		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+		BigWarpTransform bwXfm;
+		if( bwTransform == null )
+			bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+		else
+			bwXfm = bwTransform;
+
 		final RealTransform startingTransform = getTransformation( data, bwXfm, flatten );
 
 		int nd = ltm.getNumdims();
@@ -451,6 +458,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static void writeN5( 
 			final String n5BasePath, 
 			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
 			final BigWarpData<?> data,
 			final long[] dims,
 			final double[] spacing,
@@ -461,13 +469,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads,
 			final boolean flatten ) throws IOException 
 	{
-		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, flatten );
+		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, flatten );
 	}
 
 	public static void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
 			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
 			final BigWarpData<?> data,
 			final long[] dims,
 			final double[] spacing,
@@ -478,13 +487,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads,
 			final boolean flatten ) throws IOException
 	{
-		writeN5( n5BasePath, n5Dataset, ltm, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, false, flatten  );
+		writeN5( n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, false, flatten  );
 	}
 
 	public static void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
 			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
 			final BigWarpData<?> data,
 			final long[] dims,
 			final double[] spacing,
@@ -499,7 +509,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
-		final BigWarpTransform bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+		final BigWarpTransform bwXfm;
+		if( bwTransform == null )
+			bwXfm = new BigWarpTransform( ltm, BigWarpTransform.TPS );
+		else
+			bwXfm = bwTransform;
+
 //		final RealTransform tpsTotal = bwXfm.getTransformation( false );
 		final RealTransform totalTransform = getTransformation( data, bwXfm, flatten );
 

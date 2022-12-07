@@ -92,6 +92,7 @@ import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.BigwarpLandmarkSelectionPanel;
+import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.gui.TransformTypeSelectDialog;
@@ -1305,8 +1306,7 @@ public class BigWarp< T >
 
 	public void exportWarpField()
 	{
-		BigWarpToDeformationFieldPlugIn dfieldExporter = new BigWarpToDeformationFieldPlugIn();
-		dfieldExporter.runFromBigWarpInstance( this );
+		ExportDisplacementFieldFrame.createAndShow( this );
 	}
 
 	protected void setUpLandmarkMenus()
