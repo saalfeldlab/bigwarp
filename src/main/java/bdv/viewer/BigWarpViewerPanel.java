@@ -102,7 +102,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			}
 		} );
 
-		updateGrouping();
+		//updateGrouping();
 	}
 
 	@Override
@@ -154,13 +154,14 @@ public class BigWarpViewerPanel extends ViewerPanel
 	/**
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
-	 *
+	 * <p>
+	 * Deprecated. use {@link BigWarp#createMovingTargetGroup()}
+	 * 
 	 * @return the number sources in the moving group
 	 */
+	@Deprecated
 	public int updateGrouping()
 	{
-		// TODO consider deprecating in favor of Bigwarp.createMovingTargetGroups
-
 		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{

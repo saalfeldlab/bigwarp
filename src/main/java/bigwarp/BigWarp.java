@@ -184,9 +184,9 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarp< T >
 {
-	protected static final int DEFAULT_WIDTH = 600;
+	protected static final int DEFAULT_WIDTH = 400;
 
-	protected static final int DEFAULT_HEIGHT = 400;
+	protected static final int DEFAULT_HEIGHT = 300;
 
 	public static final int GRID_SOURCE_ID = 1696993146;
 
@@ -227,9 +227,9 @@ public class BigWarp< T >
 
 	protected final BigWarpViewerPanel viewerQ;
 
-	protected final AffineTransform3D initialViewP;
+	protected AffineTransform3D initialViewP;
 
-	protected final AffineTransform3D initialViewQ;
+	protected AffineTransform3D initialViewQ;
 
 	private JMenuItem toggleAlwaysWarpMenuP;
 
@@ -399,14 +399,17 @@ public class BigWarp< T >
 		final InputTriggerConfig keyProperties = BigDataViewer.getInputTriggerConfig( options );
 		options = options.inputTriggerConfig( keyProperties );
 
+		final int width = UIScale.scale( DEFAULT_WIDTH );
+		final int height = UIScale.scale( DEFAULT_HEIGHT );
+
 		// Viewer frame for the moving image
-		viewerFrameP = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, data.converterSetups, viewerSettings,
+		viewerFrameP = new BigWarpViewerFrame( this, width, height, data.converterSetups, viewerSettings,
 				data.cache, options, "Bigwarp moving image", true );
 
 		viewerP = getViewerFrameP().getViewerPanel();
 
 		// Viewer frame for the fixed image
-		viewerFrameQ = new BigWarpViewerFrame( this, DEFAULT_WIDTH, DEFAULT_HEIGHT, data.converterSetups, viewerSettings,
+		viewerFrameQ = new BigWarpViewerFrame( this, width, height, data.converterSetups, viewerSettings,
 				data.cache, options, "Bigwarp fixed image", false );
 
 		viewerQ = getViewerFrameQ().getViewerPanel();
@@ -483,7 +486,6 @@ public class BigWarp< T >
 		solverThread.start();
 
 		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
-//		bboxOptions = new BoundingBoxEstimation( BoundingBoxEstimation.Method.CORNERS, 5 );
 
 		dragOverlayP = new BigWarpDragOverlay( this, viewerP, solverThread );
 		dragOverlayQ = new BigWarpDragOverlay( this, viewerQ, solverThread );
@@ -521,10 +523,10 @@ public class BigWarp< T >
 
 		/* Set the locations of frames */
 		viewerFrameP.setLocation( 0, 0 );
-		viewerFrameP.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
-		viewerFrameQ.setLocation( DEFAULT_WIDTH, 0 );
-		viewerFrameQ.setSize( DEFAULT_WIDTH, DEFAULT_HEIGHT );
-		landmarkFrame.setLocation( 2 * DEFAULT_WIDTH, 0 );
+		viewerFrameP.setSize( width, height );
+		viewerFrameQ.setLocation( width, 0 );
+		viewerFrameQ.setSize( width, height );
+		landmarkFrame.setLocation( 2 * width, 0 );
 
 		landmarkClickListenerP = new MouseLandmarkListener( this.viewerP );
 		landmarkClickListenerQ = new MouseLandmarkListener( this.viewerQ );
@@ -533,12 +535,6 @@ public class BigWarp< T >
 		currentLandmark = new RealPoint( 3 );
 		inLandmarkMode = false;
 		setupKeyListener();
-
-		// save the initial viewer transforms
-		initialViewP = new AffineTransform3D();
-		initialViewQ = new AffineTransform3D();
-		viewerP.state().getViewerTransform( initialViewP );
-		viewerQ.state().getViewerTransform( initialViewQ );
 
 		viewerFrameP.setVisible( true );
 		viewerFrameQ.setVisible( true );
@@ -571,12 +567,9 @@ public class BigWarp< T >
 		//addKeyEventPostProcessor( new LandmarkModeListener() );
 
 		baselineModelIndex = 0;
+
 		if( data.sources.size() > 0 )
 			initialize();
-
-		createMovingTargetGroups();
-		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerP.state().setCurrentGroup( tgtGrp );
 	}
 
 	public void initialize()
@@ -586,7 +579,6 @@ public class BigWarp< T >
 		// starting view
 		if( data.numTargetSources() > 0 )
 			data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, fixedViewXfm );
-
 
 //TODO Expose adding these sources via UI
 
@@ -616,26 +608,45 @@ public class BigWarp< T >
 //		viewerQ.state().setSourceActive( jacDetSource, false );
 //		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
 
-
 		synchronizeSources();
-
-		SwingUtilities.invokeLater( new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				data.transferChannelSettings( viewerFrameP );
-				data.transferChannelSettings( viewerFrameQ );
-
-			}
-		} );
-
 		updateSourceBoundingBoxEstimators();
 
-		// set initial transforms so data are visible
-		InitializeViewerState.initTransform( viewerP );
-		InitializeViewerState.initTransform( viewerQ );
+		createMovingTargetGroups();
+		viewerP.state().setCurrentGroup( mvgGrp );
+		viewerP.state().setCurrentGroup( tgtGrp );
 
+		// set initial transforms so data are visible
+		SwingUtilities.invokeLater( () -> {
+			data.transferChannelSettings( viewerFrameP );
+			data.transferChannelSettings( viewerFrameQ );
+
+			// show moving sources in the moving viewer
+			if( data.numMovingSources() == 1 )
+				viewerP.state().setCurrentSource( data.getMovingSource( 0 ) );
+			else
+			{
+				viewerP.state().setDisplayMode( DisplayMode.GROUP );
+				viewerP.state().setCurrentGroup( mvgGrp );
+			}
+
+			// show fixed sources in the fixed viewer
+			if( data.numTargetSources() == 1 )
+				viewerQ.state().setCurrentSource( data.getTargetSource( 0 ) );
+			else
+			{
+				viewerQ.state().setDisplayMode( DisplayMode.GROUP );
+				viewerQ.state().setCurrentGroup( tgtGrp );
+			}
+
+			InitializeViewerState.initTransform( viewerP );
+			InitializeViewerState.initTransform( viewerQ );
+
+			// save the initial viewer transforms
+			initialViewP = new AffineTransform3D();
+			initialViewQ = new AffineTransform3D();
+			viewerP.state().getViewerTransform( initialViewP );
+			viewerQ.state().getViewerTransform( initialViewQ );
+		} );
 	}
 
 	protected void setupLandmarkFrame()
@@ -719,16 +730,14 @@ public class BigWarp< T >
 		tgtGrp = new SourceGroup();
 
 		final SynchronizedViewerState pState = viewerP.state();
-		final SynchronizedViewerState qState = viewerP.state();
-
 		pState.addGroup( mvgGrp );
 		pState.addGroup( tgtGrp );
-
-		qState.addGroup( mvgGrp );
-		qState.addGroup( tgtGrp );
-
 		pState.setGroupName( mvgGrp, "moving images" );
 		pState.setGroupName( tgtGrp, "target images" );
+
+		final SynchronizedViewerState qState = viewerQ.state();
+		qState.addGroup( mvgGrp );
+		qState.addGroup( tgtGrp );
 		qState.setGroupName( mvgGrp, "moving images" );
 		qState.setGroupName( tgtGrp, "target images" );
 
