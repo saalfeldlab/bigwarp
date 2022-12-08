@@ -192,13 +192,16 @@ public class BigWarpInitDialog extends JFrame
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
 
+		final int nThreads = IJ.getInstance() != null ? Prefs.getThreads() : 1;
+		BigWarpViewerOptions bwOpts = ( BigWarpViewerOptions ) BigWarpViewerOptions.options().numRenderingThreads( nThreads );
+
 		if( !haveProject )
 		{
 			int id = 0;
 			final int N = images.length;
 			for( int i = 0; i < N; i++ )
 			{
-				// TODO deal with exceptions?
+				// TODO better messages for exceptions?
 				try
 				{
 					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
@@ -208,10 +211,8 @@ public class BigWarpInitDialog extends JFrame
 					if( transformUrl!= null && !transformUrl.isEmpty() )
 						transform = NgffTransformations.open( transformUrl );
 
-					if( transform != null )
-						BigWarpInit.add( data, infos, transform );
-					else
-						BigWarpInit.add( data, infos );
+					// add performs a null check on transform
+					BigWarpInit.add( data, infos, transform );
 
 					id += infos.size();
 				}
@@ -234,7 +235,7 @@ public class BigWarpInitDialog extends JFrame
 		try
 		{
 			data.applyTransformations();
-			bw = new BigWarp<>( data, new ProgressWriterIJ() );
+			bw = new BigWarp<>( data, bwOpts, new ProgressWriterIJ() );
 			if( haveProject )
 				bw.loadSettings( projectPath );
 		}
@@ -345,6 +346,7 @@ public class BigWarpInitDialog extends JFrame
 
 		final int frameSizeX = UIScale.scale( 600 );
 		final JPanel panel = new JPanel(false);
+		panel.setPreferredSize( new Dimension( frameSizeX, UIScale.scale( 335 ) )); // ~ 16:9
 		panel.setLayout(new GridBagLayout());	
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
