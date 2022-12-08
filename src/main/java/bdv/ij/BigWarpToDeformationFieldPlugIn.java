@@ -49,8 +49,6 @@ import org.janelia.saalfeldlab.n5.metadata.omengff.NgffAffineTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffDisplacementsTransformation;
 import org.janelia.saalfeldlab.n5.metadata.omengff.NgffSequenceTransformation;
 
-import com.formdev.flatlaf.util.UIScale;
-
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;

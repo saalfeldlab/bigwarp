@@ -82,6 +82,7 @@ import org.scijava.ui.behaviour.io.InputTriggerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.formdev.flatlaf.util.UIScale;
 import com.google.gson.stream.JsonReader;
 
 import bdv.BigDataViewer;
