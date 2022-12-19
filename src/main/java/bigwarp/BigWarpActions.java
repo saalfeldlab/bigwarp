@@ -919,7 +919,8 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			bw.saveSettings();
+			System.out.println("action save project");
+			bw.saveProject();
 		}
 	}
 
@@ -954,7 +955,7 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			bw.loadSettings();
+			bw.loadProject();
 		}
 	}
 
