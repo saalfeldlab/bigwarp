@@ -3741,11 +3741,16 @@ public class BigWarp< T >
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
 
-			//ndims = detec data.sources
-			ndims = detectNumDims( data.sources );
-			setupLandmarkFrame();
-			viewerP.setNumDim( ndims );
-			viewerQ.setNumDim( ndims );
+			/**
+			 * TODO John:
+			 * The below were an attempt to change the dimensionality of bigwarp upon loading of settings.
+			 * Unfortunately, the transform handlers for bdv are final, so best we can do is start a new bigwarp
+			 * if the dimensionality changes. 
+			 */
+//			ndims = detectNumDims( data.sources );
+//			setupLandmarkFrame();
+//			viewerP.setNumDim( ndims );
+//			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();
