@@ -285,13 +285,13 @@ public class SerializationTest
 		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
 	}
 
-	private static void assertExpectedSettingsToCurrent( final Path xmlSourceSettings, final BigWarp< Object > bw ) throws IOException
+	private static void assertExpectedSettingsToCurrent( final Path expectedSettings, final BigWarp< Object > bw ) throws IOException
 	{
 		/* Save the settings and compare with initial to test the deserialization */
 		final Path tempSettings = Files.createTempFile( "deserialization", ".json" );
 		tempSettings.toFile().delete();
 		bw.saveSettingsJson(tempSettings.toFile().getCanonicalPath());
-		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( xmlSourceSettings.toFile() ) );
+		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( expectedSettings.toFile() ) );
 		final JsonElement actualJson = JsonParser.parseReader( new FileReader( tempSettings.toFile() ) );
 		BigWarpTestUtils.assertJsonDiff( expectedJson, actualJson );
 	}
@@ -387,7 +387,6 @@ public class SerializationTest
 	{
 		for ( int i = 0; i < 40; i++ )
 		{
-			System.out.println( i );
 			bw = BigWarpTestUtils.createBigWarp( true );
 
 			/* Load the known good*/
