@@ -3682,12 +3682,6 @@ public class BigWarp< T >
 			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
-
-			//ndims = detec data.sources
-			ndims = detectNumDims( data.sources );
-			setupLandmarkFrame();
-			viewerP.setNumDim( ndims );
-			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();
