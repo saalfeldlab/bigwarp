@@ -313,9 +313,9 @@ public class BigWarp< T >
 	protected int baselineModelIndex;
 
 	// file selection
-	final JFrame fileFrame;
+	protected JFrame fileFrame;
 
-	final FileDialog fileDialog;
+	protected FileDialog fileDialog;
 
 	protected File lastDirectory;
 
@@ -383,7 +383,6 @@ public class BigWarp< T >
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
 		 * LandmarkPanel
 		 */
-
 
 		/* Set up landmark panel */
 		setupLandmarkFrame();
@@ -540,25 +539,12 @@ public class BigWarp< T >
 		viewerP.state().getViewerTransform( initialViewP );
 		viewerQ.state().getViewerTransform( initialViewQ );
 
-		viewerFrameP.setVisible( true );
-		viewerFrameQ.setVisible( true );
-
-		landmarkFrame.pack();
-		landmarkFrame.setVisible( true );
-
 		checkBoxInputMaps();
-
-		// file selection
-		fileFrame = new JFrame( "Select File" );
-		fileDialog = new FileDialog( fileFrame );
 
 		if ( ij == null || (IJ.getDirectory( "current" ) == null) )
 			lastDirectory = new File( System.getProperty( "user.home" ));
 		else
 			lastDirectory = new File( IJ.getDirectory( "current" ));
-
-		// default to linear interpolation
-		fileFrame.setVisible( false );
 
 		// add focus listener
 		//new BigwarpFocusListener( this );
@@ -577,6 +563,16 @@ public class BigWarp< T >
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
 		viewerP.state().setCurrentGroup( tgtGrp );
+
+		SwingUtilities.invokeLater( () -> {
+			viewerFrameP.setVisible( true );
+			viewerFrameQ.setVisible( true );
+			landmarkFrame.setVisible( true );
+
+			fileFrame = new JFrame( "Select File" );
+			fileDialog = new FileDialog( fileFrame );
+			fileFrame.setVisible( false );
+		});
 	}
 
 	public void initialize()
@@ -666,10 +662,10 @@ public class BigWarp< T >
 		if ( sz != null )
 			landmarkFrame.setSize( sz );
 
-		landmarkFrame.pack();
-		landmarkFrame.setVisible( true );
-
-		setUpLandmarkMenus();
+		SwingUtilities.invokeLater( () -> {
+			setUpLandmarkMenus();
+			landmarkFrame.pack();
+		});
 	}
 
 	public void synchronizeSources()
@@ -2682,6 +2678,7 @@ public class BigWarp< T >
 		// Disable spacebar for toggling checkboxes
 		// Make it enter instead
 		// This is super ugly ... why does it have to be this way.
+
 
 		final TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
 		final Component c = celled.getTableCellEditorComponent( landmarkTable, Boolean.TRUE, true, 0, 1 );
