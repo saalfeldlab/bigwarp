@@ -619,16 +619,8 @@ public class BigWarp< T >
 
 		synchronizeSources();
 
-		SwingUtilities.invokeLater( new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				data.transferChannelSettings( viewerFrameP );
-				data.transferChannelSettings( viewerFrameQ );
-
-			}
-		} );
+		data.transferChannelSettings( viewerFrameP );
+		data.transferChannelSettings( viewerFrameQ );
 
 		updateSourceBoundingBoxEstimators();
 

@@ -384,7 +384,6 @@ public class BigWarpData< T >
 		final SynchronizedViewerState state = viewer.getViewerPanel().state();
 		final ConverterSetups setups = viewer.getConverterSetups();
 
-		// TODO does this need synchronization?
 		for( Entry< Integer, SourceInfo > infoEntry : sourceInfos.entrySet() )
 		{
 			final int id = infoEntry.getKey();
