@@ -37,6 +37,7 @@
  */
 package bigwarp.loader;
 
+import bigwarp.source.SourceInfo;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -161,6 +162,11 @@ public class ImagePlusLoader implements Loader
 			SourceAndConverter<?> sac = data.sources.get( key.intValue() );
 			data.getSourceInfo( key ).setColorSettings( settingsMap.get( key ) );
 		}
+	}
+
+	public void update( final SourceInfo sourceInfo )
+	{
+		sourceInfo.setColorSettings( settingsMap.get( sourceInfo.getId() ) );
 	}
 
 	@SuppressWarnings( "unchecked" )
