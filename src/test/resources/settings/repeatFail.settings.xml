@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Settings>
+	<viewerP>
+		<ViewerState>
+			<Sources>
+				<Source>
+					<active>false</active>
+				</Source>
+			</Sources>
+			<SourceGroups>
+				<SourceGroup>
+					<active>false</active>
+					<name>moving images</name>
+					<id>0</id>
+				</SourceGroup>
+			</SourceGroups>
+			<DisplayMode>sg</DisplayMode>
+			<Interpolation>nearestneighbor</Interpolation>
+			<CurrentSource>0</CurrentSource>
+			<CurrentGroup>0</CurrentGroup>
+			<CurrentTimePoint>0</CurrentTimePoint>
+		</ViewerState>
+	</viewerP>
+	<viewerQ>
+		<ViewerState>
+			<Sources>
+				<Source>
+					<active>false</active>
+				</Source>
+			</Sources>
+			<SourceGroups>
+				<SourceGroup>
+					<active>true</active>
+					<name>moving images</name>
+				</SourceGroup>
+			</SourceGroups>
+			<DisplayMode>sg</DisplayMode>
+			<Interpolation>nearestneighbor</Interpolation>
+			<CurrentSource>0</CurrentSource>
+			<CurrentGroup>0</CurrentGroup>
+			<CurrentTimePoint>0</CurrentTimePoint>
+		</ViewerState>
+	</viewerQ>
+	<SetupAssignments>
+		<ConverterSetups>
+			<ConverterSetup>
+				<id>0</id>
+				<min>0.0</min>
+				<max>65535.0</max>
+				<color>-1</color>
+				<groupId>0</groupId>
+			</ConverterSetup>
+		</ConverterSetups>
+		<MinMaxGroups>
+			<MinMaxGroup>
+				<id>0</id>
+				<fullRangeMin>-2.147483648E9</fullRangeMin>
+				<fullRangeMax>2.147483647E9</fullRangeMax>
+				<rangeMin>0.0</rangeMin>
+				<rangeMax>65535.0</rangeMax>
+				<currentMin>0.0</currentMin>
+				<currentMax>255.0</currentMax>
+			</MinMaxGroup>
+		</MinMaxGroups>
+	</SetupAssignments>
+	<Bookmarks />
+	<autosave>
+		<location>/tmp/.bigwarp</location>
+		<period>180000</period>
+	</autosave>
+</Settings>
