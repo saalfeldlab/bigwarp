@@ -71,6 +71,7 @@ public class BigWarpTestUtils
 	private static String create3DImage( final Path tmpImgPath ) throws IOException
 	{
 		ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
+		img3d.setDisplayRange( 5, 15 );
 		IJ.save( img3d, tmpImgPath.toFile().getCanonicalPath() );
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();

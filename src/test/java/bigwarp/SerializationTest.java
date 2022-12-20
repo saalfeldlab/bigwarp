@@ -6,6 +6,7 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.XmlIoViewerState;
+import bigwarp.loader.ImagePlusLoader;
 import bigwarp.source.PlateauSphericalMaskSource;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -251,6 +252,7 @@ public class SerializationTest
 	public void sourceFromImageJTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
+		img.setDisplayRange( 5, 15 );
 		img.show();
 
 		final String imagejUri = "imagej://generated image";
@@ -380,19 +382,16 @@ public class SerializationTest
 		return Files.write( newSettings, newLines );
 	}
 
-	/* When creating and closing multiple BigWarp instances, occassionally the comparison test fails.
-	 *   It shouldn't be a problem in practice, since this only occurs during testing, but I think it indicates
-	 * 	there may be a race condidtion somewhere. To duplicate the issue, run this test multiple times, and
-	 * 	it should eventually fail. It is not consistent. */
-	private void repeatComparison() throws Exception
+	@Test
+	public void repeatComparison() throws Exception
 	{
-		for ( int i = 0; i < 20; i++ )
+		for ( int i = 0; i < 40; i++ )
 		{
 			System.out.println( i );
-			bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
+			bw = BigWarpTestUtils.createBigWarp( true );
 
 			/* Load the known good*/
-			final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
+			final String originalXmlSettings = "src/test/resources/settings/repeatFail.settings.xml";
 			bw.loadSettings( originalXmlSettings );
 
 			/* save it back out*/
@@ -489,13 +488,23 @@ public class SerializationTest
 
 	}
 
-	public static void main( String[] args ) throws SpimDataException, URISyntaxException, IOException, JDOMException, InterruptedException
+	public static <T> void main( String[] args ) throws SpimDataException, URISyntaxException, IOException, JDOMException, InterruptedException
 	{
-		BigWarp<?> bw = BigWarpTestUtils.createBigWarp("/tmp/img8270806677315563879.tif", true, true, false, false);
-		bw.saveSettingsJson( "/tmp/3d-settings.json" );
-		bw.closeAll();
-		Thread.sleep( 1000 );
-		bw = BigWarpTestUtils.createBigWarp();
-		bw.loadSettings("/tmp/3d-settings.json");
+
+		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
+		img.setDisplayRange( 5, 15 );
+		img.show();
+
+		final BigWarpData< T > data = BigWarpInit.initData();
+		BigWarpInit.add(data, BigWarpInit.createSources( data, img, 123, 0, true ));
+
+		new BigWarp<>(data, null);
+
+		// BigWarp<?> bw = BigWarpTestUtils.createBigWarp("/tmp/img8270806677315563879.tif", true, true, false, false);
+		// bw.saveSettingsJson( "/tmp/3d-settings.json" );
+		// bw.closeAll();
+		// Thread.sleep( 1000 );
+		// bw = BigWarpTestUtils.createBigWarp();
+		// bw.loadSettings("/tmp/3d-settings.json");
 	}
 }
