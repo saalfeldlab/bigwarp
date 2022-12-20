@@ -146,12 +146,10 @@ public class BigWarpInitDialog extends JFrame
 		};
 		
 		imagePathUpdateCallback = ( p ) -> { 
-			System.out.println( "add image: " + p ); 
 			addPath();
 		};
 
 		transformPathUpdateCallback = ( p ) -> { 
-			System.out.println( "add transform: " + p ); 
 			addTransform();
 		};
 	}
@@ -184,6 +182,7 @@ public class BigWarpInitDialog extends JFrame
 
 //		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
 		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
+
 		createAndShow();
 	}
 
@@ -237,7 +236,9 @@ public class BigWarpInitDialog extends JFrame
 			data.applyTransformations();
 			bw = new BigWarp<>( data, bwOpts, new ProgressWriterIJ() );
 			if( haveProject )
-				bw.loadSettings( projectPath );
+			{
+				bw.loadSettings( projectPath, true );
+			}
 		}
 		catch ( SpimDataException e )
 		{
@@ -321,7 +322,7 @@ public class BigWarpInitDialog extends JFrame
 			data.applyTransformations();
 			bw = new BigWarp<>( data, new ProgressWriterIJ() );
 			if( haveProject )
-				bw.loadSettings( projectPath );
+				bw.loadSettings( projectPath, true );
 		}
 		catch ( SpimDataException e )
 		{
