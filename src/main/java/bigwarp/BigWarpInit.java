@@ -393,6 +393,7 @@ public class BigWarpInit
 		}
 
 		sourceInfoMap.forEach( ( sac, state ) -> {
+			loader.update( state );
 			state.setUriSupplier( () -> {
 				final FileInfo originalFileInfo = ip.getOriginalFileInfo();
 				if ( originalFileInfo != null )
