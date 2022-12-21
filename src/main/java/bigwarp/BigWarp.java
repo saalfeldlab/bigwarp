@@ -316,9 +316,9 @@ public class BigWarp< T >
 	protected int baselineModelIndex;
 
 	// file selection
-	final JFrame fileFrame;
+	protected JFrame fileFrame;
 
-	final FileDialog fileDialog;
+	protected FileDialog fileDialog;
 
 	protected File lastDirectory;
 
@@ -386,7 +386,6 @@ public class BigWarp< T >
 		 * Set up LandmarkTableModel, holds the data and interfaces with the
 		 * LandmarkPanel
 		 */
-
 
 		/* Set up landmark panel */
 		setupLandmarkFrame();
@@ -538,25 +537,18 @@ public class BigWarp< T >
 		inLandmarkMode = false;
 		setupKeyListener();
 
-		viewerFrameP.setVisible( true );
-		viewerFrameQ.setVisible( true );
-
-		landmarkFrame.pack();
-		landmarkFrame.setVisible( true );
+		// save the initial viewer transforms
+		initialViewP = new AffineTransform3D();
+		initialViewQ = new AffineTransform3D();
+		viewerP.state().getViewerTransform( initialViewP );
+		viewerQ.state().getViewerTransform( initialViewQ );
 
 		checkBoxInputMaps();
-
-		// file selection
-		fileFrame = new JFrame( "Select File" );
-		fileDialog = new FileDialog( fileFrame );
 
 		if ( ij == null || (IJ.getDirectory( "current" ) == null) )
 			lastDirectory = new File( System.getProperty( "user.home" ));
 		else
 			lastDirectory = new File( IJ.getDirectory( "current" ));
-
-		// default to linear interpolation
-		fileFrame.setVisible( false );
 
 		// add focus listener
 		//new BigwarpFocusListener( this );
@@ -572,6 +564,20 @@ public class BigWarp< T >
 
 		if( data.sources.size() > 0 )
 			initialize();
+
+		createMovingTargetGroups();
+		viewerP.state().setCurrentGroup( mvgGrp );
+		viewerP.state().setCurrentGroup( tgtGrp );
+
+		SwingUtilities.invokeLater( () -> {
+			viewerFrameP.setVisible( true );
+			viewerFrameQ.setVisible( true );
+			landmarkFrame.setVisible( true );
+
+			fileFrame = new JFrame( "Select File" );
+			fileDialog = new FileDialog( fileFrame );
+			fileFrame.setVisible( false );
+		});
 	}
 
 	public void initialize()
@@ -611,6 +617,10 @@ public class BigWarp< T >
 //		data.sourceColorSettings.put( jacDetSource, new ImagePlusLoader.ColorSettings( -1, 0.0, 1.0, white ));
 
 		synchronizeSources();
+
+		data.transferChannelSettings( viewerFrameP );
+		data.transferChannelSettings( viewerFrameQ );
+
 		updateSourceBoundingBoxEstimators();
 
 		createMovingTargetGroups();
@@ -618,9 +628,7 @@ public class BigWarp< T >
 		viewerP.state().setCurrentGroup( tgtGrp );
 
 		// set initial transforms so data are visible
-		SwingUtilities.invokeLater( () -> {
-			data.transferChannelSettings( viewerFrameP );
-			data.transferChannelSettings( viewerFrameQ );
+//		SwingUtilities.invokeLater( () -> {
 
 			// show moving sources in the moving viewer
 			if( data.numMovingSources() == 1 )
@@ -648,7 +656,7 @@ public class BigWarp< T >
 			initialViewQ = new AffineTransform3D();
 			viewerP.state().getViewerTransform( initialViewP );
 			viewerQ.state().getViewerTransform( initialViewQ );
-		} );
+//		} );
 	}
 
 	protected void setupLandmarkFrame()
@@ -687,10 +695,10 @@ public class BigWarp< T >
 		if ( sz != null )
 			landmarkFrame.setSize( sz );
 
-		landmarkFrame.pack();
-		landmarkFrame.setVisible( true );
-
-		setUpLandmarkMenus();
+		SwingUtilities.invokeLater( () -> {
+			setUpLandmarkMenus();
+			landmarkFrame.pack();
+		});
 	}
 
 	public void synchronizeSources()
@@ -2114,6 +2122,7 @@ public class BigWarp< T >
 
 //		synchronizeSources();
 
+//		REMEMBER TO STASH APPLY
 		return soc;
 	}
 
@@ -2747,6 +2756,7 @@ public class BigWarp< T >
 		// Disable spacebar for toggling checkboxes
 		// Make it enter instead
 		// This is super ugly ... why does it have to be this way.
+
 
 		final TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
 		final Component c = celled.getTableCellEditorComponent( landmarkTable, Boolean.TRUE, true, 0, 1 );
@@ -3771,17 +3781,6 @@ public class BigWarp< T >
 			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
-
-			/**
-			 * TODO John:
-			 * The below were an attempt to change the dimensionality of bigwarp upon loading of settings.
-			 * Unfortunately, the transform handlers for bdv are final, so best we can do is start a new bigwarp
-			 * if the dimensionality changes. 
-			 */
-//			ndims = detectNumDims( data.sources );
-//			setupLandmarkFrame();
-//			viewerP.setNumDim( ndims );
-//			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();

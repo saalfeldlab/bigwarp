@@ -6,6 +6,7 @@ import bdv.tools.brightness.MinMaxGroup;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.state.SourceGroup;
 import bdv.viewer.state.XmlIoViewerState;
+import bigwarp.loader.ImagePlusLoader;
 import bigwarp.source.PlateauSphericalMaskSource;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -39,6 +40,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.xml.sax.SAXException;
+
+import static bigwarp.BigWarpTestUtils.createTemp3DImage;
 
 public class SerializationTest
 {
@@ -136,7 +139,7 @@ public class SerializationTest
 		bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
 
 		final PipedWriter writer = new PipedWriter();
-		final PipedReader in = new PipedReader( writer, 10000 );
+		final PipedReader in = new PipedReader( writer, 1000 );
 
 		final JsonWriter out = new JsonWriter( writer );
 		new BigwarpSettings.SetupAssignmentsAdapter( bw.setupAssignments ).write( out, bw.setupAssignments );
@@ -217,7 +220,7 @@ public class SerializationTest
 			}
 			groups.add( sourceGroupObj );
 		}
-		expected.addProperty( XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_TAG, XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_GROUP );
+		expected.addProperty( XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_TAG, XmlIoViewerState.VIEWERSTATE_DISPLAYMODE_VALUE_SINGLE );
 		expected.addProperty( XmlIoViewerState.VIEWERSTATE_INTERPOLATION_TAG, XmlIoViewerState.VIEWERSTATE_INTERPOLATION_VALUE_NEARESTNEIGHBOR );
 		expected.addProperty( XmlIoViewerState.VIEWERSTATE_CURRENTSOURCE_TAG, value.getState().getCurrentSource() );
 		expected.addProperty( XmlIoViewerState.VIEWERSTATE_CURRENTGROUP_TAG, value.getState().getCurrentGroup() );
@@ -249,6 +252,7 @@ public class SerializationTest
 	public void sourceFromImageJTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
+		img.setDisplayRange( 5, 15 );
 		img.show();
 
 		final String imagejUri = "imagej://generated image";
@@ -281,13 +285,13 @@ public class SerializationTest
 		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
 	}
 
-	private static void assertExpectedSettingsToCurrent( final Path xmlSourceSettings, final BigWarp< Object > bw ) throws IOException
+	private static void assertExpectedSettingsToCurrent( final Path expectedSettings, final BigWarp< Object > bw ) throws IOException
 	{
 		/* Save the settings and compare with initial to test the deserialization */
 		final Path tempSettings = Files.createTempFile( "deserialization", ".json" );
 		tempSettings.toFile().delete();
 		bw.saveSettingsJson(tempSettings.toFile().getCanonicalPath());
-		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( xmlSourceSettings.toFile() ) );
+		final JsonElement expectedJson = JsonParser.parseReader( new FileReader( expectedSettings.toFile() ) );
 		final JsonElement actualJson = JsonParser.parseReader( new FileReader( tempSettings.toFile() ) );
 		BigWarpTestUtils.assertJsonDiff( expectedJson, actualJson );
 	}
@@ -378,19 +382,15 @@ public class SerializationTest
 		return Files.write( newSettings, newLines );
 	}
 
-	/* When creating and closing multiple BigWarp instances, occassionally the comparison test fails.
-	 *   It shouldn't be a problem in practice, since this only occurs during testing, but I think it indicates
-	 * 	there may be a race condidtion somewhere. To duplicate the issue, run this test multiple times, and
-	 * 	it should eventually fail. It is not consistent. */
-	private void repeatComparison() throws Exception
+	@Test
+	public void repeatComparison() throws Exception
 	{
-		for ( int i = 0; i < 20; i++ )
+		for ( int i = 0; i < 40; i++ )
 		{
-			System.out.println( i );
-			bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
+			bw = BigWarpTestUtils.createBigWarp( true );
 
 			/* Load the known good*/
-			final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
+			final String originalXmlSettings = "src/test/resources/settings/repeatFail.settings.xml";
 			bw.loadSettings( originalXmlSettings );
 
 			/* save it back out*/
@@ -487,4 +487,23 @@ public class SerializationTest
 
 	}
 
+	public static <T> void main( String[] args ) throws SpimDataException, URISyntaxException, IOException, JDOMException, InterruptedException
+	{
+
+		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
+		img.setDisplayRange( 5, 15 );
+		img.show();
+
+		final BigWarpData< T > data = BigWarpInit.initData();
+		BigWarpInit.add(data, BigWarpInit.createSources( data, img, 123, 0, true ));
+
+		new BigWarp<>(data, null);
+
+		// BigWarp<?> bw = BigWarpTestUtils.createBigWarp("/tmp/img8270806677315563879.tif", true, true, false, false);
+		// bw.saveSettingsJson( "/tmp/3d-settings.json" );
+		// bw.closeAll();
+		// Thread.sleep( 1000 );
+		// bw = BigWarpTestUtils.createBigWarp();
+		// bw.loadSettings("/tmp/3d-settings.json");
+	}
 }
