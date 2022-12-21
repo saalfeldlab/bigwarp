@@ -3566,17 +3566,30 @@ public class BigWarp< T >
 
 	protected void saveSettings()
 	{
-		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
 		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+		saveSettingsOrProject( proposedSettingsFile );
+	}
 
-		fileChooser.setSelectedFile( proposedSettingsFile );
+	protected void saveProject()
+	{
+		System.out.println( "save project" );
+		File proposedSettingsFile = new File( "bigwarp-project.json" );
+		saveSettingsOrProject( proposedSettingsFile );
+	}
+
+	protected void saveSettingsOrProject( final File proposedFile )
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+
+		File settingsFile;
+		fileChooser.setSelectedFile( proposedFile );
 		final int returnVal = fileChooser.showSaveDialog( null );
 		if ( returnVal == JFileChooser.APPROVE_OPTION )
 		{
-			proposedSettingsFile = fileChooser.getSelectedFile();
+			settingsFile = fileChooser.getSelectedFile();
 			try
 			{
-				final String canonicalPath = proposedSettingsFile.getCanonicalPath();
+				final String canonicalPath = settingsFile.getCanonicalPath();
 				if ( canonicalPath.endsWith( ".xml" ) )
 				{
 					saveSettings( canonicalPath );
@@ -3657,17 +3670,27 @@ public class BigWarp< T >
 
 	protected void loadSettings()
 	{
-		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
-		File proposedSettingsFile = new File( "bigwarp.settings.xml" );
+		loadSettingsOrProject( new File( "bigwarp.settings.xml" ) );
+	}
 
-		fileChooser.setSelectedFile( proposedSettingsFile );
+	protected void loadProject()
+	{
+		loadSettingsOrProject( new File( "bigwarp-project.json" ) );
+	}
+
+	protected void loadSettingsOrProject( final File f )
+	{
+		final JFileChooser fileChooser = new JFileChooser( getLastDirectory() );
+
+		File settingsFile;
+		fileChooser.setSelectedFile( f );
 		final int returnVal = fileChooser.showOpenDialog( null );
 		if ( returnVal == JFileChooser.APPROVE_OPTION )
 		{
-			proposedSettingsFile = fileChooser.getSelectedFile();
+			settingsFile = fileChooser.getSelectedFile();
 			try
 			{
-				loadSettings( proposedSettingsFile.getCanonicalPath() );
+				loadSettings( settingsFile.getCanonicalPath(), true );
 			} catch ( final Exception e )
 			{
 				e.printStackTrace();
@@ -3749,11 +3772,16 @@ public class BigWarp< T >
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
 
-			//ndims = detec data.sources
-			ndims = detectNumDims( data.sources );
-			setupLandmarkFrame();
-			viewerP.setNumDim( ndims );
-			viewerQ.setNumDim( ndims );
+			/**
+			 * TODO John:
+			 * The below were an attempt to change the dimensionality of bigwarp upon loading of settings.
+			 * Unfortunately, the transform handlers for bdv are final, so best we can do is start a new bigwarp
+			 * if the dimensionality changes. 
+			 */
+//			ndims = detectNumDims( data.sources );
+//			setupLandmarkFrame();
+//			viewerP.setNumDim( ndims );
+//			viewerQ.setNumDim( ndims );
 		}
 
 		viewerFrameP.repaint();
