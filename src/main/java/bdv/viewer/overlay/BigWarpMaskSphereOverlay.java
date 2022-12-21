@@ -34,7 +34,7 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 
 	public BigWarpMaskSphereOverlay( final BigWarpViewerPanel viewer, boolean is3d )
 	{
-		this( viewer, new double[]{}, new Color[]{ Color.ORANGE, Color.YELLOW }, is3d );
+		this( viewer, new double[]{0,0}, new Color[]{ Color.ORANGE, Color.YELLOW }, is3d );
 	}
 
 	public BigWarpMaskSphereOverlay( final BigWarpViewerPanel viewer, final Color[] colors, boolean is3d )

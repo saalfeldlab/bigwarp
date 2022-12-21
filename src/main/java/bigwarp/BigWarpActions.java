@@ -1236,7 +1236,6 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
 			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
 		}
 	}

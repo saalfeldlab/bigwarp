@@ -346,6 +346,7 @@ public class WarpVisFrame extends JDialog
 
 		// mask options
 		maskOptionsPanel = new MaskOptionsPanel( bw );
+		maskOptionsPanel.addActions();
 
 		// type options
 		transformTypePanel = new TransformTypePanel( bw );

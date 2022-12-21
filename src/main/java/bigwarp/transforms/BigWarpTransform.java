@@ -65,6 +65,7 @@ public class BigWarpTransform
 	public static final String ROTATION = "Rotation";
 	public static final String TRANSLATION = "Translation";
 
+	public static final String NO_MASK_INTERP = "NONE";
 	public static final String MASK_INTERP = "LINEAR";
 	public static final String SIM_MASK_INTERP = "SIMILARITY";
 	public static final String ROT_MASK_INTERP = "ROTATION";

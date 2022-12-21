@@ -58,8 +58,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public static enum FalloffShape
 	{
-		GAUSSIAN( it -> new GaussianFalloff( it ) ),
 		COSINE( it -> new CosineFalloff( it ) ),
+		GAUSSIAN( it -> new GaussianFalloff( it ) ),
 		LINEAR( it -> new LinearFalloff( it ) );
 
 		private final Function< PlateauSphericalMaskRealRandomAccessible, BiConsumer< RealLocalizable, DoubleType > > fallOffProvider;

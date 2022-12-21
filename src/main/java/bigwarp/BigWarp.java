@@ -95,6 +95,7 @@ import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
+import bdv.gui.MaskOptionsPanel;
 import bdv.gui.MaskedSourceEditorMouseListener;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
@@ -1943,11 +1944,6 @@ public class BigWarp< T >
 
 	public void setMaskOverlayVisibility( final boolean visible )
 	{
-		if( transformMask == null)
-		{
-			addTransformMaskSource( data, ndims, "Transform mask" );
-		}
-
 		getViewerFrameQ().getViewerPanel().getMaskOverlay().setVisible( visible );
 	}
 
@@ -2057,11 +2053,39 @@ public class BigWarp< T >
 		return soc;
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	private SourceAndConverter< DoubleType > addTransformMaskSource( final BigWarpData< T > data, final int ndims, final String name )
+	/**
+	 * Call this method when the transform mask type or options have changed.
+	 */
+	public void updateTransformMask()
 	{
-		// think about whether its worth it to pass a type parameter. or should we just stick with Floats?
+		final MaskOptionsPanel maskOpts = warpVisDialog.maskOptionsPanel;
+		final String type = maskOpts.getType();
+		if( !type.equals( BigWarpTransform.NO_MASK_INTERP ) )
+		{
+			// add the transform mask if necessary
+			addTransformMaskSource();
+		}
 
+		// upddate the bigwarp transform
+		getBwTransform().setMaskInterpolationType( type );
+		restimateTransformation();
+		setMaskOverlayVisibility( maskOpts.showMaskOverlay() && maskOpts.isMask() );
+		autoEstimateMask();
+		getViewerFrameQ().getViewerPanel().requestRepaint();
+	}
+
+	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	public SourceAndConverter< DoubleType > addTransformMaskSource()
+	{
+		if( warpVisDialog == null )
+			return null;
+
+		if( transformMask != null)
+		{
+			return ( SourceAndConverter< DoubleType > ) data.getSourceInfo( TRANSFORM_MASK_SOURCE_ID ).getSourceAndConverter();
+		}
+
+		// think about whether its worth it to pass a type parameter. or should we just stick with Floats?
 		final BoundingBoxEstimation bbe = new BoundingBoxEstimation();
 		final AffineTransform3D affine = new AffineTransform3D();
 		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
@@ -2079,7 +2103,16 @@ public class BigWarp< T >
 		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 		addMaskMouseListener();
 		bwTransform.setLambda( transformMask.getRandomAccessible() );
-		synchronizeSources();
+
+		final ArrayList<BigWarpMaskSphereOverlay> overlayList = new ArrayList<>();
+		final BigWarpMaskSphereOverlay overlay = new BigWarpMaskSphereOverlay( viewerQ, ndims==3 );
+		overlayList.add( overlay );
+
+		// first attach the overlay to the viewer
+		getViewerFrameQ().getViewerPanel().setMaskOverlay( overlay );
+		transformMask.getRandomAccessible().setOverlays( overlayList );
+
+//		synchronizeSources();
 
 		return soc;
 	}
@@ -3660,9 +3693,7 @@ public class BigWarp< T >
 			jacDetSource = addJacobianDeterminantSource( data, "Jacobian determinant" );
 			break;
 		case TRANSFORM_MASK_SOURCE_ID:
-			transformMaskSource = addTransformMaskSource( data, ndims, "Transform mask" );
-			bwTransform.setLambda( transformMask.getRandomAccessible() );
-			addMaskMouseListener();
+			updateTransformMask();
 			break;
 		default:
 			break;
