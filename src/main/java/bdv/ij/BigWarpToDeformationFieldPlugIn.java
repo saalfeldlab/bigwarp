@@ -585,8 +585,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
-		final String mvgSpaceName = data.getMovingSource( 0 ).getSpimSource().getName();
-		final String tgtSpaceName = data.getMovingSource( 1 ).getSpimSource().getName();
+		final String mvgSpaceName = data != null ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
+		final String tgtSpaceName = data != null ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
 		final String inputSpace;
 		final String outputSpace;
 		if( inverse )

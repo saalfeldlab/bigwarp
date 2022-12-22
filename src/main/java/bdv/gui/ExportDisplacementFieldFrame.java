@@ -15,12 +15,16 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
+import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -72,6 +76,12 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private boolean imageJOpen;
 	private boolean initialRecorderState;
 
+	private boolean n5DatasetChanged;
+	private DocumentListener docListener;
+
+	private JPanel contentPanel;
+	private JPanel invPanel;
+
 	private JTextField landmarkPathTxt;
 	private JButton browseLandmarksButton;
 	private JTextField n5RootTxt;
@@ -86,6 +96,11 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private JSpinner nThreadsField;
 	private JButton okBtn;
 	private JButton cancelBtn;
+
+	// inverse options
+	private JSpinner invMaxIterationsSpinner;
+	private JSpinner invToleranceSpinner;
+
 	private FieldOfViewPanel fovPanel;
 
 	public ExportDisplacementFieldFrame( BigWarp<?> bw )
@@ -115,6 +130,19 @@ public class ExportDisplacementFieldFrame extends JFrame
 			Recorder.record = initialRecorderState;
 			dispose();
 			setVisible( false );
+		};
+
+		// attach to the n5Dataset text field, keep track of whether user changes it
+		// once user change occurs, default values from direction dropdown no longer affect it
+		docListener = new DocumentListener() {
+			@Override
+			public void changedUpdate( DocumentEvent e ) { }
+
+			@Override
+			public void insertUpdate( DocumentEvent e ) { n5DatasetChanged = true; }
+
+			@Override
+			public void removeUpdate( DocumentEvent e ) { n5DatasetChanged = true; }
 		};
 	}
 
@@ -148,9 +176,20 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	public void createContent()
 	{
+		n5DatasetChanged = false;
 		final int frameSizeX = UIScale.scale( 600 );
 
 		final JPanel panel = basicPanel();
+
+		invPanel = inverseOptionsPanel( frameSizeX );
+		invPanel.setBorder( BorderFactory.createCompoundBorder(
+				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+				BorderFactory.createCompoundBorder(
+						BorderFactory.createTitledBorder(
+								BorderFactory.createEtchedBorder(),
+								"Inverse options" ),
+						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+
 
 		final JPanel n5Panel = n5OptionsPanel( frameSizeX );
 		n5Panel.setBorder( BorderFactory.createCompoundBorder(
@@ -183,7 +222,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 								"Field of view" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
-		final JPanel contentPanel = new JPanel();
+		contentPanel = new JPanel();
 		contentPanel.setLayout( new GridBagLayout() );
 
 		final GridBagConstraints cGbc = new GridBagConstraints();
@@ -194,14 +233,18 @@ public class ExportDisplacementFieldFrame extends JFrame
 		cGbc.gridy = 0;
 		contentPanel.add( panel, cGbc );
 		cGbc.gridy = 1;
-		contentPanel.add( n5Panel, cGbc );
+		contentPanel.add( invPanel, cGbc );
+		invPanel.setEnabled( false );
+		invPanel.setVisible( false );
 		cGbc.gridy = 2;
+		contentPanel.add( n5Panel, cGbc );
+		cGbc.gridy = 3;
 		contentPanel.add( fovPanel, cGbc );
 
 		// bottom button section
 		final GridBagConstraints cbot = new GridBagConstraints();
 		cbot.gridx = 0;
-		cbot.gridy = 3;
+		cbot.gridy = 4;
 		cbot.gridwidth = 1;
 		cbot.gridheight = 1;
 		cbot.weightx = 1.0;
@@ -233,6 +276,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 			fovPanel.updateFieldsFromReference();
 		else
 			fovPanel.updateFieldsFromImageJReference();
+
+		addDefaultN5DatasetAction();
 	}
 
 	public JPanel basicPanel()
@@ -354,6 +399,63 @@ public class ExportDisplacementFieldFrame extends JFrame
 		return panel;
 	}
 
+	public JPanel inverseOptionsPanel( final int frameSizeX )
+	{
+		final int OUTER_PAD = BigWarpInitDialog.DEFAULT_OUTER_PAD;
+		final int BUTTON_PAD = BigWarpInitDialog.DEFAULT_BUTTON_PAD;
+		final int MID_PAD = BigWarpInitDialog.DEFAULT_MID_PAD;
+
+		JPanel panel = new JPanel();
+		panel.setLayout( new GridBagLayout() );
+
+		final GridBagConstraints ctxt = new GridBagConstraints();
+		ctxt.gridx = 0;
+		ctxt.gridy = 0;
+		ctxt.gridwidth = 1;
+		ctxt.gridheight = 1;
+		ctxt.weightx = 0.0;
+		ctxt.weighty = 0.0;
+		ctxt.anchor = GridBagConstraints.LINE_END;
+		ctxt.fill = GridBagConstraints.NONE;
+		ctxt.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
+
+		final GridBagConstraints gbcBar = new GridBagConstraints();
+		gbcBar.gridx = 1;
+		gbcBar.gridy = 0;
+		gbcBar.gridwidth = 1;
+		gbcBar.gridheight = 1;
+		gbcBar.weightx = 1.0;
+		gbcBar.weighty = 0.0;
+		gbcBar.fill = GridBagConstraints.HORIZONTAL;
+		gbcBar.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
+
+		ctxt.gridx = 0;
+		ctxt.anchor = GridBagConstraints.LINE_END;
+		panel.add( new JLabel( "Tolerance:" ), ctxt );
+
+		gbcBar.gridx = 1;
+		gbcBar.fill = GridBagConstraints.HORIZONTAL;
+		invToleranceSpinner = new JSpinner( new SpinnerNumberModel( 0.5, 1e-9, 999999, 0.01 ) );
+
+		JSpinner.NumberEditor editor = new JSpinner.NumberEditor(invToleranceSpinner, "###,###.######");
+		JFormattedTextField textField = editor.getTextField();
+        textField.setColumns(12);
+        invToleranceSpinner.setEditor(editor);
+
+		panel.add( invToleranceSpinner, gbcBar );
+
+		ctxt.gridx = 3;
+		ctxt.anchor = GridBagConstraints.LINE_END;
+		panel.add( new JLabel( "Max iterations:" ), ctxt );
+
+		gbcBar.gridx = 4;
+		gbcBar.fill = GridBagConstraints.HORIZONTAL;
+		invMaxIterationsSpinner = new JSpinner( new SpinnerNumberModel( 200, 1, 999999, 1 ) );
+		panel.add( invMaxIterationsSpinner, gbcBar );
+
+		return panel;
+	}
+
 	public JPanel n5OptionsPanel( final int frameSizeX )
 	{
 		final int OUTER_PAD = BigWarpInitDialog.DEFAULT_OUTER_PAD;
@@ -409,6 +511,9 @@ public class ExportDisplacementFieldFrame extends JFrame
 		n5DatasetTxt = new JTextField();
 		n5DatasetTxt.setPreferredSize( new Dimension( frameSizeX / 3, n5DatasetTxt.getPreferredSize().height ) );
 		n5DatasetTxt.setText( "dfield" );
+		n5DatasetTxt.getDocument().addDocumentListener( docListener );
+
+
 		panel.add( n5DatasetTxt, gbcBar );
 
 		ctxt.gridy = 2;
@@ -430,6 +535,57 @@ public class ExportDisplacementFieldFrame extends JFrame
 		panel.add( n5CompressionDropdown, gbcBar );
 
 		return panel;
+	}
+
+	private void addDefaultN5DatasetAction()
+	{
+		directionComboBox.addActionListener( e -> {
+			if( n5DatasetChanged ) {
+				return;
+			}
+
+			final String item = (String)directionComboBox.getSelectedItem();
+			if( item.equals( BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.FORWARD.toString() ))
+			{
+				n5DatasetTxt.getDocument().removeDocumentListener( docListener );
+				n5DatasetTxt.setText( "dfield" );
+				n5DatasetTxt.getDocument().addDocumentListener( docListener );
+
+				SwingUtilities.invokeLater( () -> {
+					invPanel.setEnabled( false );
+					invPanel.setVisible( false );
+					contentPanel.revalidate();
+					contentPanel.repaint();
+					pack();
+				});
+			}
+			else if( item.equals( BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.INVERSE.toString() ))
+			{
+				n5DatasetTxt.getDocument().removeDocumentListener( docListener );
+				n5DatasetTxt.setText( "invdfield" );
+				n5DatasetTxt.getDocument().addDocumentListener( docListener );
+				SwingUtilities.invokeLater( () -> {
+					invPanel.setEnabled( true );
+					invPanel.setVisible( true );
+					contentPanel.revalidate();
+					contentPanel.repaint();
+					pack();
+				});
+			}
+			else if( item.equals( BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.BOTH.toString() ))
+			{
+				n5DatasetTxt.getDocument().removeDocumentListener( docListener );
+				n5DatasetTxt.setText( "transform" );
+				n5DatasetTxt.getDocument().addDocumentListener( docListener );
+				SwingUtilities.invokeLater( () -> {
+					invPanel.setEnabled( true );
+					invPanel.setVisible( true );
+					contentPanel.revalidate();
+					contentPanel.repaint();
+					pack();
+				});
+			}
+		});
 	}
 
 	private String browseLandmarksDialog()
