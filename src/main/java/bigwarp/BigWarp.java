@@ -2121,8 +2121,7 @@ public class BigWarp< T >
 		transformMask.getRandomAccessible().setOverlays( overlayList );
 
 //		synchronizeSources();
-
-//		REMEMBER TO STASH APPLY
+		transformMaskSource = soc;
 		return soc;
 	}
 

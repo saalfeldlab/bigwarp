@@ -46,6 +46,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 	protected static final String landmarksKey = "landmarks";
 	protected static final String splitAffineKey = "split_affine";
 	protected static final String typeKey = "type";
+	protected static final String directionKey = "direction";
 	protected static final String virtualKey = "virtual";
 	protected static final String threadsKey = "threads";
 	protected static final String sizeKey = "pixel_size";
@@ -81,6 +82,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private JCheckBox splitAffineCheckBox;
 	private JCheckBox virtualCheckBox;
 	private JComboBox< String > typeComboBox;
+	private JComboBox< String > directionComboBox;
 	private JSpinner nThreadsField;
 	private JButton okBtn;
 	private JButton cancelBtn;
@@ -238,6 +240,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final int OUTER_PAD = BigWarpInitDialog.DEFAULT_OUTER_PAD;
 		final int BUTTON_PAD = BigWarpInitDialog.DEFAULT_BUTTON_PAD;
 		final int MID_PAD = BigWarpInitDialog.DEFAULT_MID_PAD;
+		final Insets defaultInsets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
 
 		final int szX = UIScale.scale( 600 );
 
@@ -253,7 +256,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		ctxt.weighty = 0.0;
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.fill = GridBagConstraints.NONE;
-		ctxt.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
+		ctxt.insets = defaultInsets;
 
 		final GridBagConstraints gbcBar = new GridBagConstraints();
 		gbcBar.gridx = 1;
@@ -263,7 +266,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcBar.weightx = 1.0;
 		gbcBar.weighty = 0.0;
 		gbcBar.fill = GridBagConstraints.HORIZONTAL;
-		gbcBar.insets = new Insets( OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD );
+		gbcBar.insets = defaultInsets;
 
 		final GridBagConstraints cProjBrowse = new GridBagConstraints();
 		cProjBrowse.gridx = 7;
@@ -271,7 +274,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		cProjBrowse.gridwidth = 1;
 		cProjBrowse.weightx = 0.0;
 		cProjBrowse.fill = GridBagConstraints.HORIZONTAL;
-		cProjBrowse.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		cProjBrowse.insets = defaultInsets;
 
 		// Don't ask for landmarks if running from a bigwarp instance
 		if( bwTransform == null )
@@ -289,46 +292,65 @@ public class ExportDisplacementFieldFrame extends JFrame
 			panel.add( browseLandmarksButton, cProjBrowse );
 		}
 
+		ctxt.gridx = 0;
 		ctxt.gridy = 1;
 		ctxt.anchor = GridBagConstraints.LINE_END;
-		panel.add( new JLabel( "Split affine:" ), ctxt );
+		panel.add( new JLabel( "Type:" ), ctxt );
 
 		final GridBagConstraints gbcCheck = new GridBagConstraints();
 		gbcCheck.gridx = 1;
 		gbcCheck.gridy = 1;
-		gbcCheck.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		gbcCheck.insets = defaultInsets;
 		gbcCheck.anchor = GridBagConstraints.LINE_START;
-		splitAffineCheckBox = new JCheckBox();
-		panel.add( splitAffineCheckBox, gbcCheck );
-
-		ctxt.gridx = 2;
-		ctxt.anchor = GridBagConstraints.LINE_END;
-		ctxt.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
-		ctxt.weightx = 0.1;
-		panel.add( new JLabel( "Virtual:" ), ctxt );
-
-		gbcCheck.gridx = 3;
-		gbcCheck.weightx = 0.1;
-		virtualCheckBox = new JCheckBox();
-		panel.add( virtualCheckBox, gbcCheck );
-
-		ctxt.gridx = 4;
-		ctxt.anchor = GridBagConstraints.LINE_END;
-		panel.add( new JLabel( "Type:" ), ctxt );
-
-		gbcCheck.gridx = 5;
 		typeComboBox = new JComboBox< String >( new String[] { 
 				BigWarpToDeformationFieldPlugIn.flattenOption,
 				BigWarpToDeformationFieldPlugIn.sequenceOption } );
 		panel.add( typeComboBox, gbcCheck );
 
-		ctxt.gridx = 6;
+		// want some more padding for direction
+		ctxt.gridx = 3;
+		ctxt.insets = new Insets( OUTER_PAD, 10*BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		panel.add( new JLabel( "Direction:" ), ctxt );
+		ctxt.insets = defaultInsets;
+
+		gbcCheck.gridx = 4;
+		directionComboBox = new JComboBox< String >( new String[] {
+				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.FORWARD.toString(),
+				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.INVERSE.toString(),
+				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.BOTH.toString() } );
+		panel.add( directionComboBox, gbcCheck );
+
+		ctxt.gridx = 5;
+		ctxt.anchor = GridBagConstraints.LINE_END;
+		panel.add( new JLabel( "Split affine:" ), ctxt );
+
+		gbcCheck.gridx = 6;
+		splitAffineCheckBox = new JCheckBox();
+		panel.add( splitAffineCheckBox, gbcCheck );
+
+		// second row 
+		ctxt.gridx = 0;
+		ctxt.gridy = 2;
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		panel.add( new JLabel( "Threads:" ), ctxt );
 
-		gbcCheck.gridx = 7;
+		gbcCheck.gridx = 1;
+		gbcCheck.gridy = 2;
+		gbcCheck.fill = GridBagConstraints.HORIZONTAL;
 		nThreadsField = new JSpinner( new SpinnerNumberModel( 1, 1, 9999, 1 ) );
 		panel.add( nThreadsField, gbcCheck );
+
+		ctxt.gridx = 5;
+		ctxt.anchor = GridBagConstraints.LINE_END;
+		ctxt.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		ctxt.weightx = 0.1;
+		panel.add( new JLabel( "Virtual:" ), ctxt );
+
+		gbcCheck.gridx = 6;
+		gbcCheck.weightx = 0.1;
+		virtualCheckBox = new JCheckBox();
+		panel.add( virtualCheckBox, gbcCheck );
+
 		return panel;
 	}
 
@@ -477,6 +499,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 				landmarkPathTxt == null ? "" : landmarkPathTxt.getText(),
 				splitAffineCheckBox.isSelected(),
 				(String)typeComboBox.getSelectedItem(),
+				(String)directionComboBox.getSelectedItem(),
 				virtualCheckBox.isSelected(),
 				(Integer)nThreadsField.getValue(),
 				fovPanel.getPixelSize(),
@@ -488,7 +511,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 				blockSize, 
 				BigWarpToDeformationFieldPlugIn.getCompression( (String)n5CompressionDropdown.getSelectedItem() ) );
 	}
-	
+
 	public void run()
 	{
 		BigWarpToDeformationFieldPlugIn.runFromParameters( getParams(), data, ltm, bwTransform );
@@ -531,6 +554,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 	{
 		final String landmarks = Macro.getValue( args, landmarksKey, "" );
 		final String type = Macro.getValue( args, typeKey, "" );
+		final String direction = Macro.getValue( args, directionKey, "" );
 		final boolean splitAffine =  args.contains(" " + splitAffineKey );
 		final boolean openAsVirtual = args.contains(" " + virtualKey);
 		final int threads = Integer.valueOf( Macro.getValue( args, threadsKey, "1" ));
@@ -549,7 +573,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
 
 		DeformationFieldExportParameters params = new DeformationFieldExportParameters(
-				landmarks, splitAffine, type, openAsVirtual, threads,
+				landmarks, splitAffine, type, direction, openAsVirtual, threads,
 				pixSize, spacing, min, unit,
 				n5Root,
 				n5Dataset,
