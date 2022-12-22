@@ -255,7 +255,7 @@ public class SerializationTest
 		img.setDisplayRange( 5, 15 );
 		img.show();
 
-		final String imagejUri = "imagej://generated image";
+		final String imagejUri = "imagej:///generated image";
 		final Path xmlSourceSettings = createNewSettingsWithReplacement(
 				"src/test/resources/settings/expected.json",
 				new HashMap< String, String >() {

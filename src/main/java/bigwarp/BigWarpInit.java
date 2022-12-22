@@ -36,6 +36,7 @@ import java.util.Objects;
 import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5TreeNode;
+import org.janelia.saalfeldlab.n5.N5URL;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
@@ -570,77 +571,62 @@ public class BigWarpInit
 		return sourceInfoMap;
 	}
 
-	private static String schemeSpecificPartWithoutQuery( URI uri )
-	{
-		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
-	}
-
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
-		final URI tmpUri = new URI( "TMP", uri, null );
-		String encodedUriString = tmpUri.getRawSchemeSpecificPart();
-		encodedUriString = encodedUriString.replaceAll( "%23", "#" );
-		URI firstUri = new URI( encodedUriString );
+
+		URI encodedUri = N5URL.encodeAsUri( uri );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
-		if ( firstUri.isOpaque() )
+		if ( encodedUri.isOpaque() )
 		{
-			URI secondUri = new URI( firstUri.getSchemeSpecificPart() );
-			final String firstScheme = firstUri.getScheme().toLowerCase();
-			final String secondScheme = secondUri.getScheme();
-			final String secondSchemeSpecificMinusQuery = schemeSpecificPartWithoutQuery( secondUri );
-			final boolean dontIncludeScheme = secondScheme == null || Objects.equals( secondScheme, "" ) || Objects.equals( secondScheme.toLowerCase(), "file" );
-			final String secondSchemeAndPath = dontIncludeScheme ? secondSchemeSpecificMinusQuery : secondScheme + "://" + secondSchemeSpecificMinusQuery;
-			final String datasetQuery = secondUri.getQuery();
-			final String dataset = datasetQuery == null ? "/" : datasetQuery;
+			N5URL n5URL = new N5URL( encodedUri.getSchemeSpecificPart() );
+			final String firstScheme = encodedUri.getScheme().toLowerCase();
 			final N5Reader n5reader;
 			switch ( firstScheme )
 			{
 			case "n5":
-				n5reader = new N5Factory().openReader( secondSchemeAndPath );
+				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
 				break;
 			case "zarr":
-				n5reader = new N5ZarrReader( secondSchemeAndPath );
+				n5reader = new N5ZarrReader( n5URL.getContainerPath() );
 				break;
 			case "h5":
 			case "hdf5":
 			case "hdf":
-				n5reader = new N5HDF5Reader( secondSchemeAndPath );
+				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
 				break;
 			default:
 				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
 			}
 
-			final Source< T > source = loadN5Source( n5reader, dataset );
-			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset ) );
+			final Source< T > source = loadN5Source( n5reader, n5URL.getGroupPath() );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
 		}
 		else
 		{
-			firstUri = new URI( encodedUriString.replaceAll( "%23", "#" ) );
-			final String firstSchemeSpecificPartMinusQuery = schemeSpecificPartWithoutQuery( firstUri );
-			final boolean skipScheme = firstUri.getScheme() == null || firstUri.getScheme().trim().isEmpty() || firstUri.getScheme().trim().equalsIgnoreCase( "n5" ) || firstUri.getScheme().trim().equalsIgnoreCase( "file" );
-			final String firstSchemeAndPath = skipScheme ? firstSchemeSpecificPartMinusQuery : firstUri.getScheme() + "://" + firstSchemeSpecificPartMinusQuery;
+			final N5URL n5URL = new N5URL( encodedUri );
 			try
 			{
-				final N5Reader n5reader = new N5Factory().openReader( firstSchemeAndPath );
-				final String datasetQuery = firstUri.getQuery();
-				final String dataset = datasetQuery == null ? "/" : datasetQuery;
-				final Source< T > source = loadN5Source( n5reader, dataset );
-				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, dataset ) );
+				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
+				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
+				final String group = n5URL.getGroupPath();
+				final Source< T > source = loadN5Source( n5reader, group );
+				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
 			}
 			catch ( Exception ignored )
 			{}
 			if ( sourceStateMap.isEmpty() )
 			{
-				if ( firstSchemeAndPath.trim().toLowerCase().endsWith( ".xml" ) )
+				final String containerPath = n5URL.getContainerPath();
+				if ( containerPath.trim().toLowerCase().endsWith( ".xml" ) )
 				{
-					sourceStateMap.putAll( createSources( bwData, isMoving, setupId, firstSchemeAndPath, firstUri.getQuery() ) );
+					sourceStateMap.putAll( createSources( bwData, isMoving, setupId, containerPath, n5URL.getGroupPath() ) );
 				}
 				else
 				{
 					final ImagePlus ijp;
-					if ( Objects.equals( firstUri.getScheme(), "imagej" ) )
+					if ( Objects.equals( encodedUri.getScheme(), "imagej" ) )
 					{
-						final String title = schemeSpecificPartWithoutQuery( firstUri );
+						final String title = n5URL.getContainerPath().replaceAll( "^imagej:(///|//)", "" );
 						IJ.selectWindow( title );
 						ijp = IJ.getImage();
 					}
