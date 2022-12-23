@@ -4,30 +4,26 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
 
 import javax.swing.JComboBox;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import com.formdev.flatlaf.util.UIScale;
 
 import bdv.ij.ApplyBigwarpPlugin;
 import bigwarp.BigWarpData;
-import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.WindowManager;
-import mpicbg.spim.data.SpimDataException;
 import net.imglib2.Interval;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 
@@ -58,6 +54,7 @@ public class FieldOfViewPanel extends JPanel
 
 	private JComboBox<String> referenceComboBox;
 	private JTextField unitField;
+	private JLabel sizeLabel;
 
 	private ImprovedFormattedTextField[] minFields;
 	private ImprovedFormattedTextField[] sizeFields;
@@ -161,6 +158,12 @@ public class FieldOfViewPanel extends JPanel
 	public void setUnit( String unit )
 	{
 		unitField.setText( unit );
+		updateSizeLabel();
+	}
+
+	private void updateSizeLabel()
+	{
+		sizeLabel.setText( String.format( "size (%s)", unitField.getText() ) );
 	}
 
 	public void create()
@@ -236,11 +239,27 @@ public class FieldOfViewPanel extends JPanel
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.anchor = GridBagConstraints.CENTER;
 		unitField = new JTextField("pixel");
+		unitField.getDocument().addDocumentListener( new DocumentListener() {
+
+			@Override
+			public void changedUpdate( DocumentEvent e ) { }
+
+			@Override
+			public void insertUpdate( DocumentEvent e )
+			{
+				updateSizeLabel();
+			}
+
+			@Override
+			public void removeUpdate( DocumentEvent e )
+			{
+				updateSizeLabel();
+			}
+		});
 		add( unitField, gbc );
 
-
 		final JLabel minLabel = new JLabel( "min" );
-		final JLabel sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
+		sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
 		final JLabel spacingLabel = new JLabel( "spacing" );
 		final JLabel pixelLabel = new JLabel( "size (pixels)" );
 
@@ -272,6 +291,11 @@ public class FieldOfViewPanel extends JPanel
 			JLabel zLabel = new JLabel("z");
 			add( zLabel, gbc );
 		}
+
+		/*
+		 * TODO investigate focus traversal, see:
+		 * https://docs.oracle.com/javase/tutorial/uiswing/misc/focus.html#customFocusTraversal
+		 */
 
 		minFields = new ImprovedFormattedTextField[ ndims ];
 		sizeFields = new ImprovedFormattedTextField[ ndims ];
