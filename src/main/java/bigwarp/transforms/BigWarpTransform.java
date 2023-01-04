@@ -472,6 +472,25 @@ public class BigWarpTransform
 		return mtx;
 	}
 
+	public AffineGet affinePartOfTps()
+	{
+		AffineGet affine = null;
+		final double[][] affineArray = affinePartOfTpsHC();
+		if ( affineArray.length == 2 )
+		{
+			final AffineTransform2D affine2d = new AffineTransform2D();
+			affine2d.set( affineArray );
+			affine = affine2d;
+		}
+		else
+		{
+			final AffineTransform3D affine3d = new AffineTransform3D();
+			affine3d.set( affineArray );
+			affine = affine3d;
+		}
+		return affine;
+	}
+
 	public void initializeInverseParameters( BigWarpData<?> bwData )
 	{
 		final int N = bwData.numTargetSources();

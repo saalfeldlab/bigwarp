@@ -69,6 +69,7 @@ import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
+import net.imglib2.Point;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.converter.Converters;
@@ -96,10 +97,17 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
 import net.imglib2.view.composite.GenericComposite;
+import net.imglib2.view.composite.RealComposite;
 import ome.ngff.transformations.CoordinateTransformation;
 
 /**
- * ImageJ plugin to convert the thin plate spline to a deformation field.
+ * ImageJ plugin to convert the thin plate spline to a displacement field.
+ * <p>
+ * If the ignoreAffine option is true, the resulting displacement field will
+ * not contain the affine part of the transformation. In this case, the total
+ * transformation is the displacement field first, followed by the affine part 
+ * of the transformation.
+ * 
  *
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  * @author Tobias Pietzsch &lt;tobias.pietzsch@gmail.com&gt;
@@ -128,8 +136,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 //		IJ.run("Boats (356K)");
 //		ImagePlus imp = IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
-//		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack.tif" );
-		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack_mm.tif" );
+		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack.tif" );
+//		ImagePlus imp = IJ.openImage( "/home/john/tmp/mri-stack_mm.tif" );
 		imp.show();
 
 		new BigWarpToDeformationFieldPlugIn().run( null );
@@ -271,13 +279,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 				{
-					writeN5( params.n5Base, params.n5Dataset + "/dfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), false );
-					writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), true );
+					writeN5( params.n5Base, params.n5Dataset + "/dfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(),
+							false, params.inverseTolerance, params.inverseMaxIterations );
+					writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(),
+							true, params.inverseTolerance, params.inverseMaxIterations );
 				}
 				else
 				{
 					final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-					writeN5( params.n5Base, params.n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), inverse );
+					writeN5( params.n5Base, params.n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(),
+							inverse, params.inverseTolerance, params.inverseMaxIterations );
 				}
 			}
 			catch ( IOException e )
@@ -345,13 +356,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 				{
-					writeN5( params.n5Base, params.n5Dataset + "/dfield",    ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), false );
-					writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), true );
+					writeN5( params.n5Base, params.n5Dataset + "/dfield",    ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), 
+							false, params.inverseTolerance, params.inverseMaxIterations );
+					writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), 
+							true, params.inverseTolerance, params.inverseMaxIterations );
 				}
 				else
 				{
 					final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-					writeN5( params.n5Base, params.n5Dataset, ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), inverse );
+					writeN5( params.n5Base, params.n5Dataset, ltm, null, null, params.size, params.spacing, params.offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), 
+							inverse, params.inverseTolerance, params.inverseMaxIterations );
 				}
 			}
 			catch ( IOException e )
@@ -360,11 +374,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 		}
 	}
+
 	public static ImagePlus toImagePlus(
 			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
 			final BigWarpTransform bwTransform,
-			final boolean ignoreAffine,
+			final boolean splitAffine,
 			final boolean flatten,
 			final boolean inverse,
 			final boolean virtual,
@@ -373,7 +388,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads )
 	{
 		final double[] offset = new double[ spacing.length ];
-		return toImagePlus( data, ltm, bwTransform, ignoreAffine, flatten, inverse, virtual, dims, spacing, offset, nThreads );
+		return toImagePlus( data, ltm, bwTransform, splitAffine, flatten, inverse, virtual, dims, spacing, offset, nThreads );
 	}
 
 	/**
@@ -381,7 +396,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @param data the {@link BigWarpData}
 	 * @param ltm the {@link LandmarkTableModel}
 	 * @param bwTransform the {@link BigWarpTransform}
-	 * @param ignoreAffine omit the affine part of the transformation
+	 * @param splitAffine omit the affine part of the transformation
 	 * @param flatten include any fixed transformation
 	 * @param inverse output the inverse transformation
 	 * @param virtual output of virtual image
@@ -395,7 +410,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final BigWarpData<?> data,
 			final LandmarkTableModel ltm,
 			final BigWarpTransform bwTransform,
-			final boolean ignoreAffine,
+			final boolean splitAffine,
 			final boolean flatten,
 			final boolean inverse,
 			final boolean virtual,
@@ -410,7 +425,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		else
 			bwXfm = bwTransform;
 
-		final InvertibleRealTransform fwdTransform = getTransformation( data, bwXfm, flatten );
+		final InvertibleRealTransform fwdTransform = getTransformation( data, bwXfm, flatten, splitAffine );
 		final InvertibleRealTransform startingTransform = inverse ? fwdTransform.inverse() : fwdTransform;
 
 		int nd = ltm.getNumdims();
@@ -456,7 +471,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 		String title = "bigwarp dfield";
-		if ( ignoreAffine )
+		if ( splitAffine )
 			title += " (no affine)";
 
 		dfieldIp.setTitle( title );
@@ -483,44 +498,62 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @param data the bigwarp data storing the fixed transformations
 	 * @param transform the current transformation
 	 * @param concat concatenate the current with fixed transformation
+	 * @param ignoreAffine whether the output should include the affine part of the transformation
 	 * @return the transformation
 	 */
-	protected static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concat )
+	protected static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concat, 
+			final boolean ignoreAffine )
 	{
-		InvertibleRealTransform tps = transform.getTransformation( false );
-		if( data == null || !concat )
+		final InvertibleRealTransform tps = transform.getTransformation( false );
+
+		AffineGet affine = null;
+		if( ignoreAffine )
+			affine = transform.affinePartOfTps();
+
+		if ( !ignoreAffine && ( data == null || !concat ) )
+		{
 			return tps;
+		}
 
 		InvertibleRealTransform preTransform = null;
-		for ( Entry< Integer, SourceInfo > entry : data.sourceInfos.entrySet() )
+		if( data != null )
 		{
-			if ( entry.getValue().getTransform() != null )
+			for ( Entry< Integer, SourceInfo > entry : data.sourceInfos.entrySet() )
 			{
-				RealTransform tform = entry.getValue().getTransform();
-				if( tform instanceof InvertibleRealTransform )
+				if ( entry.getValue().getTransform() != null )
 				{
-					preTransform = ( InvertibleRealTransform ) tform;
+					RealTransform tform = entry.getValue().getTransform();
+					if( tform instanceof InvertibleRealTransform )
+					{
+						preTransform = ( InvertibleRealTransform ) tform;
+					}
+					else
+					{
+						WrappedIterativeInvertibleRealTransform< RealTransform > ixfm = new WrappedIterativeInvertibleRealTransform<>( tform );
+						// use same parameters as the passed transform, hopefully that works
+						// alternatively, I could wrap the sequence in the iterative invertible transform - there are tradeoffs here
+						// TODO consider the tradeoffs
+						ixfm.getOptimzer().setMaxIters( transform.getInverseMaxIterations() );
+						ixfm.getOptimzer().setTolerance( transform.getInverseTolerance() );
+						preTransform = ixfm;
+					}
+					break;
 				}
-				else
-				{
-					WrappedIterativeInvertibleRealTransform< RealTransform > ixfm = new WrappedIterativeInvertibleRealTransform<>( tform );
-					// use same parameters as the passed transform, hopefully that works
-					// alternatively, I could wrap the sequence in the iterative invertible transform - there are tradeoffs here
-					// TODO consider the tradeoffs
-					ixfm.getOptimzer().setMaxIters( transform.getInverseMaxIterations() );
-					ixfm.getOptimzer().setTolerance( transform.getInverseTolerance() );
-					preTransform = ixfm;
-				}
-				break;
 			}
 		}
 
 		final InvertibleRealTransform startingTransform;
-		if ( preTransform != null )
+		if ( preTransform != null || affine != null )
 		{
 			final InvertibleRealTransformSequence seq = new InvertibleRealTransformSequence();
 			seq.add( tps );
-			seq.add( preTransform );
+
+			if( affine != null )
+				seq.add( affine.inverse() );
+
+			if( preTransform != null )
+				seq.add( preTransform );
+
 			startingTransform = seq;
 		}
 		else
@@ -542,9 +575,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final Compression compression,
 			final int nThreads,
 			final boolean flatten,
-			final boolean inverse ) throws IOException 
+			final boolean inverse,
+			final double invTolerance,
+			final int invMaxIters ) throws IOException 
 	{
-		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, flatten, inverse );
+		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, flatten, inverse, invTolerance, invMaxIters );
 	}
 
 	public static void writeN5(
@@ -561,9 +596,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final Compression compression,
 			final int nThreads,
 			final boolean flatten,
-			final boolean inverse ) throws IOException
+			final boolean inverse,
+			final double invTolerance,
+			final int invMaxIters ) throws IOException
 	{
-		writeN5( n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, false, flatten, inverse );
+		writeN5( n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, false, flatten, inverse, invTolerance, invMaxIters  );
 	}
 
 	public static void writeN5(
@@ -581,7 +618,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads,
 			final boolean splitAffine,
 			final boolean flatten,
-			final boolean inverse ) throws IOException
+			final boolean inverse,
+			final double invTolerance,
+			final int invMaxIters ) throws IOException
 	{
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
@@ -606,34 +645,21 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		else
 			bwXfm = bwTransform;
 
-//		final RealTransform tpsTotal = bwXfm.getTransformation( false );
-		final InvertibleRealTransform fwdTransform = getTransformation( data, bwXfm, flatten );
-		final InvertibleRealTransform totalTransform = inverse ? fwdTransform.inverse() : fwdTransform;
+		bwXfm.setInverseMaxIterations( invMaxIters );
+		bwXfm.setInverseTolerance( invTolerance );
 
-		AffineGet affine = null;
-		if ( splitAffine )
-		{
-			final double[][] affineArray = bwXfm.affinePartOfTpsHC();
-			if ( affineArray.length == 2 )
-			{
-				final AffineTransform2D affine2d = new AffineTransform2D();
-				affine2d.set( affineArray );
-				affine = affine2d;
-			}
-			else
-			{
-				final AffineTransform3D affine3d = new AffineTransform3D();
-				affine3d.set( affineArray );
-				affine = affine3d;
-			}
-		}
+//		final RealTransform tpsTotal = bwXfm.getTransformation( false );
+		final InvertibleRealTransform fwdTransform = getTransformation( data, bwXfm, flatten, splitAffine );
+		final InvertibleRealTransform totalTransform = inverse ? fwdTransform.inverse() : fwdTransform;
+		final AffineGet affine = bwXfm.affinePartOfTps();
 
 		int[] spatialBlockSize = fillBlockSize( spatialBlockSizeArg, ltm.getNumdims() );
 		int[] blockSize = new int[ spatialBlockSize.length + 1 ];
 		blockSize[ 0 ] = spatialBlockSize.length;
 		System.arraycopy( spatialBlockSize, 0, blockSize, 1, spatialBlockSize.length );
 
-		final N5Writer n5 = new N5Factory().openWriter( n5BasePath );
+		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
+		final N5Writer n5 = factory.openWriter( n5BasePath );
 //		N5DisplacementField.save( n5, dataset, affine, dfield, spacing, blockSize, compression );
 
 		final RandomAccessibleInterval< DoubleType > dfield;
@@ -658,6 +684,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		else
 		{
 			dfield = DisplacementFieldTransform.createDisplacementField( totalTransform, new FinalInterval( dims ), spacing );
+
+			Point pt = new Point( 100, 100, 10 );
+			CompositeIntervalView< DoubleType, RealComposite< DoubleType > > dfImgVec = Views.collapseReal( Views.moveAxis( dfield, 0, 3 ));
+			RealPoint q = new RealPoint ( 3 );
+			q.setPosition( dfImgVec.getAt( pt ));
+			System.out.println( "displacement at " + pt +  " : " + q );
+
 			NgffDisplacementsTransformation ngffTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
 			N5DisplacementField.addCoordinateTransformations( n5, "/", ngffTform );
 		}
@@ -1039,12 +1072,17 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final String n5Dataset;
 		public final Compression compression;
 		public final int[] blockSize;
+		
+		public final double inverseTolerance;
+		public final int inverseMaxIterations;
 
 		public DeformationFieldExportParameters(
 				final String landmarkPath,
 				final boolean ignoreAffine,
 				final String option,
 				final String inverseOption,
+				final double inverseTolerance,
+				final int inverseMaxIterations,
 				final boolean virtual,
 				final int nThreads,
 				final long[] size,
@@ -1059,7 +1097,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			this.landmarkPath = landmarkPath;
 			this.ignoreAffine = ignoreAffine;
 			this.option = option;
+
 			this.inverseOption = inverseOption;
+			this.inverseTolerance = inverseTolerance;
+			this.inverseMaxIterations = inverseMaxIterations;
+
 			this.virtual = virtual;
 			this.nThreads = nThreads;
 
@@ -1213,8 +1255,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return new DeformationFieldExportParameters( 
 					landmarkPath,
 					ignoreAffine,
-					option,
-					direction,
+					option, 
+					direction, 0.5, 200,
 					virtual,
 					nThreads,
 					size,

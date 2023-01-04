@@ -51,6 +51,9 @@ public class ExportDisplacementFieldFrame extends JFrame
 	protected static final String splitAffineKey = "split_affine";
 	protected static final String typeKey = "type";
 	protected static final String directionKey = "direction";
+	protected static final String inverseToleranceKey = "inverseTolerance";
+	protected static final String inverseMaxIterationsKey = "inverseMaxIterations";
+
 	protected static final String virtualKey = "virtual";
 	protected static final String threadsKey = "threads";
 	protected static final String sizeKey = "pixel_size";
@@ -656,6 +659,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 				splitAffineCheckBox.isSelected(),
 				(String)typeComboBox.getSelectedItem(),
 				(String)directionComboBox.getSelectedItem(),
+				(Double)invToleranceSpinner.getValue(),
+				(Integer)invMaxIterationsSpinner.getValue(),
 				virtualCheckBox.isSelected(),
 				(Integer)nThreadsField.getValue(),
 				fovPanel.getPixelSize(),
@@ -711,6 +716,9 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final String landmarks = Macro.getValue( args, landmarksKey, "" );
 		final String type = Macro.getValue( args, typeKey, "" );
 		final String direction = Macro.getValue( args, directionKey, "" );
+		final double tolerance = Double.valueOf( Macro.getValue( args, inverseToleranceKey, "" ));
+		final int maxIters = Integer.valueOf( Macro.getValue( args, inverseMaxIterationsKey, "" ));
+
 		final boolean splitAffine =  args.contains(" " + splitAffineKey );
 		final boolean openAsVirtual = args.contains(" " + virtualKey);
 		final int threads = Integer.valueOf( Macro.getValue( args, threadsKey, "1" ));
@@ -729,7 +737,9 @@ public class ExportDisplacementFieldFrame extends JFrame
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
 
 		DeformationFieldExportParameters params = new DeformationFieldExportParameters(
-				landmarks, splitAffine, type, direction, openAsVirtual, threads,
+				landmarks, splitAffine, type,
+				direction, tolerance, maxIters,
+				openAsVirtual, threads,
 				pixSize, spacing, min, unit,
 				n5Root,
 				n5Dataset,
