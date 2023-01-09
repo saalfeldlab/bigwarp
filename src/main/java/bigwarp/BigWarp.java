@@ -2074,7 +2074,7 @@ public class BigWarp< T >
 			addTransformMaskSource();
 		}
 
-		// upddate the bigwarp transform
+		// update the bigwarp transform
 		getBwTransform().setMaskInterpolationType( type );
 		restimateTransformation();
 		setMaskOverlayVisibility( maskOpts.showMaskOverlay() && maskOpts.isMask() );
@@ -2106,6 +2106,10 @@ public class BigWarp< T >
 		final SourceAndConverter< DoubleType > soc = new SourceAndConverter<DoubleType>( transformMask, converter, null );
 		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TRANSFORM_MASK_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
+
+		final SourceInfo sourceInfo = new SourceInfo( TRANSFORM_MASK_SOURCE_ID, false, transformMask.getName(), null, null );
+		sourceInfo.setSourceAndConverter( soc );
+		data.sourceInfos.put( TRANSFORM_MASK_SOURCE_ID, sourceInfo);
 
 		// connect to UI
 		warpVisDialog.maskOptionsPanel.setMask( transformMask );

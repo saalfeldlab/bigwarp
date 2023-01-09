@@ -232,6 +232,19 @@ public class BigWarpData< T >
 			if( id == cs.getSetupId() )
 				id++;
 		}
+		addSource( id, src, isMoving, transform );
+	}
+
+	/**
+	 * Adds a {@link Source} with the given id. Does not check that the id is unused.
+	 *
+	 * @param id the id
+	 * @param src the source
+	 * @param isMoving if the source is moving
+	 * @param transform an optional transformation
+	 */
+	void addSource( final int id, Source<T> src, boolean isMoving, RealTransform transform )
+	{
 		BigWarpInit.add( this, src, id, 0, isMoving, transform );
 		final SourceInfo sourceInfo = new SourceInfo( id, isMoving, src.getName(), null, transform );
 		sourceInfo.setSourceAndConverter( sources.get( sources.size() -1 ) );
