@@ -157,6 +157,10 @@ public class BigWarpViewerFrame extends JFrame
 		viewer.getDisplay().addHandler( mouseAndKeyHandler );
 
 		// TODO: should be a field?
+		updateTransformBehaviors( optional );
+	}
+
+	public void updateTransformBehaviors(BigWarpViewerOptions optional) {
 		final Behaviours transformBehaviours = new Behaviours( optional.values.getInputTriggerConfig(), "bdv" );
 		transformBehaviours.install( triggerbindings, "transform" );
 

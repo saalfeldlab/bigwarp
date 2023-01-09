@@ -171,8 +171,15 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			default:
 				throw new RuntimeException( "Unknown BigWarpSetting: " + nextName );
 			}
+
+
 		}
 		in.endObject();
+		final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
+		if (is2D != bigWarp.options.values.is2D()) {
+			bigWarp.options.is2D( is2D );
+			bigWarp.changeDimensionality( is2D );
+		}
 		return this;
 	}
 

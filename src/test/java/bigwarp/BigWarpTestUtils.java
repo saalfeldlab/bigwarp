@@ -36,6 +36,13 @@ import org.junit.Assert;
 public class BigWarpTestUtils
 {
 
+	/**
+	 * Create a 3D image file which is deleted on exit.
+	 *
+	 * @param title of the temporary image file
+	 * @param format of the temporary image file
+	 * @return the path to the temporary image file
+	 */
 	public static String createTemp3DImage( String title, String format )
 	{
 
@@ -54,26 +61,32 @@ public class BigWarpTestUtils
 		return createTemp3DImage( tmpImgPath );
 	}
 
-	public static String createTemp3DImage( Path tmpImgPath )
-	{
-		try
-		{
-			return create3DImage( tmpImgPath );
-		}
-		catch ( Exception e )
-		{
-			//noinspection ResultOfMethodCallIgnored
-			tmpImgPath.toFile().delete();
-			throw new RuntimeException( e );
-		}
-	}
-
 	private static String create3DImage( final Path tmpImgPath ) throws IOException
 	{
 		ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
 		IJ.save( img3d, tmpImgPath.toFile().getCanonicalPath() );
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
+	}
+
+	/**
+	 * Create a 3D image file at {@code imagePath} which is deleted on exit.
+	 *
+	 * @param imagePath of the temporary image file
+	 * @return the path to the temporary image file
+	 */
+	public static String createTemp3DImage( Path imagePath )
+	{
+		try
+		{
+			return create3DImage( imagePath );
+		}
+		catch ( Exception e )
+		{
+			//noinspection ResultOfMethodCallIgnored
+			imagePath.toFile().delete();
+			throw new RuntimeException( e );
+		}
 	}
 
 	private static String create2DImage( final Path tmpImgPath ) throws IOException
@@ -84,6 +97,13 @@ public class BigWarpTestUtils
 		return tmpImgPath.toString();
 	}
 
+	/**
+	 * Create a 2D image file which is deleted on exit.
+	 *
+	 * @param title of the temporary image file
+	 * @param format of the temporary image file
+	 * @return the path to the temporary image file
+	 */
 	public static String createTemp2DImage( String title, String format )
 	{
 
@@ -105,6 +125,12 @@ public class BigWarpTestUtils
 		}
 	}
 
+	/**
+	 * Create a 3D image stack which is deleted on exit.
+	 *
+	 * @param title of the temporary image stack
+	 * @return the path to the temporary image stack
+	 */
 	public static String createTemp3DImageStack( String title )
 	{
 
@@ -210,8 +236,8 @@ public class BigWarpTestUtils
 	{
 		return createBigWarp( null, moving );
 	}
-	
-	static < T > BigWarp< T > createBigWarp(String sourcePath, boolean... moving ) throws SpimDataException, URISyntaxException, IOException
+
+	static < T > BigWarp< T > createBigWarp(String sourcePath,   boolean... moving ) throws SpimDataException, URISyntaxException, IOException
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		if (sourcePath != null) {
