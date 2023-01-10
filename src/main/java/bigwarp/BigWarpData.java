@@ -190,6 +190,18 @@ public class BigWarpData< T >
 		return out;
 	}
 
+	public ConverterSetup getConverterSetup( final int id )
+	{
+		final SourceInfo[] infos = sourceInfos.values().toArray(new SourceInfo[]{} );
+		for ( int i = 0; i < infos.length; i++ )
+		{
+			final SourceInfo info = infos[ i ];
+			if (info.getId() == id )
+				return converterSetups.get( i );
+		}
+		return null;
+	}
+
 	public SourceInfo getSourceInfo( int id )
 	{
 		return sourceInfos.get( id );

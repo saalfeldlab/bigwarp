@@ -570,6 +570,13 @@ public class BigWarpInit
 		return sourceInfoMap;
 	}
 
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData<?> bwdata, Source< T > src, int baseId, final boolean isMoving )
+	{
+		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+		sourceInfoMap.put( src, new SourceInfo( baseId, isMoving, src.getName() ) );
+		return sourceInfoMap;
+	}
+
 	private static String schemeSpecificPartWithoutQuery( URI uri )
 	{
 		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );

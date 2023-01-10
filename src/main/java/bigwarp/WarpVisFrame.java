@@ -82,6 +82,7 @@ public class WarpVisFrame extends JDialog
 	protected JRadioButton setWarpVisOffButton;
 	protected JRadioButton setWarpGridButton;
 	protected JRadioButton setWarpMagButton;
+	protected JRadioButton setJacobianDetButton;
 	
 	protected JLabel noOptionsLabel;
 	
@@ -194,16 +195,19 @@ public class WarpVisFrame extends JDialog
 		setWarpVisOffButton = new JRadioButton( "Off" );
 		setWarpGridButton = new JRadioButton( "Grid" );
 		setWarpMagButton = new JRadioButton( "Magnitude" );
+		setJacobianDetButton = new JRadioButton( "Jacobian Determinant" );
 		
 		visTypeGroup.add( setWarpVisOffButton );
 		visTypeGroup.add( setWarpGridButton );
 		visTypeGroup.add( setWarpMagButton );
-		
+		visTypeGroup.add( setJacobianDetButton );
+		setWarpVisOffButton.setSelected( true );
+
 		visTypePanel.add( setWarpVisOffButton );
 		visTypePanel.add( setWarpGridButton );
 		visTypePanel.add( setWarpMagButton );
-		
-		
+		visTypePanel.add( setJacobianDetButton );
+
 		// buttons for warp magnitude options
 		warpMagAffineButton = new JRadioButton( "Affine baseline" );
 		warpMagSimilarityButton = new JRadioButton("Similarity baseline");
@@ -221,6 +225,7 @@ public class WarpVisFrame extends JDialog
 		warpGridButtons = new ButtonGroup();
 		warpGridButtons.add( warpGridLineButton );
 		warpGridButtons.add( warpGridModButton );
+		warpGridLineButton.setSelected( true );
 		
 		gridSpacingSlider = new JSlider( JSlider.HORIZONTAL, minGridSpacing, maxGridSpacing, defaultGridSpacing );
 		gridWidthSlider = new JSlider( JSlider.HORIZONTAL, minGridWidth, maxGridWidth, defaultGridWidth );
@@ -445,20 +450,23 @@ public class WarpVisFrame extends JDialog
 			}
 		});
 		
-		setWarpVisOffButton.setAction( 
+		setWarpVisOffButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.NONE )));
-		setWarpGridButton.setAction( 
+		setWarpGridButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.GRID )));
-		setWarpMagButton.setAction( 
+		setWarpMagButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.WARPMAG )));
+		setJacobianDetButton.setAction(
+				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.JACDET )));
 		
 		setWarpVisOffButton.setText("Off");
 		setWarpGridButton.setText("Grid");
 		setWarpMagButton.setText("Magnitude");
+		setJacobianDetButton.setText("Jacobian Determinant");
 		
-		warpMagAffineButton.setAction( 
+		warpMagAffineButton.setAction(
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 0 ].getClass().getName() )));
-		warpMagSimilarityButton .setAction( 
+		warpMagSimilarityButton .setAction(
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 1 ].getClass().getName() ) ));
 		warpMagRigidButton.setAction( 
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 2 ].getClass().getName() ) ));
