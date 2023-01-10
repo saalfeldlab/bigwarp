@@ -767,20 +767,29 @@ public class BigWarp< T >
 
 	public void synchronizeSources()
 	{
-		viewerP.state().clearSources();
-		viewerQ.state().clearSources();
-
-		final ArrayList<ConverterSetup> converterSetupsToRemove = new ArrayList<>();
-		setupAssignments.getConverterSetups().forEach( converterSetupsToRemove::add );
-		converterSetupsToRemove.forEach( setupAssignments::removeSetup );
-
 		final SynchronizedViewerState pState = viewerP.state();
 		final SynchronizedViewerState qState = viewerQ.state();
+
+		final Set<SourceAndConverter<?>> activeSourcesP = new HashSet<>(pState.getActiveSources());
+		final Set<SourceAndConverter<?>> activeSourcesQ = new HashSet<>(qState.getActiveSources());
+
+		pState.clearSources();
+		qState.clearSources();
+
+		final ArrayList<ConverterSetup> converterSetupsToRemove = new ArrayList<>(setupAssignments.getConverterSetups());
+		converterSetupsToRemove.forEach( setupAssignments::removeSetup );
+
 		for ( int i = 0; i < data.sources.size(); i++ )
 		{
 			final SourceAndConverter< T > sac = data.sources.get( i );
 			pState.addSource( sac );
+			if (activeSourcesP.contains(sac)) {
+				pState.setSourceActive(sac, true);
+			}
 			qState.addSource( sac );
+			if (activeSourcesQ.contains(sac)) {
+				qState.setSourceActive(sac, true);
+			}
 
 			// update the viewer converter setups too
 			final ConverterSetup setup = data.converterSetups.get( i );
