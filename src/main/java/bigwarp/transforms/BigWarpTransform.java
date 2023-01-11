@@ -124,6 +124,11 @@ public class BigWarpTransform
 		return maskInterpolationType.equals( MASK_INTERP ) || maskInterpolationType.equals( ROT_MASK_INTERP ) || maskInterpolationType.equals( SIM_MASK_INTERP );
 	}
 
+	public AbstractTransformSolver< ? > getSolver()
+	{
+		return solver;
+	}
+
 	public void updateSolver()
 	{
 		if ( transformType.equals( TPS ) )
@@ -144,10 +149,10 @@ public class BigWarpTransform
 			final double[] center = new double[ 3 ];
 			if ( lambda instanceof PlateauSphericalMaskRealRandomAccessible )
 			{
-				((PlateauSphericalMaskRealRandomAccessible) lambda).getCenter()
-						.localize( center );
+				( ( PlateauSphericalMaskRealRandomAccessible ) lambda ).getCenter().localize( center );
 			}
-			solver = new MaskedSimRotTransformSolver( solver, lambda, center, Interpolators.valueOf( maskInterpolationType ) );
+
+			solver = new MaskedSimRotTransformSolver( tableModel.getNumdims(), solver, lambda, center, Interpolators.valueOf( maskInterpolationType ) );
 		}
 	}
 
@@ -557,9 +562,9 @@ public class BigWarpTransform
 		affine[ 1 ] = mtx[ 0 ][ 1 ];
 		affine[ 2 ] = mtx[ 0 ][ 2 ];
 
-		affine[ 4 ] = mtx[ 1 ][ 0 ];
-		affine[ 5 ] = mtx[ 1 ][ 1 ];
-		affine[ 6 ] = mtx[ 1 ][ 2 ];
+		affine[ 3 ] = mtx[ 1 ][ 0 ];
+		affine[ 4 ] = mtx[ 1 ][ 1 ];
+		affine[ 5 ] = mtx[ 1 ][ 2 ];
 
 		out.set( affine );
 		return out;
@@ -642,7 +647,7 @@ public class BigWarpTransform
 			return toAffine3D( ( AbstractAffineModel3D ) model );
 	}
 
-	public AffineGet toAffine2D( AbstractAffineModel2D model ) 
+	public static AffineGet toAffine2D( AbstractAffineModel2D model ) 
 	{
 		if( model instanceof TranslationModel2D )
 		{
@@ -658,7 +663,7 @@ public class BigWarpTransform
 		}
 	}
 
-	public AffineGet toAffine3D( AbstractAffineModel3D model ) 
+	public static AffineTransform3D toAffine3D( AbstractAffineModel3D<?> model ) 
 	{
 		return affine3d( model, new AffineTransform3D() );
 	}

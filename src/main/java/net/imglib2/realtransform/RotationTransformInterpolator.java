@@ -64,9 +64,9 @@ public class RotationTransformInterpolator extends AbstractTransformAnimator
 		transform.set(m);
 
 		double[] pCurrent = new double[3];
+		double[] pTgt = new double[3];
 		transform.apply(p, pCurrent);
 
-		double[] pTgt = new double[3];
 		LinAlgHelpers.scale( pDiff, t, pTgt );
 		LinAlgHelpers.add( p, pTgt, pTgt );
 		LinAlgHelpers.subtract( pTgt, pCurrent, pTgt );

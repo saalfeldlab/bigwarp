@@ -37,6 +37,11 @@ public class ModelTransformSolver extends AbstractTransformSolver< WrappedCoordi
 		this.model = model;
 	}
 
+	public Model< ? > getModel()
+	{
+		return model;
+	}
+
 	public WrappedCoordinateTransform solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
 		final double[] w = new double[ mvgPts[ 0 ].length ];

@@ -140,7 +140,9 @@ import bigwarp.source.JacobianDeterminantSource;
 import bigwarp.source.PlateauSphericalMaskSource;
 import bigwarp.source.SourceInfo;
 import bigwarp.source.WarpMagnitudeSource;
+import bigwarp.transforms.AbstractTransformSolver;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.MaskedSimRotTransformSolver;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import bigwarp.transforms.io.TransformWriterJson;
 import bigwarp.util.BigWarpUtils;
@@ -2275,6 +2277,12 @@ public class BigWarp< T >
 			final Sphere sph = BoundingSphereRitter.boundingSphere(landmarkModel.getFixedPointsCopy());
 			transformMask.getRandomAccessible().setCenter(sph.getCenter());
 			transformMask.getRandomAccessible().setRadius(sph.getRadius());
+
+			AbstractTransformSolver< ? > solver = getBwTransform().getSolver();
+			if( solver instanceof MaskedSimRotTransformSolver )
+			{
+				((MaskedSimRotTransformSolver)solver).setCenter( sph.getCenter() );
+			}
 		}
 	}
 
