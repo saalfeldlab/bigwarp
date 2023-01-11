@@ -729,10 +729,16 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		pointEdit( row, PENDING_PT, false, isMoving, null, true );
 	}
-	
+
 	public boolean add( double[] pt, boolean isMoving )
 	{
 		return pointEdit( -1, pt, true, isMoving, false, true, null );
+	}
+
+	public boolean add( final double[] mvg, final double[] tgt ) {
+		add( mvg, true);
+		setPoint( numRows - 1, false, tgt, null );
+		return true;
 	}
 
 	public boolean add( double[] pt, boolean isMoving, final RealTransform xfm )
