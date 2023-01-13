@@ -145,7 +145,7 @@ public class SimilarityTransformInterpolationExample {
 
 		// masked similarity
 		final MaskedSimilarityTransform msim = new MaskedSimilarityTransform( transform, lambda, center );
-		final MaskedSimilarityTransform msimInv = new MaskedSimilarityTransform( transform.inverse(), lambda, center, Interpolators.SIMILARITY, true );
+		final MaskedSimilarityTransform msimInv = new MaskedSimilarityTransform( transform.inverse(), lambda, center, Interpolators.SIMILARITY );
 		final WrappedIterativeInvertibleRealTransform<?> tpsXfm = new TpsTransformSolver().solve( ltm );
 
 		final Scale3D id = new Scale3D(1,1,1);
