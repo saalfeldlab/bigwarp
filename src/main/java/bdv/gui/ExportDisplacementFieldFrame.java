@@ -45,6 +45,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 {
 	private static final long serialVersionUID = -6179153725489981013L;
 
+	// formats
+	public static final String FMT_NGFF = "NGFF";
+	public static final String FMT_SLICER = "Slicer";
+
 	// macro recording
 	public static final String commandName = "Big Warp to Displacement field";
 	protected static final String landmarksKey = "landmarks";
@@ -56,6 +60,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	protected static final String virtualKey = "virtual";
 	protected static final String threadsKey = "threads";
+	protected static final String formatKey = "format";
 	protected static final String sizeKey = "pixel_size";
 	protected static final String spacingKey = "pixel_spacing";
 	protected static final String minKey = "min";
@@ -97,6 +102,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private JComboBox< String > typeComboBox;
 	private JComboBox< String > directionComboBox;
 	private JSpinner nThreadsField;
+	private JComboBox< String > formatComboBox;
 	private JButton okBtn;
 	private JButton cancelBtn;
 
@@ -388,6 +394,12 @@ public class ExportDisplacementFieldFrame extends JFrame
 		nThreadsField = new JSpinner( new SpinnerNumberModel( 1, 1, 9999, 1 ) );
 		panel.add( nThreadsField, gbcCheck );
 
+		ctxt.gridx = 3;
+		panel.add( new JLabel( "Format:" ), ctxt );
+		gbcCheck.gridx = 4;
+		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_SLICER } );
+		panel.add( formatComboBox, gbcCheck );
+
 		ctxt.gridx = 5;
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
@@ -663,6 +675,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 				(Integer)invMaxIterationsSpinner.getValue(),
 				virtualCheckBox.isSelected(),
 				(Integer)nThreadsField.getValue(),
+				(String)formatComboBox.getSelectedItem(),
 				fovPanel.getPixelSize(),
 				fovPanel.getSpacing(),
 				fovPanel.getMin(),
@@ -722,6 +735,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final boolean splitAffine =  args.contains(" " + splitAffineKey );
 		final boolean openAsVirtual = args.contains(" " + virtualKey);
 		final int threads = Integer.valueOf( Macro.getValue( args, threadsKey, "1" ));
+		final String format = Macro.getValue( args, formatKey, FMT_NGFF );
 
 		final double[] min = Arrays.stream( Macro.getValue( args, minKey, "" ).split( "," ) ).mapToDouble( Double::valueOf ).toArray();
 		final double[] spacing = Arrays.stream( Macro.getValue( args, spacingKey, "" ).split( "," ) ).mapToDouble( Double::valueOf ).toArray();
@@ -739,7 +753,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		DeformationFieldExportParameters params = new DeformationFieldExportParameters(
 				landmarks, splitAffine, type,
 				direction, tolerance, maxIters,
-				openAsVirtual, threads,
+				openAsVirtual, threads, format,
 				pixSize, spacing, min, unit,
 				n5Root,
 				n5Dataset,
