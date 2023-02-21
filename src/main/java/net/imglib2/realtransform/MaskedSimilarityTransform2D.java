@@ -2,6 +2,7 @@ package net.imglib2.realtransform;
 
 import bdv.viewer.animate.AbstractTransformAnimator;
 import net.imglib2.RealLocalizable;
+import net.imglib2.RealPoint;
 import net.imglib2.RealPositionable;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
@@ -75,7 +76,10 @@ public class MaskedSimilarityTransform2D<T extends RealType<T>> implements RealT
 
 	@Override
 	public void apply(double[] source, double[] target) {
-		lambdaAccess.setPosition(source);
+//		lambdaAccess.setPosition(source);
+		for( int i = 0; i < source.length; i++ )
+			lambdaAccess.setPosition( source[ i ], i );
+
 		final double lam = lambdaAccess.get().getRealDouble();
 		interpolator.get( lam ).apply( source, target );
 	}

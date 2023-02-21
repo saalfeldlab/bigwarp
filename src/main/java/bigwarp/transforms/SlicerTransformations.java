@@ -6,11 +6,15 @@ import java.util.concurrent.ExecutorService;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
+import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform2D;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.IntervalView;
@@ -93,7 +97,47 @@ public class SlicerTransformations
 
 	public static final <T extends NativeType<T> & RealType<T>> void saveAffine( final N5Writer n5Writer, final String dataset, final AffineGet affine)
 	{
-		// TODO implement me
+		try
+		{
+			final double[][] mtx;
+			if ( affine instanceof AffineTransform3D )
+			{
+				AffineTransform3D a3d = ( AffineTransform3D ) affine;
+				mtx = new double[ 4 ][ 4 ];
+				a3d.toMatrix( mtx );
+			}
+			else if ( affine instanceof AffineTransform2D )
+			{
+				AffineTransform2D a2d = ( AffineTransform2D ) affine;
+				mtx = new double[ 3 ][ 3 ];
+				a2d.toMatrix( mtx );
+			}
+			else {
+				// src and tgt dims always the same for AffineGets
+				final int nd = affine.numTargetDimensions();
+				mtx = new double[nd][nd];
+				for( int i = 0; i < nd; i++ )
+					for( int j = 0; j < nd; j++ )
+						mtx[i][j] = affine.get( i, j );
+			}
+			n5Writer.setAttribute( dataset, AFFINE_ATTR, mtx );
+		}
+		catch ( IOException e ) {}
+	}
+
+	public static void main( String[] args ) throws IOException
+	{
+		double[][] mtx = new double[4][4];
+		mtx[0][0] = 2;
+		mtx[1][1] = 3;
+		mtx[2][2] = 4;
+		mtx[3][3] = 1;
+
+		final N5HDF5Writer h5 = new N5Factory().openHDF5Writer( "/home/john/tmp/mri-stack-landmarks-df-slicer.h5" );
+		h5.setAttribute( "dfield", AFFINE_ATTR, mtx );
+		h5.close();
+
+		System.out.println( "done" );
 	}
 
 }

@@ -683,10 +683,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
 				SlicerTransformations.saveDisplacementField( n5, dataset, dfield, blockSize, compression, exec );
+				SlicerTransformations.saveAffine( n5, dataset, affine );
 			}
 			else
 			{
 				NgffDisplacementsTransformation dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				// TODO save affine
+
 				// the total transform
 				NgffSequenceTransformation totalTform = new NgffSequenceTransformation( inputSpace, outputSpace,
 						new CoordinateTransformation[]{ dfieldTform, ngffAffine  });

@@ -2114,7 +2114,7 @@ public class BigWarp< T >
 		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
 		final Interval itvl = bbe.estimatePixelInterval(  affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
 
-		transformMask = PlateauSphericalMaskSource.build( new RealPoint( ndims ), itvl );
+		transformMask = PlateauSphericalMaskSource.build( new RealPoint( 3 ), itvl );
 
 		final RealARGBColorConverter< DoubleType > converter = RealARGBColorConverter.create( new DoubleType(), 0, 1 );
 		converter.setColor( new ARGBType( 0xffffffff ) );

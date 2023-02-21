@@ -69,7 +69,10 @@ public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implement
 		a.apply(source, arrA);
 		b.apply(source, arrB);
 
-		lambdaAccess.setPosition(source);
+//		lambdaAccess.setPosition(source);
+		for( int i = 0; i < source.length; i++ )
+			lambdaAccess.setPosition( source[ i ], i );
+
 		final double am = lambdaAccess.get().getRealDouble();
 		final double bm = (1 - am);
 

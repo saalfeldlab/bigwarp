@@ -243,7 +243,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public void setCenter( RealLocalizable p )
 	{
-		center.setPosition( p );
+		p.localize( center );
 		if ( overlays != null )
 			overlays.stream().forEach( o -> o.setCenter( p ) );
 	}
