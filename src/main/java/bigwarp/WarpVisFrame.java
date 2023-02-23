@@ -34,9 +34,6 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.io.File;
 import java.util.Enumeration;
 
 import javax.swing.AbstractButton;
@@ -51,13 +48,11 @@ import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
-import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
@@ -70,6 +65,7 @@ import bdv.gui.TransformTypePanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.miginfocom.swing.MigLayout;
 
 public class WarpVisFrame extends JDialog 
 {
@@ -402,8 +398,15 @@ public class WarpVisFrame extends JDialog
 		content.add( maskOptionsPanel, gbcContent );
 
 		gbcContent.gridy = 6;
+		final JPanel toggle2DPanel = new JPanel(new MigLayout("", "[grow][][grow]"));
+		final JCheckBox toggle2D = new JCheckBox("Is 2D");
+		toggle2DPanel.add(toggle2D, "cell 1 0");
+		toggle2D.addActionListener(e ->  bw.changeDimensionality(toggle2D.isSelected()) );
+		content.add(toggle2DPanel, gbcContent);
+
+		gbcContent.gridy = 7;
 		content.add( getAutoSaveOptionsPanel(), gbcContent );
-		
+
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
 
 		addListeners();

@@ -52,14 +52,15 @@ public class BigWarpOverlay {
 	private int hoveredIndex;
 
 	protected final boolean isMoving;
-	protected final boolean is3d;
-	
-	protected final double[] spot;
-	protected final double[] viewerCoords;
 
+	protected boolean is3d;
+
+	protected final double[] spot;
+
+	protected final double[] viewerCoords;
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
-	
+
 	public BigWarpOverlay( final BigWarpViewerPanel viewer, BigWarpLandmarkPanel landmarkpanel )
 	{
 		this.viewer = viewer;
@@ -75,6 +76,11 @@ public class BigWarpOverlay {
 
 		spot = new double[ 3 ];
 		viewerCoords = new double[ 3 ];
+	}
+
+	public void is2D( final boolean is2d )
+	{
+		this.is3d = !is2d;
 	}
 
 
