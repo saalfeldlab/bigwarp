@@ -58,7 +58,8 @@ public class SlicerTransformations
 			}
 		}
 
-		final RandomAccessibleInterval< T > dfieldPerm = dxyz2dzyx( dfield );
+		/* Converts [3,X,Y,Z] to [X,Y,Z,3] displacement field */
+		final RandomAccessibleInterval< T > dfieldPerm = Views.moveAxis( dfield, 0, 3 );
 		try
 		{
 			N5Utils.save( dfieldPerm, n5Writer, dataset, vecBlkSz, compression, exec );
@@ -80,6 +81,13 @@ public class SlicerTransformations
 	public static final int[] permXYZ = new int[] { 2, 1, 0 };
 	public static final int[] perm = new int[] { 1, 2, 3, 0 };
 
+	/**
+	 * Converts a [3,X,Y,Z] displacement field to a [3,Z,Y,X] displacement field
+	 *
+	 * @param <T> the type
+	 * @param df the displacement field
+	 * @return a permuted displacement field
+	 */
 	public static final <T extends NativeType<T> & RealType<T>> RandomAccessibleInterval<T> dxyz2dzyx( RandomAccessibleInterval<T> df )
 	{
 		final IntervalView< T > dx = Views.hyperSlice( df, 0, 0 );
