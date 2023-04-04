@@ -237,7 +237,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		LandmarkTableModel ltm;
 		if( landmarkModel == null )
 		{
-			// load
+			if( params.landmarkPath == null || params.landmarkPath.isEmpty() )
+			{
+				IJ.showMessage( "Must provide landmark file." ); // TODO message differently
+				return;
+			}
+
+			// load landmarks
 			try
 			{
 				ltm = LandmarkTableModel.loadFromCsv( new File( params.landmarkPath ), false );
@@ -505,7 +511,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @param ignoreAffine whether the output should include the affine part of the transformation
 	 * @return the transformation
 	 */
-	protected static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concat, 
+	protected static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concatPreTransforms,
 			final boolean ignoreAffine )
 	{
 		final InvertibleRealTransform tps = transform.getTransformation( false );
@@ -514,13 +520,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( ignoreAffine )
 			affine = transform.affinePartOfTps();
 
-		if ( !ignoreAffine && ( data == null || !concat ) )
+		if ( !ignoreAffine && ( data == null || !concatPreTransforms ) )
 		{
 			return tps;
 		}
 
 		InvertibleRealTransform preTransform = null;
-		if( data != null )
+		if( data != null && concatPreTransforms )
 		{
 			for ( Entry< Integer, SourceInfo > entry : data.sourceInfos.entrySet() )
 			{
@@ -631,8 +637,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
-		final String mvgSpaceName = data != null ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
-		final String tgtSpaceName = data != null ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
+		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
+		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
 		final String inputSpace;
 		final String outputSpace;
 		if( inverse )
