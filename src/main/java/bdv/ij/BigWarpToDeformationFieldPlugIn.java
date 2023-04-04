@@ -663,7 +663,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		final InvertibleRealTransform fwdTransform = getTransformation( data, bwXfm, flatten, splitAffine );
 		final InvertibleRealTransform totalTransform = inverse ? fwdTransform.inverse() : fwdTransform;
-		final AffineGet affine = bwXfm.affinePartOfTps();
 
 		int[] spatialBlockSize = fillBlockSize( spatialBlockSizeArg, ltm.getNumdims() );
 		int[] blockSize = new int[ spatialBlockSize.length + 1 ];
@@ -674,13 +673,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 
 		final RandomAccessibleInterval< DoubleType > dfield;
-		if( affine != null )
+		if( splitAffine )
 		{
 			// the affine part
-			NgffAffineTransformation ngffAffine = new NgffAffineTransformation( affine.getRowPackedCopy() );
+			final AffineGet affine = bwXfm.affinePartOfTps();
+			final NgffAffineTransformation ngffAffine = new NgffAffineTransformation( affine.getRowPackedCopy() );
 
 			// displacement field (with the affine removed)
-			RealTransformSequence totalNoAffine = new RealTransformSequence();
+			final RealTransformSequence totalNoAffine = new RealTransformSequence();
 			totalNoAffine.add( totalTransform );
 			totalNoAffine.add( affine.inverse() );
 			dfield = DisplacementFieldTransform.createDisplacementField( totalNoAffine, new FinalInterval( dims ), spacing );
@@ -693,11 +693,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			else
 			{
-				NgffDisplacementsTransformation dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
-				// TODO save affine
-
+				final NgffDisplacementsTransformation dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
 				// the total transform
-				NgffSequenceTransformation totalTform = new NgffSequenceTransformation( inputSpace, outputSpace,
+				final NgffSequenceTransformation totalTform = new NgffSequenceTransformation( inputSpace, outputSpace,
 						new CoordinateTransformation[]{ dfieldTform, ngffAffine  });
 
 				N5DisplacementField.addCoordinateTransformations( n5, "/", totalTform );
@@ -711,6 +709,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
 				SlicerTransformations.saveDisplacementField( n5, dataset, dfield, blockSize, compression, exec );
+
+				// for slicer, this affine represents the pixel to physical transformation
+				SlicerTransformations.saveAffine( n5, dataset, new ScaleAndTranslation( spacing, offset ) );
 			}
 			else
 			{
