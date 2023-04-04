@@ -320,6 +320,10 @@ public class FieldOfViewPanel extends JPanel
 			minFields[ i ].setPreferredSize( textFieldSize );
 			minFields[ i ].setHorizontalAlignment( JTextField.RIGHT );
 			minFields[ i ].setValue( new Double( initMin[i]) );
+			minFields[ i ].addActionListener( a ->
+			{
+				min[ idx ] = Double.parseDouble( minFields[ idx ].getText() );
+			});
 			add( minFields[ i ], gbc );
 
 			gbc.gridx = 2;
