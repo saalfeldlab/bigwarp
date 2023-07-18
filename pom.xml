@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>33.2.0</version>
+		<version>36.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>7.0.8-SNAPSHOT</version>
+	<version>8.0.0-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -63,22 +65,30 @@
 		<contributor>
 			<name>Curtis Rueden</name>
 			<url>https://imagej.net/User:Rueden</url>
-			<properties><id>ctrueden</id></properties>
+			<properties>
+				<id>ctrueden</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Mark Hiner</name>
 			<url>https://imagej.net/User:Hinerm</url>
-			<properties><id>hinerm</id></properties>
+			<properties>
+				<id>hinerm</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Philipp Hanslovsky</name>
 			<url>https://imagej.net/User:Hanslovsky</url>
-			<properties><id>hanslovsky</id></properties>
+			<properties>
+				<id>hanslovsky</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Christian Tischer</name>
 			<url>https://imagej.net/User:EMBL-CBA</url>
-			<properties><id>tischi</id></properties>
+			<properties>
+				<id>tischi</id>
+			</properties>
 		</contributor>
 	</contributors>
 
@@ -115,6 +125,11 @@
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+
+		<n5.version>3.0.0</n5.version>
+		<n5-ij.version>3.2.4</n5-ij.version>
+		<n5-imglib2.version>7.0.0</n5-imglib2.version>
+		<n5-universe.version>1.0.1</n5-universe.version>
 	</properties>
 
 	<repositories>
@@ -221,6 +236,12 @@
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-imglib2</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-universe</artifactId>
+			<version>${n5-universe.version}</version>
+		</dependency>
+
 
 		<!-- OME dependencies -->
 		<dependency>

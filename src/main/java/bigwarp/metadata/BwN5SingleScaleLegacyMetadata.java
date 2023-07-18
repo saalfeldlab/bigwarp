@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -46,33 +46,17 @@
  */
 package bigwarp.metadata;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Stream;
-
-import org.janelia.saalfeldlab.n5.DatasetAttributes;
-import org.janelia.saalfeldlab.n5.N5Writer;
-import org.janelia.saalfeldlab.n5.metadata.AbstractN5Metadata;
-import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadata;
-
-import ij.ImagePlus;
-import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineTransform3D;
-
-public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5SingleScaleLegacyMetadata> 
-	//implements ImageplusMetadata< BwN5SingleScaleLegacyMetadata >, PhysicalMetadata 
+public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5SingleScaleLegacyMetadata>
+	//implements ImageplusMetadata< BwN5SingleScaleLegacyMetadata >, PhysicalMetadata
 {
 //    public static final String DOWNSAMPLING_FACTORS_KEY = "downsamplingFactors";
 //    public static final String PIXEL_RESOLUTION_KEY = "pixelResolution";
 //    public static final String AFFINE_TRANSFORM_KEY = "affineTransform";
 //
 //	private final HashMap< String, Class< ? > > keysToTypes;
-//	
+//
 //    public final AffineTransform3D transform;
-//	
+//
 //	public final double[] resolution;
 //
 //    public BwN5SingleScaleLegacyMetadata( final String path, final AffineTransform3D transform,
@@ -111,7 +95,7 @@ public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5Sing
 //    {
 //    	this( "", new AffineTransform3D(), null );
 //    }
-//    
+//
 //    public BwN5SingleScaleLegacyMetadata( final String path, final double[] resolution,
 //    		final DatasetAttributes attributes )
 //    {
@@ -130,11 +114,11 @@ public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5Sing
 //
 //		AbstractN5Metadata.addDatasetAttributeKeys( keysToTypes );
 //    }
-//    
+//
 //    private static AffineTransform3D resToAffine( double[] res )
 //    {
 //    	AffineTransform3D affine = new AffineTransform3D();
-//    	affine.set( res[0], 0, 0, 0, 
+//    	affine.set( res[0], 0, 0, 0,
 //    			0, res[1], 0, 0,
 //    			0, 0, res[2], 0 );
 //
@@ -160,7 +144,7 @@ public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5Sing
 //		}
 //
 //		// needs to contain one of pixelResolution key
-//		if ( !metaMap.containsKey( PIXEL_RESOLUTION_KEY ) || metaMap.get( PIXEL_RESOLUTION_KEY ) == null ) 
+//		if ( !metaMap.containsKey( PIXEL_RESOLUTION_KEY ) || metaMap.get( PIXEL_RESOLUTION_KEY ) == null )
 //			return false;
 //
 //		return true;
@@ -179,7 +163,7 @@ public class BwN5SingleScaleLegacyMetadata //extends AbstractN5Metadata<BwN5Sing
 //			return null;
 //
 //		final long[] downsamplingFactors = ( long[] ) metaMap.get( DOWNSAMPLING_FACTORS_KEY );
-//		final double[] pixelResolution = ( double[] ) metaMap.get( PIXEL_RESOLUTION_KEY ); 
+//		final double[] pixelResolution = ( double[] ) metaMap.get( PIXEL_RESOLUTION_KEY );
 //
 //		final AffineTransform3D extraTransform = ( AffineTransform3D ) metaMap.get( AFFINE_TRANSFORM_KEY );
 //		final AffineTransform3D transform = N5SingleScaleMetadata.buildTransform( downsamplingFactors, pixelResolution, extraTransform );
