@@ -22,7 +22,6 @@
 package bdv.ij;
 
 import java.io.File;
-import java.io.IOException;
 
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
 
@@ -52,7 +51,7 @@ public class BigWarpImagePlusPlugIn implements PlugIn
     private ImagePlus movingIp;
     private ImagePlus targetIp;
 
-	public static void main( final String[] args ) throws IOException
+	public static void main( final String[] args )
 	{
 		new ImageJ();
 		IJ.run("Boats (356K)");
