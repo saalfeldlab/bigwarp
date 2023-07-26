@@ -22,10 +22,8 @@
 package bigwarp;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.function.Supplier;
 
 import bigwarp.landmarks.LandmarkTableModel;
 
@@ -75,12 +73,7 @@ public class BigWarpAutoSaver
 			LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 			if( ltm.isModifiedSinceSave() )
 			{
-//				try
-//				{
-					bw.autoSaveLandmarks();
-//					ltm.save( fileSupplier.get() );
-//				}
-//				catch ( IOException e ) { e.printStackTrace(); }
+				bw.autoSaveLandmarks();
 			}
 		}
 	}

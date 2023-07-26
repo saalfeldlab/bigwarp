@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -25,23 +25,23 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.janelia.saalfeldlab.n5.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.N5TreeNode;
-import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5CosemMultiScaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5GenericSingleScaleMetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
-import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5SingleScaleMetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultiscaleMetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.SpatialMetadata;
-import org.janelia.saalfeldlab.n5.metadata.canonical.CanonicalMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
+import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
+import org.janelia.saalfeldlab.n5.universe.metadata.MultiscaleMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5GenericSingleScaleMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5SingleScaleMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.SpatialMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
 
 import bdv.BigDataViewer;
 import bdv.img.BwRandomAccessibleIntervalSource;
@@ -49,6 +49,7 @@ import bdv.img.RenamableSource;
 import bdv.spimdata.SpimDataMinimal;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
+import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.viewer.Source;
@@ -243,7 +244,7 @@ public class BigWarpInit
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	public static void initSetup( final Source< ? > src, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
 	{
-		Object type = src.getType();
+		final Object type = src.getType();
 		if ( RealType.class.isInstance( type ) )
 		{
 			initSourceReal( ( Source< RealType > ) src, setupId, converterSetups, sources );
@@ -269,7 +270,7 @@ public class BigWarpInit
 
 	public static < T extends RealType< T > > void initSourceReal( final Source< T > src, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
 	{
-		T type = src.getType();
+		final T type = src.getType();
 		final double typeMin = Math.max( 0, Math.min( type.getMinValue(), 65535 ) );
 		final double typeMax = Math.max( 0, Math.min( type.getMaxValue(), 65535 ) );
 		final RealARGBColorConverter< T > converter = RealARGBColorConverter.create( type, typeMin, typeMax );
@@ -298,19 +299,19 @@ public class BigWarpInit
 	 * @return BigWarpData the data
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, String[] names )
+	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
 	{
-		BigWarpData data = initData();
+		final BigWarpData data = initData();
 
 		int setupId = 0;
 		// moving
-		for ( Source< ? > mvgSource : movingSourceList )
+		for ( final Source< ? > mvgSource : movingSourceList )
 		{
 			add( data, mvgSource, setupId++, 1, true );
 		}
 
 		// target
-		for ( Source< ? > fxdSource : fixedSourceList )
+		for ( final Source< ? > fxdSource : fixedSourceList )
 		{
 			add( data, fxdSource, setupId, 1, false );
 		}
@@ -323,11 +324,11 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "rawtypes" } )
-	public static < T > int add( BigWarpData bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	public static < T > int add( final BigWarpData bwdata, final ImagePlus ip, int setupId, final int numTimepoints, final boolean isMoving )
 	{
-		ImagePlusLoader loader = new ImagePlusLoader( ip );
-		SpimDataMinimal[] dataList = loader.loadAll( setupId );
-		for ( SpimDataMinimal data : dataList )
+		final ImagePlusLoader loader = new ImagePlusLoader( ip );
+		final SpimDataMinimal[] dataList = loader.loadAll( setupId );
+		for ( final SpimDataMinimal data : dataList )
 		{
 			add( bwdata, data, setupId, numTimepoints, isMoving );
 			setupId++;
@@ -337,11 +338,11 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
+	public static < T > BigWarpData< ? > add( final BigWarpData bwdata, final Source< T > src, final int setupId, final int numTimepoints, final boolean isMoving )
 	{
 		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
 
-		int N = bwdata.sources.size();
+		final int N = bwdata.sources.size();
 		if ( isMoving )
 			bwdata.movingSourceIndexList.add( N - 1 );
 		else
@@ -351,14 +352,14 @@ public class BigWarpInit
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T > BigWarpData< ? > add( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, int numTimepoints, boolean isMoving )
+	public static < T > BigWarpData< ? > add( final BigWarpData bwdata, final AbstractSpimData< ? > data, final int baseId, final int numTimepoints, final boolean isMoving )
 	{
 		final List<SourceAndConverter<?>> tmpSources = new ArrayList<>();
 		final List<ConverterSetup> tmpConverterSetups = new ArrayList<>();
 		initSetups( data, tmpConverterSetups, tmpSources );
 
 		int setupId = baseId;
-		for( SourceAndConverter sac : tmpSources )
+		for( final SourceAndConverter sac : tmpSources )
 			add( bwdata, sac.getSpimSource(), setupId++, numTimepoints, isMoving );
 
 //		int N = bwdata.sources.size();
@@ -374,7 +375,7 @@ public class BigWarpInit
 		return bwdata;
 	}
 
-	public static SpimData addToData( final BigWarpData<?> bwdata, 
+	public static SpimData addToData( final BigWarpData<?> bwdata,
 			final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		if( rootPath.endsWith( "xml" ))
@@ -388,7 +389,7 @@ public class BigWarpInit
 				if( isMoving )
 					return spimData;
 			}
-			catch ( SpimDataException e ) { e.printStackTrace(); }
+			catch ( final SpimDataException e ) { e.printStackTrace(); }
 			return null;
 		}
 		else
@@ -405,7 +406,7 @@ public class BigWarpInit
 		{
 			n5 = new N5Factory().openReader( n5Root );
 		}
-		catch ( IOException e ) { 
+		catch ( final RuntimeException e ) {
 			e.printStackTrace();
 			return null;
 		}
@@ -427,14 +428,14 @@ public class BigWarpInit
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, 
-					N5DatasetDiscoverer.fromParsers(PARSERS), 
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5,
+					N5DatasetDiscoverer.fromParsers(PARSERS),
 					N5DatasetDiscoverer.fromParsers(GROUP_PARSERS) );
 
 			final N5TreeNode node = discoverer.discoverAndParseRecursive( n5Dataset );
 			meta = node.getMetadata();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{}
 
 		if( meta instanceof MultiscaleMetadata )
@@ -459,7 +460,7 @@ public class BigWarpInit
 			else
 				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ));
 
-			if( meta instanceof N5ImagePlusMetadata 
+			if( meta instanceof N5ImagePlusMetadata
 					&& ((N5ImagePlusMetadata)meta).getType() == ImagePlus.COLOR_RGB
 					&& Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
 			{
@@ -472,7 +473,7 @@ public class BigWarpInit
 			{
 				final String unit = ((SpatialMetadata)meta).unit();
 				final AffineTransform3D srcXfm = ((SpatialMetadata)meta).spatialTransform3d();
-				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, 
+				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit,
 						new double[]{ srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) });
 
 				return new BwRandomAccessibleIntervalSource( image, (NumericType ) Util.getTypeFromInterval( image ),
@@ -482,7 +483,7 @@ public class BigWarpInit
 				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ),
 						new AffineTransform3D(), meta.getPath() );
 		}
-		catch ( IOException e )
+		catch ( final RuntimeException e )
 		{
 			e.printStackTrace();
 		}
@@ -508,7 +509,7 @@ public class BigWarpInit
 				else
 					images[ s ] = to3d( N5Utils.open( n5, paths[s] ));
 			}
-			catch ( IOException e )
+			catch ( final RuntimeException e )
 			{
 				e.printStackTrace();
 			}
@@ -519,8 +520,8 @@ public class BigWarpInit
 		}
 
 		@SuppressWarnings( { "unchecked", "rawtypes" } )
-		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( 
-				images, 
+		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource(
+				images,
 				(NumericType ) Util.getTypeFromInterval(images[0]),
 				mipmapScales,
 				new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[0]),
@@ -530,7 +531,7 @@ public class BigWarpInit
 		return source;
 	}
 
-	private static RandomAccessibleInterval<?> to3d( RandomAccessibleInterval<?> img )
+	private static RandomAccessibleInterval<?> to3d( final RandomAccessibleInterval<?> img )
 	{
 		if( img.numDimensions() == 2 )
 			return Views.addDimension( img, 0, 0 );
@@ -538,13 +539,13 @@ public class BigWarpInit
 			return img;
 	}
 
-	private static RandomAccessibleInterval<ARGBType> toColor( RandomAccessibleInterval<UnsignedIntType> img )
+	private static RandomAccessibleInterval<ARGBType> toColor( final RandomAccessibleInterval<UnsignedIntType> img )
 	{
 		return Converters.convertRAI( img,
 				new Converter<UnsignedIntType,ARGBType>()
 				{
 					@Override
-					public void convert( UnsignedIntType input, ARGBType output )
+					public void convert( final UnsignedIntType input, final ARGBType output )
 					{
 						output.set( input.getInt() );
 					}
@@ -634,27 +635,27 @@ public class BigWarpInit
 	 * @return BigWarpData
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList, String[] names )
+	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList, final String[] names )
 	{
 		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
 		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
 
 		int numMovingSources = 0;
-		for ( AbstractSpimData< ? > spimDataP : spimDataPList )
+		for ( final AbstractSpimData< ? > spimDataP : spimDataPList )
 		{
 			numMovingSources += spimDataP.getSequenceDescription().getViewSetups().size();
 			BigDataViewer.initSetups( spimDataP, converterSetups, sources );
 		}
 
 		int numTargetSources = 0;
-		for ( AbstractSpimData< ? > spimDataQ : spimDataQList )
+		for ( final AbstractSpimData< ? > spimDataQ : spimDataQList )
 		{
 			numTargetSources += spimDataQ.getSequenceDescription().getViewSetups().size();
 			BigDataViewer.initSetups( spimDataQ, converterSetups, sources );
 		}
 
-		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
-		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+		final int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+		final int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
 
 		if ( names != null && names.length == sources.size() )
 		{
@@ -666,14 +667,14 @@ public class BigWarpInit
 		}
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final List< SourceAndConverter< ? > > sources, String[] names )
+	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final List< SourceAndConverter< ? > > sources, final String[] names )
 	{
 		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
 
 		int i = 0;
 		for ( final SourceAndConverter< ? > sac : sources )
 		{
-			SourceAndConverter< ? > renamableSource = wrapSourceAsRenamable( sac );
+			final SourceAndConverter< ? > renamableSource = wrapSourceAsRenamable( sac );
 			if ( names != null )
 			{
 				( ( RenamableSource< ? > ) renamableSource.getSpimSource() ).setName( names[ i ] );
@@ -716,11 +717,11 @@ public class BigWarpInit
 		final ArrayList< SourceAndConverter< ? > > sources = new ArrayList< SourceAndConverter< ? > >();
 		BigWarpInit.initSetups( spimDataP, converterSetups, sources );
 
-		int numMovingSources = seqP.getViewSetups().size();
-		int numTargetSources = seqQ.getViewSetups().size();
+		final int numMovingSources = seqP.getViewSetups().size();
+		final int numTargetSources = seqQ.getViewSetups().size();
 
-		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
-		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+		final int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+		final int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
 
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
@@ -733,17 +734,17 @@ public class BigWarpInit
 		return createBigWarpData( loaderP, loaderQ, null );
 	}
 
-	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ, 
+	public static BigWarpData< ? > createBigWarpData( final ImagePlusLoader loaderP, final ImagePlusLoader loaderQ,
 			final String[] names )
 	{
 		/* Load the first source */
 		final AbstractSpimData< ? >[] spimDataP = loaderP.loadAll( 0 );
-		int numMovingChannels = loaderP.numChannels();
+		final int numMovingChannels = loaderP.numChannels();
 
 		/* Load the second source, giving each channel a different setupId */
 		final AbstractSpimData< ? >[] spimDataQ = loaderQ.loadAll( numMovingChannels );
 
-		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
+		final BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
 
 		// update channel settings
 		loaderP.update( data );
@@ -785,7 +786,7 @@ public class BigWarpInit
 		final AbstractSpimData< ? >[] spimDataP;
 		if( loaderP instanceof ImagePlusLoader  )
 			spimDataP = loaderP.load();
-		else 
+		else
 			spimDataP = loaderP.load();
 
 		/* Load the fixed sources */
@@ -795,7 +796,7 @@ public class BigWarpInit
 		else
 			spimDataQ = loaderQ.load();
 
-		int N = loaderP.numSources() + loaderQ.numSources();
+		final int N = loaderP.numSources() + loaderQ.numSources();
 
 		String[] names;
 		if( namesIn == null || namesIn.length != N )
@@ -811,7 +812,7 @@ public class BigWarpInit
 		else
 			names = namesIn;
 
-		BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
+		final BigWarpData< ? > data = createBigWarpData( spimDataP, spimDataQ, names );
 
 		if( loaderP instanceof ImagePlusLoader  )
 			((ImagePlusLoader)loaderP).update( data );
@@ -963,17 +964,17 @@ public class BigWarpInit
 	 *            second image to generate names from
 	 * @return String array of names from both images
 	 */
-	public static String[] namesFromImagePluses( ImagePlus impP, ImagePlus impQ )
+	public static String[] namesFromImagePluses( final ImagePlus impP, final ImagePlus impQ )
 	{
-		String[] names = new String[ impP.getNChannels() + impQ.getNChannels() ];
+		final String[] names = new String[ impP.getNChannels() + impQ.getNChannels() ];
 
-		String[] impPnames = namesFromImagePlus( impP );
-		String[] impQnames = namesFromImagePlus( impQ );
+		final String[] impPnames = namesFromImagePlus( impP );
+		final String[] impQnames = namesFromImagePlus( impQ );
 
 		int i = 0;
-		for ( String name : impPnames )
+		for ( final String name : impPnames )
 			names[ i++ ] = name;
-		for ( String name : impQnames )
+		for ( final String name : impQnames )
 			names[ i++ ] = name;
 
 		return names;
@@ -988,11 +989,11 @@ public class BigWarpInit
 	 *            image to generate names from
 	 * @return String array of names
 	 */
-	public static String[] namesFromImagePlus( ImagePlus imp )
+	public static String[] namesFromImagePlus( final ImagePlus imp )
 	{
 		if ( imp.getNChannels() == 1 )
 			return new String[] { imp.getTitle() };
-		String[] names = new String[ imp.getNChannels() ];
+		final String[] names = new String[ imp.getNChannels() ];
 		for ( int i = 0; i < names.length; ++i )
 			names[ i ] = imp.getTitle() + "-" + i;
 		return names;
