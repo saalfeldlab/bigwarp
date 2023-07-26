@@ -130,6 +130,8 @@
 		<n5-ij.version>3.2.4</n5-ij.version>
 		<n5-imglib2.version>7.0.0</n5-imglib2.version>
 		<n5-universe.version>1.0.1</n5-universe.version>
+		<bigdataviewer-core.version>10.4.8</bigdataviewer-core.version>
+
 	</properties>
 
 	<repositories>
