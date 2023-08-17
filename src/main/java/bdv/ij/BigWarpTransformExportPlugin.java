@@ -3,11 +3,10 @@ package bdv.ij;
 import java.io.File;
 import java.io.IOException;
 
-import org.janelia.saalfeldlab.n5.imglib2.NgffTransformations;
-
 import bigwarp.BigWarp;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import bigwarp.transforms.WrappedCoordinateTransform;
 import fiji.util.gui.GenericDialogPlus;
 import ij.ImageJ;
@@ -46,7 +45,7 @@ public class BigWarpTransformExportPlugin implements PlugIn
 			gd.addFileField( "landmarks_file", "" );
 		}
 
-		gd.addChoice( "Transform type", 
+		gd.addChoice( "Transform type",
 				new String[] {
 					BigWarpTransform.AFFINE,
 					BigWarpTransform.SIMILARITY,
@@ -80,7 +79,7 @@ public class BigWarpTransformExportPlugin implements PlugIn
 				final LandmarkTableModel ltm = LandmarkTableModel.loadFromCsv( new File( landmarksPath ), false );
 				bwTransform = new BigWarpTransform( ltm, transformTypeOption );
 			}
-			catch ( IOException e )
+			catch ( final IOException e )
 			{
 				e.printStackTrace();
 				return;

@@ -28,12 +28,12 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import org.janelia.saalfeldlab.n5.ij.N5Importer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
-import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
-import org.janelia.saalfeldlab.n5.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.metadata.canonical.CanonicalDatasetMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
 import org.janelia.saalfeldlab.n5.ui.N5DatasetTreeCellRenderer;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalDatasetMetadata;
 import org.jdom2.JDOMException;
 
 import com.formdev.flatlaf.util.UIScale;
@@ -93,7 +93,7 @@ public class BigWarpInitDialog extends JFrame
 	public static final int DEFAULT_OUTER_PAD = 8;
 	public static final int DEFAULT_BUTTON_PAD = 3;
 	public static final int DEFAULT_MID_PAD = 5;
-	
+
 	private static final String commandName = "BigWarp";
 	private static final String projectKey = "project";
 	private static final String imagesKey = "images";
@@ -144,22 +144,22 @@ public class BigWarpInitDialog extends JFrame
 			Recorder.record = initialRecorderState;
 			setVisible( false );
 		};
-		
-		imagePathUpdateCallback = ( p ) -> { 
+
+		imagePathUpdateCallback = ( p ) -> {
 			addPath();
 		};
 
-		transformPathUpdateCallback = ( p ) -> { 
+		transformPathUpdateCallback = ( p ) -> {
 			addTransform();
 		};
 	}
 
-	public void setInitialRecorderState( boolean initialRecorderState )
+	public void setInitialRecorderState( final boolean initialRecorderState )
 	{
 		this.initialRecorderState = initialRecorderState;
 	}
 
-	public static void main( String[] args ) throws IOException
+	public static void main( final String[] args ) throws IOException
 	{
 //		ImageJ ij2 = new ImageJ();
 //		ij2.ui().showUI();
@@ -186,13 +186,13 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static <T> void runBigWarp( String projectPath, String[] images, String[] moving, String[] transforms )
+	public static <T> void runBigWarp( final String projectPath, final String[] images, final String[] moving, final String[] transforms )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
 
 		final int nThreads = IJ.getInstance() != null ? Prefs.getThreads() : 1;
-		BigWarpViewerOptions bwOpts = ( BigWarpViewerOptions ) BigWarpViewerOptions.options().numRenderingThreads( nThreads );
+		final BigWarpViewerOptions bwOpts = ( BigWarpViewerOptions ) BigWarpViewerOptions.options().numRenderingThreads( nThreads );
 
 		if( !haveProject )
 		{
@@ -215,15 +215,15 @@ public class BigWarpInitDialog extends JFrame
 
 					id += infos.size();
 				}
-				catch ( URISyntaxException e )
+				catch ( final URISyntaxException e )
 				{
 					e.printStackTrace();
 				}
-				catch ( IOException e )
+				catch ( final IOException e )
 				{
 					e.printStackTrace();
 				}
-				catch ( SpimDataException e )
+				catch ( final SpimDataException e )
 				{
 					e.printStackTrace();
 				}
@@ -240,15 +240,15 @@ public class BigWarpInitDialog extends JFrame
 				bw.loadSettings( projectPath, true );
 			}
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( JDOMException e )
+		catch ( final JDOMException e )
 		{
 			e.printStackTrace();
 		}
@@ -273,21 +273,21 @@ public class BigWarpInitDialog extends JFrame
 			final int N = sourceTable.getRowCount();
 			for( int i = 0; i < N; i++ )
 			{
-				SourceRow tableRow = sourceTableModel.get( i );
+				final SourceRow tableRow = sourceTableModel.get( i );
 				if( tableRow.type.equals( SourceType.IMAGEPLUS )  )
 				{
 					// strip off prefix if present
 					final ImagePlus imp = WindowManager.getImage( tableRow.srcName.replaceAll( "^"+ImageJPrefix, "" ) );
-					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
+					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform() );
 					id += infos.size();
 				}
 				else if( tableRow.type.equals( SourceType.DATASET ))
 				{
-					Dataset dataset = datasetService.getDatasets().stream()
+					final Dataset dataset = datasetService.getDatasets().stream()
 							.filter( x -> x.getSource().equals( tableRow.srcName ) )
 							.findFirst().get();
-					LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
+					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform() );
 					id += infos.size();
 				}
@@ -296,19 +296,19 @@ public class BigWarpInitDialog extends JFrame
 					// TODO deal with exceptions
 					try
 					{
-						LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+						final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
 						BigWarpInit.add( data, infos, tableRow.getTransform() );
 						id += infos.size();
 					}
-					catch ( URISyntaxException e )
+					catch ( final URISyntaxException e )
 					{
 						e.printStackTrace();
 					}
-					catch ( IOException e )
+					catch ( final IOException e )
 					{
 						e.printStackTrace();
 					}
-					catch ( SpimDataException e )
+					catch ( final SpimDataException e )
 					{
 						e.printStackTrace();
 					}
@@ -324,15 +324,15 @@ public class BigWarpInitDialog extends JFrame
 			if( haveProject )
 				bw.loadSettings( projectPath, true );
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( JDOMException e )
+		catch ( final JDOMException e )
 		{
 			e.printStackTrace();
 		}
@@ -348,7 +348,7 @@ public class BigWarpInitDialog extends JFrame
 		final int frameSizeX = UIScale.scale( 600 );
 		final JPanel panel = new JPanel(false);
 		panel.setPreferredSize( new Dimension( frameSizeX, UIScale.scale( 335 ) )); // ~ 16:9
-		panel.setLayout(new GridBagLayout());	
+		panel.setLayout(new GridBagLayout());
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
 		ctxt.gridx = 0;
@@ -421,7 +421,7 @@ public class BigWarpInitDialog extends JFrame
 		addImageButton = new JButton("+");
 		panel.add( addImageButton, cadd );
 		addImageButton.addActionListener( e -> { addImage(); });
-		
+
 		ctxt.gridy = 2;
 		final JLabel addFileLabel = new JLabel( "Add image file/folder:");
 		panel.add(addFileLabel, ctxt);
@@ -546,12 +546,12 @@ public class BigWarpInitDialog extends JFrame
 
 		return panel;
 	}
-	
+
 	public void buildN5SelectionDialog()
 	{
 		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
 
-		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(), 
+		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
 				lastOpenedContainer, new N5MetadataParser[] {}, // no
 				N5Importer.PARSERS );
 
@@ -577,10 +577,10 @@ public class BigWarpInitDialog extends JFrame
 		selectionDialog.setCropOption( true );
 	}
 
-	public void n5DialogCallback( DataSelection selection )
+	public void n5DialogCallback( final DataSelection selection )
 	{
 		final String n5RootPath = selectionDialog.getN5RootPath();
-		for( N5Metadata m : selection.metadata )
+		for( final N5Metadata m : selection.metadata )
 			sourceTableModel.add( n5RootPath + "?" + m.getPath() );
 
 		repaint();
@@ -604,17 +604,17 @@ public class BigWarpInitDialog extends JFrame
 		this.repaint();
 	}
 
-	protected void addDataset( String datasetSource, boolean moving )
+	protected void addDataset( final String datasetSource, final boolean moving )
 	{
 		sourceTableModel.addDataset( datasetSource, moving );
 	}
 
-	protected void addImagePlus( String title )
+	protected void addImagePlus( final String title )
 	{
 		addImagePlus( title, true );
 	}
 
-	protected void addImagePlus( String title, boolean moving )
+	protected void addImagePlus( final String title, final boolean moving )
 	{
 		if ( IJ.getInstance() == null )
 			return;
@@ -643,7 +643,7 @@ public class BigWarpInitDialog extends JFrame
 	protected void addTransform()
 	{
 		final String path = transformPathText.getText();
-		int row = sourceTable.getSelectedRow();
+		final int row = sourceTable.getSelectedRow();
 		if( !path.isEmpty() && row >= 0 )
 		{
 			sourceTableModel.setTransform( row, path );
@@ -661,7 +661,7 @@ public class BigWarpInitDialog extends JFrame
 		{
 			int i = 0;
 			titles = new String[ datasetService.getDatasets().size() ];
-			for( Dataset d : datasetService.getDatasets() )
+			for( final Dataset d : datasetService.getDatasets() )
 				titles[i++] = d.getSource();
 		}
 		else
@@ -719,10 +719,10 @@ public class BigWarpInitDialog extends JFrame
 		return createAndShow( null );
 	}
 
-	public static BigWarpInitDialog createAndShow( DatasetService datasets )
+	public static BigWarpInitDialog createAndShow( final DatasetService datasets )
 	{
 		// Create and set up the window.
-		BigWarpInitDialog frame = new BigWarpInitDialog( "BigWarp", datasets );
+		final BigWarpInitDialog frame = new BigWarpInitDialog( "BigWarp", datasets );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 		frame.setVisible( true );
 		return frame;
@@ -784,7 +784,7 @@ public class BigWarpInitDialog extends JFrame
 	{
 		this.projectPathUpdateCallback = callback;
 	}
-	
+
 	private String browseProjectDialog()
 	{
 		final String s = browseDialogGeneral( JFileChooser.FILES_ONLY, new FileNameExtensionFilter( "JSON file", "json" ) );
@@ -815,7 +815,7 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public void setParameters( String projectPath, String images, String moving, String transforms ) {
+	public void setParameters( final String projectPath, final String images, final String moving, final String transforms ) {
 		this.projectPath = projectPath;
 		this.imageList = images;
 		this.movingList = moving;
@@ -865,9 +865,9 @@ public class BigWarpInitDialog extends JFrame
 				transformList.append( listSeparator );
 			}
 		}
-		
+
 		this.imageList = imageList.toString();
-		this.movingList = movingList.toString(); 
+		this.movingList = movingList.toString();
 		this.transformList = transformList.toString();
 	}
 
@@ -890,14 +890,14 @@ public class BigWarpInitDialog extends JFrame
 		return Recorder.getCommandOptions();
 	}
 
-	public static void runMacro( String args )
+	public static void runMacro( final String args )
 	{
-		String project = Macro.getValue( args, projectKey, "" );
+		final String project = Macro.getValue( args, projectKey, "" );
 
-		String[] images = Macro.getValue( args, imagesKey, "" ).split( ",", -1 );
-		String[] moving = Macro.getValue( args, movingKey, "" ).split( ",", -1 );
-		String[] transforms = Macro.getValue( args, transformsKey, "" ).split( ",", -1 );
-		
+		final String[] images = Macro.getValue( args, imagesKey, "" ).split( ",", -1 );
+		final String[] moving = Macro.getValue( args, movingKey, "" ).split( ",", -1 );
+		final String[] transforms = Macro.getValue( args, transformsKey, "" ).split( ",", -1 );
+
 		if( !project.isEmpty())
 		{
 			runBigWarp( project, null, null, null );

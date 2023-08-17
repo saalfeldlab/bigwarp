@@ -5,11 +5,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Writer;
-import org.janelia.saalfeldlab.n5.ij.N5Factory;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineGet;
@@ -26,7 +27,7 @@ public class SlicerTransformations
 	public static final String AFFINE_ATTR = "Transformation_Matrix";
 
 	/*
-	 * Saves an arbitrary {@link RealTransform} as a deformation field 
+	 * Saves an arbitrary {@link RealTransform} as a deformation field
 	 * into a specified n5 dataset using slicer's convention.
 	 *
 	 * @param <T> the type parameter
@@ -44,11 +45,11 @@ public class SlicerTransformations
 			final RandomAccessibleInterval<T> dfield,
 			final int[] blockSize,
 			final Compression compression,
-			ExecutorService exec ) throws IOException {
+			final ExecutorService exec ) throws IOException {
 
 		int[] vecBlkSz;
 		if( blockSize.length >= dfield.numDimensions() )
-			vecBlkSz = blockSize; 
+			vecBlkSz = blockSize;
 		else {
 			vecBlkSz = new int[ blockSize.length + 1 ];
 			vecBlkSz[ 0 ] = (int)dfield.dimension( 0 );
@@ -64,15 +65,15 @@ public class SlicerTransformations
 		{
 			N5Utils.save( dfieldPerm, n5Writer, dataset, vecBlkSz, compression, exec );
 		}
-		catch ( IOException e )
+		catch ( final N5Exception e )
 		{
 			e.printStackTrace();
 		}
-		catch ( InterruptedException e )
+		catch ( final InterruptedException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( ExecutionException e )
+		catch ( final ExecutionException e )
 		{
 			e.printStackTrace();
 		}
@@ -88,7 +89,7 @@ public class SlicerTransformations
 	 * @param df the displacement field
 	 * @return a permuted displacement field
 	 */
-	public static final <T extends NativeType<T> & RealType<T>> RandomAccessibleInterval<T> dxyz2dzyx( RandomAccessibleInterval<T> df )
+	public static final <T extends NativeType<T> & RealType<T>> RandomAccessibleInterval<T> dxyz2dzyx( final RandomAccessibleInterval<T> df )
 	{
 		final IntervalView< T > dx = Views.hyperSlice( df, 0, 0 );
 		final IntervalView< T > dy = Views.hyperSlice( df, 0, 1 );
@@ -110,13 +111,13 @@ public class SlicerTransformations
 			final double[][] mtx;
 			if ( affine instanceof AffineTransform3D )
 			{
-				AffineTransform3D a3d = ( AffineTransform3D ) affine;
+				final AffineTransform3D a3d = ( AffineTransform3D ) affine;
 				mtx = new double[ 4 ][ 4 ];
 				a3d.toMatrix( mtx );
 			}
 			else if ( affine instanceof AffineTransform2D )
 			{
-				AffineTransform2D a2d = ( AffineTransform2D ) affine;
+				final AffineTransform2D a2d = ( AffineTransform2D ) affine;
 				mtx = new double[ 3 ][ 3 ];
 				a2d.toMatrix( mtx );
 			}
@@ -130,12 +131,12 @@ public class SlicerTransformations
 			}
 			n5Writer.setAttribute( dataset, AFFINE_ATTR, mtx );
 		}
-		catch ( IOException e ) {}
+		catch ( final N5Exception e ) {}
 	}
 
-	public static void main( String[] args ) throws IOException
+	public static void main( final String[] args ) throws IOException
 	{
-		double[][] mtx = new double[4][4];
+		final double[][] mtx = new double[4][4];
 		mtx[0][0] = 2;
 		mtx[1][1] = 3;
 		mtx[2][2] = 4;

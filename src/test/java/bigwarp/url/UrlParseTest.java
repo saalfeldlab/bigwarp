@@ -1,10 +1,10 @@
 package bigwarp.url;
 
-import bdv.viewer.Source;
-import bigwarp.BigWarpData;
-import bigwarp.BigWarpInit;
-import bigwarp.BigWarpTestUtils;
-import bigwarp.source.SourceInfo;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -13,18 +13,21 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
-import mpicbg.spim.data.SpimDataException;
+
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5FSReader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
-import org.janelia.saalfeldlab.n5.ij.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import bdv.viewer.Source;
+import bigwarp.BigWarpData;
+import bigwarp.BigWarpInit;
+import bigwarp.BigWarpTestUtils;
+import bigwarp.source.SourceInfo;
+import mpicbg.spim.data.SpimDataException;
 
 public class UrlParseTest
 {
@@ -72,14 +75,14 @@ public class UrlParseTest
 	@Test
 	public void testFactories()
 	{
-		N5Factory n5Factory = new N5Factory();
+		final N5Factory n5Factory = new N5Factory();
 		try
 		{
 			assertEquals( n5Clazz, n5Factory.openReader( n5Root ).getClass() );
 			assertEquals( zarrClazz, n5Factory.openReader( zarrRoot ).getClass() );
 			assertEquals( h5Clazz, n5Factory.openReader( h5Root ).getClass() );
 		}
-		catch ( IOException e )
+		catch ( final N5Exception e )
 		{
 			fail( e.getMessage() );
 		}
@@ -90,24 +93,24 @@ public class UrlParseTest
 	{
 		final String bdvXmlUrl = new File( "src/test/resources/mri-stack.xml" ).getAbsolutePath();
 
-		Source< ? > bdvXmlSrc = loadSourceFromUri( bdvXmlUrl );
+		final Source< ? > bdvXmlSrc = loadSourceFromUri( bdvXmlUrl );
 		assertNotNull( bdvXmlSrc );
 
-		Source< ? > img3dTif = loadSourceFromUri( TIFF_FILE_3D );
+		final Source< ? > img3dTif = loadSourceFromUri( TIFF_FILE_3D );
 		assertNotNull( img3dTif );
 		assertArrayEquals( new long[]{8,8,4}, img3dTif.getSource( 0, 0 ).dimensionsAsLongArray() );
 
-		Source< ? > img2dPng = loadSourceFromUri( PNG_FILE_2D );
+		final Source< ? > img2dPng = loadSourceFromUri( PNG_FILE_2D );
 		assertNotNull( img2dPng );
 		assertArrayEquals( new long[]{8,8,1}, img2dPng.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
 
-		Source< ? > img3dTifFromDir = loadSourceFromUri( TIFF_STACK_DIR );
+		final Source< ? > img3dTifFromDir = loadSourceFromUri( TIFF_STACK_DIR );
 		assertNotNull( img3dTifFromDir );
 		assertArrayEquals( new long[]{8,8,4}, img3dTifFromDir.getSource( 0, 0 ).dimensionsAsLongArray() );
 
-		for ( String url : urlToDimensions.keySet() )
+		for ( final String url : urlToDimensions.keySet() )
 		{
-			Source< ? > src = loadSourceFromUri( url );
+			final Source< ? > src = loadSourceFromUri( url );
 			assertNotNull( src );
 			assertArrayEquals( urlToDimensions.get( url ), src.getSource( 0, 0 ).dimensionsAsLongArray() ); // TODO I wrote this to expect [8,8,1], but it might need [8,8].
 		}
@@ -154,7 +157,7 @@ public class UrlParseTest
 
 		final BigWarpData< Object > data = BigWarpInit.initData();
 		final AtomicInteger id = new AtomicInteger( 1 );
-		for ( String uri : variants )
+		for ( final String uri : variants )
 		{
 			final int setupId = id.getAndIncrement();
 			BigWarpInit.add( data, BigWarpInit.createSources( data, uri, setupId, new Random().nextBoolean() ) );
@@ -162,13 +165,13 @@ public class UrlParseTest
 		}
 	}
 
-	private Object loadTransformFromUrl( String url )
+	private Object loadTransformFromUrl( final String url )
 	{
 		// TODO Caleb will remove me and replace calls to me with something real
 		return null;
 	}
 
-	private < T > Source< ? > loadSourceFromUri( String uri ) throws SpimDataException, URISyntaxException, IOException
+	private < T > Source< ? > loadSourceFromUri( final String uri ) throws SpimDataException, URISyntaxException, IOException
 	{
 
 		final BigWarpData< T > data = BigWarpInit.initData();

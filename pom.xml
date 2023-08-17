@@ -5,13 +5,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>33.2.0</version>
+		<version>36.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>7.0.8-SNAPSHOT</version>
+	<version>8.0.1-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -63,22 +63,30 @@
 		<contributor>
 			<name>Curtis Rueden</name>
 			<url>https://imagej.net/User:Rueden</url>
-			<properties><id>ctrueden</id></properties>
+			<properties>
+				<id>ctrueden</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Mark Hiner</name>
 			<url>https://imagej.net/User:Hinerm</url>
-			<properties><id>hinerm</id></properties>
+			<properties>
+				<id>hinerm</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Philipp Hanslovsky</name>
 			<url>https://imagej.net/User:Hanslovsky</url>
-			<properties><id>hanslovsky</id></properties>
+			<properties>
+				<id>hanslovsky</id>
+			</properties>
 		</contributor>
 		<contributor>
 			<name>Christian Tischer</name>
 			<url>https://imagej.net/User:EMBL-CBA</url>
-			<properties><id>tischi</id></properties>
+			<properties>
+				<id>tischi</id>
+			</properties>
 		</contributor>
 	</contributors>
 
@@ -117,13 +125,16 @@
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 		<jitk-tps.version>3.0.3</jitk-tps.version>
 
-		<n5.version>2.5.2-SNAPSHOT</n5.version>
-		<n5-ij.version>3.2.3-SNAPSHOT</n5-ij.version>
-		<n5-hdf5.version>1.4.1</n5-hdf5.version>
-		<n5-imglib2.version>5.0.0-SNAPSHOT</n5-imglib2.version>
-
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+
+		<n5.version>3.0.0</n5.version>
+		<n5-ij.version>3.2.4</n5-ij.version>
+		<n5-hdf5.version>2.0.0</n5-hdf5.version>
+		<n5-imglib2.version>7.0.0</n5-imglib2.version>
+		<n5-universe.version>1.1.1-SNAPSHOT</n5-universe.version>
+		<bigdataviewer-core.version>10.4.8</bigdataviewer-core.version>
+
 	</properties>
 
 	<repositories>
@@ -214,7 +225,6 @@
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5</artifactId>
-			<version>2.5.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
@@ -231,7 +241,15 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-imglib2</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-universe</artifactId>
+			<version>${n5-universe.version}</version>
+		</dependency>
 		<!-- OME dependencies -->
 		<dependency>
 			<groupId>ome</groupId>
@@ -299,11 +317,6 @@
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.janelia.saalfeldlab</groupId>
-			<artifactId>n5-imglib2</artifactId>
-			<version>5.0.0-SNAPSHOT</version>
-		</dependency>
 
 		<!-- Test scope dependencies -->
 		<dependency>
@@ -315,11 +328,6 @@
 			<groupId>xmlunit</groupId>
 			<artifactId>xmlunit</artifactId>
 			<version>1.5</version>
-		</dependency>
-		<dependency>
-			<groupId>ome</groupId>
-			<artifactId>ome-ngff-java</artifactId>
-			<version>0.0.0-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>
