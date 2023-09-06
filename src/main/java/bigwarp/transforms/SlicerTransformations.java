@@ -45,7 +45,7 @@ public class SlicerTransformations
 			final RandomAccessibleInterval<T> dfield,
 			final int[] blockSize,
 			final Compression compression,
-			final ExecutorService exec ) throws IOException {
+			final ExecutorService exec ) {
 
 		int[] vecBlkSz;
 		if( blockSize.length >= dfield.numDimensions() )

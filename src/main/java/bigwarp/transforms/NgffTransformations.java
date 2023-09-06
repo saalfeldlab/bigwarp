@@ -4,7 +4,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -14,23 +17,37 @@ import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.N5Writer;
-import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.Axis;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.coordinateTransformations.CoordinateTransformation;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.coordinateTransformations.CoordinateTransformationAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
+import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.Common;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.graph.TransformGraph;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.AffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.CoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.CoordinateTransformAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.DisplacementFieldCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.IdentityCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.InvertibleCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.ScaleCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.SequenceCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.TranslationCoordinateTransform;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.ScaleGet;
+import net.imglib2.realtransform.TranslationGet;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
+
 
 public class NgffTransformations
 {
@@ -147,48 +164,31 @@ public class NgffTransformations
 
 	}
 
-//	public static TransformGraph openGraph( final N5Reader n5 )
-//	{
-//		return openGraph( n5, "/" );
-//	}
-//
-//	public static TransformGraph openGraph( final N5Reader n5, final String dataset )
-//	{
-//		return new TransformGraph( n5, dataset );
-//	}
-//
-//	public static RealTransform open( final N5Reader n5, final String dataset )
-//	{
-//		// TODO error handling
-//		return openGraph( n5, dataset ).getTransforms().get( 0 ).getTransform( n5 );
-//	}
-//
-//	public static RealTransform open( final N5Reader n5, final String dataset, final String name )
-//	{
-//		// TODO error handling
-//		return openGraph( n5, dataset ).getTransform( name ).get().getTransform( n5 );
-//	}
-//
+	@SuppressWarnings("unchecked")
 	public static < T extends RealTransform> T open( final N5Reader n5, final String dataset, final String input, final String output )
 	{
 		// TODO error handling
-		final TransformGraph g = openGraph( n5, dataset );
+		final TransformGraph g = Common.openGraph( n5, dataset );
 		return (T)g.path( input, output ).get().totalTransform( n5, g );
 	}
 
 	public static RealTransform open( final String url )
 	{
-		final Pair< NgffCoordinateTransformation< ? >, N5Reader > pair = openTransformN5( url );
+		final Pair< CoordinateTransform< ? >, N5Reader > pair = openTransformN5( url );
 		return pair.getA().getTransform( pair.getB() );
 	}
 
-	public static InvertibleRealTransform openInvertible( final String url )
-	{
-		final Pair< NgffCoordinateTransformation< ? >, N5Reader > pair = openTransformN5( url );
-		return pair.getA().getInvertibleTransform( pair.getB() );
+	public static InvertibleRealTransform openInvertible(final String url) {
+
+		final Pair<CoordinateTransform<?>, N5Reader> pair = openTransformN5(url);
+		final CoordinateTransform<?> ct = pair.getA();
+		if (ct instanceof InvertibleCoordinateTransform)
+			return ((InvertibleCoordinateTransform<?>)ct).getInvertibleTransform(pair.getB());
+		else
+			return null;
 	}
 
-	public static Pair<NgffCoordinateTransformation<?>,N5Reader> openTransformN5( final String url )
+	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url )
 	{
 		try
 		{
@@ -204,8 +204,8 @@ public class NgffTransformations
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
 				final String attribute = n5url.getAttributePath() != null ? n5url.getAttributePath() : "coordinateTransformations/[0]";
 
-				final CoordinateTransformation ct = n5.getAttribute( dataset, attribute, CoordinateTransformation.class );
-				final NgffCoordinateTransformation< ? > nct = NgffCoordinateTransformation.create( ct );
+				final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
+				final CoordinateTransform<?> nct = CoordinateTransform.create(ct);
 				return new ValuePair<>( nct, n5 );
 			}
 		}
@@ -216,7 +216,7 @@ public class NgffTransformations
 		}
 	}
 
-	public static NgffCoordinateTransformation openJson( final String url )
+	public static CoordinateTransform<?> openJson( final String url )
 	{
 		final Path path = Paths.get( url );
 		String string;
@@ -234,10 +234,10 @@ public class NgffTransformations
 //		System.out.println( elem );
 
 //		final CoordinateTransformation ct = gson.fromJson( elem.getAsJsonArray().get( 0 ), CoordinateTransformation.class );
-		final CoordinateTransformation ct = gson.fromJson( elem, CoordinateTransformation.class );
+		final CoordinateTransform<?> ct = gson.fromJson( elem, CoordinateTransform.class );
 //		System.out.println( ct );
 
-		final CoordinateTransformation< ? > nct = CoordinateTransformation.create( ct );
+		final CoordinateTransform< ? > nct = CoordinateTransform.create( ct );
 		return nct;
 //		final RealTransform tform = nct.getTransform( null );
 //		System.out.println( tform );
@@ -245,10 +245,10 @@ public class NgffTransformations
 //		return tform;
 	}
 
-	public static void save( final String jsonFile, final CoordinateTransformation<?> transform )
+	public static void save( final String jsonFile, final CoordinateTransform<?> transform )
 	{
 		final GsonBuilder gb = new GsonBuilder();
-		gb.registerTypeAdapter(CoordinateTransformation.class, new CoordinateTransformationAdapter() );
+		gb.registerTypeAdapter(CoordinateTransform.class, new CoordinateTransformAdapter() );
 		final Gson gson = gb.create();
 		try( FileWriter writer = new FileWriter( jsonFile ))
 		{
@@ -261,7 +261,7 @@ public class NgffTransformations
 		}
 	}
 
-	public static < T extends NativeType< T > & RealType< T > > NgffDisplacementsTransformation save(
+	public static < T extends NativeType< T > & RealType< T > > DisplacementFieldCoordinateTransform<?> save(
 			final N5Writer n5,
 			final String dataset,
 			final RandomAccessibleInterval< T > dfield,
@@ -272,20 +272,143 @@ public class NgffTransformations
 			final String unit,
 			final int[] blockSize,
 			final Compression compression,
-			final int nThreads ) throws IOException
+			final int nThreads )
 	{
 		final String[] axisNames = ( spacing.length == 2 ) ? new String[] { "x", "y" } : new String[] { "x", "y", "z"};
 		final CoordinateSystem inputCoordinates = new CoordinateSystem( inName, Axis.space( unit, axisNames ) );
 		final CoordinateSystem outputCoordinates = new CoordinateSystem( outName, Axis.space( unit, axisNames ) );
 
 		final ThreadPoolExecutor threadPool = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
-		N5DisplacementField.saveDisplacementFieldNgff( n5, dataset, "/", inputCoordinates, outputCoordinates,
+		final DisplacementFieldCoordinateTransform<?> ngffDfield = saveDisplacementFieldNgff( n5, dataset, "/", inputCoordinates, outputCoordinates,
 				dfield, spacing, offset, blockSize, compression, threadPool );
 
-		final NgffDisplacementsTransformation ngffDfield = new NgffDisplacementsTransformation( dataset, "linear" );
 		return ngffDfield;
+
+//		final DisplacementFieldCoordinateTransform ngffDfield = new DisplacementFieldCoordinateTransform( "", dataset, "linear" );
+//		return ngffDfield;
 //		N5DisplacementField.addCoordinateTransformations( n5, "/", ngffDfield );
 	}
+
+	public static void addCoordinateTransformations( final N5Writer n5, final String groupPath, final CoordinateTransform<?> transform ) {
+
+		// TODO untested
+		final CoordinateTransform<?>[] cts = n5.getAttribute(groupPath, CoordinateTransform.KEY, CoordinateTransform[].class);
+		final CoordinateTransform<?>[] ctsOut = new CoordinateTransform[ cts.length + 1 ];
+		System.arraycopy(cts, 0, ctsOut, 0, cts.length);
+		ctsOut[ cts.length ] = transform;
+
+		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
+	}
+
+	public static final <T extends NativeType<T> & RealType<T>> DisplacementFieldCoordinateTransform<?> saveDisplacementFieldNgff(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final RandomAccessibleInterval<T> dfield,
+			final double[] spacing,
+			final double[] offset,
+			final int[] blockSize,
+			final Compression compression,
+			ExecutorService exec ) {
+
+		int[] vecBlkSz;
+		if( blockSize.length >= dfield.numDimensions() )
+			vecBlkSz = blockSize;
+		else {
+			vecBlkSz = new int[ blockSize.length + 1 ];
+			vecBlkSz[ 0 ] = (int)dfield.dimension( 0 );
+			for( int i = 1; i < vecBlkSz.length; i++ )
+			{
+				vecBlkSz[ i ] = blockSize[ i - 1 ];
+			}
+		}
+
+		try
+		{
+			N5Utils.save(dfield, n5Writer, dataset, vecBlkSz, compression, exec);
+		}
+		catch ( final InterruptedException e )
+		{
+			e.printStackTrace();
+		}
+		catch ( final ExecutionException e )
+		{
+			e.printStackTrace();
+		}
+
+		final String vecFieldCsName =  inputCoordinates.getName() + "_dfield";
+		final CoordinateSystem[] cs = new CoordinateSystem[] {
+				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates ) };
+		n5Writer.setAttribute(dataset, CoordinateSystem.KEY, cs);
+
+		final CoordinateTransform[] ct = new CoordinateTransform[] {
+				createTransformation( "", spacing, offset, dataset, cs[0] ) };
+		n5Writer.setAttribute(dataset, CoordinateTransform.KEY, ct );
+
+		return new DisplacementFieldCoordinateTransform( "", dataset, "linear" );
+	}
+
+
+	public static CoordinateTransform<?> createTransformation(final String name,
+			final double[] scale, final double[] offset,
+			final String dataset, final CoordinateSystem output) {
+
+		CoordinateTransform<?> ct;
+		if ((scale != null || allOnes(scale)) && (offset != null || allZeros(offset))) {
+			ct = new SequenceCoordinateTransform(name, dataset, output.getName(),
+					new CoordinateTransform[]{
+							new ScaleCoordinateTransform(prepend(1, scale)),
+							new TranslationCoordinateTransform(prepend(0, offset))});
+		} else if (offset != null || !allZeros(offset))
+			ct = new TranslationCoordinateTransform(name, dataset, output.getName(), prepend(0, offset));
+		else if (scale != null || !allOnes(scale))
+			ct = new ScaleCoordinateTransform(name, dataset, output.getName(), prepend(1, scale));
+		else
+			ct = new IdentityCoordinateTransform(name, dataset, output.getName());
+
+		return ct;
+	}
+
+	private static boolean allZeros(final double[] x) {
+
+		for (int i = 0; i < x.length; i++)
+			if (x[i] != 0.0)
+				return false;
+
+		return true;
+	}
+
+	private static boolean allOnes(final double[] x) {
+
+		for (int i = 0; i < x.length; i++)
+			if (x[i] != 1.0)
+				return false;
+
+		return true;
+	}
+
+	private static double[] prepend(double val, double[] array) {
+
+		final double[] out = new double[array.length + 1];
+		out[0] = val;
+		for (int i = 1; i < out.length; i++) {
+			out[i] = array[i - 1];
+		}
+		return out;
+	}
+
+	public static CoordinateSystem createVectorFieldCoordinateSystem(final String name, final CoordinateSystem input) {
+
+		final Axis[] vecAxes = new Axis[input.getAxes().length + 1];
+		vecAxes[0] = new Axis("d", "displacement", null, true);
+		for (int i = 1; i < vecAxes.length; i++)
+			vecAxes[i] = input.getAxes()[i - 1];
+
+		return new CoordinateSystem(name, vecAxes);
+	}
+
 
 	/**
 	 * returns null if no permutation needed
@@ -299,7 +422,7 @@ public class NgffTransformations
 		final Axis[] axes = cs.getAxes();
 		final int n = axes.length;
 
-		if ( axes[ n - 1 ].getType().equals( Axis.DISPLACEMENT_TYPE ))
+		if ( axes[ n - 1 ].getType().equals( Axis.DISPLACEMENT))
 			return null;
 		else
 		{
@@ -318,7 +441,7 @@ public class NgffTransformations
 			int k = 0;
 			for( int i = 0; i < n; i++ )
 			{
-				if ( axes[ i ].getType().equals( Axis.DISPLACEMENT_TYPE ))
+				if ( axes[ i ].getType().equals( Axis.DISPLACEMENT))
 					vecDim = i;
 				else
 					permutation[i] = k++;
@@ -340,18 +463,29 @@ public class NgffTransformations
 			final N5Reader n5, final String dataset ) throws Exception {
 
 		// TODO move to somewhere more central
-		final TransformGraph g = openGraph( n5, dataset );
+		final TransformGraph g = Common.openGraph( n5, dataset );
 
 		// TODO need to be smarter about which coordinate system to get
-		final CoordinateSystem cs = g.getCoordinateSystems().iterator().next();
+		final CoordinateSystem cs = g.getCoordinateSystems().getCollection().iterator().next();
 		return vectorAxisLastNgff( cs );
 	}
 
-	public static GsonBuilder gsonBuilder()
-	{
+	public static GsonBuilder gsonBuilder() {
+
 		final GsonBuilder gb = new GsonBuilder();
-		gb.registerTypeAdapter(CoordinateTransformation.class, new CoordinateTransformationAdapter() );
+		gb.registerTypeAdapter(CoordinateTransform.class, new CoordinateTransformAdapter());
 		return gb;
+	}
+
+	public static CoordinateTransform<?> createAffine(AffineGet transform) {
+
+		if (transform instanceof TranslationGet) {
+			return new TranslationCoordinateTransform(((TranslationGet)transform).getTranslationCopy());
+		} else if (transform instanceof ScaleGet) {
+			return new ScaleCoordinateTransform(((ScaleGet)transform).getScaleCopy());
+		} else {
+			return new AffineCoordinateTransform(transform.getRowPackedCopy());
+		}
 	}
 
 }

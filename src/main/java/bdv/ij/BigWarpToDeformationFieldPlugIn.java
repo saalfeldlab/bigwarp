@@ -48,10 +48,11 @@ import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
-import org.janelia.saalfeldlab.n5.metadata.omengff.NgffAffineTransformation;
-import org.janelia.saalfeldlab.n5.metadata.omengff.NgffDisplacementsTransformation;
-import org.janelia.saalfeldlab.n5.metadata.omengff.NgffSequenceTransformation;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.AffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.CoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.DisplacementFieldCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.SequenceCoordinateTransform;
 
 import bdv.gui.ExportDisplacementFieldFrame;
 import bigwarp.BigWarp;
@@ -102,7 +103,6 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
 import net.imglib2.view.composite.GenericComposite;
-import ome.ngff.transformations.CoordinateTransformation;
 
 /**
  * ImageJ plugin to convert the thin plate spline to a displacement field.
@@ -258,9 +258,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			ltm = landmarkModel;
 
 		final int ndims = ltm.getNumdims();
-		final double[] spacing = new double[ ndims ];
-		final double[] offset = new double[ ndims ];
-		final long[] dims = new long[ ndims ];
+		double[] spacing = new double[ ndims ];
+		double[] offset = new double[ ndims ];
+		long[] dims = new long[ ndims ];
 		if ( params.spacing != null )
 
 			spacing = params.spacing;
@@ -635,7 +635,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final boolean flatten,
 			final boolean inverse,
 			final double invTolerance,
-			final int invMaxIters ) throws IOException
+			final int invMaxIters )
 	{
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
@@ -679,7 +679,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			// the affine part
 			final AffineGet affine = bwXfm.affinePartOfTps();
-			final NgffAffineTransformation ngffAffine = new NgffAffineTransformation( affine.getRowPackedCopy() );
+			final AffineCoordinateTransform ngffAffine = new AffineCoordinateTransform( affine.getRowPackedCopy() );
 
 			// displacement field (with the affine removed)
 			final RealTransformSequence totalNoAffine = new RealTransformSequence();
@@ -695,12 +695,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			else
 			{
-				final NgffDisplacementsTransformation dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
 				// the total transform
-				final NgffSequenceTransformation totalTform = new NgffSequenceTransformation( inputSpace, outputSpace,
-						new CoordinateTransformation[]{ dfieldTform, ngffAffine  });
+				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform( inputSpace, outputSpace,
+						new CoordinateTransform[]{ dfieldTform, ngffAffine  });
 
-				N5DisplacementField.addCoordinateTransformations( n5, "/", totalTform );
+				NgffTransformations.addCoordinateTransformations( n5, "/", totalTform );
 			}
 		}
 		else
@@ -717,8 +717,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			else
 			{
-				final NgffDisplacementsTransformation ngffTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
-				N5DisplacementField.addCoordinateTransformations( n5, "/", ngffTform );
+				final DisplacementFieldCoordinateTransform<?> ngffTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				NgffTransformations.addCoordinateTransformations( n5, "/", ngffTform );
 			}
 		}
 
