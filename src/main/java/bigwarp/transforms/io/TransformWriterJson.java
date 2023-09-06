@@ -30,7 +30,7 @@ public class TransformWriterJson {
 			final Writer writer = Channels.newWriter(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
 			BigwarpSettings.gson.toJson(transformObj, writer);
 			writer.flush();
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -42,11 +42,11 @@ public class TransformWriterJson {
 			final Path path = Paths.get(f.getCanonicalPath());
 			final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
 			final Reader reader = Channels.newReader(FileChannel.open(path, options), StandardCharsets.UTF_8.name());
-			JsonObject json = BigwarpSettings.gson.fromJson( reader, JsonObject.class );
+			final JsonObject json = BigwarpSettings.gson.fromJson( reader, JsonObject.class );
 
 			read( bw, json );
 
-		} catch ( IOException e )
+		} catch ( final IOException e )
 		{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -55,14 +55,14 @@ public class TransformWriterJson {
 
 	public static JsonObject write(LandmarkTableModel ltm, BigWarpTransform bwTransform) {
 
-		JsonObject transformObj = new JsonObject();
+		final JsonObject transformObj = new JsonObject();
 		transformObj.addProperty("type", bwTransform.getTransformType() );
 		transformObj.addProperty("maskInterpolationType", bwTransform.getMaskInterpolationType() );
 		transformObj.add("landmarks", ltm.toJson());
 
 		if( bwTransform.isMasked() )
 		{
-			PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
+			final PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
 			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
 		}
 
@@ -79,10 +79,10 @@ public class TransformWriterJson {
 
 		if( json.has( "mask" ))
 		{
-			JsonObject maskParams = json.get("mask").getAsJsonObject();
+			final JsonObject maskParams = json.get("mask").getAsJsonObject();
 			final PlateauSphericalMaskRealRandomAccessible maskFromJson = BigwarpSettings.gson.fromJson( maskParams, PlateauSphericalMaskRealRandomAccessible.class );
 
-			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTransformMaskSource().getRandomAccessible();
+			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTransformPlateauMaskSource().getRandomAccessible();
 			mask.setFalloffShape( maskFromJson.getFallOffShape() );
 			mask.setSquaredRadius( maskFromJson.getSquaredRadius() );
 			mask.setCenter( maskFromJson.getCenter() );
