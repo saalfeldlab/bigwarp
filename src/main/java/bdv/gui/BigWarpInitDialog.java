@@ -102,7 +102,7 @@ public class BigWarpInitDialog extends JFrame
 
 	public static final String ImageJPrefix = "imagej://";
 
-	private String projectPath;
+	private String projectLandmarkPath;
 	private String imageList;
 	private String movingList;
 	private String transformList;
@@ -186,10 +186,12 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static <T> void runBigWarp( final String projectPath, final String[] images, final String[] moving, final String[] transforms )
+	public static <T> void runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
-		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
+		final boolean haveProjectLandmarkArg = projectLandmarkPath != null && !projectLandmarkPath.isEmpty();
+		final boolean haveProject = haveProjectLandmarkArg && projectLandmarkPath.endsWith(".json");
+		final boolean haveLandmarks = haveProjectLandmarkArg && projectLandmarkPath.endsWith(".csv");
 
 		final int nThreads = IJ.getInstance() != null ? Prefs.getThreads() : 1;
 		final BigWarpViewerOptions bwOpts = ( BigWarpViewerOptions ) BigWarpViewerOptions.options().numRenderingThreads( nThreads );
@@ -236,9 +238,9 @@ public class BigWarpInitDialog extends JFrame
 			data.applyTransformations();
 			bw = new BigWarp<>( data, bwOpts, new ProgressWriterIJ() );
 			if( haveProject )
-			{
-				bw.loadSettings( projectPath, true );
-			}
+				bw.loadSettings( projectLandmarkPath, true );
+			else if( haveLandmarks )
+				bw.loadLandmarks(projectLandmarkPath);
 		}
 		catch ( final SpimDataException e )
 		{
@@ -265,7 +267,11 @@ public class BigWarpInitDialog extends JFrame
 		}
 
 		final BigWarpData< T > data = BigWarpInit.initData();
-		final boolean haveProject = projectPath != null && !projectPath.isEmpty();
+
+		projectLandmarkPath = projectLandmarkPath == null ? projectPathTxt.getText() : projectLandmarkPath;
+		final boolean haveProjectLandmarkArg = projectLandmarkPath != null && !projectLandmarkPath.isEmpty();
+		final boolean haveProject = haveProjectLandmarkArg && projectLandmarkPath.endsWith(".json");
+		final boolean haveLandmarks = haveProjectLandmarkArg && projectLandmarkPath.endsWith(".csv");
 
 		if( !haveProject )
 		{
@@ -322,7 +328,9 @@ public class BigWarpInitDialog extends JFrame
 			data.applyTransformations();
 			bw = new BigWarp<>( data, new ProgressWriterIJ() );
 			if( haveProject )
-				bw.loadSettings( projectPath, true );
+				bw.loadSettings( projectLandmarkPath, true );
+			else if( haveLandmarks )
+				bw.loadLandmarks(projectLandmarkPath);
 		}
 		catch ( final SpimDataException e )
 		{
@@ -360,7 +368,7 @@ public class BigWarpInitDialog extends JFrame
 		ctxt.anchor = GridBagConstraints.LINE_END;
 		ctxt.fill = GridBagConstraints.NONE;
 		ctxt.insets = new Insets(OUTER_PAD, OUTER_PAD, MID_PAD, BUTTON_PAD);
-		panel.add( new JLabel("Open BigWarp project:"), ctxt );
+		panel.add( new JLabel("BigWarp project or landmarks:"), ctxt );
 
 		final GridBagConstraints gbcBar = new GridBagConstraints();
 		gbcBar.gridx = 1;
@@ -815,8 +823,8 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public void setParameters( final String projectPath, final String images, final String moving, final String transforms ) {
-		this.projectPath = projectPath;
+	public void setParameters( final String projectLandmarkPath, final String images, final String moving, final String transforms ) {
+		this.projectLandmarkPath = projectLandmarkPath;
 		this.imageList = images;
 		this.movingList = moving;
 		this.transformList = transforms;
