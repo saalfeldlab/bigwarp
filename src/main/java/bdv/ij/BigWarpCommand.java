@@ -10,11 +10,15 @@ import bdv.gui.BigWarpInitDialog;
 import ij.Macro;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.Recorder;
+import net.imagej.DatasetService;
 
 @Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp Command" )
 public class BigWarpCommand implements Command, PlugIn
 {
 	private boolean initialRecorderState;
+
+	@Parameter
+	private DatasetService datasetService;
 
 	public BigWarpCommand()
 	{
@@ -36,7 +40,7 @@ public class BigWarpCommand implements Command, PlugIn
 			BigWarpInitDialog.runMacro( macroOptions );
 		else
 		{
-			final BigWarpInitDialog dialog = BigWarpInitDialog.createAndShow( null );
+			final BigWarpInitDialog dialog = BigWarpInitDialog.createAndShow( datasetService );
 			// dialog sets recorder to its initial state on cancel or execution
 			dialog.setInitialRecorderState( initialRecorderState );
 		}
