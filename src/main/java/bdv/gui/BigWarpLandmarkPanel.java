@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -45,23 +45,23 @@ import org.slf4j.LoggerFactory;
 import bigwarp.landmarks.LandmarkTableModel;
 
 public class BigWarpLandmarkPanel extends JPanel {
-	
+
 	private static final long serialVersionUID = 8470689265638231579L;
 
 	protected LandmarkTableModel tableModel;
 	protected JTable table;
-	
+
 	public final Logger logger = LoggerFactory.getLogger( BigWarpLandmarkPanel.class );
 
     public BigWarpLandmarkPanel( LandmarkTableModel tableModel ) {
-        
+
     	super(new GridLayout(1,0));
     	setTableModel( tableModel );
-        
+
         genJTable();
-        
+
         //Create the scroll pane and add the table to it.
-        JScrollPane scrollPane = new JScrollPane(table);
+        final JScrollPane scrollPane = new JScrollPane(table);
 
         //Add the scroll pane to this panel.
         add(scrollPane);
@@ -70,7 +70,11 @@ public class BigWarpLandmarkPanel extends JPanel {
     public LandmarkTableModel getTableModel() {
 		return tableModel;
 	}
-    
+
+	public int numDimensions() {
+		return tableModel.getNumdims();
+	}
+
     public void genJTable()
     {
 		table = new JTableChecking( getTableModel() );
@@ -93,7 +97,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 		/*
 		 * Add a listener to update the next row the tableModel will edit
 		 * based on the selected row.
-		 * 
+		 *
 		 * Specifically, when the user changes the selected row of the table, the
 		 * listener checks whether any of those rows are "incomplete."
 		 * If so, the first row in the selection that does not have a moving image
@@ -108,7 +112,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 				logger.trace( "table selection changed" );
 				boolean setMoving = false;
 				boolean setFixed = false;
-				int row = table.getSelectedRow();
+				final int row = table.getSelectedRow();
 
 				// if no rows are selected, the next edit should add a new row
 				if( row < 0 )
@@ -137,18 +141,18 @@ public class BigWarpLandmarkPanel extends JPanel {
 			}
 		});
     }
-    
+
     public void setTableModel( LandmarkTableModel tableModel )
     {
 		this.tableModel = tableModel;
 		genJTable();
 	}
-    
+
     public JTable getJTable()
     {
     	return table;
     }
-	
+
 	/**
 	 * A JTable implementation that prevents keybindings from being propagated
 	 * while editing cells. This prevents hotkeys from being activated.
@@ -163,6 +167,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 			super( tableModel );
 		}
 
+		@Override
 		protected boolean processKeyBinding(
 				KeyStroke ks, KeyEvent e,
 				int condition, boolean pressed )
@@ -196,7 +201,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 				@Override
 				public void focusLost( FocusEvent e )
 				{
-					CellEditor cellEditor = table.getCellEditor();
+					final CellEditor cellEditor = table.getCellEditor();
 					if ( cellEditor != null )
 					{
 						if ( cellEditor.getCellEditorValue() != null )
@@ -240,7 +245,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 		public Component getTableCellEditorComponent( JTable table, Object value,
 				boolean isSelected, int row, int column )
 		{
-			TextFieldCell tf = (TextFieldCell) super.getTableCellEditorComponent( table,
+			final TextFieldCell tf = (TextFieldCell) super.getTableCellEditorComponent( table,
 					value, isSelected, row, column );
 			if ( value != null )
 			{
@@ -268,7 +273,7 @@ public class BigWarpLandmarkPanel extends JPanel {
 		        else if (columnClass.equals(String.class))
 		            return textField.getText();
 		    }
-		    catch (NumberFormatException ex) {
+		    catch (final NumberFormatException ex) {
 
 		    }
 

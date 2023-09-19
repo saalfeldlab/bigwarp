@@ -614,6 +614,7 @@ public class BigWarp< T >
 		landmarkModel.setMessage( message );
 
 		landmarkPanel.setTableModel(landmarkModel);
+		setupLandmarkFrame();
 
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
@@ -669,8 +670,8 @@ public class BigWarp< T >
 		viewerP.setNumDim( ndims );
 		viewerQ.setNumDim( ndims );
 
-		overlayP.is2D( options.values.is2D() );
-		overlayQ.is2D( options.values.is2D() );
+//		overlayP.is2D( options.values.is2D() );
+//		overlayQ.is2D( options.values.is2D() );
 
 		bwTransform = new BigWarpTransform( landmarkModel );
 		bwTransform.initializeInverseParameters(data);
@@ -801,6 +802,12 @@ public class BigWarp< T >
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
 		addDefaultTableMouseListener();
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this );
+
+		if( overlayP != null )
+			overlayP.setLandmarkPanel(landmarkPanel);
+
+		if( overlayQ != null )
+			overlayQ.setLandmarkPanel(landmarkPanel);
 
 		if ( loc != null )
 			landmarkFrame.setLocation( loc );
@@ -2226,7 +2233,7 @@ public class BigWarp< T >
 		getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "unchecked" } )
 	public void importTransformMaskSource( final String uri ) {
 
 		URI encodedUri;
@@ -2809,6 +2816,10 @@ public class BigWarp< T >
 	 */
 	public static <T> int detectNumDims( List< SourceAndConverter< T > > sources )
 	{
+		// default to 3D if bigwarp is opened without any sources
+		if( sources.size() == 0 )
+			return 3;
+
 		boolean isAnySource3d = false;
 		for ( final SourceAndConverter< T > sac : sources )
 		{

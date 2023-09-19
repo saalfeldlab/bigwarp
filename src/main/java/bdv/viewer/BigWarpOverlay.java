@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -40,20 +40,16 @@ import bigwarp.landmarks.LandmarkTableModel;
 public class BigWarpOverlay {
 
 	private BigWarpViewerPanel viewer;
-	
-	protected JTable table;
 
-	protected LandmarkTableModel landmarkModel;
+	private BigWarpLandmarkPanel landmarkPanel;
 
 	protected RealTransform estimatedXfm;
-	
+
 	protected boolean isTransformed = false;
 
 	private int hoveredIndex;
 
 	protected final boolean isMoving;
-
-	protected boolean is3d;
 
 	protected final double[] spot;
 
@@ -61,55 +57,34 @@ public class BigWarpOverlay {
 	/** The transform for the viewer current viewpoint. */
 	private final AffineTransform3D transform = new AffineTransform3D();
 
-	public BigWarpOverlay( final BigWarpViewerPanel viewer, BigWarpLandmarkPanel landmarkpanel )
+
+	public BigWarpOverlay( final BigWarpViewerPanel viewer, BigWarpLandmarkPanel landmarkPanel )
 	{
 		this.viewer = viewer;
-		this.table = landmarkpanel.getJTable();
-		this.landmarkModel = landmarkpanel.getTableModel();
-
-		if( landmarkModel.getNumdims() == 3 )
-			is3d = true;
-		else
-			is3d = false;
-
+		setLandmarkPanel(landmarkPanel);
 		isMoving = viewer.getIsMoving();
 
 		spot = new double[ 3 ];
 		viewerCoords = new double[ 3 ];
 	}
 
-	public void is2D( final boolean is2d )
-	{
-		this.is3d = !is2d;
-	}
-
-
 	public int getHoveredIndex()
 	{
 		return hoveredIndex;
 	}
-
 
 	public void setHoveredIndex( int hoveredIndex )
 	{
 		this.hoveredIndex = hoveredIndex;
 	}
 
+	public void setLandmarkPanel( final BigWarpLandmarkPanel landmarkPanel )
+	{
+		this.landmarkPanel = landmarkPanel;
+	}
 
 	public void paint( final Graphics2D g )
 	{
-		// Save graphic device original settings
-		final Composite originalComposite = g.getComposite();
-		final Stroke originalStroke = g.getStroke();
-		final Color originalColor = g.getColor();
-
-		// get selected points
-		int[] selectedRows = table.getSelectedRows();
-		Arrays.sort( selectedRows );
-		boolean[] isSelected = new boolean[ landmarkModel.getRowCount() ];
-		for( int i : selectedRows )
-			isSelected[ i ] = true;
-
 
 		/*
 		 * Draw spots.
@@ -117,17 +92,34 @@ public class BigWarpOverlay {
 		if ( viewer.getSettings().areLandmarksVisible() )
 		{
 
-			final BasicStroke hlStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight );
-			final BasicStroke selStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight / 2 );
+			final LandmarkTableModel landmarkModel = landmarkPanel.getTableModel();
+			final JTable table = landmarkPanel.getJTable();
+			final boolean is3d = landmarkPanel.numDimensions() == 3;
 
-			final double radiusRatio = ( Double ) viewer.getSettings().get( 
+			// Save graphic device original settings
+			final Composite originalComposite = g.getComposite();
+			final Stroke originalStroke = g.getStroke();
+			final Color originalColor = g.getColor();
+
+			// get selected points
+			final int[] selectedRows = table.getSelectedRows();
+			Arrays.sort( selectedRows );
+			final boolean[] isSelected = new boolean[ landmarkModel.getRowCount() ];
+			for( final int i : selectedRows )
+				isSelected[ i ] = true;
+
+
+			final BasicStroke hlStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight );
+			// final BasicStroke selStroke = new BasicStroke( (int)viewer.getSettings().strokeWeight / 2 );
+
+			final double radiusRatio = ( Double ) viewer.getSettings().get(
 					BigWarpViewerSettings.KEY_SPOT_RADIUS_RATIO );
-			
+
 			final double radius = viewer.getSettings().getSpotSize();
 
 			Stroke stroke;
 			stroke = BigWarpViewerSettings.NORMAL_STROKE;
-			
+
 			FontMetrics fm = null;
 			Font font = null;
 			int fonthgt = 0;
@@ -149,7 +141,7 @@ public class BigWarpOverlay {
 				textBoxColorHl = new Color( color.getRed(), color.getGreen(), color.getBlue(), 255 );
 				textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
 
-			}		final Color desaturatedColor = null;
+			}
 
 			final int nRows = landmarkModel.getRowCount();
 			for( int index = 0; index < nRows; index++ )
@@ -201,13 +193,13 @@ public class BigWarpOverlay {
 					else
 						arad = rad;
 
-					double srad = arad + strokeW;
+					final double srad = arad + strokeW;
 
 					// vary size
-					g.fillOval( ( int ) ( viewerCoords[ 0 ] - arad ), 
-								( int ) ( viewerCoords[ 1 ] - arad ), 
+					g.fillOval( ( int ) ( viewerCoords[ 0 ] - arad ),
+								( int ) ( viewerCoords[ 1 ] - arad ),
 								( int ) ( 2 * arad + 1 ), ( int ) ( 2 * arad + 1) );
-					
+
 					if( isSelected[ index ] )
 					{
 						g.setStroke( hlStroke );
@@ -234,30 +226,31 @@ public class BigWarpOverlay {
 					{
 						final int tx = ( int ) ( viewerCoords[ 0 ] + arad + 5 );
 						final int ty = ( int ) viewerCoords[ 1 ];
-						
-						String name = landmarkModel.getNames().get(index);
-						int strwidth = fm.stringWidth( name );
-						
+
+						final String name = landmarkModel.getNames().get(index);
+						final int strwidth = fm.stringWidth( name );
+
 						if( hoveredIndex == index )
 							g.setColor( textBoxColorHl );
 						else
 							g.setColor( textBoxColor );
-						
+
 						g.fillRect( tx - 1, ty - fonthgt + 2, strwidth + 2, fonthgt);
-						
+
 						g.setColor( Color.BLACK );
 						g.setFont( font );
 						g.drawString( name, tx, ty );
-						
+
 					}
 				}
 			}
+
+			// Restore graphic device original settings
+			g.setComposite( originalComposite );
+			g.setStroke( originalStroke );
+			g.setColor( originalColor );
 		}
 
-		// Restore graphic device original settings
-		g.setComposite( originalComposite );
-		g.setStroke( originalStroke );
-		g.setColor( originalColor );
 	}
 
 
@@ -272,17 +265,17 @@ public class BigWarpOverlay {
 		 */
 		state.getViewerTransform( transform );
 	}
-	
+
 	public void setEstimatedTransform( final RealTransform estimatedXfm )
 	{
 		this.estimatedXfm = estimatedXfm;
 	}
-	
+
 	public boolean getIsTransformed()
 	{
 		return isTransformed;
 	}
-	
+
 	public void setIsTransformed( boolean isTransformed )
 	{
 		this.isTransformed = isTransformed;

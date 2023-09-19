@@ -177,7 +177,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		in.endObject();
 		final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
 		if (is2D != bigWarp.options.values.is2D()) {
-			bigWarp.options.is2D( is2D );
 			bigWarp.changeDimensionality( is2D );
 		}
 		return this;
@@ -204,14 +203,14 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 			/* We only want the lowest setupId with the same url*/
 
-			for ( Map.Entry< Integer, SourceInfo > entry : value.entrySet() )
+			for ( final Map.Entry< Integer, SourceInfo > entry : value.entrySet() )
 			{
 				if ( !entry.getValue().isSerializable() )
 					continue;
 
-				SourceInfo sourceInfo = entry.getValue();
-				int id = sourceInfo.getId();
-				URI uriObj;
+				final SourceInfo sourceInfo = entry.getValue();
+				final int id = sourceInfo.getId();
+				final URI uriObj;
 				String uri = sourceInfo.getUri();
 				final String name = sourceInfo.getName();
 				out.name( "" + id );
@@ -241,7 +240,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			while ( in.hasNext() )
 			{
 				//TODO Caleb: What to do if `data` alrread has a source for this `id`?
-				int id = Integer.parseInt( in.nextName() );
+				final int id = Integer.parseInt( in.nextName() );
 				in.beginObject();
 				String uri = null;
 				String name = null;
@@ -439,7 +438,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final SynchronizedViewerState state = panel.state();
 			state.setGroupsActive( state.getActiveGroups(), false );
 			state.removeGroups( state.getGroups() );
-			int i = 0;
 			while ( in.hasNext() )
 			{
 				in.beginObject();
@@ -677,7 +675,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			in.beginObject();
 			while ( in.hasNext() )
 			{
-				int id = Integer.parseInt( in.nextName() );
+				final int id = Integer.parseInt( in.nextName() );
 				double fullRangeMin = 0;
 				double fullRangeMax = 0;
 				double rangeMin = 0;
