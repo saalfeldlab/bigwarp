@@ -146,6 +146,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			{
 			case "Sources":
 				new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).read( in );
+				final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
+				if (is2D != bigWarp.options.values.is2D()) {
+					bigWarp.changeDimensionality( is2D );
+				}
 				break;
 			case "ViewerP":
 				new BigWarpViewerPanelAdapter( viewerP ).read( in );
@@ -175,10 +179,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		}
 		in.endObject();
-		final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
-		if (is2D != bigWarp.options.values.is2D()) {
-			bigWarp.changeDimensionality( is2D );
-		}
 		return this;
 	}
 
