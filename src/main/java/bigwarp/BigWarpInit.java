@@ -99,6 +99,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
 import net.imglib2.util.Util;
+import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 public class BigWarpInit
@@ -187,7 +188,7 @@ public class BigWarpInit
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
 	{
-		BigWarpData data = initData();
+		final BigWarpData data = initData();
 		int nameIdx = 0;
 		int setupId = 0;
 		// moving
@@ -248,11 +249,11 @@ public class BigWarpInit
 
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
-		ImagePlusLoader loader = new ImagePlusLoader( ip );
-		SpimDataMinimal[] dataList = loader.loadAll( setupId );
+		final ImagePlusLoader loader = new ImagePlusLoader( ip );
+		final SpimDataMinimal[] dataList = loader.loadAll( setupId );
 
 		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
-		for ( SpimDataMinimal data : dataList )
+		for ( final SpimDataMinimal data : dataList )
 		{
 			final LinkedHashMap< Source< T >, SourceInfo > map = createSources( bwdata, data, setupId, isMoving );
 			sourceInfoMap.putAll( map );
@@ -359,12 +360,22 @@ public class BigWarpInit
 		boolean first = true;
 		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 
-		AffineTransform3D res = datasetResolution( data );
+		final AffineTransform3D res = datasetResolution( data );
 		final long nc = data.getChannels();
+		boolean hasZ = false;
+
+		final CalibratedAxis[] axes = new CalibratedAxis[ data.numDimensions() ];
+		data.axes( axes );
+		for (int i = 0; i < data.numDimensions(); i++) {
+			if (axes[i].type().equals(Axes.Z))
+			{
+				hasZ = true;
+				break;
+			}
+		}
+
 		if ( nc > 1 )
 		{
-			CalibratedAxis[] axes = new CalibratedAxis[ data.numDimensions() ];
-			data.axes( axes );
 			int channelIdx = -1;
 			for ( int i = 0; i < data.numDimensions(); i++ )
 			{
@@ -377,8 +388,11 @@ public class BigWarpInit
 
 			for ( int c = 0; c < nc; c++ )
 			{
+				final IntervalView<RealType<?>> channelRaw = Views.hyperSlice( data, channelIdx, c );
+				final IntervalView<RealType<?>> channel = hasZ ? channelRaw : Views.addDimension( channelRaw, 0, 0 );
+
 				@SuppressWarnings( "unchecked" )
-				RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( Views.hyperSlice( data, channelIdx, c ), Util.getTypeFromInterval( data ), res, data.getName() );
+				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, Util.getTypeFromInterval( data ), res, data.getName() );
 
 				final SourceInfo info = new SourceInfo( baseId + c, isMoving, data.getName(), () -> data.getSource() );
 				info.setSerializable( first );
@@ -390,8 +404,10 @@ public class BigWarpInit
 		}
 		else
 		{
+			final RandomAccessibleInterval<RealType<?>> img = hasZ ? data : Views.addDimension( data, 0, 0 );
+
 			@SuppressWarnings( "unchecked" )
-			RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( data, Util.getTypeFromInterval( data ), res, data.getName() );
+			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, Util.getTypeFromInterval( data ), res, data.getName() );
 
 			final SourceInfo info = new SourceInfo( baseId, isMoving, data.getName(), () -> data.getSource() );
 			info.setSerializable( true );
@@ -428,7 +444,7 @@ public class BigWarpInit
 
 		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		int setupId = baseId;
-		for ( SourceAndConverter sac : tmpSources )
+		for ( final SourceAndConverter sac : tmpSources )
 		{
 			final Source< T > source = sac.getSpimSource();
 			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
@@ -452,11 +468,11 @@ public class BigWarpInit
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
 
-		URI encodedUri = N5URI.encodeAsUri( uri );
+		final URI encodedUri = N5URI.encodeAsUri( uri );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
 		{
-			N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
+			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
 			final String firstScheme = encodedUri.getScheme().toLowerCase();
 			final N5Reader n5reader;
 			switch ( firstScheme )
@@ -490,7 +506,7 @@ public class BigWarpInit
 				final Source< T > source = loadN5Source( n5reader, group );
 				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
 			}
-			catch ( Exception ignored )
+			catch ( final Exception ignored )
 			{}
 			if ( sourceStateMap.isEmpty() )
 			{
@@ -581,7 +597,7 @@ public class BigWarpInit
 						{
 							return spimData.getBasePath().getCanonicalPath();
 						}
-						catch ( IOException e )
+						catch ( final IOException e )
 						{
 							return null;
 						}
@@ -596,7 +612,7 @@ public class BigWarpInit
 				}
 				return sources;
 			}
-			catch ( SpimDataException e )
+			catch ( final SpimDataException e )
 			{
 				e.printStackTrace();
 			}
@@ -907,8 +923,8 @@ public class BigWarpInit
 		final int numMovingSources = seqP.getViewSetups().size();
 		final int numTargetSources = seqQ.getViewSetups().size();
 
-		int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
-		int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
+		final int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
+		final int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
 //		List<Integer> movingSourceIndices = IntStream.range( 0, numMovingSources ).collect( Collectors.toList());
 //		List<Integer> targetSourceIndices = IntStream.range( numMovingSources, numTargetSources + numMovingSources )
 //				.collect( Collectors.toList());
@@ -1034,15 +1050,15 @@ public class BigWarpInit
 			BigWarpInit.add( bwdata, mvgSrcs );
 			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id, false ) );
 		}
-		catch ( URISyntaxException e )
+		catch ( final URISyntaxException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			e.printStackTrace();
 		}
@@ -1065,7 +1081,7 @@ public class BigWarpInit
 
 		int id = 0;
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
-		LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
+		final LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 		id += mvgSrcs.size();
 		BigWarpInit.add( bwdata, mvgSrcs );
 		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
@@ -1138,15 +1154,15 @@ public class BigWarpInit
 			BigWarpInit.add( bwdata, mvgSrcs );
 			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
 		}
-		catch ( URISyntaxException e )
+		catch ( final URISyntaxException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			e.printStackTrace();
 		}
@@ -1191,15 +1207,15 @@ public class BigWarpInit
 			BigWarpInit.add( bwdata, mvgSrcs );
 			BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, xmlFilenameQ, id, false ) );
 		}
-		catch ( URISyntaxException e )
+		catch ( final URISyntaxException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 		}
-		catch ( SpimDataException e )
+		catch ( final SpimDataException e )
 		{
 			e.printStackTrace();
 		}
