@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -47,7 +47,7 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 {
 	private final AbstractTransformSolver<?> baseSolver;
 	private final ModelTransformSolver interpSolver;
-	private final RealRandomAccessible<T> lambda;
+	private RealRandomAccessible<T> lambda;
 	private final double[] center;
 	private final Interpolators interp;
 	private final int ndims;
@@ -79,6 +79,11 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 		System.out.println( this );
 	}
 
+	public void setMask( final RealRandomAccessible<T> lambda )
+	{
+		this.lambda = lambda;
+	}
+
 	@Override
 	public String toString()
 	{
@@ -96,11 +101,12 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 		c.localize( center );
 	}
 
+	@Override
 	@SuppressWarnings("rawtypes")
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
 //		WrappedCoordinateTransform simXfm = interpSolver.solve( mvgPts, tgtPts );
-		WrappedCoordinateTransform simXfm = interpSolver.solve( tgtPts, mvgPts );
+		final WrappedCoordinateTransform simXfm = interpSolver.solve( tgtPts, mvgPts );
 
 		RealTransform msim;
 		if ( ndims == 2 )
@@ -128,7 +134,8 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 		return new WrappedIterativeInvertibleRealTransform<>( MaskedTransformSolver.wrap( seq, lambda ) );
 	}
 
-	public WrappedIterativeInvertibleRealTransform<?> solve( 
+	@Override
+	public WrappedIterativeInvertibleRealTransform<?> solve(
 			final LandmarkTableModel landmarkTable )
 	{
 		final int numActive = landmarkTable.numActive();
@@ -141,12 +148,12 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 
 	private static double[][] transformPoints( RealTransform xfm, double[][] pts )
 	{
-		int nd = pts.length;
-		int np = pts[0].length;
+		final int nd = pts.length;
+		final int np = pts[0].length;
 
 		final double[] tmp = new double[nd];
 		final double[][] out = new double[ nd ][ np ];
-		
+
 		for( int i = 0; i < np; i++ )
 		{
 			for( int d = 0; d < nd; d++ )
@@ -157,7 +164,7 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 			for( int d = 0; d < nd; d++ )
 				out[d][i] = tmp[d];
 		}
-		
+
 		return out;
 	}
 }

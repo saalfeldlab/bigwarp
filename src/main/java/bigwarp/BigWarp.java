@@ -116,6 +116,7 @@ import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.bookmarks.BookmarksEditor;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
+import bdv.util.BoundedRange;
 import bdv.util.Bounds;
 import bdv.util.RealRandomAccessibleIntervalSource;
 import bdv.viewer.BigWarpDragOverlay;
@@ -2274,6 +2275,15 @@ public class BigWarp< T >
 
 //		updateTransformMask();
 		bwTransform.setLambda( transformMask.getInterpolatedSource(0, 0, Interpolation.NLINEAR));
+
+		final RealType<?> type = transformMask.getType();
+		if( !(type instanceof DoubleType ) && !(type instanceof FloatType ))
+		{
+			final double min = type.getMinValue();
+			final double max = type.getMaxValue();
+			bwTransform.setMaskIntensityBounds( min, max );
+			warpVisDialog.maskOptionsPanel.getMaskRangeSlider().setRange(new BoundedRange( min, max, min, max ));
+		}
 
 		synchronizeSources();
 	}
