@@ -42,9 +42,9 @@ public class BigWarpData< T >
 		this( new ArrayList<>(), new ArrayList<>(), null );
 	}
 
-	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
-			final CacheControl cache, 
-			final int[] movingIndexes, 
+	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups,
+			final CacheControl cache,
+			final int[] movingIndexes,
 			final int[] targetIndexes )
 	{
 		this( sources, converterSetups, cache,
@@ -58,7 +58,7 @@ public class BigWarpData< T >
 	{
 		this( sources, null, converterSetups, cache );
 	}
-	
+
 	public BigWarpData( final List< SourceAndConverter< T > > sources,
 			final List< RealTransform > transforms,
 			final List< ConverterSetup > converterSetups,
@@ -73,9 +73,9 @@ public class BigWarpData< T >
 			this.cache = cache;
 	}
 
-	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups, 
-			final CacheControl cache, 
-			final List<Integer> movingIndexes, 
+	public BigWarpData( final List< SourceAndConverter< T > > sources, final List< ConverterSetup > converterSetups,
+			final CacheControl cache,
+			final List<Integer> movingIndexes,
 			final List<Integer> targetIndexes )
 	{
 		this.sources = sources;
@@ -94,11 +94,11 @@ public class BigWarpData< T >
 		else
 			this.cache = cache;
 	}
-	
+
 	private static ArrayList<Integer> listOf( int[] x )
 	{
 		final ArrayList< Integer > out = new ArrayList<Integer>();
-		for( int i : x )
+		for( final int i : x )
 			out.add( i );
 
 		return out;
@@ -159,7 +159,7 @@ public class BigWarpData< T >
 		}
 		return null;
 	}
-	
+
 	public List<ConverterSetup> getMovingConverterSetups()
 	{
 		final ArrayList<ConverterSetup> out = new ArrayList<>();
@@ -174,7 +174,7 @@ public class BigWarpData< T >
 		}
 		return out;
 	}
-	
+
 	public List<ConverterSetup> getTargetConverterSetups()
 	{
 		final ArrayList<ConverterSetup> out = new ArrayList<>();
@@ -239,7 +239,7 @@ public class BigWarpData< T >
 	{
 		// find an unused id
 		int id = 0;
-		for( ConverterSetup cs : converterSetups )
+		for( final ConverterSetup cs : converterSetups )
 		{
 			if( id == cs.getSetupId() )
 				id++;
@@ -272,9 +272,10 @@ public class BigWarpData< T >
 
 	void remove( int i )
 	{
-		SourceAndConverter< T > sac = sources.get( i );
-		final int sacId = sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().get();
-		final SourceInfo sourceInfo = sourceInfos.remove( sacId );
+		final SourceAndConverter< T > sac = sources.get( i );
+		sourceInfos.entrySet().stream().filter( it -> it.getValue().getSourceAndConverter() == sac ).map( Map.Entry::getKey ).findFirst().ifPresent(
+				sacId -> { sourceInfos.remove( sacId ); } );
+
 		sources.remove( i );
 		converterSetups.remove( i  );
 	}
@@ -288,7 +289,7 @@ public class BigWarpData< T >
 			final RealTransform transform = info.getTransform();
 			if ( transform != null )
 			{
-				SourceAndConverter<T> newSac = inheritConverter(
+				final SourceAndConverter<T> newSac = inheritConverter(
 						applyFixedTransform( sac.getSpimSource(), transform),
 						sac );
 
@@ -318,10 +319,10 @@ public class BigWarpData< T >
 	 * <p>
 	 * The returned source will be a new instance than unless the transform
 	 * is a instance of {@link AffineGet} and source is an instance of {@link TransformedSource}.
-	 * 
+	 *
 	 * @param <T> the type
 	 * @param src the original source
-	 * @param transform the transformation 
+	 * @param transform the transformation
 	 * @return the transformed source
 	 */
 	public <T> Source<T> applyFixedTransform( final Source<T> src, final RealTransform transform )
@@ -373,7 +374,7 @@ public class BigWarpData< T >
 	/**
 	 * Updates the moving sources' transformation with the transform currently
 	 * being edited by BigWarp.
-	 * 
+	 *
 	 * @param transform the transformation
 	 */
 	public void updateEditableTransformation( RealTransform transform )
@@ -394,9 +395,9 @@ public class BigWarpData< T >
 				/*
 				 * There was a time when I had a single WarpedSource manage a RealTransformSequence
 				 * instead of a WarpedSource wrapping a different WarpedSource as I'm doing now.
-				 * 
+				 *
 				 * But I decided against having a single source because warped sources can toggle their transforms.
-				 * That toggling makes sense for the editable transform, but the fixex should be "on" 
+				 * That toggling makes sense for the editable transform, but the fixex should be "on"
 				 * always, and therefore be handled by either a TransformedSource or a different
 				 * WarpedSource instance.
 				 */
@@ -409,7 +410,7 @@ public class BigWarpData< T >
 		final SynchronizedViewerState state = viewer.getViewerPanel().state();
 		final ConverterSetups setups = viewer.getConverterSetups();
 
-		for( Entry< Integer, SourceInfo > infoEntry : sourceInfos.entrySet() )
+		for( final Entry< Integer, SourceInfo > infoEntry : sourceInfos.entrySet() )
 		{
 			final int id = infoEntry.getKey();
 			final SourceInfo info = infoEntry.getValue();
