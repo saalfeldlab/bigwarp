@@ -39,7 +39,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.URI;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -47,8 +47,6 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -72,10 +70,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
 import org.janelia.saalfeldlab.n5.Compression;
-import org.janelia.saalfeldlab.n5.N5Reader;
-import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
-import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.utility.geom.BoundingSphereRitter;
 import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -118,7 +113,6 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.util.BoundedRange;
 import bdv.util.Bounds;
-import bdv.util.RealRandomAccessibleIntervalSource;
 import bdv.viewer.BigWarpDragOverlay;
 import bdv.viewer.BigWarpLandmarkFrame;
 import bdv.viewer.BigWarpOverlay;
@@ -145,6 +139,8 @@ import bdv.viewer.overlay.MultiBoxOverlayRenderer;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.GridSource;
 import bigwarp.source.JacobianDeterminantSource;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.PlateauSphericalMaskRealRandomAccessible.FalloffShape;
 import bigwarp.source.PlateauSphericalMaskSource;
 import bigwarp.source.SourceInfo;
 import bigwarp.source.WarpMagnitudeSource;
@@ -158,7 +154,6 @@ import fiji.util.gui.GenericDialogPlus;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
-import ij.plugin.FolderOpener;
 
 import java.util.LinkedHashMap;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
@@ -179,7 +174,6 @@ import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.registration.ViewTransformAffine;
-import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
@@ -1072,6 +1066,10 @@ public class BigWarp< T >
 		final JMenuItem openMask = new JMenuItem( actionMap.get( BigWarpActions.MASK_IMPORT ));
 		openMask.setText( "Import mask" );
 		fileMenu.add( openMask );
+
+		final JMenuItem removeMask = new JMenuItem( actionMap.get( BigWarpActions.MASK_REMOVE ));
+		removeMask.setText( "Remove mask" );
+		fileMenu.add( removeMask );
 
 		fileMenu.addSeparator();
 		final JMenuItem miLoadSettings = new JMenuItem( actionMap.get( BigWarpActions.LOAD_SETTINGS ));
@@ -2220,7 +2218,11 @@ public class BigWarp< T >
 	{
 		final MaskOptionsPanel maskOpts = warpVisDialog.maskOptionsPanel;
 		final String type = maskOpts.getType();
-		if( !type.equals( BigWarpTransform.NO_MASK_INTERP ) && transformMaskSource == null )
+
+		if( type.equals( BigWarpTransform.NO_MASK_INTERP ))
+			return;
+
+		if( transformMaskSource == null )
 		{
 			// add the transform mask if necessary
 			addTransformMaskSource();
@@ -2234,43 +2236,94 @@ public class BigWarp< T >
 		getViewerFrameQ().getViewerPanel().requestRepaint();
 	}
 
-	@SuppressWarnings( { "unchecked" } )
-	public void importTransformMaskSource( final String uri ) {
+	public void refreshTransformMask()
+	{
+		getBwTransform().setLambda(
+			transformMaskSource.getSpimSource().getInterpolatedSource(0, 0, Interpolation.NLINEAR));
+	}
 
-		URI encodedUri;
-		try {
-			encodedUri = N5URI.encodeAsUri( uri );
-		} catch (final URISyntaxException e) {
-			e.printStackTrace();
-			return;
-		}
+	public void setTransformMaskRange( double min, double max )
+	{
+		getBwTransform().setMaskIntensityBounds(min, max);
+		warpVisDialog.maskOptionsPanel.getMaskRangeSlider().setRange(
+				new BoundedRange( min, max, min, max ));
+	}
 
-		final N5URI n5Uri = new N5URI( encodedUri );
+	public void setTransformMaskType( final String maskInterpolationType )
+	{
+		getBwTransform().setMaskInterpolationType(maskInterpolationType);
+		warpVisDialog.maskOptionsPanel.getMaskTypeDropdown().setSelectedItem(maskInterpolationType);
+	}
+
+	public void setTransformMaskProperties( final FalloffShape falloffShape,
+			final double squaredRadius, double[] center )
+	{
+		warpVisDialog.maskOptionsPanel.getMaskFalloffTypeDropdown().setSelectedItem(falloffShape);
+
+		final PlateauSphericalMaskRealRandomAccessible mask = getTransformPlateauMaskSource().getRandomAccessible();
+		mask.setFalloffShape( falloffShape );
+		mask.setSquaredRadius( squaredRadius );
+		mask.setCenter( center );
+	}
+
+	public void importTransformMaskSourceDialog() {
+
+//		URI encodedUri;
+//		try {
+//			encodedUri = N5URI.encodeAsUri( initialUri );
+//		} catch (final URISyntaxException e) {
+//			e.printStackTrace();
+//			return;
+//		}
+//
+//		final N5URI n5Uri = new N5URI( encodedUri );
+
 		final JFileChooser fileChooser = new JFileChooser();
 		fileChooser.setFileSelectionMode( JFileChooser.FILES_AND_DIRECTORIES );
-//		fileChooser.setCurrentDirectory( startingFolder );
+		fileChooser.setCurrentDirectory(lastDirectory);
 
 		final int ret = fileChooser.showOpenDialog(landmarkFrame);
 		if ( ret == JFileChooser.APPROVE_OPTION ) {
 
-			LinkedHashMap<Source<T>, SourceInfo> infos;
-			try {
-				final File selection = fileChooser.getSelectedFile();
-				infos = BigWarpInit.createSources(data, selection.getAbsolutePath(), TRANSFORM_MASK_SOURCE_ID, false);
-				BigWarpInit.add( data, infos, null );
+			final File selection = fileChooser.getSelectedFile();
+			importTransformMaskSource( selection.getAbsolutePath() );
+		}
 
-				synchronizeSources();
-				infos.entrySet().stream().map( e -> { return e.getKey(); }).findFirst().ifPresent( x -> {
-					transformMask = (Source<? extends RealType<?>>)x;
-				});
+	}
 
-			} catch (final URISyntaxException e) {
-				e.printStackTrace();
-			} catch (final IOException e) {
-				e.printStackTrace();
-			} catch (final SpimDataException e) {
-				e.printStackTrace();
-			}
+	@SuppressWarnings( { "unchecked" } )
+	public void importTransformMaskSource( final String uri ) {
+
+		// first remove any existing mask source
+		removeMaskSource(false);
+
+		// TODO do i build an N5URI?
+//		URI encodedUri;
+//		try {
+//			encodedUri = N5URI.encodeAsUri( uri );
+//		} catch (final URISyntaxException e) {
+//			e.printStackTrace();
+//			return;
+//		}
+//		final N5URI n5Uri = new N5URI( encodedUri );
+
+
+		LinkedHashMap<Source<T>, SourceInfo> infos;
+		try {
+			infos = BigWarpInit.createSources(data, uri, TRANSFORM_MASK_SOURCE_ID, false);
+			BigWarpInit.add( data, infos, null );
+
+			synchronizeSources();
+			infos.entrySet().stream().map( e -> { return e.getKey(); }).findFirst().ifPresent( x -> {
+				transformMask = (Source<? extends RealType<?>>)x;
+			});
+
+		} catch (final URISyntaxException e) {
+			e.printStackTrace();
+		} catch (final IOException e) {
+			e.printStackTrace();
+		} catch (final SpimDataException e) {
+			e.printStackTrace();
 		}
 
 //		updateTransformMask();
@@ -2286,6 +2339,34 @@ public class BigWarp< T >
 		}
 
 		synchronizeSources();
+	}
+
+	/**
+	 * Run this after loading projet to set the transform mask from a loaded source
+	 */
+	@SuppressWarnings("unchecked")
+	public void connectMaskSource()
+	{
+		transformMask = (Source<? extends RealType<?>>)data.sourceInfos.get(TRANSFORM_MASK_SOURCE_ID).getSourceAndConverter().getSpimSource();
+		bwTransform.setLambda( transformMask.getInterpolatedSource(0, 0, Interpolation.NLINEAR));
+	}
+
+	public void removeMaskSource( ) {
+		removeMaskSource( true );
+	}
+
+	public void removeMaskSource( boolean reAdd ) {
+
+		final SourceInfo srcInfo = data.sourceInfos.get(TRANSFORM_MASK_SOURCE_ID);
+		if( srcInfo != null )
+			removeSource(srcInfo);
+
+		transformMask = null;
+		transformMaskSource = null;
+		bwTransform.setLambda(null);
+
+		if( reAdd )
+			updateTransformMask();
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes", "hiding" } )
@@ -2323,6 +2404,7 @@ public class BigWarp< T >
 		warpVisDialog.maskOptionsPanel.setMask( plateauTransformMask );
 		addMaskMouseListener();
 		bwTransform.setLambda( plateauTransformMask.getRandomAccessible() );
+		bwTransform.setMaskIntensityBounds(0, 1);
 
 		final ArrayList<BigWarpMaskSphereOverlay> overlayList = new ArrayList<>();
 		final BigWarpMaskSphereOverlay overlay = new BigWarpMaskSphereOverlay( viewerQ, ndims==3 );
@@ -2332,12 +2414,13 @@ public class BigWarp< T >
 		getViewerFrameQ().getViewerPanel().setMaskOverlay( overlay );
 		plateauTransformMask.getRandomAccessible().setOverlays( overlayList );
 
+
 		synchronizeSources();
 		transformMaskSource = soc;
 		return soc;
 	}
 
-	public Source<? extends RealType<?>> getTransformMaskSource()
+	public Source<? extends RealType<?>> getTansformMaskSource()
 	{
 		return transformMask;
 	}
@@ -3808,7 +3891,6 @@ public class BigWarp< T >
 
 	protected void saveProject()
 	{
-		System.out.println( "save project" );
 		final File proposedSettingsFile = new File( "bigwarp-project.json" );
 		saveSettingsOrProject( proposedSettingsFile );
 	}
@@ -4006,7 +4088,21 @@ public class BigWarp< T >
 		{
 			final BigwarpSettings settings = getSettings();
 			settings.setOverwriteSources( overwriteSources );
-			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+
+			try {
+				SwingUtilities.invokeAndWait( () -> {
+					try {
+						settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+					} catch (final IOException e) {
+						e.printStackTrace();
+					}
+				});
+			} catch (final InvocationTargetException e) {
+				e.printStackTrace();
+			} catch (final InterruptedException e) {
+				e.printStackTrace();
+			}
+
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
 		}

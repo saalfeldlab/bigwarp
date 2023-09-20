@@ -7,11 +7,8 @@ public class MaskBoundsRangePanel extends BoundedRangePanel {
 
 	private static final long serialVersionUID = -4065636040399818543L;
 
-	public MaskBoundsRangePanel(BigWarp<?> bw )
-	{
-		super();
-		setConsistent( true );
-		setup( bw );
+	public MaskBoundsRangePanel(BigWarp<?> bw ) {
+		this(bw, new BoundedRange(0, 1, 0, 1));
 	}
 
 	public MaskBoundsRangePanel( final BigWarp<?> bw, final BoundedRange range ) {

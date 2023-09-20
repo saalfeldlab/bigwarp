@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.function.Supplier;
 
 import bdv.gui.TransformTypeSelectDialog;
+import bdv.util.BoundedRange;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.animate.SimilarityModel3D;
 import bigwarp.BigWarpData;
@@ -122,7 +123,6 @@ public class BigWarpTransform
 
 	public void setMaskIntensityBounds( final double min, final double max ) {
 
-		System.out.println( "setMaskIntensityBounds " + min + " " + max );
 		lambdaConverterMin = min;
 		lambdaConverterMax = max;
 		lambdaConverter = new Converter<RealType<?>,RealType<?>>() {
@@ -140,21 +140,26 @@ public class BigWarpTransform
 		updateLambda();
 	}
 
+	public BoundedRange getMaskIntensityBounds() {
+		return new BoundedRange(lambdaConverterMin, lambdaConverterMax, lambdaConverterMin, lambdaConverterMax);
+	}
+
 	@SuppressWarnings("unchecked")
 	protected void updateLambda() {
 
-		if( lambdaConverter == null )
-			lambda = lambdaRaw;
-		else
+		if( lambdaConverter != null && !(lambdaRaw instanceof PlateauSphericalMaskRealRandomAccessible) )
+		{
 			lambda = Converters.convert2(lambdaRaw,
 					(Converter<RealType<?>, RealType<?>>)lambdaConverter,
 					(Supplier<RealType<?>>)DoubleType::new);
+		}
+		else
+			lambda = lambdaRaw;
 
 		if( solver instanceof MaskedTransformSolver )
 			((MaskedTransformSolver)solver).setMask(lambda);
 		else if( solver instanceof MaskedSimRotTransformSolver )
 			((MaskedSimRotTransformSolver)solver).setMask(lambda);
-
 	}
 
 	public void setMaskInterpolationType( String maskType )

@@ -179,6 +179,11 @@ public class MaskOptionsPanel extends JPanel
 		return maskTypeDropdown;
 	}
 
+	public JComboBox< FalloffShape > getMaskFalloffTypeDropdown()
+	{
+		return falloffTypeDropdown;
+	}
+
 	public MaskBoundsRangePanel getMaskRangeSlider()
 	{
 		return maskRangePanel;
@@ -189,7 +194,7 @@ public class MaskOptionsPanel extends JPanel
 		return ( String ) maskTypeDropdown.getSelectedItem();
 	}
 
-	/**
+	/*
 	 * @return true if a mask is applied to the transformation
 	 */
 	public boolean isMask()

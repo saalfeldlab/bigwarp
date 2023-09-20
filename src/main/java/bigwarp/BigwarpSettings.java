@@ -138,47 +138,35 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	@Override
 	public BigwarpSettings read( final JsonReader in ) throws IOException
 	{
-		in.beginObject();
-		while ( in.hasNext() )
+		final JsonObject json = JsonParser.parseReader(in).getAsJsonObject();
+		if( json.has("Sources"))
 		{
-			final String nextName = in.nextName();
-			switch ( nextName )
-			{
-			case "Sources":
-				new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).read( in );
-				final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
-				if (is2D != bigWarp.options.values.is2D()) {
-					bigWarp.changeDimensionality( is2D );
-				}
-				break;
-			case "ViewerP":
-				new BigWarpViewerPanelAdapter( viewerP ).read( in );
-				break;
-			case "ViewerQ":
-				new BigWarpViewerPanelAdapter( viewerQ ).read( in );
-				break;
-			case "SetupAssignments":
-				new SetupAssignmentsAdapter( setupAssignments ).read( in );
-				break;
-			case "Bookmarks":
-				bookmarks = gson.fromJson( in, Bookmarks.class );
-				bigWarp.setBookmarks( bookmarks );
-				break;
-			case "Autosave":
-				autoSaver = gson.fromJson( in, BigWarpAutoSaver.class );
-				bigWarp.setAutoSaver( autoSaver );
-				break;
-			case "Transform":
-				final JsonObject transformObject = ( JsonObject ) JsonParser.parseReader( in );
-				TransformWriterJson.read( bigWarp, transformObject );
-				break;
-			default:
-				throw new RuntimeException( "Unknown BigWarpSetting: " + nextName );
+			new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).fromJsonTree(json.get("Sources"));
+			final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
+			if (is2D != bigWarp.options.values.is2D()) {
+				bigWarp.changeDimensionality( is2D );
 			}
-
-
 		}
-		in.endObject();
+
+		// need to parse transform first
+		if( json.has("Transform"))
+			TransformWriterJson.read( bigWarp, json.get("Transform").getAsJsonObject());
+
+		if( json.has("ViewerP"))
+			new BigWarpViewerPanelAdapter( viewerP ).fromJsonTree( json.get("ViewerP") );
+
+		if( json.has("ViewerQ"))
+			new BigWarpViewerPanelAdapter( viewerQ ).fromJsonTree( json.get("ViewerQ") );
+
+		if( json.has("SetupAssignments"))
+			new SetupAssignmentsAdapter(setupAssignments).fromJsonTree(json.get("SetupAssignments"));
+
+		if( json.has("Bookmarks"))
+			bigWarp.setBookmarks(gson.fromJson(json.get("Bookmarks"), Bookmarks.class));
+
+		if( json.has("Autosave"))
+			bigWarp.setAutoSaver( gson.fromJson( json.get("Autosave"), BigWarpAutoSaver.class ));
+
 		return this;
 	}
 
@@ -191,7 +179,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 		public BigWarpSourcesAdapter( final BigWarp< T > bigwarp, boolean overwriteSources )
 		{
-
 			this.bigwarp = bigwarp;
 			this.overwriteExisting = overwriteSources;
 		}

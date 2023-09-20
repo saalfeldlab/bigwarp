@@ -1,11 +1,15 @@
 package bigwarp.transforms.io;
 
+
 import bigwarp.BigWarp;
 import bigwarp.BigwarpSettings;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
 import bigwarp.transforms.BigWarpTransform;
 import com.google.gson.JsonObject;
+
+import bdv.util.BoundedRange;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.Reader;
@@ -57,13 +61,18 @@ public class TransformWriterJson {
 
 		final JsonObject transformObj = new JsonObject();
 		transformObj.addProperty("type", bwTransform.getTransformType() );
-		transformObj.addProperty("maskInterpolationType", bwTransform.getMaskInterpolationType() );
 		transformObj.add("landmarks", ltm.toJson());
 
 		if( bwTransform.isMasked() )
 		{
-			final PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
-			transformObj.add("mask", BigwarpSettings.gson.toJsonTree( mask ));
+			final JsonObject maskObj = new JsonObject();
+			if (bwTransform.getLambda() instanceof PlateauSphericalMaskRealRandomAccessible) {
+				final PlateauSphericalMaskRealRandomAccessible mask = (PlateauSphericalMaskRealRandomAccessible)bwTransform.getLambda();
+				maskObj.add("parameters", BigwarpSettings.gson.toJsonTree(mask));
+			}
+			maskObj.add("range", BigwarpSettings.gson.toJsonTree(bwTransform.getMaskIntensityBounds()));
+			maskObj.addProperty("interpolationType", bwTransform.getMaskInterpolationType() );
+			transformObj.add("mask", maskObj);
 		}
 
 		return transformObj;
@@ -72,21 +81,40 @@ public class TransformWriterJson {
 	public static void read( final BigWarp< ? > bw, final JsonObject json )
 	{
 		if( json.has( "landmarks" ))
-			bw.getLandmarkPanel().getTableModel().fromJson( json );
+		{
+			final int nd = json.get("landmarks").getAsJsonObject().get("numDimensions").getAsInt();
+			if( bw.numDimensions() != nd )
+				bw.changeDimensionality(nd == 2);
 
-		final String maskInterpolationType = json.get( "maskInterpolationType" ).getAsString();
-		bw.getBwTransform().setMaskInterpolationType( maskInterpolationType );
+			bw.getLandmarkPanel().getTableModel().fromJson( json );
+		}
 
 		if( json.has( "mask" ))
 		{
 			final JsonObject maskParams = json.get("mask").getAsJsonObject();
-			final PlateauSphericalMaskRealRandomAccessible maskFromJson = BigwarpSettings.gson.fromJson( maskParams, PlateauSphericalMaskRealRandomAccessible.class );
 
-			final PlateauSphericalMaskRealRandomAccessible mask = bw.getTransformPlateauMaskSource().getRandomAccessible();
-			mask.setFalloffShape( maskFromJson.getFallOffShape() );
-			mask.setSquaredRadius( maskFromJson.getSquaredRadius() );
-			mask.setCenter( maskFromJson.getCenter() );
+			if( maskParams.has("parameters"))
+			{
+				bw.addTransformMaskSource();
+				final JsonObject paramsObj = maskParams.get("parameters").getAsJsonObject();
+				final PlateauSphericalMaskRealRandomAccessible maskFromJson = BigwarpSettings.gson.fromJson( paramsObj, PlateauSphericalMaskRealRandomAccessible.class );
+				bw.setTransformMaskProperties(
+						maskFromJson.getFallOffShape(),
+						maskFromJson.getSquaredRadius(),
+						maskFromJson.getCenter().positionAsDoubleArray());
+			}else
+				bw.connectMaskSource();
+
+			bw.setTransformMaskType(maskParams.get("interpolationType").getAsString());
+
+			if( maskParams.has("range"))
+			{
+				final BoundedRange maskRange = BigwarpSettings.gson.fromJson(maskParams.get("range"), BoundedRange.class);
+				bw.getBwTransform().setMaskIntensityBounds(maskRange.getMin(), maskRange.getMax());
+				bw.setTransformMaskRange(maskRange.getMin(), maskRange.getMax());
+			}
 		}
+
 	}
 
 }

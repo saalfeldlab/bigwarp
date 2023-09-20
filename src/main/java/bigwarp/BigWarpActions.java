@@ -86,6 +86,7 @@ public class BigWarpActions
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
 	public static final String MASK_IMPORT = "import mask";
+	public static final String MASK_REMOVE = "remove mask";
 	public static final String MASK_SIZE_EDIT = "mask edit";
 	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
 
@@ -339,6 +340,7 @@ public class BigWarpActions
 		new MaskSizeEdit( bw ).put(actionMap);
 		new MaskVisToggle( bw ).put(actionMap);
 		new MaskImport( bw ).put(actionMap);
+		new MaskRemove( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -1258,7 +1260,25 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.importTransformMaskSource("");
+			bw.importTransformMaskSourceDialog();
+		}
+	}
+
+	public static class MaskRemove extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4103338122650843631L;
+		private final BigWarp< ? > bw;
+
+		public MaskRemove( final BigWarp< ? > bw )
+		{
+			super( MASK_REMOVE );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.removeMaskSource();
 		}
 	}
 
