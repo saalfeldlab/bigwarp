@@ -291,12 +291,16 @@ public class NgffTransformations
 
 	public static void addCoordinateTransformations( final N5Writer n5, final String groupPath, final CoordinateTransform<?> transform ) {
 
-		// TODO untested
 		final CoordinateTransform<?>[] cts = n5.getAttribute(groupPath, CoordinateTransform.KEY, CoordinateTransform[].class);
-		final CoordinateTransform<?>[] ctsOut = new CoordinateTransform[ cts.length + 1 ];
-		System.arraycopy(cts, 0, ctsOut, 0, cts.length);
-		ctsOut[ cts.length ] = transform;
-
+		final CoordinateTransform<?>[] ctsOut;
+		if (cts == null)
+			ctsOut = new CoordinateTransform[] { transform };
+		else
+		{
+			ctsOut = new CoordinateTransform[cts.length + 1];
+			System.arraycopy(cts, 0, ctsOut, 0, cts.length);
+			ctsOut[ ctsOut.length - 1 ] = transform;
+		}
 		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
 	}
 
