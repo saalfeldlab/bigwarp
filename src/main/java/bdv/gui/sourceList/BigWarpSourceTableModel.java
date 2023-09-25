@@ -4,6 +4,8 @@ import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.ArrayList;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -16,7 +18,7 @@ import javax.swing.table.TableCellRenderer;
 import bigwarp.transforms.NgffTransformations;
 import net.imglib2.realtransform.RealTransform;
 
-public class BigWarpSourceTableModel extends AbstractTableModel 
+public class BigWarpSourceTableModel extends AbstractTableModel
 {
 
 	private static final long serialVersionUID = 5923947651732788341L;
@@ -33,19 +35,27 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	protected static int transformColIdx = 2;
 	protected static int removeColIdx = 3;
 
+	protected Function<String,String> transformChangedCallback;
+
 	private Component container;
 
 	public BigWarpSourceTableModel()
+	{
+		this(null);
+	}
+
+	public BigWarpSourceTableModel(final Function<String,String> transformChangedCallback )
 	{
 		super();
 		columnNames = colNames;
 		sources = new ArrayList<>();
 		rmRowButtons = new ArrayList<>();
+		this.transformChangedCallback = transformChangedCallback;
 	}
-	
+
 	/**
 	 * Set the {@link Component} to repaint when a row is removed.
-	 * 
+	 *
 	 * @param container the component containing this table
 	 */
 	public void setContainer( Component container )
@@ -58,7 +68,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		return sources.get( i );
 	}
 
-	@Override 
+	@Override
 	public String getColumnName( int col ){
 		return columnNames[col];
 	}
@@ -84,6 +94,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			return sources.get( r ).get( c );
 	}
 
+	@Override
 	public Class<?> getColumnClass( int col ){
 		if ( col == 1 )
 			return Boolean.class;
@@ -104,10 +115,23 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	{
 		if( col == movingColIdx )
 			sources.get( row ).moving = (Boolean)value;
-		if( col == imageColIdx )
+		else if( col == imageColIdx )
 			sources.get( row ).srcName = (String)value;
-		if( col == transformColIdx )
-			sources.get( row ).transformUrl = (String)value;
+		else if( col == transformColIdx )
+			setTransform( (String)value, row );
+	}
+
+	protected void setTransform(String value, int row)
+	{
+		if (transformChangedCallback != null)
+		{
+			final String res = transformChangedCallback.apply(value);
+			if (res != null)
+				sources.get(row).transformUrl = res;
+			else
+				sources.get(row).transformUrl = value;
+		} else
+			sources.get(row).transformUrl = value;
 	}
 
 	public void add( String srcName, boolean moving, SourceType type )
@@ -186,9 +210,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		public String srcName;
 		public boolean moving;
 		public String transformUrl;
-		
+
 		public SourceType type;
-		
+
 		public SourceRow( String srcName, boolean moving, String transformUrl, SourceType type )
 		{
 			this.srcName = srcName;
@@ -244,7 +268,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	}
 
 	/**
-	 * From 
+	 * From
 	 * http://www.java2s.com/Code/Java/Swing-Components/ButtonTableExample.htm
 	 */
 	protected static class ButtonRenderer extends JButton implements TableCellRenderer
@@ -254,6 +278,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			setOpaque( true );
 		}
 
+		@Override
 		public Component getTableCellRendererComponent( JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column )
 		{
 			if ( isSelected )
@@ -272,7 +297,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	}
 
 	/**
-	 * From 
+	 * From
 	 * http://www.java2s.com/Code/Java/Swing-Components/ButtonTableExample.htm
 	 */
 	protected static class ButtonEditor extends DefaultCellEditor
@@ -280,7 +305,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		protected JButton button;
 
 		private String label;
-		
+
 		private RemoveRowButton thisButton;
 
 		private BigWarpSourceTableModel model;
@@ -297,6 +322,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			button.setOpaque( true );
 			button.addActionListener( new ActionListener()
 			{
+				@Override
 				public void actionPerformed( ActionEvent e )
 				{
 					fireEditingStopped();
@@ -304,6 +330,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			} );
 		}
 
+		@Override
 		public Component getTableCellEditorComponent( JTable table, Object value, boolean isSelected, int row, int column )
 		{
 			if ( isSelected )
@@ -323,6 +350,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			return button;
 		}
 
+		@Override
 		public Object getCellEditorValue()
 		{
 			if ( isPushed )
@@ -333,12 +361,14 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			return new String( label );
 		}
 
+		@Override
 		public boolean stopCellEditing()
 		{
 			isPushed = false;
 			return super.stopCellEditing();
 		}
 
+		@Override
 		protected void fireEditingStopped()
 		{
 			super.fireEditingStopped();

@@ -5,6 +5,8 @@ import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -22,6 +24,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.Timer;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -495,7 +498,7 @@ public class BigWarpInitDialog extends JFrame
 		panel.add( addN5TransformButton, cn5 );
 
 		addN5TransformButton.addActionListener( e -> {
-			selectionDialog.run( this::n5DialogCallback );
+			selectionDialog.run( this::n5DialogTransformCallback );
 		});
 
 		// source list
@@ -509,10 +512,20 @@ public class BigWarpInitDialog extends JFrame
 		clist.fill = GridBagConstraints.BOTH;
 		clist.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
-		sourceTableModel = new BigWarpSourceTableModel();
+		sourceTableModel = new BigWarpSourceTableModel( t -> {
+			final String val = NgffTransformations.detectTransforms(t);
+			if( val == null )
+				showMessage(1000, "No transformation found");
+			else
+				showMessage(1000, "Found transformation");
+
+			return val;
+		});
+
         final BigWarpSourceListPanel srcListPanel = new BigWarpSourceListPanel( sourceTableModel );
         sourceTableModel.setContainer( srcListPanel );
         sourceTable = srcListPanel.getJTable();
+        sourceTable.putClientProperty("terminateEditOnFocusLost", true);
         panel.add( srcListPanel, clist );
 
 		// bottom button section
@@ -590,6 +603,16 @@ public class BigWarpInitDialog extends JFrame
 		final String n5RootPath = selectionDialog.getN5RootPath();
 		for( final N5Metadata m : selection.metadata )
 			sourceTableModel.add( n5RootPath + "?" + m.getPath() );
+
+		repaint();
+	}
+
+	public void n5DialogTransformCallback( final DataSelection selection )
+	{
+		final String n5RootPath = selectionDialog.getN5RootPath();
+		final int i = sourceTable.getSelectedRow();
+		if( selection.metadata.size() > 0 )
+			sourceTableModel.setTransform(i, n5RootPath + "?" + selection.metadata.get(0).getPath() );
 
 		repaint();
 	}
@@ -896,6 +919,19 @@ public class BigWarpInitDialog extends JFrame
 			Recorder.recordOption(transformsKey, transformList.toString());
 
 		return Recorder.getCommandOptions();
+	}
+
+	protected void showMessage( int timeMillis, String message )
+	{
+		messageLabel.setText(message);
+		final Timer timer = new Timer( timeMillis, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				messageLabel.setText("");
+			}
+		});
+		timer.setRepeats(false);
+		timer.start();
 	}
 
 	public static void runMacro( final String args )
