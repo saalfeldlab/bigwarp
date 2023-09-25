@@ -596,7 +596,6 @@ public class BigWarp< T >
 			return;
 
 		options.is2D( is2D );
-
 		if( options.values.is2D() )
 			ndims = 2;
 		else
@@ -2218,22 +2217,28 @@ public class BigWarp< T >
 	{
 		final MaskOptionsPanel maskOpts = warpVisDialog.maskOptionsPanel;
 		final String type = maskOpts.getType();
+		final boolean masked = maskOpts.isMask();
 
-		if( type.equals( BigWarpTransform.NO_MASK_INTERP ))
-			return;
-
-		if( transformMaskSource == null )
-		{
-			// add the transform mask if necessary
+		// add the transform mask if necessary
+		if( masked && transformMaskSource == null )
 			addTransformMaskSource();
-		}
 
 		// update the bigwarp transform
+		final boolean isVirtualMask = isVirtualMask();
 		getBwTransform().setMaskInterpolationType( type );
+		setMaskOverlayVisibility( maskOpts.showMaskOverlay() && masked && isVirtualMask );
+
+		if (masked && isVirtualMask)
+			autoEstimateMask();
+
 		restimateTransformation();
-		setMaskOverlayVisibility( maskOpts.showMaskOverlay() && maskOpts.isMask() );
-		autoEstimateMask();
 		getViewerFrameQ().getViewerPanel().requestRepaint();
+		getViewerFrameP().getViewerPanel().requestRepaint();
+	}
+
+	private boolean isVirtualMask() {
+
+		return plateauTransformMask == transformMask;
 	}
 
 	public void refreshTransformMask()
@@ -2268,16 +2273,6 @@ public class BigWarp< T >
 
 	public void importTransformMaskSourceDialog() {
 
-//		URI encodedUri;
-//		try {
-//			encodedUri = N5URI.encodeAsUri( initialUri );
-//		} catch (final URISyntaxException e) {
-//			e.printStackTrace();
-//			return;
-//		}
-//
-//		final N5URI n5Uri = new N5URI( encodedUri );
-
 		final JFileChooser fileChooser = new JFileChooser();
 		fileChooser.setFileSelectionMode( JFileChooser.FILES_AND_DIRECTORIES );
 		fileChooser.setCurrentDirectory(lastDirectory);
@@ -2295,28 +2290,19 @@ public class BigWarp< T >
 	public void importTransformMaskSource( final String uri ) {
 
 		// first remove any existing mask source
-		removeMaskSource(false);
-
-		// TODO do i build an N5URI?
-//		URI encodedUri;
-//		try {
-//			encodedUri = N5URI.encodeAsUri( uri );
-//		} catch (final URISyntaxException e) {
-//			e.printStackTrace();
-//			return;
-//		}
-//		final N5URI n5Uri = new N5URI( encodedUri );
-
+		final SourceInfo srcInfo = data.sourceInfos.get(TRANSFORM_MASK_SOURCE_ID);
+		if( srcInfo != null )
+			removeSource(srcInfo);
 
 		LinkedHashMap<Source<T>, SourceInfo> infos;
 		try {
 			infos = BigWarpInit.createSources(data, uri, TRANSFORM_MASK_SOURCE_ID, false);
 			BigWarpInit.add( data, infos, null );
 
-			synchronizeSources();
 			infos.entrySet().stream().map( e -> { return e.getKey(); }).findFirst().ifPresent( x -> {
 				transformMask = (Source<? extends RealType<?>>)x;
 			});
+			synchronizeSources();
 
 		} catch (final URISyntaxException e) {
 			e.printStackTrace();
@@ -2326,8 +2312,8 @@ public class BigWarp< T >
 			e.printStackTrace();
 		}
 
-//		updateTransformMask();
 		bwTransform.setLambda( transformMask.getInterpolatedSource(0, 0, Interpolation.NLINEAR));
+		updateTransformMask();
 
 		final RealType<?> type = transformMask.getType();
 		if( !(type instanceof DoubleType ) && !(type instanceof FloatType ))
@@ -2337,8 +2323,6 @@ public class BigWarp< T >
 			bwTransform.setMaskIntensityBounds( min, max );
 			warpVisDialog.maskOptionsPanel.getMaskRangeSlider().setRange(new BoundedRange( min, max, min, max ));
 		}
-
-		synchronizeSources();
 	}
 
 	/**
@@ -2351,11 +2335,7 @@ public class BigWarp< T >
 		bwTransform.setLambda( transformMask.getInterpolatedSource(0, 0, Interpolation.NLINEAR));
 	}
 
-	public void removeMaskSource( ) {
-		removeMaskSource( true );
-	}
-
-	public void removeMaskSource( boolean reAdd ) {
+	public void removeMaskSource() {
 
 		final SourceInfo srcInfo = data.sourceInfos.get(TRANSFORM_MASK_SOURCE_ID);
 		if( srcInfo != null )
@@ -2364,9 +2344,16 @@ public class BigWarp< T >
 		transformMask = null;
 		transformMaskSource = null;
 		bwTransform.setLambda(null);
+		bwTransform.setMaskInterpolationType(BigWarpTransform.NO_MASK_INTERP);
+		warpVisDialog.maskOptionsPanel.getMaskTypeDropdown().setSelectedItem(BigWarpTransform.NO_MASK_INTERP);
 
-		if( reAdd )
-			updateTransformMask();
+		final BigWarpMaskSphereOverlay overlay = getViewerFrameQ().getViewerPanel().getMaskOverlay();
+		if( overlay != null )
+			overlay.setVisible(false);
+
+		updateTransformMask();
+
+		restimateTransformation();
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes", "hiding" } )
