@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -36,6 +37,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transform
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineGet;
@@ -54,6 +56,50 @@ public class NgffTransformations
 
 	public static void main( final String[] args ) throws Exception
 	{
+		// detect transformations
+		final String loc = "/home/john/Desktop/dfield.n5";
+		final N5URI uri = new N5URI(loc);
+
+//		final CoordinateTransform<?>[] cts = detectTransforms(loc);
+//		System.out.println(Arrays.toString(cts));
+
+		System.out.println(detectTransforms(loc));
+
+//		System.out.println( uri );
+//		System.out.println( uri.getURI() );
+//
+//		final String grp = ( uri.getGroupPath() != null ) ? uri.getGroupPath() : "";
+//		System.out.println( grp );
+//
+//		final String attr = ( uri.getAttributePath() != null ) ? uri.getAttributePath() : "";
+//		System.out.println( attr );
+
+//		final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( uri.getContainerPath() );
+//		final JsonObject json = n5.getAttribute(grp, attr, JsonObject.class);
+//		final String ver = n5.getAttribute(grp, "n5", String.class);
+//		final JsonElement jcts = n5.getAttribute(grp, "coordinateTransformations", JsonElement.class);
+//		final JsonElement jct = n5.getAttribute(grp, "coordinateTransformations[0]", JsonElement.class);
+//		final CoordinateTransform<?> ct = n5.getAttribute(grp, "coordinateTransformations[0]", CoordinateTransform.class);
+//		final CoordinateTransform<?>[] cts = n5.getAttribute(grp, "coordinateTransformations", CoordinateTransform[].class);
+
+//		System.out.println("");
+//		System.out.println(json);
+//		System.out.println("");
+//		System.out.println(ver);
+//		System.out.println("");
+//		System.out.println(jcts);
+//		System.out.println("");
+//		System.out.println(jct);
+//		System.out.println("");
+//		System.out.println(ct);
+//		System.out.println(ct.getType());
+//		System.out.println("");
+//		System.out.println(Arrays.toString(cts));
+
+
+//		openTransformN5( url );
+
+
 		// full
 //		final String bijPath = "/home/john/projects/ngff/dfieldTest/jrc18_example.n5?/#/coordinateTransformations[0]";
 
@@ -186,6 +232,42 @@ public class NgffTransformations
 			return ((InvertibleCoordinateTransform<?>)ct).getInvertibleTransform(pair.getB());
 		else
 			return null;
+	}
+
+	/**
+	 * Finds a candidate transformation in the n5 attributes at the given url and returns the
+	 * complete URI for that transformation if found, otherwise null.
+	 *
+	 * @param url the base url
+	 * @return the complete n5uri for a transformation, or null
+	 */
+	public static String detectTransforms( final String url )
+	{
+		// detect transformations
+		N5URI uri;
+		try {
+			uri = new N5URI(url);
+		} catch (final URISyntaxException e) {
+			return null;
+		}
+
+		final String grp = ( uri.getGroupPath() != null ) ? uri.getGroupPath() : "";
+		final String attr = ( uri.getAttributePath() != null && !uri.getAttributePath().equals("/")) ? uri.getAttributePath() : "coordinateTransformations";
+
+		final N5Reader n5;
+		try {
+
+			n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader(uri.getContainerPath());
+			final CoordinateTransform<?>[] cts = n5.getAttribute(grp, attr, CoordinateTransform[].class);
+
+			if (cts != null && cts.length > 0)
+				try {
+					return N5URI.from(uri.getContainerPath(), grp, "coordinateTransformations[0]").toString();
+				} catch (final URISyntaxException e) {}
+
+		} catch (final N5Exception e) {}
+
+		return null;
 	}
 
 	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url )
