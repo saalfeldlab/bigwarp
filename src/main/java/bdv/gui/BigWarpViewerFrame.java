@@ -166,6 +166,8 @@ public class BigWarpViewerFrame extends JFrame
 
 		final TransformEventHandler tfHandler = viewer.getTransformEventHandler();
 		tfHandler.install( transformBehaviours );
+
+		viewer.getDisplay().setTransformEventHandler(tfHandler);
 	}
 
 	public boolean isMoving()
