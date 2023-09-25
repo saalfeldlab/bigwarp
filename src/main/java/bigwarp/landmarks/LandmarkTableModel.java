@@ -1550,15 +1550,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			modifiedSinceLastSave = false;
 		}
 	}
-	
+
 	public JsonElement toJson()
 	{
-		final Gson gson = new Gson();
+		final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().create();
 		final JsonObject out = new JsonObject();
-		JsonElement mvgPtsObj = gson.toJsonTree(getMovingPoints(), new TypeToken<List<Double[]> >() {}.getType());
-		JsonElement fixedPtsObj = gson.toJsonTree(getFixedPoints(), new TypeToken<List<Double[]> >() {}.getType());
-		JsonElement activeObj = gson.toJsonTree( activeList );
-		JsonElement namesObj = gson.toJsonTree( names );
+		final JsonElement mvgPtsObj = gson.toJsonTree(getMovingPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		final JsonElement fixedPtsObj = gson.toJsonTree(getFixedPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		final JsonElement activeObj = gson.toJsonTree( activeList );
+		final JsonElement namesObj = gson.toJsonTree( names );
 
 		out.add("type", new JsonPrimitive("BigWarpLandmarks"));
 		out.add("numDimensions", new JsonPrimitive( ndims ));
