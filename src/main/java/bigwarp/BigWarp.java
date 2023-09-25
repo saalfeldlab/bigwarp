@@ -3994,13 +3994,17 @@ public class BigWarp< T >
 		if ( returnVal == JFileChooser.APPROVE_OPTION )
 		{
 			settingsFile = fileChooser.getSelectedFile();
-			try
-			{
-				loadSettings( settingsFile.getCanonicalPath(), true );
-			} catch ( final Exception e )
-			{
-				e.printStackTrace();
-			}
+
+			Executors.newSingleThreadExecutor().execute(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						loadSettings(settingsFile.getCanonicalPath(), true);
+					} catch (final Exception e) {
+						e.printStackTrace();
+					}
+				}
+			});
 		}
 	}
 
