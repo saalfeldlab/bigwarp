@@ -137,11 +137,6 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public void add( String srcName, boolean moving, SourceType type )
 	{
 		final RemoveRowButton rmButton = new RemoveRowButton( sources.size() );
-//		rmButton.addActionListener( e -> {
-//			System.out.println( "pushed rm row button " + rmButton.getRow() );
-//			remove( rmButton.getRow() );
-//		});
-
 		rmRowButtons.add( rmButton );
 		sources.add( new SourceRow( srcName, moving, "", type ));
 	}
@@ -184,10 +179,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public boolean remove( int i )
 	{
 		if( i >= sources.size() )
-		{
-			//System.out.println( "NOT REMOVED - SHOULD NEVER BE CALLED" );
 			return false;
-		}
 
 		sources.remove( i );
 		rmRowButtons.remove( i );
