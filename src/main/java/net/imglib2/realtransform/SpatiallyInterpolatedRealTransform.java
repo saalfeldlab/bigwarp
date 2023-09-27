@@ -12,7 +12,7 @@ import net.imglib2.type.numeric.RealType;
  * <p>
  * Given a {@link RealRandomAccessible} "lambda", and two transformations "a", and "b", implements the transformation
  * lambda * a(x) + (1-lambda) * b(x) for a point x.
- * 
+ *
  * @author John Bogovic
  *
  * @param <T> lambda's type
@@ -44,7 +44,7 @@ public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implement
 		this.lambda = lambda;
 		lambdaAccess = lambda.realRandomAccess();
 
-		int nd = a.numTargetDimensions();
+		final int nd = a.numTargetDimensions();
 		arrA = new double[nd];
 		arrB = new double[nd];
 		pa = RealPoint.wrap(arrA);
@@ -70,13 +70,13 @@ public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implement
 		b.apply(source, arrB);
 
 //		lambdaAccess.setPosition(source);
-		for( int i = 0; i < source.length; i++ )
+		for( int i = 0; i < numSourceDimensions(); i++ )
 			lambdaAccess.setPosition( source[ i ], i );
 
 		final double am = lambdaAccess.get().getRealDouble();
 		final double bm = (1 - am);
 
-		for (int i = 0; i < target.length; i++)
+		for (int i = 0; i < numTargetDimensions(); i++)
 			target[i] = am * arrA[i] + bm * arrB[i];
 	}
 
@@ -87,10 +87,10 @@ public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implement
 		b.apply(source, pb);
 
 		lambdaAccess.setPosition(source);
-		double am = lambdaAccess.get().getRealDouble();
-		double bm = (1 - am);
+		final double am = lambdaAccess.get().getRealDouble();
+		final double bm = (1 - am);
 
-		for (int i = 0; i < target.numDimensions(); i++)
+		for (int i = 0; i < numTargetDimensions(); i++)
 			target.setPosition(am * pa.getDoublePosition(i) + bm * pb.getDoublePosition(i), i);
 	}
 

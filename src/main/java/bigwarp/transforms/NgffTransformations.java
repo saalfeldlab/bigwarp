@@ -37,13 +37,14 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transform
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ScaleGet;
+import net.imglib2.realtransform.Translation2D;
 import net.imglib2.realtransform.TranslationGet;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
@@ -56,14 +57,83 @@ public class NgffTransformations
 
 	public static void main( final String[] args ) throws Exception
 	{
-		// detect transformations
-		final String loc = "/home/john/Desktop/dfield.n5";
-		final N5URI uri = new N5URI(loc);
+
+//		final String p2pUri = "/home/john/Desktop/tforms.n5?/dfield2d#coordinateTransformations[1]";
+//		final Pair< CoordinateTransform< ? >, N5Reader > pair = openTransformN5( p2pUri );
+//		final CoordinateTransform<?> ct = pair.getA();
+//		System.out.println( ct );
+//		System.out.println( ct.getType() );
+//
+//		final N5Reader n5 = pair.getB();
+////		final RealTransform tform = ct.getTransform(n5);
+////		System.out.println( tform );
+//
+//
+//		final SequenceCoordinateTransform sct = (SequenceCoordinateTransform)ct;
+//		final AffineGet affine = sct.asAffine(3);
+//		System.out.println( affine.getRowPackedCopy());
+
+
+
+		final String dfUri = "/home/john/Desktop/tforms.n5?/dfield2d#coordinateTransformations[0]";
+		final Pair< CoordinateTransform< ? >, N5Reader > pair = openTransformN5( dfUri );
+		final CoordinateTransform<?> ct = pair.getA();
+		System.out.println( ct );
+
+		final N5Reader n5 = pair.getB();
+		final RealTransform tform = ct.getTransform(n5);
+		System.out.println( tform );
+
+
+
+
+
+//		final AffineTransform affine = new AffineTransform( 2 );
+//		final Translation2D t = new Translation2D( new double[] { 5, 6 } );
+//		System.out.println( Arrays.toString(affine.getRowPackedCopy() ));
+//		affine.preConcatenate(t);
+//		System.out.println( Arrays.toString(affine.getRowPackedCopy() ));
+
+
+
+//		// detect transformations
+//		final String loc = "/home/john/Desktop/tforms.n5";
+//		final N5URI uri = new N5URI(loc);
+
+//		final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
+////		final RealTransform tform = findFieldTransformFirst( n5, "/dfield2d" );
+//		final RealTransform tform = findFieldTransformStrict( n5, "/dfield2d", "boats.tif_dfield" );
+
+
+//		// detect transformations
+//		final String loc = "/home/john/Desktop/tforms.n5";
+//		final N5URI uri = new N5URI(loc);
+//
+//		// dfield 2d path
+//		final String dfUri = "/home/john/Desktop/tforms.n5?/dfield2d#coordinateTransformations[0]";
+////		final String dfUri = "/home/john/Desktop/tforms.n5?/#coordinateTransformations[2]";
+////		final String dfPartUri = "/home/john/Desktop/tforms.n5";
+//
+////		final RealTransform tform = open(dfUri);
+////		System.out.println(tform);
+//
+//		final Pair< CoordinateTransform< ? >, N5Reader > pair = openTransformN5( dfUri );
+//		final CoordinateTransform<?> ct = pair.getA();
+//		System.out.println( ct );
+//
+//		final RealTransform tform = ct.getTransform( pair.getB());
+//		System.out.println( tform );
+
+
+//		final String s = detectTransforms(dfUri);
+//		System.out.println( "full uri: " + s );
+//		System.out.println("inferred full uri: " + detectTransforms(dfPartUri));
+
 
 //		final CoordinateTransform<?>[] cts = detectTransforms(loc);
 //		System.out.println(Arrays.toString(cts));
 
-		System.out.println(detectTransforms(loc));
+//		System.out.println(detectTransforms(loc));
 
 //		System.out.println( uri );
 //		System.out.println( uri.getURI() );
@@ -234,6 +304,57 @@ public class NgffTransformations
 			return null;
 	}
 
+	public static RealTransform findFieldTransformFirst(final N5Reader n5, final String group) {
+
+		final String normGrp = N5URI.normalizeGroupPath(group);
+		System.out.println( "nnrmGrp: " + normGrp );
+
+		final CoordinateTransform<?>[] transforms = n5.getAttribute(group, CoordinateTransform.KEY, CoordinateTransform[].class);
+		if (transforms == null)
+			return null;
+
+		if( transforms.length == 1 )
+		{
+
+		}
+
+		boolean found = false;
+		for (final CoordinateTransform<?> ct : transforms) {
+			System.out.println(ct);
+			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
+			System.out.println( "nrmInput: " + nrmInput );
+			if (nrmInput.equals(normGrp)) {
+				found = true;
+				System.out.println( "found: " + ct );
+			}
+
+		}
+
+		return null;
+	}
+
+	public static RealTransform findFieldTransformStrict(final N5Reader n5, final String group, final String output ) {
+
+		final String normGrp = N5URI.normalizeGroupPath(group);
+		System.out.println( "nnrmGrp: " + normGrp );
+
+		final CoordinateTransform<?>[] transforms = n5.getAttribute(group, CoordinateTransform.KEY, CoordinateTransform[].class);
+		if (transforms == null)
+			return null;
+
+		final boolean found = false;
+		for (final CoordinateTransform<?> ct : transforms) {
+			System.out.println(ct);
+			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
+			System.out.println( "nrmInput: " + nrmInput );
+			if (nrmInput.equals(normGrp) && ct.getOutput().equals(output) ) {
+				System.out.println( "found: " + ct );
+				return ct.getTransform(n5);
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * Finds a candidate transformation in the n5 attributes at the given url and returns the
 	 * complete URI for that transformation if found, otherwise null.
@@ -244,30 +365,48 @@ public class NgffTransformations
 	public static String detectTransforms( final String url )
 	{
 		// detect transformations
-		N5URI uri;
+		final N5URI uri;
 		try {
 			uri = new N5URI(url);
 		} catch (final URISyntaxException e) {
 			return null;
 		}
 
-		final String grp = ( uri.getGroupPath() != null ) ? uri.getGroupPath() : "";
-		final String attr = ( uri.getAttributePath() != null && !uri.getAttributePath().equals("/")) ? uri.getAttributePath() : "coordinateTransformations";
+//		final String grp = ( uri.getGroupPath() != null ) ? uri.getGroupPath() : "";
+//		final String attr = ( uri.getAttributePath() != null && !uri.getAttributePath().equals("/")) ? uri.getAttributePath() : "coordinateTransformations[0]";
 
-		final N5Reader n5;
-		try {
+		if( isValidTransformUri( url ))
+			return url;
 
-			n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader(uri.getContainerPath());
-			final CoordinateTransform<?>[] cts = n5.getAttribute(grp, attr, CoordinateTransform[].class);
+		if (!uri.getAttributePath().equals("coordinateTransformations[0]")) {
 
-			if (cts != null && cts.length > 0)
-				try {
-					return N5URI.from(uri.getContainerPath(), grp, "coordinateTransformations[0]").toString();
-				} catch (final URISyntaxException e) {}
+			String defaultUri;
+			try {
+				defaultUri = N5URI.from(uri.getContainerPath(), uri.getGroupPath(), "coordinateTransformations[0]").toString();
+				if( isValidTransformUri( defaultUri ))
+					return defaultUri;
+			} catch (final URISyntaxException e) { }
+		}
 
-		} catch (final N5Exception e) {}
+//		final N5Reader n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader(uri.getContainerPath());
+//		final CoordinateTransform<?>[] cts = n5.getAttribute(grp, attr, CoordinateTransform[].class);
+//
+//		if (cts != null && cts.length > 0)
+//			try {
+//				return N5URI.from(uri.getContainerPath(), grp, "coordinateTransformations[0]").toString();
+//			} catch (final URISyntaxException e) {}
+
 
 		return null;
+	}
+
+	private static boolean isValidTransformUri(final String uri) {
+
+		final Pair<CoordinateTransform<?>, N5Reader> out = openTransformN5(uri);
+		if (out != null && out.getA() != null)
+			return true;
+
+		return false;
 	}
 
 	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url )
@@ -284,16 +423,19 @@ public class NgffTransformations
 			{
 				final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
-				final String attribute = n5url.getAttributePath() != null ? n5url.getAttributePath() : "coordinateTransformations/[0]";
+				final String attribute = n5url.getAttributePath();
+//				final String attribute = n5url.getAttributePath() != null ? n5url.getAttributePath() : "coordinateTransformations[0]";
 
 				final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
-				final CoordinateTransform<?> nct = CoordinateTransform.create(ct);
-				return new ValuePair<>( nct, n5 );
+				return new ValuePair<>( ct, n5 );
+
+//				final CoordinateTransform<?> nct = CoordinateTransform.create(ct);
+//				return new ValuePair<>( nct, n5 );
 			}
 		}
-		catch ( URISyntaxException | N5Exception e )
+		catch ( URISyntaxException | N5Exception | ClassCastException e )
 		{
-			e.printStackTrace();
+//			e.printStackTrace();
 			return null;
 		}
 	}
@@ -313,16 +455,13 @@ public class NgffTransformations
 
 		final Gson gson = gsonBuilder().create();
 		final JsonElement elem = gson.fromJson( string, JsonElement.class );
-//		System.out.println( elem );
 
 //		final CoordinateTransformation ct = gson.fromJson( elem.getAsJsonArray().get( 0 ), CoordinateTransformation.class );
 		final CoordinateTransform<?> ct = gson.fromJson( elem, CoordinateTransform.class );
-//		System.out.println( ct );
 
 		final CoordinateTransform< ? > nct = CoordinateTransform.create( ct );
 		return nct;
 //		final RealTransform tform = nct.getTransform( null );
-//		System.out.println( tform );
 //
 //		return tform;
 	}
@@ -383,6 +522,10 @@ public class NgffTransformations
 			System.arraycopy(cts, 0, ctsOut, 0, cts.length);
 			ctsOut[ ctsOut.length - 1 ] = transform;
 		}
+
+		if( !n5.exists(groupPath))
+			n5.createGroup(groupPath);
+
 		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
 	}
 
@@ -488,7 +631,7 @@ public class NgffTransformations
 	public static CoordinateSystem createVectorFieldCoordinateSystem(final String name, final CoordinateSystem input) {
 
 		final Axis[] vecAxes = new Axis[input.getAxes().length + 1];
-		vecAxes[0] = new Axis("d", "displacement", null, true);
+		vecAxes[0] = new Axis("displacement", "d", null, true);
 		for (int i = 1; i < vecAxes.length; i++)
 			vecAxes[i] = input.getAxes()[i - 1];
 

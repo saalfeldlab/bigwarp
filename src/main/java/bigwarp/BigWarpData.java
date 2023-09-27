@@ -331,9 +331,9 @@ public class BigWarpData< T >
 		if( transform.numSourceDimensions() < 3 )
 		{
 			if( transform instanceof InvertibleRealTransform )
-				tform = new Wrapped2DTransformAs3D( transform );
-			else
 				tform = new InvertibleWrapped2DTransformAs3D( ( InvertibleRealTransform ) transform );
+			else
+				tform = new Wrapped2DTransformAs3D( transform );
 		}
 
 		if( transform instanceof AffineGet )

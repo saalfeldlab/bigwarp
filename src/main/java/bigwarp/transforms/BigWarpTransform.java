@@ -115,12 +115,6 @@ public class BigWarpTransform
 		updateSolver();
 	}
 
-	public void setTransformType( final String transformType )
-	{
-		this.transformType = transformType;
-		updateSolver();
-	}
-
 	public void setMaskIntensityBounds( final double min, final double max ) {
 
 		lambdaConverterMin = min;
@@ -228,6 +222,12 @@ public class BigWarpTransform
 	public int getInverseMaxIterations()
 	{
 		return maxIterations;
+	}
+
+	public void setTransformType( final String transformType )
+	{
+		this.transformType = transformType;
+		updateSolver();
 	}
 
 	public String getTransformType()
@@ -378,7 +378,7 @@ public class BigWarpTransform
 	public AffineTransform3D affine3d()
 	{
 		final AffineTransform3D out = new AffineTransform3D();
-		if( transformType.equals( TransformTypeSelectDialog.TPS ))
+		if( transformType.equals( TPS ))
 		{
 			return affine3d( getTpsBase(), out );
 		}
