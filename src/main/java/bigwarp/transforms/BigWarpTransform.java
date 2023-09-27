@@ -246,6 +246,11 @@ public class BigWarpTransform
 		updateLambda();
 	}
 
+	public boolean isNonlinear()
+	{
+		return getTransformType().equals(BigWarpTransform.TPS);
+	}
+
 	public InvertibleRealTransform getTransformation()
 	{
 		return getTransformation( -1, true );

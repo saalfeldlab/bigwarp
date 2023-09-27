@@ -126,7 +126,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		this.data = data;
 		this.bwTransform = bwTransform;
 		this.ltm = ltm;
-		
+
 		cancelCallback = x -> {
 			dispose();
 			setVisible( false );
@@ -176,7 +176,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	public static void createAndShow( BigWarpData< ? > data, BigWarpTransform bwTransform, LandmarkTableModel ltm )
 	{
-		ExportDisplacementFieldFrame frame = new ExportDisplacementFieldFrame( data, bwTransform, ltm );
+		final ExportDisplacementFieldFrame frame = new ExportDisplacementFieldFrame( data, bwTransform, ltm );
 		frame.createContent();
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 		frame.pack();
@@ -185,6 +185,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	public void createContent()
 	{
+		final boolean isNonlinear = bwTransform.isNonlinear();
+
 		n5DatasetChanged = false;
 		final int frameSizeX = UIScale.scale( 600 );
 
@@ -217,19 +219,22 @@ public class ExportDisplacementFieldFrame extends JFrame
 			unit = src.getVoxelDimensions().unit();
 		}
 
-		fovPanel = new FieldOfViewPanel( data, ltm, bwTransform, unit, 150,
-				new double[] { 0, 0, 0 },
-				new double[] { 1, 1, 1 },
-				new long[] { 256, 256, 128 }
-		);
+		if( isNonlinear )
+		{
+			fovPanel = new FieldOfViewPanel( data, ltm, bwTransform, unit, 150,
+					new double[] { 0, 0, 0 },
+					new double[] { 1, 1, 1 },
+					new long[] { 256, 256, 128 }
+			);
 
-		fovPanel.setBorder( BorderFactory.createCompoundBorder(
-				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
-				BorderFactory.createCompoundBorder(
-						BorderFactory.createTitledBorder(
-								BorderFactory.createEtchedBorder(),
-								"Field of view" ),
-						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+			fovPanel.setBorder( BorderFactory.createCompoundBorder(
+					BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
+					BorderFactory.createCompoundBorder(
+							BorderFactory.createTitledBorder(
+									BorderFactory.createEtchedBorder(),
+									"Field of view" ),
+							BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
+		}
 
 		contentPanel = new JPanel();
 		contentPanel.setLayout( new GridBagLayout() );
@@ -248,7 +253,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 		cGbc.gridy = 2;
 		contentPanel.add( n5Panel, cGbc );
 		cGbc.gridy = 3;
-		contentPanel.add( fovPanel, cGbc );
+		if( isNonlinear )
+			contentPanel.add( fovPanel, cGbc );
 
 		// bottom button section
 		final GridBagConstraints cbot = new GridBagConstraints();
@@ -281,10 +287,13 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final Container content = getContentPane();
 		content.add( contentPanel );
 
-		if( data != null )
-			fovPanel.updateFieldsFromReference();
-		else
-			fovPanel.updateFieldsFromImageJReference();
+		if( isNonlinear )
+		{
+			if( data != null )
+				fovPanel.updateFieldsFromReference();
+			else
+				fovPanel.updateFieldsFromImageJReference();
+		}
 
 		addDefaultN5DatasetAction();
 	}
@@ -356,7 +365,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcCheck.gridy = 1;
 		gbcCheck.insets = defaultInsets;
 		gbcCheck.anchor = GridBagConstraints.LINE_START;
-		typeComboBox = new JComboBox< String >( new String[] { 
+		typeComboBox = new JComboBox< String >( new String[] {
 				BigWarpToDeformationFieldPlugIn.flattenOption,
 				BigWarpToDeformationFieldPlugIn.sequenceOption } );
 		panel.add( typeComboBox, gbcCheck );
@@ -382,7 +391,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		splitAffineCheckBox = new JCheckBox();
 		panel.add( splitAffineCheckBox, gbcCheck );
 
-		// second row 
+		// second row
 		ctxt.gridx = 0;
 		ctxt.gridy = 2;
 		ctxt.anchor = GridBagConstraints.LINE_END;
@@ -420,7 +429,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final int BUTTON_PAD = BigWarpInitDialog.DEFAULT_BUTTON_PAD;
 		final int MID_PAD = BigWarpInitDialog.DEFAULT_MID_PAD;
 
-		JPanel panel = new JPanel();
+		final JPanel panel = new JPanel();
 		panel.setLayout( new GridBagLayout() );
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
@@ -452,8 +461,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcBar.fill = GridBagConstraints.HORIZONTAL;
 		invToleranceSpinner = new JSpinner( new SpinnerNumberModel( 0.5, 1e-9, 999999, 0.01 ) );
 
-		JSpinner.NumberEditor editor = new JSpinner.NumberEditor(invToleranceSpinner, "###,###.######");
-		JFormattedTextField textField = editor.getTextField();
+		final JSpinner.NumberEditor editor = new JSpinner.NumberEditor(invToleranceSpinner, "###,###.######");
+		final JFormattedTextField textField = editor.getTextField();
         textField.setColumns(12);
         invToleranceSpinner.setEditor(editor);
 
@@ -477,7 +486,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final int BUTTON_PAD = BigWarpInitDialog.DEFAULT_BUTTON_PAD;
 		final int MID_PAD = BigWarpInitDialog.DEFAULT_MID_PAD;
 
-		JPanel panel = new JPanel();
+		final JPanel panel = new JPanel();
 		panel.setLayout( new GridBagLayout() );
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
@@ -659,13 +668,13 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 		return path;
 	}
-	
+
 	public DeformationFieldExportParameters getParams()
 	{
 		final String n5BlockSizeString = n5BlockSizeTxt.getText();
-		final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
+		final int[] blockSize = n5BlockSizeString.isEmpty() ? null :
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
-		
+
 		return new DeformationFieldExportParameters(
 				landmarkPathTxt == null ? "" : landmarkPathTxt.getText(),
 				splitAffineCheckBox.isSelected(),
@@ -676,13 +685,13 @@ public class ExportDisplacementFieldFrame extends JFrame
 				virtualCheckBox.isSelected(),
 				(Integer)nThreadsField.getValue(),
 				(String)formatComboBox.getSelectedItem(),
-				fovPanel.getPixelSize(),
-				fovPanel.getSpacing(),
-				fovPanel.getMin(),
-				fovPanel.getUnit(),
+				fovPanel == null ? null : fovPanel.getPixelSize(),
+				fovPanel == null ? null : fovPanel.getSpacing(),
+				fovPanel == null ? null : fovPanel.getMin(),
+				fovPanel == null ? null : fovPanel.getUnit(),
 				n5RootTxt.getText(),
 				n5DatasetTxt.getText(),
-				blockSize, 
+				blockSize,
 				BigWarpToDeformationFieldPlugIn.getCompression( (String)n5CompressionDropdown.getSelectedItem() ) );
 	}
 
@@ -747,10 +756,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final String n5BlockSizeString = Macro.getValue( args, n5BlockSizeKey, "" );
 		final String n5Compression = Macro.getValue( args, n5CompressionKey, "" );
 
-		final int[] blockSize = n5BlockSizeString.isEmpty() ? null : 
+		final int[] blockSize = n5BlockSizeString.isEmpty() ? null :
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
 
-		DeformationFieldExportParameters params = new DeformationFieldExportParameters(
+		final DeformationFieldExportParameters params = new DeformationFieldExportParameters(
 				landmarks, splitAffine, type,
 				direction, tolerance, maxIters,
 				openAsVirtual, threads, format,
