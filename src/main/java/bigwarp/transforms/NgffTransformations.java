@@ -558,11 +558,7 @@ public class NgffTransformations
 		{
 			N5Utils.save(dfield, n5Writer, dataset, vecBlkSz, compression, exec);
 		}
-		catch ( final InterruptedException e )
-		{
-			e.printStackTrace();
-		}
-		catch ( final ExecutionException e )
+		catch ( final InterruptedException | ExecutionException e )
 		{
 			e.printStackTrace();
 		}
@@ -576,7 +572,8 @@ public class NgffTransformations
 				createTransformation( "", spacing, offset, dataset, cs[0] ) };
 		n5Writer.setAttribute(dataset, CoordinateTransform.KEY, ct );
 
-		return new DisplacementFieldCoordinateTransform( "", dataset, "linear" );
+		return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
+				inputCoordinates.getName(), outputCoordinates.getName() );
 	}
 
 

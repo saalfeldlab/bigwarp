@@ -20,6 +20,8 @@ public class SourceInfo
 
 	private RealTransform transform;
 
+	private Supplier<String> transformUriSupplier;
+
 	boolean serializable = false;
 
 	public SourceInfo( final int id, final boolean moving )
@@ -103,14 +105,23 @@ public class SourceInfo
 		return moving;
 	}
 
-	public void setTransform( final RealTransform transform )
+	public void setTransform( final RealTransform transform, Supplier<String> transformUriSupplier )
 	{
 		this.transform = transform;
+		this.transformUriSupplier = transformUriSupplier;
 	}
 
 	public RealTransform getTransform()
 	{
 		return transform;
+	}
+
+	public String getTransformUri()
+	{
+		if( transformUriSupplier != null )
+			return transformUriSupplier.get();
+		else
+			return null;
 	}
 
 	public SourceAndConverter< ? > getSourceAndConverter()

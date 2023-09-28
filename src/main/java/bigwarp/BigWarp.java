@@ -2297,7 +2297,7 @@ public class BigWarp< T >
 		LinkedHashMap<Source<T>, SourceInfo> infos;
 		try {
 			infos = BigWarpInit.createSources(data, uri, TRANSFORM_MASK_SOURCE_ID, false);
-			BigWarpInit.add( data, infos, null );
+			BigWarpInit.add( data, infos, null, null );
 
 			infos.entrySet().stream().map( e -> { return e.getKey(); }).findFirst().ifPresent( x -> {
 				transformMask = (Source<? extends RealType<?>>)x;

@@ -29,6 +29,7 @@ import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
 import net.imglib2.Interval;
+import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
 
@@ -268,16 +269,41 @@ public class BigWarpUtils
 		return arg.substring( startIdx, endIdx );
 	}
 
+	/**
+	 * Return a 3D {@link AffineGet} from a lower-dimensional (1D or 2D) AffineGet.
+	 * The input instance is returned if it is 3D.
+	 *
+	 * @param affine the input affine.
+	 * @return the 3D affine
+	 */
+	public static AffineGet toAffine3D( final AffineGet affine )
+	{
+		if( affine.numSourceDimensions() == 3)
+			return affine;
+
+		final AffineTransform3D out = new AffineTransform3D();
+		final int N = affine.numSourceDimensions();
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < N; j++)
+				out.set(affine.get(i, j), i, j);
+
+		// translation part
+		for (int i = 0; i < N; i++)
+			out.set(affine.get(i, N+1), i, 3);
+
+		return out;
+	}
+
 //	/**
 //	 * Computes the angle of rotation between the two input quaternions,
 //	 * returning the result in degrees.  Assumes the inputs are unit quaternions.
-//	 * 
+//	 *
 //	 * @param q1 first quaternion
 //	 * @param q2 second quaternion
 //	 * @return the angle in degrees
 //	 */
 //	public static double quaternionAngleD( double[] q1, double q2 )
 //	{
-//		
+//
 //	}
 }

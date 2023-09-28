@@ -1,6 +1,8 @@
 package bigwarp;
 
 import bigwarp.source.SourceInfo;
+import bigwarp.util.BigWarpUtils;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -336,8 +338,53 @@ public class BigWarpData< T >
 				tform = new Wrapped2DTransformAs3D( transform );
 		}
 
+		// TODO using a TransformedSource like the below wasn't working correctly
+		// investigate later
+
+//		if( transform instanceof AffineGet )
+//		{
+//			// if transform is a 2D affine, turn it into a 3D transform
+//
+//			// can use TransformedSource
+//			final AffineTransform3D affine3d;
+//			if( transform instanceof AffineTransform3D )
+//				affine3d = ( AffineTransform3D ) transform;
+//			else
+//			{
+//				affine3d = new AffineTransform3D();
+//				final AffineGet transformTo3D = BigWarpUtils.toAffine3D((AffineGet)transform);
+//				System.out.println( transformTo3D );
+//				affine3d.preConcatenate( transformTo3D );
+//				System.out.println( affine3d );
+//			}
+//
+//			// could perhaps try to be clever if its a warped source (?), maybe later
+//			TransformedSource<?> tsrc;
+//			if ( src instanceof TransformedSource )
+//			{
+//				tsrc = ( TransformedSource ) ( src );
+//			}
+//			else
+//			{
+//				tsrc = new TransformedSource( src );
+//			}
+//			tsrc.setFixedTransform( affine3d );
+//			return ( Source< T > ) tsrc;
+//		}
+//		else
+//		{
+//			// need to use WarpedSource
+//			final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
+//			wsrc.updateTransform( tform );
+//			wsrc.setIsTransformed( true );
+//			return ( Source< T > ) wsrc;
+//		}
+
+
 		if( transform instanceof AffineGet )
 		{
+			// if transform is a 2D affine, turn it into a 3D transform
+
 			// can use TransformedSource
 			final AffineTransform3D affine3d;
 			if( transform instanceof AffineTransform3D )
@@ -345,30 +392,17 @@ public class BigWarpData< T >
 			else
 			{
 				affine3d = new AffineTransform3D();
-				affine3d.preConcatenate( ( AffineGet ) transform );
+				final AffineGet transformTo3D = BigWarpUtils.toAffine3D((AffineGet)transform);
+				affine3d.preConcatenate( transformTo3D );
 			}
+			tform = affine3d.inverse();
+		}
 
-			// could perhaps try to be clever if its a warped source (?), maybe later
-			TransformedSource<?> tsrc;
-			if ( src instanceof TransformedSource )
-			{
-				tsrc = ( TransformedSource ) ( src );
-			}
-			else
-			{
-				tsrc = new TransformedSource( src );
-			}
-			tsrc.setFixedTransform( affine3d );
-			return ( Source< T > ) tsrc;
-		}
-		else
-		{
-			// need to use WarpedSource
-			final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
-			wsrc.updateTransform( tform );
-			wsrc.setIsTransformed( true );
-			return ( Source< T > ) wsrc;
-		}
+		// need to use WarpedSource
+		final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
+		wsrc.updateTransform( tform );
+		wsrc.setIsTransformed( true );
+		return ( Source< T > ) wsrc;
 	}
 
 	/**
