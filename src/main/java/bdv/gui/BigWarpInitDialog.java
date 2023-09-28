@@ -748,12 +748,6 @@ public class BigWarpInitDialog extends JFrame
 		}
 	}
 
-	public void fillTableFromProject()
-	{
-		// TODO implement me
-		System.out.println( "implement me" );
-	}
-
 	public static BigWarpInitDialog createAndShow()
 	{
 		return createAndShow( null );

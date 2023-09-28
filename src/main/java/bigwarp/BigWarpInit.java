@@ -239,7 +239,6 @@ public class BigWarpInit
 	 *             instaed, and pass output to
 	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
 	 */
-	@SuppressWarnings( { "rawtypes" } )
 	@Deprecated
 	public static < T > int add( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{

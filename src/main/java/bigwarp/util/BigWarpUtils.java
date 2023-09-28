@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -72,12 +72,12 @@ public class BigWarpUtils
 		if( det( xfm ) < 0 )
 			flipX( xfm );
 	}
-	
+
 	public static double det( final AffineTransform3D xfm )
 	{
 		return LinAlgHelpers.det3x3(
-				xfm.get(0, 0), xfm.get(0, 1), xfm.get(0, 2), 
-				xfm.get(1, 0), xfm.get(1, 1), xfm.get(1, 2), 
+				xfm.get(0, 0), xfm.get(0, 1), xfm.get(0, 2),
+				xfm.get(1, 0), xfm.get(1, 1), xfm.get(1, 2),
 				xfm.get(2, 0), xfm.get(2, 1), xfm.get(2, 2) );
 	}
 
@@ -190,7 +190,7 @@ public class BigWarpUtils
 	/**
 	 * Computes the angle of rotation between the two input quaternions,
 	 * returning the result in radians.  Assumes the inputs are unit quaternions.
-	 * 
+	 *
 	 * @param q1 first quaternion
 	 * @param q2 second quaternion
 	 * @return the angle in radians
@@ -203,7 +203,7 @@ public class BigWarpUtils
 
 		return Math.acos( 2 * dot * dot  - 1);
 	}
-	
+
 //	public static double angleBetween( final AffineTransform3D xfm1, final AffineTransform3D xfm2 )
 //	{
 //		double[][] tmpMat = new double[ 3 ][ 4 ];
@@ -212,7 +212,7 @@ public class BigWarpUtils
 //
 //		xfm1.toMatrix( tmpMat );
 //		LinAlgHelpers.qu
-//	
+//
 //		normalize( q1 );
 //		normalize( q2 );
 //
@@ -252,7 +252,7 @@ public class BigWarpUtils
 			arguments = arguments.substring( i + 1 ).trim();
 			if( arguments.length() == 0 )
 				done = true;
-			else 
+			else
 				arguments = arguments.substring( 1 ).trim(); // remove comma
 		}
 

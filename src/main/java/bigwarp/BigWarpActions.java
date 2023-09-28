@@ -923,7 +923,6 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( final ActionEvent e )
 		{
-			System.out.println("action save project");
 			bw.saveProject();
 		}
 	}
