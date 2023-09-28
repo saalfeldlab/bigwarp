@@ -119,13 +119,12 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		else if( col == imageColIdx )
 			sources.get( row ).srcName = (String)value;
 		else if( col == transformColIdx )
-			setTransform( (String)value, row );
+			setTransform( row, (String)value);
 	}
 
-	protected void setTransform(String value, int row)
-	{
-		if (transformChangedCallback != null)
-		{
+	public void setTransform(final int row, final String value) {
+
+		if (transformChangedCallback != null) {
 			final String res = transformChangedCallback.apply(value);
 			if (res != null)
 				sources.get(row).transformUrl = res;
@@ -140,11 +139,6 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		final RemoveRowButton rmButton = new RemoveRowButton( sources.size() );
 		rmRowButtons.add( rmButton );
 		sources.add( new SourceRow( srcName, moving, "", type ));
-	}
-
-	public void setTransform( int i, String transform )
-	{
-		sources.get( i ).transformUrl = transform;
 	}
 
 	public void add( String srcName, boolean moving )
