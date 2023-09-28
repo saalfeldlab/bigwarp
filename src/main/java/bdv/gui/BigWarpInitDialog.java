@@ -52,6 +52,8 @@ import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import bigwarp.source.SourceInfo;
 import bigwarp.transforms.NgffTransformations;
+import bigwarp.transforms.metadata.N5TransformMetadataParser;
+import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
 import ij.ImageJ;
 import ij.ImagePlus;
@@ -83,7 +85,7 @@ public class BigWarpInitDialog extends JFrame
 	private BigWarpSourceTableModel sourceTableModel;
 	private JComboBox<String> imagePlusDropdown;
 	private JButton addImageButton, addPathButton, addTransformButton;
-	private DatasetSelectorDialog selectionDialog;
+	private DatasetSelectorDialog selectionDialog, transformSelectionDialog;
 
 	private String lastOpenedContainer = "";
 	private String lastBrowsePath = null;
@@ -507,7 +509,10 @@ public class BigWarpInitDialog extends JFrame
 		panel.add( addN5TransformButton, cn5 );
 
 		addN5TransformButton.addActionListener( e -> {
-			selectionDialog.run( this::n5DialogTransformCallback );
+			if (sourceTable.getSelectedRow() < 0)
+				IJ.showMessage("Please highlight the row you would like to transform.");
+			else
+				transformSelectionDialog.run(this::n5DialogTransformCallback);
 		});
 
 		// source list
@@ -582,7 +587,7 @@ public class BigWarpInitDialog extends JFrame
 		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
 
 		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-				lastOpenedContainer, new N5MetadataParser[] {}, // no
+				lastOpenedContainer, new N5MetadataParser[] {},
 				N5Importer.PARSERS );
 
 		selectionDialog.setLoaderExecutor( exec );
@@ -605,6 +610,23 @@ public class BigWarpInitDialog extends JFrame
 
 		selectionDialog.setVirtualOption( true );
 		selectionDialog.setCropOption( true );
+
+
+		// transform
+
+		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
+
+		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+				lastOpenedContainer, new N5MetadataParser[] {},
+				tformParsers );
+
+		transformSelectionDialog.setLoaderExecutor( exec );
+		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
+		transformSelectionDialog.setContainerPathUpdateCallback( x -> {
+			if ( x != null )
+				lastOpenedContainer = x;
+		} );
+
 	}
 
 	public void n5DialogCallback( final DataSelection selection )
@@ -618,7 +640,7 @@ public class BigWarpInitDialog extends JFrame
 
 	public void n5DialogTransformCallback( final DataSelection selection )
 	{
-		final String n5RootPath = selectionDialog.getN5RootPath();
+		final String n5RootPath = transformSelectionDialog.getN5RootPath();
 		final int i = sourceTable.getSelectedRow();
 		if( selection.metadata.size() > 0 )
 			sourceTableModel.setTransform(i, n5RootPath + "?" + selection.metadata.get(0).getPath() );
