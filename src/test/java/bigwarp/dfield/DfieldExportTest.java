@@ -19,13 +19,11 @@ import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
 import ij.ImagePlus;
 import net.imglib2.FinalRealInterval;
-import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.iterator.RealIntervalIterator;
-import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.DisplacementFieldTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
@@ -33,7 +31,6 @@ import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.Scale3D;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
 import net.imglib2.view.Views;
 
@@ -46,7 +43,7 @@ public class DfieldExportTest
 	@Before
 	public void setup()
 	{
-		ImagePlus imp = ImagePlusImgs.bytes( 64, 64, 16 ).getImagePlus();
+		final ImagePlus imp = ImagePlusImgs.bytes( 64, 64, 16 ).getImagePlus();
 		data = makeData( imp, null );
 		dataWithTransform = makeData( imp, new Scale3D( 0.5, 0.5, 0.5 ));
 
@@ -55,7 +52,7 @@ public class DfieldExportTest
 		{
 			ltm.load( new File( "src/test/resources/mr_landmarks_p2p2p4-111.csv" ));
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			e.printStackTrace();
 			fail();
@@ -68,7 +65,7 @@ public class DfieldExportTest
 		final boolean isMoving = true;
 		final BigWarpData<T> data = BigWarpInit.initData();
 		final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, isMoving );
-		BigWarpInit.add( data, infos, tform );
+		BigWarpInit.add( data, infos, tform, null );
 		return data;
 	}
 
@@ -87,7 +84,7 @@ public class DfieldExportTest
 		final double[] offset = new double[] { 0, 0, 0 };
 		final int nThreads = 1;
 
-		final FinalRealInterval testItvl = new FinalRealInterval( 
+		final FinalRealInterval testItvl = new FinalRealInterval(
 				new double[]{ 3.6,   3.6, 1.6 },
 				new double[]{ 32.0, 40.0, 9.6 });
 
@@ -127,7 +124,7 @@ public class DfieldExportTest
 		final double[] offset = new double[] { 0, 0, 0 };
 		final int nThreads = 1;
 
-		final FinalRealInterval testItvl = new FinalRealInterval( 
+		final FinalRealInterval testItvl = new FinalRealInterval(
 				new double[]{ 3.6,   3.6, 1.6 },
 				new double[]{ 32.0, 40.0, 9.6 });
 
@@ -161,11 +158,11 @@ public class DfieldExportTest
 		final double[] offset = new double[] { 0, 0, 0 };
 		final int nThreads = 1;
 
-		final FinalRealInterval testItvl = new FinalRealInterval( 
+		final FinalRealInterval testItvl = new FinalRealInterval(
 				new double[]{ 3.6,   3.6, 1.6 },
 				new double[]{ 32.0, 40.0, 9.6 });
 
-		// flattened 
+		// flattened
 		final ImagePlus dfieldImpFlat = BigWarpToDeformationFieldPlugIn.toImagePlus(
 				dataWithTransform, ltm, bwTransform,
 				ignoreAffine, true, inverse, virtual,

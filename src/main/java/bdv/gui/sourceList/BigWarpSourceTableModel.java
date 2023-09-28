@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.swing.DefaultCellEditor;
 import javax.swing.JButton;
@@ -237,6 +238,14 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 				transform = NgffTransformations.open( transformUrl );
 
 			return transform;
+		}
+
+		public Supplier<String> getTransformUri()
+		{
+			if( transformUrl!= null && !transformUrl.isEmpty() )
+				return () -> transformUrl;
+
+			return null;
 		}
 	}
 

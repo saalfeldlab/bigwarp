@@ -80,10 +80,12 @@ public class TransformWriterJson {
 
 	public static void read( final BigWarp< ? > bw, final JsonObject json )
 	{
+
 		if( json.has( "landmarks" ))
 		{
 			final int nd = json.get("landmarks").getAsJsonObject().get("numDimensions").getAsInt();
-			if( bw.numDimensions() != nd )
+			final boolean nonEmpty = json.get("landmarks").getAsJsonObject().get("active").getAsJsonArray().size() > 0;
+			if( bw.numDimensions() != nd && nonEmpty )
 				bw.changeDimensionality(nd == 2);
 
 			bw.getLandmarkPanel().getTableModel().fromJson( json );

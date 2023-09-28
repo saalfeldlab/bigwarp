@@ -11,7 +11,7 @@ public class BigWarpTransformedSourcesTest
 
 	public static void main( String[] args ) throws SpimDataException
 	{
-		BigWarpData< ? > data = createData();
+		final BigWarpData< ? > data = createData();
 		data.applyTransformations();
 
 		final BigWarp<?> bw = new BigWarp<>( data, new ProgressWriterConsole());
@@ -28,17 +28,17 @@ public class BigWarpTransformedSourcesTest
 //		final ImagePlus mr = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif");
 //		final ImagePlus t1 = IJ.openImage("/groups/saalfeld/home/bogovicj/tmp/t1-head.tif");
 
-		AffineTransform3D translation0 = new AffineTransform3D();
+		final AffineTransform3D translation0 = new AffineTransform3D();
 		translation0.translate( -50, -50, -10 );
 
-		AffineTransform3D translation = new AffineTransform3D();
+		final AffineTransform3D translation = new AffineTransform3D();
 		translation.translate( -100, -150, -50 );
 
 		int id = 0;
 		final BigWarpData< T > data = BigWarpInit.initData();
-		BigWarpInit.add( data, BigWarpInit.createSources( data, mr, id++, 0, true ), translation0 );
+		BigWarpInit.add( data, BigWarpInit.createSources( data, mr, id++, 0, true ), translation0, null);
 		BigWarpInit.add( data, BigWarpInit.createSources( data, t1, id++, 0, false ));
-		BigWarpInit.add( data, BigWarpInit.createSources( data, t1, id++, 0, false ), translation);
+		BigWarpInit.add( data, BigWarpInit.createSources( data, t1, id++, 0, false ), translation, null);
 
 		return data;
 	}

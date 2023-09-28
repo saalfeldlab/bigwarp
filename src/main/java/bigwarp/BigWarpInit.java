@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
@@ -307,16 +308,16 @@ public class BigWarpInit
 		return add( bwdata, source, sourceInfo );
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform )
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
 		final LinkedHashMap< Source< T >, SourceInfo > sourceToInfo = new LinkedHashMap<>();
 		sourceToInfo.put( source, sourceInfo );
-		return add( bwdata, sourceToInfo, transform );
+		return add( bwdata, sourceToInfo, transform, transformUriSupplier );
 	}
 
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources )
 	{
-		add( bwdata, sources, null );
+		add( bwdata, sources, null, null );
 		return bwdata;
 	}
 
@@ -338,7 +339,7 @@ public class BigWarpInit
 		return bwdata;
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform )
+	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
 		sources.forEach( ( source, info ) -> {
 			addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
@@ -347,7 +348,7 @@ public class BigWarpInit
 
 			if ( transform != null )
 			{
-				info.setTransform( transform );
+				info.setTransform( transform, transformUriSupplier );
 			}
 			bwdata.sourceInfos.put( info.getId(), info );
 		} );

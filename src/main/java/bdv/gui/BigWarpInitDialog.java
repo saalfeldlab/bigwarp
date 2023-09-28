@@ -189,7 +189,7 @@ public class BigWarpInitDialog extends JFrame
 		createAndShow();
 	}
 
-	public static <T> void runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
+	public static <T> BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProjectLandmarkArg = projectLandmarkPath != null && !projectLandmarkPath.isEmpty();
@@ -210,13 +210,19 @@ public class BigWarpInitDialog extends JFrame
 				{
 					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
 
-					final String transformUrl = transforms[ i ];
 					RealTransform transform = null;
-					if( transformUrl!= null && !transformUrl.isEmpty() )
-						transform = NgffTransformations.open( transformUrl );
+					final String transformUrl;
+					if( transforms != null && transforms.length > i )
+					{
+						transformUrl = transforms[ i ];
+						if( transformUrl!= null && !transformUrl.isEmpty() )
+							transform = NgffTransformations.open( transformUrl );
+					}
+					else
+						transformUrl = null;
 
 					// add performs a null check on transform
-					BigWarpInit.add( data, infos, transform );
+					BigWarpInit.add( data, infos, transform, transformUrl == null ? null : () -> transformUrl );
 
 					id += infos.size();
 				}
@@ -235,10 +241,12 @@ public class BigWarpInitDialog extends JFrame
 			}
 		}
 
-		BigWarp<?> bw;
+		BigWarp<?> bw = null;
 		try
 		{
+			bwOpts.is2D(BigWarp.detectNumDims( data.sources ) == 2);
 			data.applyTransformations();
+
 			bw = new BigWarp<>( data, bwOpts, new ProgressWriterIJ() );
 			if( haveProject )
 				bw.loadSettings( projectLandmarkPath, true );
@@ -258,6 +266,7 @@ public class BigWarpInitDialog extends JFrame
 			e.printStackTrace();
 		}
 
+		return bw;
 	}
 
 	public <T> void runBigWarp()
@@ -288,7 +297,7 @@ public class BigWarpInitDialog extends JFrame
 					// strip off prefix if present
 					final ImagePlus imp = WindowManager.getImage( tableRow.srcName.replaceAll( "^"+ImageJPrefix, "" ) );
 					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
-					BigWarpInit.add( data, infos, tableRow.getTransform() );
+					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 					id += infos.size();
 				}
 				else if( tableRow.type.equals( SourceType.DATASET ))
@@ -297,16 +306,16 @@ public class BigWarpInitDialog extends JFrame
 							.filter( x -> x.getSource().equals( tableRow.srcName ) )
 							.findFirst().get();
 					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
-					BigWarpInit.add( data, infos, tableRow.getTransform() );
+					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 					id += infos.size();
 				}
 				else
 				{
-					// TODO deal with exceptions
+					// deal with exceptions differently?
 					try
 					{
 						final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
-						BigWarpInit.add( data, infos, tableRow.getTransform() );
+						BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 						id += infos.size();
 					}
 					catch ( final URISyntaxException e )

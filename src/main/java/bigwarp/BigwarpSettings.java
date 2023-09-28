@@ -18,6 +18,7 @@ import bdv.viewer.state.XmlIoViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import bigwarp.transforms.io.TransformWriterJson;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -40,6 +41,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import org.scijava.listeners.Listeners;
 
@@ -59,7 +61,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	private final BigWarpTransform transform;
 
-	private final Map< Integer, SourceInfo> sourceInfos;
+	private final Map<Integer, SourceInfo> sourceInfos;
 
 	BigWarpViewerPanel viewerP;
 
@@ -215,6 +217,11 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 					out.name( "name" ).value( sourceInfo.getName() );
 				}
 				out.name( "isMoving" ).value( sourceInfo.isMoving() );
+
+				final String transformUri = sourceInfo.getTransformUri();
+				if( transformUri != null )
+					out.name( "transform" ).value( transformUri );
+
 				out.endObject();
 			}
 			out.endObject();
@@ -230,6 +237,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				final int id = Integer.parseInt( in.nextName() );
 				in.beginObject();
 				String uri = null;
+				String transformUri = null;
 				String name = null;
 				Boolean isMoving = null;
 				while ( in.hasNext() )
@@ -245,6 +253,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 						break;
 					case "isMoving":
 						isMoving = in.nextBoolean();
+						break;
+					case "transform":
+						transformUri = in.nextString();
 						break;
 					}
 				}
@@ -262,14 +273,20 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 					final LinkedHashMap< Source< T >, SourceInfo > sources;
 					try
 					{
-						//TODO Transform
 						sources = BigWarpInit.createSources( bigwarp.data, uri, id, isMoving );
 					}
 					catch ( URISyntaxException | SpimDataException e )
 					{
 						throw new RuntimeException( e );
 					}
-					BigWarpInit.add( bigwarp.data, sources );
+
+					RealTransform transform = null;
+					final String tformUri = transformUri;
+					if( transformUri != null )
+						transform = NgffTransformations.open(transformUri);
+
+					BigWarpInit.add( bigwarp.data, sources, transform, () -> tformUri );
+
 					if ( targetIdx >= 0 )
 					{
 						/* move the source and converterSetup to the correct idx */
@@ -283,7 +300,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				in.endObject();
 			}
 			in.endObject();
+
+			bigwarp.data.applyTransformations();
 			bigwarp.initialize();
+
 			return bigwarp.data.sourceInfos;
 		}
 	}
