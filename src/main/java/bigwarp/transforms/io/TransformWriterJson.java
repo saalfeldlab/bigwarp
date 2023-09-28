@@ -115,6 +115,9 @@ public class TransformWriterJson {
 			}
 		}
 
+		if( json.has( "type" ))
+			bw.setTransformType(json.get("type").getAsString());
+
 	}
 
 }

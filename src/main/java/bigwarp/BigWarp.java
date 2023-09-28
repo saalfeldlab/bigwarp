@@ -3468,7 +3468,9 @@ public class BigWarp< T >
 
 	public void setTransformType( final String type )
 	{
-		bwTransform.setTransformType( type );
+		updateTransformTypePanel(type);
+		updateTransformTypeDialog(type);
+		bwTransform.setTransformType(type);
 		this.restimateTransformation();
 	}
 
