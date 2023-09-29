@@ -470,29 +470,46 @@ public class BigWarpInit
 
 		final URI encodedUri = N5URI.encodeAsUri( uri );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
-		if ( encodedUri.isOpaque() )
+		final boolean possibleN5 = encodedUri.getPath().contains(".n5") ||
+			encodedUri.getPath().contains(".zarr") ||
+			encodedUri.getPath().contains(".h5") ||
+			encodedUri.getPath().contains(".hdf") ||
+			encodedUri.getPath().contains(".hdf5");
+
+		if ( encodedUri.isOpaque() || possibleN5 )
 		{
-			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
-			final String firstScheme = encodedUri.getScheme().toLowerCase();
 			final N5Reader n5reader;
-			switch ( firstScheme )
+			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
+			final String firstScheme = encodedUri.getScheme();
+			if( firstScheme != null )
 			{
-			case "n5":
-				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
-				break;
-			case "zarr":
-				n5reader = new N5ZarrReader( n5URL.getContainerPath() );
-				break;
-			case "h5":
-			case "hdf5":
-			case "hdf":
-				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
-				break;
-			default:
-				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
+				switch ( firstScheme.toLowerCase() )
+				{
+				case "n5":
+					n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
+					break;
+				case "zarr":
+					n5reader = new N5ZarrReader( n5URL.getContainerPath() );
+					break;
+				case "h5":
+				case "hdf5":
+				case "hdf":
+					n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
+					break;
+				default:
+					throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
+				}
+			}
+			else {
+				// give it a try anyway
+				n5reader = new N5Factory().openReader(n5URL.getContainerPath());
+				if( n5reader == null )
+					throw new URISyntaxException( n5URL.toString(), " not valid N5 container." );
 			}
 
+
 			final Source< T > source = loadN5Source( n5reader, n5URL.getGroupPath() );
+
 			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
 		}
 		else
@@ -504,7 +521,9 @@ public class BigWarpInit
 				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
 				final String group = n5URL.getGroupPath();
 				final Source< T > source = loadN5Source( n5reader, group );
-				sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
+
+				if( source != null )
+					sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
 			}
 			catch ( final Exception ignored )
 			{}
@@ -678,6 +697,9 @@ public class BigWarpInit
 	{
 		final RandomAccessibleInterval imageRaw;
 		final RandomAccessibleInterval image;
+		if( meta == null )
+			return null;
+
 		try
 		{
 			if ( isVolatile )
