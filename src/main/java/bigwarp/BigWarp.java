@@ -4082,19 +4082,16 @@ public class BigWarp< T >
 			final BigwarpSettings settings = getSettings();
 			settings.setOverwriteSources( overwriteSources );
 
-			try {
-				SwingUtilities.invokeAndWait( () -> {
+			Executors.newSingleThreadExecutor().execute(new Runnable() {
+				@Override
+				public void run() {
 					try {
 						settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
-					} catch (final IOException e) {
+					} catch (final Exception e) {
 						e.printStackTrace();
 					}
-				});
-			} catch (final InvocationTargetException e) {
-				e.printStackTrace();
-			} catch (final InterruptedException e) {
-				e.printStackTrace();
-			}
+				}
+			});
 
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
