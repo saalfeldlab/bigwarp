@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -653,22 +654,22 @@ public class BigWarpInitDialog extends JFrame
 		if ( !imageJOpen && datasetService == null)
 			return;
 
-		if( datasetService != null )
-		{
-			final String title = (String)(imagePlusDropdown.getSelectedItem());
-			addDataset( title, false );
-		}
-		else
-		{
-			final String title = (String)(imagePlusDropdown.getSelectedItem());
-			addImagePlus( title );
-		}
+		final String title = (String)(imagePlusDropdown.getSelectedItem());
+		if (!addDataset(title, false))
+			addImagePlus(title);
+
 		this.repaint();
 	}
 
-	protected void addDataset( final String datasetSource, final boolean moving )
+	protected boolean addDataset( final String datasetSource, final boolean moving )
 	{
-		sourceTableModel.addDataset( datasetSource, moving );
+		if( datasetService.getDatasets().stream().filter( x -> x.getSource().equals(datasetSource)).count() > 0 )
+		{
+			sourceTableModel.addDataset( datasetSource, moving );
+			return true;
+		}
+		else
+			return false;
 	}
 
 	protected void addImagePlus( final String title )
@@ -718,28 +719,30 @@ public class BigWarpInitDialog extends JFrame
 		if( !imageJOpen && datasetService == null )
 			return;
 
-        final String[] titles;
+        // add both images from dataset service and ij1 window manager but avoid duplicates
+		final ArrayList<String> titleList = new ArrayList<>();
 		if( datasetService != null )
 		{
-			int i = 0;
-			titles = new String[ datasetService.getDatasets().size() ];
+			final int i = 0;
 			for( final Dataset d : datasetService.getDatasets() )
-				titles[i++] = d.getSource();
+				titleList.add(d.getSource());
 		}
-		else
+
+		// don't need any open windows if we're using N5
+		final int[] ids = WindowManager.getIDList();
+
+		// Find any open images
+		final int N = ids == null ? 0 : ids.length;
+		for ( int i = 0; i < N; ++i )
 		{
-			// don't need any open windows if we're using N5
-			final int[] ids = WindowManager.getIDList();
-
-			// Find any open images
-			final int N = ids == null ? 0 : ids.length;
-
-			titles = new String[ N ];
-			for ( int i = 0; i < N; ++i )
-			{
-				titles[ i ] = ( WindowManager.getImage( ids[ i ] )).getTitle();
-			}
+			final String t = ( WindowManager.getImage( ids[ i ] )).getTitle();
+			if( !titleList.contains(t))
+				titleList.add(t);
 		}
+
+        final String[] titles = new String[titleList.size()];
+		for (int i = 0; i < titleList.size(); i++)
+			titles[i] = titleList.get(i);
 
 		imagePlusDropdown.setModel( new DefaultComboBoxModel<>( titles ));
 	}
