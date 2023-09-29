@@ -154,7 +154,6 @@
     },
     "Transform": {
         "type": "Thin Plate Spline",
-        "maskInterpolationType": "NONE",
         "landmarks": {
             "type": "BigWarpLandmarks",
             "numDimensions": 3,
