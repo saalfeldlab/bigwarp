@@ -1644,12 +1644,9 @@ public class BigWarp< T >
 			LandmarkTableModel landmarkModel, JTable table,
 			boolean isMoving, int lastRowEdited )
 	{
-		logger.trace( "updateRowSelection " );
-
 		final int i = landmarkModel.getNextRow( isMoving );
 		if ( i < table.getRowCount() )
 		{
-			logger.trace( "  landmarkTable ( updateRowSelection ) selecting row " + i );
 			table.setRowSelectionInterval( i, i );
 		} else if( lastRowEdited >= 0 && lastRowEdited < table.getRowCount() )
 			table.setRowSelectionInterval( lastRowEdited, lastRowEdited );
@@ -1762,9 +1759,6 @@ public class BigWarp< T >
 		int bestIdx = -1;
 		double smallestDist = Double.MAX_VALUE;
 
-		logger.trace( "  selectedLandmarkHelper dist scale: " + scale );
-		logger.trace( "  selectedLandmarkHelper      radsq: " + radsq );
-
 		for ( int n = 0; n < N; n++ )
 		{
 			final Double[] lmpt;
@@ -1788,7 +1782,6 @@ public class BigWarp< T >
 			}
 
 			dist *= ( scale * scale );
-			logger.trace( "    dist squared of lm index : " + n + " is " + dist );
 			if ( dist < radsq && dist < smallestDist )
 			{
 				smallestDist = dist;
@@ -1806,7 +1799,6 @@ public class BigWarp< T >
 			landmarkTable.setEditingRow( bestIdx );
 			landmarkFrame.repaint();
 		}
-		logger.trace( "selectedLandmark: " + bestIdx );
 		return bestIdx;
 	}
 
@@ -2065,7 +2057,6 @@ public class BigWarp< T >
 		// points to estimate a reasonable transformation.
 		// return early if an re-estimation did not occur
 		final boolean success = restimateTransformation();
-		logger.trace( "toggleMovingImageDisplay, success: " + success );
 		if ( !success )
 		{
 			message.showMessage( "Require at least 4 points to estimate a transformation" );
@@ -3256,7 +3247,6 @@ public class BigWarp< T >
 						thisViewer.doUpdateOnDrag() &&
 						BigWarp.this.landmarkModel.isActive( selectedPointIndex ) )
 				{
-					logger.trace("Drag resolve");
 					solverThread.requestResolve( isMoving, selectedPointIndex, ptarrayLoc );
 				}
 				else
@@ -3265,7 +3255,6 @@ public class BigWarp< T >
 					// the undoable action is added on mouseRelease
 					if( isMoving && isMovingDisplayTransformed() )
 					{
-						logger.trace("Drag moving transformed");
 						// The moving image:
 						// Update the warped point during the drag even if there is a corresponding fixed image point
 						// Do this so the point sticks on the mouse
@@ -3277,7 +3266,6 @@ public class BigWarp< T >
 					}
 					else
 					{
-						logger.trace("Drag default");
 						// The fixed image
 						BigWarp.this.landmarkModel.pointEdit( selectedPointIndex, ptarrayLoc, false, isMoving, false, false, currentTransform );
 						thisViewer.requestRepaint();
