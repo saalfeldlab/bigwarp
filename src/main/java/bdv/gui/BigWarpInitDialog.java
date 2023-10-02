@@ -222,18 +222,26 @@ public class BigWarpInitDialog extends JFrame
 					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
 
 					RealTransform transform = null;
-					final String transformUrl;
+					final Supplier<String> transformSupplier;
 					if( transforms != null && transforms.length > i )
 					{
-						transformUrl = transforms[ i ];
+						final String transformUrl = transforms[ i ];
 						if( transformUrl!= null && !transformUrl.isEmpty() )
+						{
 							transform = NgffTransformations.open( transformUrl );
+							transformSupplier = () -> transformUrl;
+						}
+						else {
+							transformSupplier = null;
+						}
 					}
 					else
-						transformUrl = null;
+					{
+						transformSupplier = null;
+					}
 
 					// add performs a null check on transform
-					BigWarpInit.add( data, infos, transform, transformUrl == null ? null : () -> transformUrl );
+					BigWarpInit.add( data, infos, transform, transformSupplier );
 
 					id += infos.size();
 				}
