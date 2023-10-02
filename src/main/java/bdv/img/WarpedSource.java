@@ -228,6 +228,11 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		return source.getName() + "_" + name;
 	}
 
+	public String getOriginalName()
+	{
+		return getWrappedSource().getName();
+	}
+
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
