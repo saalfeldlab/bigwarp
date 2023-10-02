@@ -55,6 +55,8 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transform
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.TranslationCoordinateTransform;
 
 import bdv.gui.ExportDisplacementFieldFrame;
+import bdv.img.WarpedSource;
+import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpExporter;
@@ -686,8 +688,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	{
 		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
-		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
-		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
+		final String mvgSpaceName = getMovingName(data);
+		final String tgtSpaceName = getTargetName(data);
 		final String inputSpace;
 		final String outputSpace;
 		if( inverse )
@@ -738,7 +740,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final RealTransformSequence totalNoAffine = new RealTransformSequence();
 			totalNoAffine.add( transform );
 			totalNoAffine.add( affine.inverse() );
-			dfield = DisplacementFieldTransform.createDisplacementField( totalNoAffine, new FinalInterval( dims ), spacing );
+			dfield = DisplacementFieldTransform.createDisplacementField( totalNoAffine, new FinalInterval( dims ), spacing, offset );
 
 			if( format.equals( ExportDisplacementFieldFrame.FMT_SLICER ))
 			{
@@ -758,7 +760,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 		else
 		{
-			dfield = DisplacementFieldTransform.createDisplacementField( transform, new FinalInterval( dims ), spacing );
+			dfield = DisplacementFieldTransform.createDisplacementField( transform, new FinalInterval( dims ), spacing, offset );
 
 			if( format.equals( ExportDisplacementFieldFrame.FMT_SLICER ))
 			{
@@ -776,6 +778,30 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 		n5.close();
+	}
+
+	private static String getMovingName( final BigWarpData data ) {
+		if( data != null &&  data.numMovingSources() > 0 )
+		{
+			final Source src = data.getMovingSource( 0 ).getSpimSource();
+			if( src instanceof WarpedSource )
+				return ((WarpedSource)src).getOriginalName();
+			else
+				return src.getName();
+		}
+		return "moving";
+	}
+
+	private static String getTargetName( final BigWarpData data ) {
+		if( data != null &&  data.numTargetSources() > 0 )
+		{
+			final Source src = data.getTargetSource( 0 ).getSpimSource();
+			if( src instanceof WarpedSource )
+				return ((WarpedSource)src).getOriginalName();
+			else
+				return src.getName();
+		}
+		return "target";
 	}
 
 	private static int[] fillBlockSize(final int[] blockSize, final int N)

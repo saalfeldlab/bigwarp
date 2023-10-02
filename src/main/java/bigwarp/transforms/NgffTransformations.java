@@ -563,7 +563,7 @@ public class NgffTransformations
 			e.printStackTrace();
 		}
 
-		final String vecFieldCsName =  inputCoordinates.getName() + "_dfield";
+		final String vecFieldCsName =  inputCoordinates.getName();
 		final CoordinateSystem[] cs = new CoordinateSystem[] {
 				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates ) };
 		n5Writer.setAttribute(dataset, CoordinateSystem.KEY, cs);
