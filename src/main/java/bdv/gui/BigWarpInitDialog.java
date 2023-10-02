@@ -25,9 +25,14 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.Timer;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 import org.janelia.saalfeldlab.n5.ij.N5Importer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
@@ -35,6 +40,8 @@ import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
 import org.janelia.saalfeldlab.n5.ui.N5DatasetTreeCellRenderer;
+import org.janelia.saalfeldlab.n5.ui.N5SwingTreeNode;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5DatasetMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalDatasetMetadata;
@@ -53,6 +60,7 @@ import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import bigwarp.source.SourceInfo;
 import bigwarp.transforms.NgffTransformations;
+import bigwarp.transforms.metadata.N5TransformMetadata;
 import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
@@ -513,7 +521,17 @@ public class BigWarpInitDialog extends JFrame
 			if (sourceTable.getSelectedRow() < 0)
 				IJ.showMessage("Please highlight the row you would like to transform.");
 			else
+			{
 				transformSelectionDialog.run(this::n5DialogTransformCallback);
+
+				// remove any existing selection listeners
+				final JTree tree = transformSelectionDialog.getJTree();
+				for ( final TreeSelectionListener l : tree.getTreeSelectionListeners())
+					tree.removeTreeSelectionListener(l);
+
+				// add a new listener for transform metadata
+				tree.addTreeSelectionListener(new N5TransformTreeSelectionListener(tree.getSelectionModel()));
+			}
 		});
 
 		// source list
@@ -618,8 +636,7 @@ public class BigWarpInitDialog extends JFrame
 		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
 
 		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-				lastOpenedContainer, new N5MetadataParser[] {},
-				tformParsers );
+				lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
 
 		transformSelectionDialog.setLoaderExecutor( exec );
 		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
@@ -1018,6 +1035,38 @@ public class BigWarpInitDialog extends JFrame
 //			// TOD fix transforms
 //			runBigWarp( null, images, moving, null );
 //		}
+	}
+
+	/**
+	 * Removes selected nodes that do not have transformation metadata.
+	 */
+	public static class N5TransformTreeSelectionListener implements TreeSelectionListener {
+
+		private TreeSelectionModel selectionModel;
+
+		public N5TransformTreeSelectionListener(final TreeSelectionModel selectionModel) {
+
+			this.selectionModel = selectionModel;
+		}
+
+		@Override
+		public void valueChanged(final TreeSelectionEvent sel) {
+
+			int i = 0;
+			for (final TreePath path : sel.getPaths()) {
+				if (!sel.isAddedPath(i))
+					continue;
+
+				final Object last = path.getLastPathComponent();
+				if (last instanceof N5SwingTreeNode) {
+					final N5SwingTreeNode node = ((N5SwingTreeNode)last);
+					if (node.getMetadata() == null || !(node.getMetadata() instanceof N5TransformMetadata)) {
+						selectionModel.removeSelectionPath(path);
+					}
+				}
+				i++;
+			}
+		}
 	}
 
 }
