@@ -383,12 +383,6 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( bw.isInLandmarkMode() )
-			{
-				bw.message.showMessage( "Undo/Redo not allowed in landmark mode" );
-				return;
-			}
-
 			// I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
 //			if( isRedo && manager.canRedo() ){
