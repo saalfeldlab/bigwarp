@@ -199,7 +199,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final Source< ? > spimSource = bwData.getTargetSource(0 ).getSpimSource();
 			return getResolution( spimSource, resolutionOption, resolutionSpec );
 		}
-		else if( resolutionOption.equals( MOVING ))
+		else if( resolutionOption.equals( MOVING ) )
 		{
 			if( bwData.numTargetSources() <= 0 )
 				return null;
@@ -339,8 +339,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			final double[] inputres = resolutionFromSource( source );
 
+			final int N  = outputResolution.length <= rai.numDimensions() ? outputResolution.length : rai.numDimensions();
 			final long[] max = new long[ rai.numDimensions() ];
-			for( int d = 0; d < rai.numDimensions(); d++ )
+			for( int d = 0; d < N; d++ )
 			{
 				max[ d ] = (long)Math.ceil( ( inputres[ d ] * rai.dimension( d )) / outputResolution[ d ]);
 			}
