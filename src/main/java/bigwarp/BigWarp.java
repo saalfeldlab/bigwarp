@@ -1736,9 +1736,10 @@ public class BigWarp< T >
 	 */
 	protected int selectedLandmark( final double[] pt, final boolean isMoving, final boolean selectInTable )
 	{
-		logger.trace( "clicked: " + XfmUtils.printArray( pt ) );
+		// this gets called on startup for some reason, so put this check in
+		if( landmarkModel == null )
+			return -1;
 
-		// TODO selectedLandmark
 		final int N = landmarkModel.getRowCount();
 
 		// a point will be selected if you click inside the spot ( with a 5 pixel buffer )
