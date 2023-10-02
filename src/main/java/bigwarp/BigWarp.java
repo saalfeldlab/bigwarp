@@ -1947,6 +1947,12 @@ public class BigWarp< T >
 			return;
 		}
 
+		if ( BigWarp.this.landmarkModel.getRowCount() < 1 )
+		{
+			message.showMessage( "No landmarks found." );
+			return;
+		}
+
 		int offset = 0;
 		final int ndims = landmarkModel.getNumdims();
 		double[] pt = null;

@@ -1028,6 +1028,12 @@ public class BigWarpActions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
+			if ( bw.landmarkModel.getRowCount() < 1 )
+			{
+				bw.message.showMessage( "No landmarks found." );
+				return;
+			}
+
 			final int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
 
 			int row = 0;
