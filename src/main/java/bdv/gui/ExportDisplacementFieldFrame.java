@@ -30,6 +30,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.formdev.flatlaf.util.UIScale;
 
+import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.BigWarpToDeformationFieldPlugIn.DeformationFieldExportParameters;
 import bdv.viewer.Source;
@@ -293,6 +294,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 				fovPanel.updateFieldsFromReference();
 			else
 				fovPanel.updateFieldsFromImageJReference();
+
+			// set default resolution to target image resolution
+			final double[] res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.TARGET, null );
+			fovPanel.setSpacing(res);
 		}
 
 		addDefaultN5DatasetAction();
