@@ -1087,7 +1087,7 @@ public class BigWarp< T >
 			fileMenu.add( exportToImagePlus );
 
 			final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ));
-			exportWarpField.setText( "Export warp field" );
+			exportWarpField.setText( "Export transformation" );
 			fileMenu.add( exportWarpField );
 		}
 

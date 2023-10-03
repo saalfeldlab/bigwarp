@@ -120,7 +120,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	public ExportDisplacementFieldFrame( BigWarpData<?> data, BigWarpTransform bwTransform, LandmarkTableModel ltm )
 	{
-		super( "Export displacement field" );
+		super( "Export transformation" );
 		initialPath = "";
 		imageJOpen = IJ.getInstance() != null;
 

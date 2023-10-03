@@ -727,11 +727,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final AffineGet affine = bwXfm.affinePartOfTps();
 			final AffineCoordinateTransform ngffAffine = new AffineCoordinateTransform( affine.getRowPackedCopy() );
 
-			// displacement field (with the affine removed)
-			final RealTransformSequence totalNoAffine = new RealTransformSequence();
-			totalNoAffine.add( transform );
-			totalNoAffine.add( affine.inverse() );
-			dfield = DisplacementFieldTransform.createDisplacementField( totalNoAffine, new FinalInterval( dims ), spacing, offset );
+			// the variable transform has the affine part removed here
+			dfield = DisplacementFieldTransform.createDisplacementField( transform, new FinalInterval( dims ), spacing, offset );
 
 			if( format.equals( ExportDisplacementFieldFrame.FMT_SLICER ))
 			{
