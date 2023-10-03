@@ -42,7 +42,9 @@ public class SpatiallyInterpolatedRealTransform<T extends RealType<T>> implement
 		this.a = a;
 		this.b = b;
 		this.lambda = lambda;
-		lambdaAccess = lambda.realRandomAccess();
+
+		if( lambda != null )
+			lambdaAccess = lambda.realRandomAccess();
 
 		final int nd = a.numTargetDimensions();
 		arrA = new double[nd];
