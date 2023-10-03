@@ -2601,15 +2601,8 @@ public class BigWarp< T >
 				jacDetSource = addJacobianDeterminantSource( ndims, data, "Jacobian determinant" );
 				synchronizeSources();
 			}
-			state.setSourceActive( data.getSourceInfo( JACDET_SOURCE_ID ).getSourceAndConverter(), true );
+			showSourceFused( viewerFrame, JACDET_SOURCE_ID );
 
-			if ( warpMagSource != null )
-				state.setSourceActive( data.getSourceInfo( WARPMAG_SOURCE_ID ).getSourceAndConverter(), false );
-
-			if ( gridSource != null )
-				state.setSourceActive( data.getSourceInfo( GRID_SOURCE_ID ).getSourceAndConverter(), false );
-
-			state.setDisplayMode( DisplayMode.FUSED );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Jacobian Determinant" );
 			break;
 		}
@@ -2622,13 +2615,7 @@ public class BigWarp< T >
 				warpMagSource = addWarpMagnitudeSource( data, ndims == 2, "Warp magnitude" );
 				synchronizeSources();
 			}
-			state.setSourceActive( data.getSourceInfo( WARPMAG_SOURCE_ID ).getSourceAndConverter(), true );
-
-			if ( jacDetSource != null )
-				state.setSourceActive( data.getSourceInfo( JACDET_SOURCE_ID ).getSourceAndConverter(), false );
-
-			if ( gridSource != null )
-				state.setSourceActive( data.getSourceInfo( GRID_SOURCE_ID ).getSourceAndConverter(), false );
+			showSourceFused( viewerFrame, WARPMAG_SOURCE_ID );
 
 			// estimate the max warp
 //			final WarpMagnitudeSource< ? > wmSrc = ( ( WarpMagnitudeSource< ? > ) sources.get( warpMagSourceIndex ).getSpimSource() );
@@ -2637,7 +2624,7 @@ public class BigWarp< T >
 			// set the slider
 //			( ( RealARGBColorConverter< FloatType > ) ( sources.get( warpMagSourceIndex ).getConverter() ) ).setMax( maxval );
 
-			state.setDisplayMode( DisplayMode.FUSED );
+
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Magnitude" );
 			break;
 		}
@@ -2650,15 +2637,8 @@ public class BigWarp< T >
 				synchronizeSources();
 				data.getConverterSetup( GRID_SOURCE_ID ).setDisplayRange( 0, 512 );
 			}
-			state.setSourceActive( data.getSourceInfo( GRID_SOURCE_ID ).getSourceAndConverter(), true );
+			showSourceFused( viewerFrame, GRID_SOURCE_ID );
 
-			if ( warpMagSource != null )
-				state.setSourceActive( data.getSourceInfo( WARPMAG_SOURCE_ID ).getSourceAndConverter(), false );
-
-			if ( jacDetSource != null )
-				state.setSourceActive( data.getSourceInfo( JACDET_SOURCE_ID ).getSourceAndConverter(), false );
-
-			state.setDisplayMode( DisplayMode.FUSED );
 			viewerFrame.getViewerPanel().showMessage( "Displaying Warp Grid" );
 			break;
 		}
@@ -2692,7 +2672,7 @@ public class BigWarp< T >
 				return;
 		}
 
-		if ( landmarkModel.getTransform() == null )
+		if( getBwTransform().getTransformation() == null )
 		{
 			message.showMessage( "No warp - estimate warp first." );
 			return;
@@ -2702,6 +2682,7 @@ public class BigWarp< T >
 
 		// TODO consider remembering whether fused was on before displaying warpmag
 		// so that its still on or off after we turn it off
+
 		final SourceAndConverter< ? > wmSac = data.getSourceInfo( WARPMAG_SOURCE_ID ).getSourceAndConverter();
 		if ( state.isSourceActive( wmSac ) ) // warp mag is visible, turn it off
 		{
@@ -2726,6 +2707,53 @@ public class BigWarp< T >
 		}
 
 		viewerFrame.getViewerPanel().requestRepaint();
+	}
+
+	private void showSourceFused(BigWarpViewerFrame viewerFrame, int sourceId) {
+
+		if (viewerFrame == null) {
+			if (viewerFrameP.isActive()) {
+				viewerFrame = viewerFrameP;
+			} else if (viewerFrameQ.isActive()) {
+				viewerFrame = viewerFrameQ;
+			} else
+				return;
+		}
+
+		if (getBwTransform().getTransformation() == null) {
+			message.showMessage("No warp - estimate warp first.");
+			return;
+		}
+
+		final SourceAndConverter< ? > newSrc = data.getSourceInfo( sourceId ).getSourceAndConverter();
+
+		final ViewerState state = viewerFrame.getViewerPanel().state();
+		if (!state.getDisplayMode().equals(DisplayMode.FUSED)) {
+			final SourceAndConverter<?> currentSource = state.getCurrentSource();
+			for( final SourceAndConverter<?> src : state.getSources())
+				state.setSourceActive(src, src == currentSource || src == newSrc );
+		}
+		else {
+
+			final SourceInfo warpMagSrcInfo = data.getSourceInfo( WARPMAG_SOURCE_ID );
+			final SourceInfo gridSrcInfo = data.getSourceInfo( GRID_SOURCE_ID );
+			final SourceInfo jacDetSrcInfo = data.getSourceInfo( JACDET_SOURCE_ID );
+
+			// un-dispolay all the warp vis sources
+			if (warpMagSrcInfo != null)
+				state.setSourceActive(warpMagSrcInfo.getSourceAndConverter(), false);
+
+			if (gridSrcInfo != null)
+				state.setSourceActive(gridSrcInfo.getSourceAndConverter(), false);
+
+			if (jacDetSrcInfo != null)
+				state.setSourceActive(jacDetSrcInfo.getSourceAndConverter(), false);
+
+			// activate the requested one
+			state.setSourceActive(newSrc, true);
+		}
+
+		state.setDisplayMode(DisplayMode.FUSED);
 	}
 
 	private void setTransformationMovingSourceOnly( final InvertibleRealTransform transform )
@@ -4014,7 +4042,6 @@ public class BigWarp< T >
 //			} catch (final Exception e) {
 //				e.printStackTrace();
 //			}
-
 
 			// TODO I may need this
 //			Executors.newSingleThreadExecutor().execute(new Runnable() {

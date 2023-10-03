@@ -494,10 +494,10 @@ public class WarpVisFrame extends JDialog
 
 	public void addListeners()
 	{
-		final MyChangeListener mylistener = new MyChangeListener();
-		setWarpVisOffButton.addChangeListener( mylistener );
-		setWarpGridButton.addChangeListener( mylistener );
-		setWarpMagButton.addChangeListener( mylistener );
+		final VisOptUiListener visOptListener = new VisOptUiListener();
+		setWarpVisOffButton.addChangeListener( visOptListener );
+		setWarpGridButton.addChangeListener( visOptListener );
+		setWarpMagButton.addChangeListener( visOptListener );
 
 		gridSpacingSlider.addChangeListener( new ChangeListener()
 		{
@@ -522,7 +522,7 @@ public class WarpVisFrame extends JDialog
 		});
 	}
 
-	public class MyChangeListener implements ChangeListener
+	private class VisOptUiListener implements ChangeListener
 	{
 		@Override
 		public void stateChanged( ChangeEvent e )
