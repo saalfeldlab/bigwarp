@@ -3995,16 +3995,38 @@ public class BigWarp< T >
 		{
 			settingsFile = fileChooser.getSelectedFile();
 
-			Executors.newSingleThreadExecutor().execute(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						loadSettings(settingsFile.getCanonicalPath(), true);
-					} catch (final Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			try {
+				loadSettings(settingsFile.getCanonicalPath(), true);
+			} catch (IOException | JDOMException e) {
+				e.printStackTrace();
+			}
+
+//			try {
+//				SwingUtilities.invokeAndWait( () -> {
+//					try {
+//						loadSettings(settingsFile.getCanonicalPath(), true);
+//					} catch (final IOException e) {
+//						e.printStackTrace();
+//					} catch (final JDOMException e) {
+//						e.printStackTrace();
+//					}
+//				});
+//			} catch (final Exception e) {
+//				e.printStackTrace();
+//			}
+
+
+			// TODO I may need this
+//			Executors.newSingleThreadExecutor().execute(new Runnable() {
+//				@Override
+//				public void run() {
+//					try {
+//						loadSettings(settingsFile.getCanonicalPath(), true);
+//					} catch (final Exception e) {
+//						e.printStackTrace();
+//					}
+//				}
+//			});
 		}
 	}
 
@@ -4079,17 +4101,19 @@ public class BigWarp< T >
 		{
 			final BigwarpSettings settings = getSettings();
 			settings.setOverwriteSources( overwriteSources );
+			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
 
-			Executors.newSingleThreadExecutor().execute(new Runnable() {
-				@Override
-				public void run() {
-					try {
-						settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
-					} catch (final Exception e) {
-						e.printStackTrace();
-					}
-				}
-			});
+			// TODO I may need this
+//			Executors.newSingleThreadExecutor().execute(new Runnable() {
+//				@Override
+//				public void run() {
+//					try {
+//						settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+//					} catch (final Exception e) {
+//						e.printStackTrace();
+//					}
+//				}
+//			});
 
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
