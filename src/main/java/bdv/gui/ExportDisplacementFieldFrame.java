@@ -291,13 +291,14 @@ public class ExportDisplacementFieldFrame extends JFrame
 		if( isNonlinear )
 		{
 			if( data != null )
+			{
+				// set default resolution to target image resolution
+				final double[] res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.TARGET, null );
+				fovPanel.setSpacing(res);
 				fovPanel.updateFieldsFromReference();
+			}
 			else
 				fovPanel.updateFieldsFromImageJReference();
-
-			// set default resolution to target image resolution
-			final double[] res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.TARGET, null );
-			fovPanel.setSpacing(res);
 		}
 
 		addDefaultN5DatasetAction();

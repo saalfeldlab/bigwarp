@@ -6,12 +6,14 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.List;
 
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
@@ -105,12 +107,17 @@ public class FieldOfViewPanel extends JPanel
 		return min;
 	}
 
+	/**
+	 * Sets the minimum value, does not trigger callbacks.
+	 *
+	 * @param newMin the new min val
+	 */
 	public void setMin( final double[] newMin )
 	{
 		final int N = newMin.length > min.length ? min.length : newMin.length;
 		for ( int i = 0; i < N; i++ )
 		{
-			minFields[ i ].setValue( new Double( newMin[ i ] ) );
+			minFields[ i ].setValue( new Double( newMin[ i ] ), false );
 			min[ i ] = newMin[ i ];
 		}
 	}
@@ -120,12 +127,17 @@ public class FieldOfViewPanel extends JPanel
 		return spacing;
 	}
 
+	/**
+	 * Sets the spacing, does not trigger callbacks
+	 *
+	 * @param newSpacing the new spacing
+	 */
 	public void setSpacing( final double[] newSpacing )
 	{
 		final int N = newSpacing.length > spacing.length ? spacing.length : newSpacing.length;
 		for ( int i = 0; i < N; i++ )
 		{
-			spacingFields[ i ].setValue( new Double( newSpacing[ i ] ) );
+			spacingFields[ i ].setValue( new Double( newSpacing[ i ] ), false );
 			spacing[ i ] = newSpacing[ i ];
 		}
 	}
@@ -140,12 +152,17 @@ public class FieldOfViewPanel extends JPanel
 		return pixSize;
 	}
 
+	/**
+	 * Sets the pixel size, does not trigger callbacks.
+	 *
+	 * @param newSize the new discrete image size (in pixels)
+	 */
 	public void setPixelSize( final long[] newSize )
 	{
 		final int N = newSize.length > pixSize.length ? pixSize.length : newSize.length;
 		for ( int i = 0; i < N; i++ )
 		{
-			pixelFields[ i ].setValue( new Long( newSize[ i ]));
+			pixelFields[i].setValue( new Long(newSize[i]), false );
 			pixSize[ i ] = newSize[ i ];
 		}
 	}
@@ -168,7 +185,7 @@ public class FieldOfViewPanel extends JPanel
 
 	public void create()
 	{
-		setLayout(new GridBagLayout());	
+		setLayout(new GridBagLayout());
 
 		final GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridx = 0;
@@ -206,7 +223,7 @@ public class FieldOfViewPanel extends JPanel
 		{
 			add( new JLabel( "reference:" ), gbc );
 
-			String[] impTitles = getImagePlusTitles();
+			final String[] impTitles = getImagePlusTitles();
 			int numImp = 0;
 			if( impTitles != null )
 				numImp = impTitles.length;
@@ -258,10 +275,10 @@ public class FieldOfViewPanel extends JPanel
 		});
 		add( unitField, gbc );
 
-		final JLabel minLabel = new JLabel( "min" );
+		final JLabel minLabel = new JLabel( String.format("min (%s)", unit ));
 		sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
-		final JLabel spacingLabel = new JLabel( "spacing" );
-		final JLabel pixelLabel = new JLabel( "size (pixels)" );
+		final JLabel spacingLabel = new JLabel( String.format( "spacing (%s/px)", unit ));
+		final JLabel pixelLabel = new JLabel( "size (px)" );
 
 		gbc.gridy++;
 		gbc.gridx = 1;
@@ -284,11 +301,11 @@ public class FieldOfViewPanel extends JPanel
 
 		gbc.gridy++;
 		add( yLabel, gbc );
-		
+
 		if( ndims >= 3 )
 		{
 			gbc.gridy++;
-			JLabel zLabel = new JLabel("z");
+			final JLabel zLabel = new JLabel("z");
 			add( zLabel, gbc );
 		}
 
@@ -306,87 +323,103 @@ public class FieldOfViewPanel extends JPanel
 		final int textWidthScaled = UIScale.scale( textFieldWidth );
 		final int textHeight = UIScale.scale( 20 );
 		final Dimension textFieldSize = new Dimension( textWidthScaled, textHeight );
-		final DecimalFormat decimalFormat = new DecimalFormat(); 
+		final DecimalFormat decimalFormat = new DecimalFormat();
 		decimalFormat.setMaximumFractionDigits( 8 );
 
 		// add fields
 		for( int i = 0; i < ndims; i++ )
 		{
-			final int idx = i;
 			gbc.gridy = i + j;
 
 			gbc.gridx = 1;
 			minFields[ i ] = new ImprovedFormattedTextField( decimalFormat );
 			minFields[ i ].setPreferredSize( textFieldSize );
 			minFields[ i ].setHorizontalAlignment( JTextField.RIGHT );
-			minFields[ i ].setValue( new Double( initMin[i]) );
-			minFields[ i ].addActionListener( a ->
-			{
-				min[ idx ] = Double.parseDouble( minFields[ idx ].getText() );
-			});
+			minFields[ i ].setValueNoCallback( new Double( initMin[i]) );
 			add( minFields[ i ], gbc );
 
 			gbc.gridx = 2;
 			sizeFields[ i ] = new ImprovedFormattedTextField( decimalFormat );
 			sizeFields[ i ].setPreferredSize( textFieldSize );
 			sizeFields[ i ].setHorizontalAlignment( JTextField.RIGHT );
-			sizeFields[ i ].setValue( new Double( initSpacing[ i ] * initPixsize[ i ] ) );
-			sizeFields[ i ].addActionListener( a -> 
-			{
-				size[ idx ] = Double.parseDouble( sizeFields[ idx ].getText() );
-				updatePixelsFromSize( idx );
-			});
+			sizeFields[ i ].setValueNoCallback( new Double( initSpacing[ i ] * initPixsize[ i ] ) );
 			add( sizeFields[ i ], gbc );
 
 			gbc.gridx = 3;
 			spacingFields[ i ] = new ImprovedFormattedTextField( decimalFormat );
 			spacingFields[ i ].setPreferredSize( textFieldSize );
 			spacingFields[ i ].setHorizontalAlignment( JTextField.RIGHT );
-			spacingFields[ i ].setValue( new Double( initSpacing[ i ] ) );
-			spacingFields[ i ].addActionListener( a -> 
-			{
-				spacing[ idx ] = Double.parseDouble( spacingFields[ idx ].getText() );
-				updatePixelsFromSpacing( idx );
-			});
+			spacingFields[ i ].setValueNoCallback( new Double( initSpacing[ i ] ) );
 
 			add( spacingFields[ i ], gbc );
 
 			gbc.gridx = 4;
-			pixelFields[ i ] = new ImprovedFormattedTextField( NumberFormat.getIntegerInstance() );
+			pixelFields[ i ] = new ImprovedFormattedTextField( NumberFormat.getIntegerInstance());
 			pixelFields[ i ].setPreferredSize( textFieldSize );
 			pixelFields[ i ].setHorizontalAlignment( JTextField.RIGHT );
-			pixelFields[ i ].setValue( new Long( initPixsize[ i ] ) );
-			pixelFields[ i ].addActionListener( a -> 
-			{
-				pixSize[ idx ] = Long.parseLong( pixelFields[ idx ].getText() );
-				updateSpacingFromPixels( idx );
-			});
+			pixelFields[ i ].setValueNoCallback( new Long( initPixsize[ i ] ) );
 			add( pixelFields[ i ], gbc );
+
+			// set callbacks for fields
+			// what fields update others when modified
+			final int idx = i;
+			minFields[ i ].setCallback( () -> {
+//				System.out.println("min callback");
+				try {
+					min[ idx ] = Double.parseDouble( minFields[ idx ].getText() );
+				} catch (final NumberFormatException e) {}
+			});
+
+			sizeFields[ i ].setCallback( () -> {
+//				System.out.println("size callback");
+				try {
+					size[ idx ] = Double.parseDouble( sizeFields[ idx ].getText() );
+					updatePixelsFromSize( idx );
+				} catch (final NumberFormatException e) {}
+			});
+
+			spacingFields[ i ].setCallback( () -> {
+//				System.out.println("spacing callback");
+				try {
+					spacing[ idx ] = Double.parseDouble( spacingFields[ idx ].getText() );
+//					updatePixelsFromSpacing( idx );
+					updateSize( idx );
+				} catch (final NumberFormatException e) {}
+			});
+
+			pixelFields[ i ].setCallback( () -> {
+//				System.out.println("pix sz callback");
+				try {
+					pixSize[ idx ] = Long.parseLong( pixelFields[ idx ].getText() );
+					updateSize( idx );
+				} catch (final NumberFormatException e) {}
+//				updateSpacingFromPixels( idx ); // an alternative update
+			});
 		}
 	}
 
 	protected void updatePixelsFromSize( int i )
 	{
 		pixSize[ i ] = ( long ) Math.ceil( size[ i ] / spacing[ i ] );
-		pixelFields[ i ].setValue( new Double( pixSize[ i ] ) );
+		SwingUtilities.invokeLater( () -> { pixelFields[ i ].setValueNoCallback( new Double( pixSize[ i ] ) ); });
 	}
 
 	protected void updatePixelsFromSpacing( int i )
 	{
 		pixSize[ i ] = ( long ) Math.floor( size[ i ] / spacing[ i ] );
-		pixelFields[ i ].setValue( new Long( pixSize[ i ] ) );
+		SwingUtilities.invokeLater( () -> { pixelFields[ i ].setValueNoCallback( new Long( pixSize[ i ] ) ); });
 	}
 
 	protected void updateSpacingFromPixels( int i )
 	{
 		spacing[ i ] = size[ i ] / pixSize[ i ];
-		spacingFields[ i ].setValue( new Double( spacing[ i ] ) );
+		SwingUtilities.invokeLater( () -> { spacingFields[ i ].setValueNoCallback( new Double( spacing[ i ] ) ); });
 	}
 
 	protected void updateSize( int i )
 	{
 		size[ i ] = spacing[ i ] * pixSize[ i ];
-		sizeFields[ i ].setValue( new Double( size[ i ] ) );
+		SwingUtilities.invokeLater( () -> { sizeFields[ i ].setValueNoCallback( new Double( size[ i ] ) ); });
 	}
 
 	protected void updateFieldsFromReference()
@@ -434,19 +467,19 @@ public class FieldOfViewPanel extends JPanel
 		if( IJ.getInstance() != null )
 		{
 			final ImagePlus refImp = WindowManager.getImage( (String)referenceComboBox.getSelectedItem() );
-			setSpacing( new double[] { 
+			setSpacing( new double[] {
 					refImp.getCalibration().pixelWidth,
 					refImp.getCalibration().pixelHeight,
 					refImp.getCalibration().pixelDepth,
 			});
 
-			setMin( new double[] { 
+			setMin( new double[] {
 					refImp.getCalibration().xOrigin,
 					refImp.getCalibration().yOrigin,
 					refImp.getCalibration().zOrigin,
 			});
 
-			setPixelSize( new long[] { 
+			setPixelSize( new long[] {
 					refImp.getWidth(),
 					refImp.getHeight(),
 					refImp.getNSlices()

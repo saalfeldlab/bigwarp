@@ -21,7 +21,7 @@ import java.text.ParsePosition;
  * Extension of {@code JFormattedTextField} which solves some of the usability
  * issues
  * </p>
- * 
+ *
  * <p>
  * from
  * https://stackoverflow.com/questions/1313390/is-there-any-way-to-accept-only-numeric-values-in-a-jtextfield?answertab=scoredesc#tab-top
@@ -34,6 +34,10 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 	private static final Color ERROR_FOREGROUND_COLOR = null;
 
 	private Color fBackground, fForeground;
+
+	private Runnable updateCallback;
+
+	private boolean runCallback = true;
 
 	/**
 	 * Create a new {@code ImprovedFormattedTextField} instance which will use
@@ -71,6 +75,11 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 		setValue( aValue );
 	}
 
+	public void setCallback(final Runnable updateCallback) {
+
+		this.updateCallback = updateCallback;
+	}
+
 	private void updateBackgroundOnEachUpdate()
 	{
 		getDocument().addDocumentListener( new DocumentListener()
@@ -79,18 +88,24 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 			public void insertUpdate( DocumentEvent e )
 			{
 				updateBackground();
+				if( runCallback && updateCallback != null )
+					updateCallback.run();
 			}
 
 			@Override
 			public void removeUpdate( DocumentEvent e )
 			{
 				updateBackground();
+				if( runCallback && updateCallback != null )
+					updateCallback.run();
 			}
 
 			@Override
 			public void changedUpdate( DocumentEvent e )
 			{
 				updateBackground();
+				if( runCallback && updateCallback != null )
+					updateCallback.run();
 			}
 		} );
 	}
@@ -101,7 +116,7 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 	 */
 	private void updateBackground()
 	{
-		boolean valid = validContent();
+		final boolean valid = validContent();
 		if ( ERROR_BACKGROUND_COLOR != null )
 		{
 			setBackground( valid ? fBackground : ERROR_BACKGROUND_COLOR );
@@ -122,7 +137,7 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 
 	private boolean validContent()
 	{
-		AbstractFormatter formatter = getFormatter();
+		final AbstractFormatter formatter = getFormatter();
 		if ( formatter != null )
 		{
 			try
@@ -130,7 +145,7 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 				formatter.stringToValue( getText() );
 				return true;
 			}
-			catch ( ParseException e )
+			catch ( final ParseException e )
 			{
 				return false;
 			}
@@ -138,20 +153,19 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 		return true;
 	}
 
-	@Override
-	public void setValue( Object value )
+	public void setValue( Object value, boolean callback )
 	{
 		boolean validValue = true;
 		// before setting the value, parse it by using the format
 		try
 		{
-			AbstractFormatter formatter = getFormatter();
+			final AbstractFormatter formatter = getFormatter();
 			if ( formatter != null )
 			{
 				formatter.valueToString( value );
 			}
 		}
-		catch ( ParseException e )
+		catch ( final ParseException e )
 		{
 			validValue = false;
 			updateBackground();
@@ -159,10 +173,27 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 		// only set the value when valid
 		if ( validValue )
 		{
-			int old_caret_position = getCaretPosition();
+			final int old_caret_position = getCaretPosition();
+
+			// TODO synchronize?
+			final boolean before = runCallback;
+			runCallback = callback;
 			super.setValue( value );
+			runCallback = before;
+
 			setCaretPosition( Math.min( old_caret_position, getText().length() ) );
 		}
+	}
+
+	public void setValueNoCallback( Object value )
+	{
+		setValue( value, false );
+	}
+
+	@Override
+	public void setValue( Object value )
+	{
+		setValue( value, true );
 	}
 
 	@Override
@@ -253,11 +284,11 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 		@Override
 		public Object parseObject( String source, ParsePosition pos )
 		{
-			int initialIndex = pos.getIndex();
-			Object result = fDelegate.parseObject( source, pos );
+			final int initialIndex = pos.getIndex();
+			final Object result = fDelegate.parseObject( source, pos );
 			if ( result != null && pos.getIndex() < source.length() )
 			{
-				int errorIndex = pos.getIndex();
+				final int errorIndex = pos.getIndex();
 				pos.setIndex( initialIndex );
 				pos.setErrorIndex( errorIndex );
 				return null;
