@@ -475,7 +475,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 * @param ignoreAffine whether the output should include the affine part of the transformation
 	 * @return the transformation
 	 */
-	protected static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concatPreTransforms,
+	public static InvertibleRealTransform getTransformation( final BigWarpData<?> data, final BigWarpTransform transform, final boolean concatPreTransforms,
 			final boolean ignoreAffine )
 	{
 		final InvertibleRealTransform tps = transform.getTransformation( false );
@@ -536,6 +536,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return startingTransform;
 	}
 
+
+
 	public static void writeAffineN5(
 			final String n5BasePath,
 			final String n5Dataset,
@@ -546,65 +548,54 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
 		final String input= mvgSpaceName;
 		final String output= tgtSpaceName;
+		final String name = input + " to " + output;
 
 		CoordinateTransform<?> ct = null;
 		final InvertibleCoordinateTransform tform = bwTransform.getCoordinateTransform();
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
-				ct = new TranslationCoordinateTransform("translation transformation", input, output, ((TranslationModel2D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel2D)tform).createInverse().getTranslation());
 			else if (tform instanceof TranslationModel3D)
-				ct = new TranslationCoordinateTransform("translation transformation", input, output, ((TranslationModel3D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel3D)tform).createInverse().getTranslation());
 			break;
 		case BigWarpTransform.SIMILARITY:
 			double[] simparams;
 			if (tform instanceof SimilarityModel2D)
 			{
-				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).inverse().getRowPackedCopy();
-//				simparams = new double[ 6 ];
-//				((SimilarityModel2D)tform).toArray(simparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, simparams);
+				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, simparams);
 			}
 			else if (tform instanceof SimilarityModel3D)
 			{
-				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).inverse().getRowPackedCopy();
-//				simparams = new double[ 12 ];
-//				((SimilarityModel3D)tform).toArray(simparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, simparams);
+				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, simparams);
 			}
 			break;
 		case BigWarpTransform.ROTATION:
 			double[] rotparams;
 			if (tform instanceof RigidModel2D)
 			{
-				rotparams = bwTransform.toImglib2((RigidModel2D)tform).inverse().getRowPackedCopy();
-//				rotparams = new double[ 6 ];
-//				((RigidModel2D)tform).toArray(rotparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, rotparams);
+				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, rotparams);
 			}
 			else if (tform instanceof RigidModel3D)
 			{
-				rotparams = bwTransform.toImglib2((RigidModel3D)tform).inverse().getRowPackedCopy();
-//				rotparams = new double[ 12 ];
-//				((RigidModel3D)tform).toArray(rotparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, rotparams);
+				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, rotparams);
 			}
 			break;
 		case BigWarpTransform.AFFINE:
 			double[] affparams;
 			if (tform instanceof AffineModel2D)
 			{
-				affparams = bwTransform.toImglib2((AffineModel2D)tform).inverse().getRowPackedCopy();
-//				affparams = new double[ 6 ];
-//				((AffineModel2D)tform).toArray(affparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, affparams);
+				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, affparams);
 			}
 			else if (tform instanceof AffineModel3D)
 			{
-				affparams = bwTransform.toImglib2((AffineModel3D)tform).inverse().getRowPackedCopy();
-//				affparams = new double[ 12 ];
-//				((AffineModel3D)tform).toArray(affparams);
-				ct = new AffineCoordinateTransform("translation transformation", input, output, affparams);
+				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
+				ct = new AffineCoordinateTransform(name, input, output, affparams);
 			}
 			break;
 		}

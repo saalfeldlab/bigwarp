@@ -395,7 +395,6 @@ public class BigWarpData< T >
 				final AffineGet transformTo3D = BigWarpUtils.toAffine3D((AffineGet)transform);
 				affine3d.preConcatenate( transformTo3D );
 			}
-			tform = affine3d.inverse();
 		}
 
 		// need to use WarpedSource
