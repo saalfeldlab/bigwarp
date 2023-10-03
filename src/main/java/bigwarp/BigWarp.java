@@ -1737,8 +1737,6 @@ public class BigWarp< T >
 		if( landmarkModel == null )
 			return -1;
 
-		final int N = landmarkModel.getRowCount();
-
 		// a point will be selected if you click inside the spot ( with a 5 pixel buffer )
 		double radsq = ( viewerSettings.getSpotSize() * viewerSettings.getSpotSize() ) + 5 ;
 		final AffineTransform3D viewerXfm = new AffineTransform3D();
@@ -1759,45 +1757,50 @@ public class BigWarp< T >
 		int bestIdx = -1;
 		double smallestDist = Double.MAX_VALUE;
 
-		for ( int n = 0; n < N; n++ )
+		synchronized( landmarkModel )
 		{
-			final Double[] lmpt;
-			if( isMoving && landmarkModel.isWarped( n ) && isMovingDisplayTransformed() )
+			final int N = landmarkModel.getRowCount();
+			for ( int n = 0; n < N; n++ )
 			{
-				lmpt = landmarkModel.getWarpedPoints().get( n );
-			}
-			else if( isMoving && isMovingDisplayTransformed() )
-			{
-				lmpt = landmarkModel.getPoints( false ).get( n );
-			}
-			else
-			{
-				lmpt = landmarkModel.getPoints( isMoving ).get( n );
+				final Double[] lmpt;
+				if( isMoving && landmarkModel.isWarped( n ) && isMovingDisplayTransformed() )
+				{
+					lmpt = landmarkModel.getWarpedPoints().get( n );
+				}
+				else if( isMoving && isMovingDisplayTransformed() )
+				{
+					lmpt = landmarkModel.getPoints( false ).get( n );
+				}
+				else
+				{
+					lmpt = landmarkModel.getPoints( isMoving ).get( n );
+				}
+
+				dist = 0.0;
+				for ( int i = 0; i < landmarkModel.getNumdims(); i++ )
+				{
+					dist += ( pt[ i ] - lmpt[ i ] ) * ( pt[ i ] - lmpt[ i ] );
+				}
+
+				dist *= ( scale * scale );
+				if ( dist < radsq && dist < smallestDist )
+				{
+					smallestDist = dist;
+					bestIdx = n;
+				}
 			}
 
-			dist = 0.0;
-			for ( int i = 0; i < landmarkModel.getNumdims(); i++ )
+			if ( selectInTable && landmarkFrame.isVisible() )
 			{
-				dist += ( pt[ i ] - lmpt[ i ] ) * ( pt[ i ] - lmpt[ i ] );
+				if( landmarkTable.isEditing())
+				{
+					landmarkTable.getCellEditor().stopCellEditing();
+				}
+
+				landmarkTable.setEditingRow( bestIdx );
+				landmarkFrame.repaint();
 			}
 
-			dist *= ( scale * scale );
-			if ( dist < radsq && dist < smallestDist )
-			{
-				smallestDist = dist;
-				bestIdx = n;
-			}
-		}
-
-		if ( selectInTable && landmarkFrame.isVisible() )
-		{
-			if( landmarkTable.isEditing())
-			{
-				landmarkTable.getCellEditor().stopCellEditing();
-			}
-
-			landmarkTable.setEditingRow( bestIdx );
-			landmarkFrame.repaint();
 		}
 		return bestIdx;
 	}
