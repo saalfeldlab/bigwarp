@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -82,7 +82,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 	/**
 	 * Returns true if moving image sources are all of the same type.
-	 * 
+	 *
 	 * @param sources the sources
 	 * @param <T> the type
 	 * @param movingSourceIndexList list of indexes for moving sources
@@ -90,12 +90,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 */
 	public static <T> boolean isTypeListFullyConsistent( List< SourceAndConverter< T >> sources, int[] movingSourceIndexList )
 	{
-		Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
+		final Object baseType = sources.get( movingSourceIndexList[ 0 ] ).getSpimSource().getType();
 
 		for ( int i = 1; i < movingSourceIndexList.length; i++ )
 		{
-			int idx = movingSourceIndexList[ i ];
-			Object type = sources.get( idx ).getSpimSource().getType();
+			final int idx = movingSourceIndexList[ i ];
+			final Object type = sources.get( idx ).getSpimSource().getType();
 
 			if ( !baseType.getClass().equals( type.getClass() ) )
 				return false;
@@ -103,10 +103,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 		return true;
 	}
-	
+
 	/**
 	 * Returns true if moving image sources are all of the same type.
-	 * 
+	 *
 	 * @param sources the sources
 	 * @param <T> the type
 	 * @param movingSourceIndexList list of indexes for moving sources
@@ -114,12 +114,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	 */
 	public static <T> boolean isTypeListFullyConsistent( List< SourceAndConverter< T >> sources, List<Integer> movingSourceIndexList )
 	{
-		Object baseType = sources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
+		final Object baseType = sources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
 
 		for ( int i = 1; i < movingSourceIndexList.size(); i++ )
 		{
-			int idx = movingSourceIndexList.get( i );
-			Object type = sources.get( idx ).getSpimSource().getType();
+			final int idx = movingSourceIndexList.get( i );
+			final Object type = sources.get( idx ).getSpimSource().getType();
 
 			if ( !baseType.getClass().equals( type.getClass() ) )
 				return false;
@@ -127,45 +127,45 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 		return true;
 	}
-	
+
 	@Override
 	public RandomAccessibleInterval< T > exportRai()
 	{
-		System.out.println( "RealExporter.exportRai");
-		ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >(); 
+		final ArrayList< RandomAccessibleInterval< T > > raiList = new ArrayList< RandomAccessibleInterval< T > >();
 
 		buildTotalRenderTransform();
 
 		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			SourceAndConverter< T > msrcTmp = bwData.getMovingSource( i );
+			final SourceAndConverter< T > msrcTmp = bwData.getMovingSource( i );
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > ) bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
-			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
+			final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine(
 					raiRaw, pixelRenderToPhysical.inverse() );
-			
+
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
-		RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
+		final RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
 
 		return raiStack;
 	}
-	
+
 	@Override
 	public boolean isRGB()
 	{
 		return false;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
 	public ImagePlus export()
 	{
 		final int numChannels = bwData.numMovingSources();
-		RandomAccessibleInterval< T > raiStack = exportRai();
-		
-		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
+		final RandomAccessibleInterval< T > raiStack = exportRai();
+
+		final VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
 				resolutionTransform.get( 2, 2 ));
@@ -195,9 +195,9 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
 				dimensions[ 2 ] = numChannels; 						// c
-				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = copyToImageStack( 
+				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z
+				final FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+				final RandomAccessibleInterval< T > img = copyToImageStack(
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
@@ -208,9 +208,9 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
 				dimensions[ 2 ] = numChannels; 						// c
-				dimensions[ 3 ] = 1; 								// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< T > img = copyToImageStack( 
+				dimensions[ 3 ] = 1; 								// z
+				final FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+				final RandomAccessibleInterval< T > img = copyToImageStack(
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<T,?>)img).getImagePlus();
@@ -221,14 +221,14 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		ip.getCalibration().pixelHeight = voxdim.dimension( 1 );
 		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
 		ip.getCalibration().setUnit( voxdim.unit() );
-		
+
 		if( offsetTransform != null )
 		{
 			ip.getCalibration().xOrigin = offsetTransform.get( 0, 3 );
 			ip.getCalibration().yOrigin = offsetTransform.get( 1, 3 );
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
-		
+
 //		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
 		ip.setTitle( bwData.getMovingSource( 0 ).getSpimSource().getName() + nameSuffix );
 
@@ -262,10 +262,10 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		final ImagePlusImgFactory< T > factory = new ImagePlusImgFactory< T >( t );
 		final ImagePlusImg< T, ? > target = factory.create( dimensions );
 
-		long[] dims = new long[ target.numDimensions() ];
+		final long[] dims = new long[ target.numDimensions() ];
 		target.dimensions( dims );
 
-		long N = Intervals.numElements(itvl);
+		final long N = Intervals.numElements(itvl);
 		final Cursor< T > c = target.cursor();
 		final RandomAccess< T > ra = raip.randomAccess();
 		double k = 0;

@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -55,17 +55,6 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 	private Interpolation interp;
 
-//	public BigWarpARGBExporter(
-//			final List< SourceAndConverter< ARGBType >> sources,
-//			final List< ConverterSetup > convSetups,
-//			final int[] movingSourceIndexList,
-//			final int[] targetSourceIndexList,
-//			final Interpolation interp,
-//			final ProgressWriter progress )
-//	{
-//		super( sources, convSetups, movingSourceIndexList, targetSourceIndexList, interp, progress );
-//	}
-	
 	public BigWarpARGBExporter(
 			BigWarpData<ARGBType> bwData,
 			final List< ConverterSetup > convSetups,
@@ -77,7 +66,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 	/**
 	 * Returns true if moving image sources are all of the same type.
-	 * 
+	 *
 	 * @param sources the sources
 	 * @param movingSourceIndexList list of indexes for moving sources
 	 * @return true if all moving sources are of the same type
@@ -86,15 +75,15 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	{
 		for ( int i = 0; i < movingSourceIndexList.length; i++ )
 		{
-			int idx = movingSourceIndexList[ i ];
-			Object type = sources.get( idx ).getSpimSource().getType();
+			final int idx = movingSourceIndexList[ i ];
+			final Object type = sources.get( idx ).getSpimSource().getType();
 
 			if ( !type.getClass().equals( ARGBType.class ) )
 				return false;
 		}
 		return true;
 	}
-	
+
 	@Override
 	public boolean isRGB()
 	{
@@ -104,12 +93,12 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	@Override
 	public RandomAccessibleInterval< ARGBType > exportRai()
 	{
-		ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >(); 
+		final ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >();
 
 		buildTotalRenderTransform();
 
 		final int numChannels = bwData.numMovingSources();
-		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
+		final VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
 				resolutionTransform.get( 2, 2 ));
@@ -119,22 +108,23 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 			final RealRandomAccessible< ARGBType > raiRaw = ( RealRandomAccessible< ARGBType > )bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
-			final AffineRandomAccessible< ARGBType, AffineGet > rai = RealViews.affine( 
+			final AffineRandomAccessible< ARGBType, AffineGet > rai = RealViews.affine(
 					raiRaw, pixelRenderToPhysical.inverse() );
 
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
-		RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );
+		final RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );
 
 		return raiStack;
 	}
 
+	@Override
 	public ImagePlus export()
 	{
 		buildTotalRenderTransform();
 
 		final int numChannels = bwData.numMovingSources();
-		VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
+		final VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
 				resolutionTransform.get( 0, 0 ),
 				resolutionTransform.get( 1, 1 ),
 				resolutionTransform.get( 2, 2 ));
@@ -161,9 +151,9 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
 				dimensions[ 2 ] = numChannels; 					// c
-				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
+				dimensions[ 3 ] = outputInterval.dimension( 2 ); 	// z
+				final FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+				final RandomAccessibleInterval< ARGBType > img = copyToImageStack(
 						raiStack,
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
@@ -174,9 +164,9 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 				dimensions[ 0 ] = outputInterval.dimension( 0 );	// x
 				dimensions[ 1 ] = outputInterval.dimension( 1 );	// y
 				dimensions[ 2 ] = numChannels; 					// c
-				dimensions[ 3 ] = 1; 							// z 
-				FinalInterval destIntervalPerm = new FinalInterval( dimensions );
-				RandomAccessibleInterval< ARGBType > img = copyToImageStack( 
+				dimensions[ 3 ] = 1; 							// z
+				final FinalInterval destIntervalPerm = new FinalInterval( dimensions );
+				final RandomAccessibleInterval< ARGBType > img = copyToImageStack(
 						Views.addDimension( Views.extendMirrorDouble( raiStack )),
 						destIntervalPerm, factory, nThreads );
 				ip = ((ImagePlusImg<ARGBType,?>)img).getImagePlus();
@@ -187,7 +177,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		ip.getCalibration().pixelHeight = voxdim.dimension( 1 );
 		ip.getCalibration().pixelDepth = voxdim.dimension( 2 );
 		ip.getCalibration().setUnit( voxdim.unit() );
-		
+
 		if( offsetTransform != null )
 		{
 			ip.getCalibration().xOrigin = offsetTransform.get( 0, 3 );
@@ -204,7 +194,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 	{
 		// A bit of hacking to make slices the 4th dimension and channels the 3rd
 		// since that's how ImagePlusImgFactory does it
-		MixedTransformView< ARGBType > raip = Views.permute( rai, 2, 3 );
+		final MixedTransformView< ARGBType > raip = Views.permute( rai, 2, 3 );
 
 		final long[] dimensions = new long[ itvl.numDimensions() ];
 		for( int d = 0; d < itvl.numDimensions(); d++ )
@@ -221,7 +211,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		final ImagePlusImgFactory< ARGBType > factory = new ImagePlusImgFactory< ARGBType >( new ARGBType() );
 		final ImagePlusImg< ARGBType, ? > target = factory.create( dimensions );
 
-		long[] dims = new long[ target.numDimensions() ];
+		final long[] dims = new long[ target.numDimensions() ];
 		target.dimensions( dims );
 
 		double k = 0;

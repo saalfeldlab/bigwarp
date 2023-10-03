@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -74,25 +74,20 @@ public abstract class BigWarpExporter <T>
 {
 	final protected List< SourceAndConverter< T >> sources;
 
-	private List< ConverterSetup > convSetups;
-
 	private List< ImagePlus > outputList;
 
-//	final protected int[] movingSourceIndexList;
-//
-//	final protected int[] targetSourceIndexList;
 	protected final BigWarpData<T> bwData;
-	
+
 	protected AffineTransform3D pixelRenderToPhysical;
-	
+
 	protected AffineTransform3D resolutionTransform;
-	
+
 	protected AffineTransform3D offsetTransform;
-	
+
 	protected Interval outputInterval;
 
 	protected Interpolation interp;
-	
+
 	protected boolean isVirtual = false;
 
 	protected int nThreads = 1;
@@ -137,7 +132,7 @@ public abstract class BigWarpExporter <T>
 //			{
 //				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
 //				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
-//	
+//
 //				if( ws.getTransform() != null )
 //				{
 //					wsCopy.updateTransform( ws.getTransform().copy() );
@@ -147,7 +142,7 @@ public abstract class BigWarpExporter <T>
 //			}
 //			else
 //				srcCopy = src;
-//				
+//
 //			SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
 //			sources.add( copy );
 //		}
@@ -161,7 +156,7 @@ public abstract class BigWarpExporter <T>
 //			this.progress = progress;
 //
 //		this.setInterp( interp );
-//		
+//
 //		pixelRenderToPhysical = new AffineTransform3D();
 //		resolutionTransform = new AffineTransform3D();
 //		offsetTransform = new AffineTransform3D();
@@ -170,7 +165,7 @@ public abstract class BigWarpExporter <T>
 //			unit = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
 //		} catch( Exception e ) {}
 //	}
-	
+
 	public BigWarpExporter(
 			BigWarpData<T> bwData,
 			final List< ConverterSetup > convSetups,
@@ -179,16 +174,15 @@ public abstract class BigWarpExporter <T>
 	{
 		this.bwData = bwData;
 		this.sources = new ArrayList<SourceAndConverter<T>>();
-		this.convSetups = convSetups;
-		for( SourceAndConverter<T> sac : bwData.sources )
+		for( final SourceAndConverter<T> sac : bwData.sources )
 		{
 			Source<T> srcCopy = null;
-			Source<T> src = sac.getSpimSource();
+			final Source<T> src = sac.getSpimSource();
 			if( src instanceof WarpedSource )
 			{
-				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
-				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
-	
+				final WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
+				final WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
+
 				if( ws.getTransform() != null )
 				{
 					wsCopy.updateTransform( ws.getTransform().copy() );
@@ -198,8 +192,8 @@ public abstract class BigWarpExporter <T>
 			}
 			else
 				srcCopy = src;
-				
-			SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
+
+			final SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
 			sources.add( copy );
 		}
 
@@ -209,14 +203,14 @@ public abstract class BigWarpExporter <T>
 			this.progress = progress;
 
 		this.setInterp( interp );
-		
+
 		pixelRenderToPhysical = new AffineTransform3D();
 		resolutionTransform = new AffineTransform3D();
 		offsetTransform = new AffineTransform3D();
 
 		try {
 			unit = bwData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions().unit();
-		} catch( Exception e ) {}
+		} catch( final Exception e ) {}
 	}
 
 	public abstract RandomAccessibleInterval<?> exportRai();
@@ -249,7 +243,7 @@ public abstract class BigWarpExporter <T>
 	{
 		this.interp = interp;
 	}
-	
+
 	public void setVirtual( final boolean isVirtual )
 	{
 		this.isVirtual = isVirtual;
@@ -275,10 +269,10 @@ public abstract class BigWarpExporter <T>
 		for( int i = 0; i < res.length; i++ )
 			resolutionTransform.set( res[ i ], i, i );
 	}
-	
+
 	/**
 	 * Set the offset of the output field of view in pixels.
-	 * 
+	 *
 	 * @param offset the offset in pixel units.
 	 */
 	public void setOffset( double... offset )
@@ -289,8 +283,8 @@ public abstract class BigWarpExporter <T>
 
 	/**
 	 * Generate the transform from output pixel space to physical space.
-	 * 
-	 * Call this after setRenderResolution and setOffset.  
+	 *
+	 * Call this after setRenderResolution and setOffset.
 	 */
 	public void buildTotalRenderTransform()
 	{
@@ -309,13 +303,13 @@ public abstract class BigWarpExporter <T>
 		final RealRandomAccessible< T > raiRaw = src.getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 		// apply the transformations
-		final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine( 
+		final AffineRandomAccessible< T, AffineGet > rai = RealViews.affine(
 				raiRaw, pixelRenderToPhysical.inverse() );
 
-		return Views.interval( Views.raster( rai ), outputInterval );	
+		return Views.interval( Views.raster( rai ), outputInterval );
 	}
 
-	public static void updateBrightnessContrast( 
+	public static void updateBrightnessContrast(
 			final ImagePlus imp,
 			final List<ConverterSetup> convSetups,
 			final int[] indexList )
@@ -324,25 +318,25 @@ public abstract class BigWarpExporter <T>
 
 		for( int i = 0; i < indexList.length; i++ )
 		{
-			ConverterSetup setup = convSetups.get( indexList[ i ] );
-			double rngmin = setup.getDisplayRangeMin();
-			double rngmax = setup.getDisplayRangeMax();
+			final ConverterSetup setup = convSetups.get( indexList[ i ] );
+			final double rngmin = setup.getDisplayRangeMin();
+			final double rngmax = setup.getDisplayRangeMax();
 
 			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
 			imp.setDisplayRange( rngmin, rngmax );
 			imp.updateAndDraw();
 		}
 	}
-	
-	public static void updateBrightnessContrast( 
+
+	public static void updateBrightnessContrast(
 			final ImagePlus imp,
 			final List<ConverterSetup> convSetups)
 	{
 		for( int i = 0; i < convSetups.size(); i++ )
 		{
 			final ConverterSetup setup = convSetups.get( i );
-			double rngmin = setup.getDisplayRangeMin();
-			double rngmax = setup.getDisplayRangeMax();
+			final double rngmin = setup.getDisplayRangeMin();
+			final double rngmax = setup.getDisplayRangeMax();
 
 			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
 			imp.setDisplayRange( rngmin, rngmax );
@@ -350,7 +344,7 @@ public abstract class BigWarpExporter <T>
 		}
 	}
 
-	public static void updateBrightnessContrast( 
+	public static void updateBrightnessContrast(
 			final ImagePlus imp,
 			final BigWarpData<?> bwdata,
 			final int[] indexList )
@@ -359,9 +353,9 @@ public abstract class BigWarpExporter <T>
 
 		for( int i = 0; i < indexList.length; i++ )
 		{
-			ConverterSetup setup = bwdata.converterSetups.get( indexList[ i ] );
-			double rngmin = setup.getDisplayRangeMin();
-			double rngmax = setup.getDisplayRangeMax();
+			final ConverterSetup setup = bwdata.converterSetups.get( indexList[ i ] );
+			final double rngmin = setup.getDisplayRangeMin();
+			final double rngmax = setup.getDisplayRangeMax();
 
 			imp.setC( i + 1 ); // ImagePlus.setC is one-indexed
 			imp.setDisplayRange( rngmin, rngmax );
@@ -371,32 +365,32 @@ public abstract class BigWarpExporter <T>
 
 	public FinalInterval destinationIntervalFromLandmarks( ArrayList<Double[]> pts, boolean isMoving )
 	{
-		int nd = pts.get( 0 ).length;
-		long[] min = new long[ nd ];
-		long[] max = new long[ nd ];
+		final int nd = pts.get( 0 ).length;
+		final long[] min = new long[ nd ];
+		final long[] max = new long[ nd ];
 
 		Arrays.fill( min, Long.MAX_VALUE );
 		Arrays.fill( max, Long.MIN_VALUE );
 
-		for( Double[] pt : pts )
+		for( final Double[] pt : pts )
 		{
 			for( int d = 0; d < nd; d++ )
 			{
 				if( pt[ d ] > max [ d ] )
 					max[ d ] = (long)Math.ceil( pt[ d ]);
-				
+
 				if( pt[ d ] < min [ d ] )
 					min[ d ] = (long)Math.floor( pt[ d ]);
 			}
 		}
 		return new FinalInterval( min, max );
 	}
-	
+
 	public static FinalInterval getSubInterval( Interval interval, int d, long start, long end )
 	{
-		int nd = interval.numDimensions();
-		long[] min = new long[ nd ];
-		long[] max = new long[ nd ];
+		final int nd = interval.numDimensions();
+		final long[] min = new long[ nd ];
+		final long[] max = new long[ nd ];
 		for( int i = 0; i < nd; i++ )
 		{
 			if( i == d )
@@ -413,20 +407,20 @@ public abstract class BigWarpExporter <T>
 		return new FinalInterval( min, max );
 	}
 
-	public < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack( 
+	public < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStack(
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
 			final int nThreads )
 	{
-		Img< T > target = factory.create( itvl );
+		final Img< T > target = factory.create( itvl );
 		if( policy == ParallelizationPolicy.ITER )
 			return copyToImageStackIterOrder( raible, itvl, target, nThreads, progress );
 		else
 			return copyToImageStackBySlice( raible, itvl, target, nThreads, progress );
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice(
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
@@ -434,11 +428,11 @@ public abstract class BigWarpExporter <T>
 			final ProgressWriter progress )
 	{
 		// create the image plus image
-		Img< T > target = factory.create( itvl );
+		final Img< T > target = factory.create( itvl );
 		return copyToImageStackBySlice( raible, itvl, target, nThreads, progress );
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice( 
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackBySlice(
 			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
@@ -446,10 +440,10 @@ public abstract class BigWarpExporter <T>
 			final ProgressWriter progress )
 	{
 		// TODO I wish I didn't have to do this inside this method
-		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
+		final MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
 
 		// what dimension should we split across?
-		int nd = raible.numDimensions();
+		final int nd = raible.numDimensions();
 		int tmp = nd - 1;
 		while( tmp >= 0 )
 		{
@@ -461,8 +455,8 @@ public abstract class BigWarpExporter <T>
 		final int dim2split = tmp;
 
 		final long[] splitPoints = new long[ nThreads + 1 ];
-		long N = target.dimension( dim2split );
-		long del = ( long )( N / nThreads ); 
+		final long N = target.dimension( dim2split );
+		final long del = ( long )( N / nThreads );
 		splitPoints[ 0 ] = 0;
 		splitPoints[ nThreads ] = target.dimension( dim2split );
 		for( int i = 1; i < nThreads; i++ )
@@ -470,9 +464,9 @@ public abstract class BigWarpExporter <T>
 			splitPoints[ i ] = splitPoints[ i - 1 ] + del;
 		}
 
-		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
+		final ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
 
-		LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
+		final LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
 		for( int i = 0; i < nThreads; i++ )
 		{
 			final long start = splitPoints[ i ];
@@ -487,7 +481,7 @@ public abstract class BigWarpExporter <T>
 					{
 						final FinalInterval subItvl = getSubInterval( target, dim2split, start, end );
 						final IntervalView< T > subTgt = Views.interval( target, subItvl );
-						long N = Intervals.numElements(subTgt);
+						final long N = Intervals.numElements(subTgt);
 						final Cursor< T > c = subTgt.cursor();
 						final RandomAccess< T > ra = raible.randomAccess();
 						long j = 0;
@@ -499,14 +493,14 @@ public abstract class BigWarpExporter <T>
 
 							if( start == 0  && j % 100000 == 0 )
 							{
-								double ratio = 1.0 * j / N;
-								progress.setProgress( ratio ); 
+								final double ratio = 1.0 * j / N;
+								progress.setProgress( ratio );
 							}
 							j++;
 						}
 						return true;
 					}
-					catch( Exception e )
+					catch( final Exception e )
 					{
 						e.printStackTrace();
 					}
@@ -520,7 +514,7 @@ public abstract class BigWarpExporter <T>
 			threadPool.shutdown(); // wait for all jobs to finish
 
 		}
-		catch ( InterruptedException e1 )
+		catch ( final InterruptedException e1 )
 		{
 			e1.printStackTrace();
 		}
@@ -529,7 +523,7 @@ public abstract class BigWarpExporter <T>
 		return target;
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder( 
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder(
 			final RandomAccessible< T > raible,
 			final Interval itvl,
 			final ImgFactory<T> factory,
@@ -537,11 +531,11 @@ public abstract class BigWarpExporter <T>
 			final ProgressWriter progress )
 	{
 		// create the image plus image
-		Img< T > target = factory.create( itvl );
+		final Img< T > target = factory.create( itvl );
 		return copyToImageStackIterOrder( raible, itvl, target, nThreads, progress );
 	}
 
-	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder( 
+	public static < T extends NumericType<T> > RandomAccessibleInterval<T> copyToImageStackIterOrder(
 			final RandomAccessible< T > ra,
 			final Interval itvl,
 			final RandomAccessibleInterval<T> target,
@@ -551,11 +545,11 @@ public abstract class BigWarpExporter <T>
 		progress.setProgress(0.0);
 		// TODO I wish I didn't have to do this inside this method..
 		// 	Maybe I don't have to, and should do it where I call this instead?
-		MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
+		final MixedTransformView< T > raible = Views.permute( ra, 2, 3 );
 
-		ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
+		final ExecutorService threadPool = Executors.newFixedThreadPool( nThreads );
 
-		LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
+		final LinkedList<Callable<Boolean>> jobs = new LinkedList<Callable<Boolean>>();
 		for( int i = 0; i < nThreads; i++ )
 		{
 
@@ -567,10 +561,10 @@ public abstract class BigWarpExporter <T>
 				{
 					try
 					{
-						IterableInterval<T> it = Views.flatIterable( target );
+						final IterableInterval<T> it = Views.flatIterable( target );
 						final RandomAccess< T > access = raible.randomAccess();
 
-						long N = it.size();
+						final long N = it.size();
 						final Cursor< T > c = it.cursor();
 						c.jumpFwd( 1 + offset );
 						for( long j = offset; j < N; j += nThreads )
@@ -578,17 +572,17 @@ public abstract class BigWarpExporter <T>
 							access.setPosition( c );
 							c.get().set( access.get() );
 							c.jumpFwd( nThreads );
-							
+
 							if( offset == 0  && j % (nThreads * 100000) == 0 )
 							{
-								double ratio = 1.0 * j / N;
-								progress.setProgress( ratio ); 
+								final double ratio = 1.0 * j / N;
+								progress.setProgress( ratio );
 							}
 						}
 
 						return true;
 					}
-					catch( Exception e )
+					catch( final Exception e )
 					{
 						e.printStackTrace();
 					}
@@ -602,7 +596,7 @@ public abstract class BigWarpExporter <T>
 			threadPool.shutdown(); // wait for all jobs to finish
 
 		}
-		catch ( InterruptedException e1 )
+		catch ( final InterruptedException e1 )
 		{
 			e1.printStackTrace();
 		}
@@ -610,80 +604,80 @@ public abstract class BigWarpExporter <T>
 		progress.setProgress(1.0);
 		return target;
 	}
-	
+
 	public static FinalInterval transformRealInterval( RealTransform xfm, RealInterval interval )
 	{
-		int nd = interval.numDimensions();
-		double[] pt = new double[ nd ];
-		double[] ptxfm = new double[ nd ];
+		final int nd = interval.numDimensions();
+		final double[] pt = new double[ nd ];
+		final double[] ptxfm = new double[ nd ];
 
-		long[] min = new long[ nd ];
-		long[] max = new long[ nd ];
+		final long[] min = new long[ nd ];
+		final long[] max = new long[ nd ];
 
-		// transform min		
+		// transform min
 		for( int d = 0; d < nd; d++ )
 			pt[ d ] = interval.realMin( d );
-		
+
 		xfm.apply( pt, ptxfm );
 		copyToLongFloor( ptxfm, min );
 
 
 		// transform max
-		
+
 		for( int d = 0; d < nd; d++ )
 		{
 			pt[ d ] = interval.realMax( d );
 		}
-		
+
 		xfm.apply( pt, ptxfm );
 		copyToLongCeil( ptxfm, max );
-		
+
 		return new FinalInterval( min, max );
 	}
-	
+
 	public static FinalInterval transformIntervalMinMax( RealTransform xfm, Interval interval )
 	{
-		int nd = interval.numDimensions();
-		double[] pt = new double[ nd ];
-		double[] ptxfm = new double[ nd ];
+		final int nd = interval.numDimensions();
+		final double[] pt = new double[ nd ];
+		final double[] ptxfm = new double[ nd ];
 
-		long[] min = new long[ nd ];
-		long[] max = new long[ nd ];
+		final long[] min = new long[ nd ];
+		final long[] max = new long[ nd ];
 
-		// transform min		
+		// transform min
 		for( int d = 0; d < nd; d++ )
 			pt[ d ] = interval.min( d );
-		
+
 		xfm.apply( pt, ptxfm );
 		copyToLongFloor( ptxfm, min );
 
 
 		// transform max
-		
+
 		for( int d = 0; d < nd; d++ )
 		{
 			pt[ d ] = interval.max( d );
 		}
-		
+
 		xfm.apply( pt, ptxfm );
 		copyToLongCeil( ptxfm, max );
-		
+
 		return new FinalInterval( min, max );
 	}
 
 	/**
 	 * Only works for 2D or 3D.
-	 * 
+	 *
 	 * @param affine variable in which to store the result
-	 * @param xfm the transform 
+	 * @param xfm the transform
 	 * @param interval the interval
 	 */
 	public static void estimateAffineFromCorners( AffineTransform3D affine, RealTransform xfm, Interval interval )
 	{
-		if( xfm == null ) 
+		if( xfm == null )
 			return;
 
-		int nd = interval.numDimensions();
+		final int nd = interval.numDimensions();
 		int N;
 		Model model;
 		if ( nd == 2 )
@@ -696,21 +690,21 @@ public abstract class BigWarpExporter <T>
 			N = 8;
 			model = new AffineModel3D();
 		}
-		
-		double[][] mvgPts = new double[ nd ][ N ];
-		double[][] tgtPts = new double[ nd ][ N ];
 
-		double[] w = new double[ N ];
+		final double[][] mvgPts = new double[ nd ][ N ];
+		final double[][] tgtPts = new double[ nd ][ N ];
+
+		final double[] w = new double[ N ];
 		Arrays.fill( w, 1.0 );
 
-		double[] pt = new double[ nd ];
-		double[] ptxfm = new double[ nd ];
+		final double[] pt = new double[ nd ];
+		final double[] ptxfm = new double[ nd ];
 
-		long[] unitInterval = new long[ nd ];
+		final long[] unitInterval = new long[ nd ];
 		Arrays.fill( unitInterval, 2 );
-		
+
 		int i = 0;
-		IntervalIterator it = new IntervalIterator( unitInterval );
+		final IntervalIterator it = new IntervalIterator( unitInterval );
 		while( it.hasNext() )
 		{
 			it.fwd();
@@ -729,7 +723,7 @@ public abstract class BigWarpExporter <T>
 				mvgPts[ d ][ i ] = pt[ d ];
 				tgtPts[ d ][ i ] = ptxfm[ d ];
 			}
-			
+
 			i++;
 		}
 
@@ -737,46 +731,46 @@ public abstract class BigWarpExporter <T>
 		{
 			model.fit( mvgPts, tgtPts, w );
 		}
-		catch ( Exception e )
+		catch ( final Exception e )
 		{
 			affine.identity();
 			return;
 		}
-		
+
 		if ( nd == 2 )
 		{
-			double[] mat = new double[ 6 ];
+			final double[] mat = new double[ 6 ];
 			((AffineModel2D)model).toArray( mat );
 			affine.set( mat );
 		}
 		else
 		{
-			double[] mat = new double[ 12 ];
+			final double[] mat = new double[ 12 ];
 			((AffineModel3D)model).getMatrix( mat );
 			affine.set( mat );
 		}
 	}
-	
+
 	public static FinalInterval estimateBounds( RealTransform xfm, Interval interval )
 	{
 		if( xfm == null )
-			return new FinalInterval( 
+			return new FinalInterval(
 							Intervals.minAsLongArray(interval),
 							Intervals.maxAsLongArray(interval) );
 
-		int nd = interval.numDimensions();
-		double[] pt = new double[ nd ];
-		double[] ptxfm = new double[ nd ];
+		final int nd = interval.numDimensions();
+		final double[] pt = new double[ nd ];
+		final double[] ptxfm = new double[ nd ];
 
-		long[] min = new long[ nd ];
-		long[] max = new long[ nd ];
+		final long[] min = new long[ nd ];
+		final long[] max = new long[ nd ];
 		Arrays.fill( min, Long.MAX_VALUE );
 		Arrays.fill( max, Long.MIN_VALUE );
 
-		long[] unitInterval = new long[ nd ];
+		final long[] unitInterval = new long[ nd ];
 		Arrays.fill( unitInterval, 2 );
-		
-		IntervalIterator it = new IntervalIterator( unitInterval );
+
+		final IntervalIterator it = new IntervalIterator( unitInterval );
 		while( it.hasNext() )
 		{
 			it.fwd();
@@ -792,12 +786,12 @@ public abstract class BigWarpExporter <T>
 
 			for( int d = 0; d < nd; d++ )
 			{
-				long lo = (long)Math.floor( ptxfm[d] );
-				long hi = (long)Math.ceil( ptxfm[d] );
-				
+				final long lo = (long)Math.floor( ptxfm[d] );
+				final long hi = (long)Math.ceil( ptxfm[d] );
+
 				if( lo < min[ d ])
 					min[ d ] = lo;
-				
+
 				if( hi > max[ d ])
 					max[ d ] = hi;
 			}
@@ -831,7 +825,7 @@ public abstract class BigWarpExporter <T>
 			{
 				exportThread.join();
 			}
-			catch ( InterruptedException e )
+			catch ( final InterruptedException e )
 			{
 				e.printStackTrace();
 			}
@@ -883,7 +877,7 @@ public abstract class BigWarpExporter <T>
 					try{
 						IJ.save( exporter.result, exporter.exportPath );
 					}
-					catch( Exception e )
+					catch( final Exception e )
 					{
 						IJ.showMessage( "Failed to write : " + exporter.exportPath );
 					}
@@ -905,12 +899,12 @@ public abstract class BigWarpExporter <T>
 			final Interpolation interp,
 			final ProgressWriter progressWriter )
 	{
-		List<Integer> movingSourceIndexList = bwData.getMovingSourceIndices();
+		final List<Integer> movingSourceIndexList = bwData.getMovingSourceIndices();
 
 		//TODO Caleb: Consider a method that just takes a list of all moving sources
 		if ( BigWarpRealExporter.isTypeListFullyConsistent( transformedSources, movingSourceIndexList ) )
 		{
-			Object baseType = transformedSources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
+			final Object baseType = transformedSources.get( movingSourceIndexList.get( 0 ) ).getSpimSource().getType();
 			if( baseType instanceof RealType )
 				return new BigWarpRealExporter( bwData, bwData.converterSetups, interp, (RealType)baseType, progressWriter);
 			else if ( ARGBType.class.isInstance( baseType ) )
