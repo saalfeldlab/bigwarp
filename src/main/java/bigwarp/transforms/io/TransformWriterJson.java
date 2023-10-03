@@ -50,11 +50,7 @@ public class TransformWriterJson {
 
 			read( bw, json );
 
-		} catch ( final IOException e )
-		{
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		} catch ( final IOException e ) { }
 	}
 
 	public static JsonObject write(LandmarkTableModel ltm, BigWarpTransform bwTransform) {
