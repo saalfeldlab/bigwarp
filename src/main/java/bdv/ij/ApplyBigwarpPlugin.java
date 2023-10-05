@@ -350,6 +350,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
 		{
+			final FinalInterval interval = new FinalInterval(
+					Intervals.minAsLongArray( rai ),
+					Intervals.maxAsLongArray( rai ));
+
+			if( transform == null )
+				return interval;
+
 			final double[] movingRes = resolutionFromSource( source );
 			final int ndims = transform.numSourceDimensions();
 			final AffineTransform movingPixelToPhysical = new AffineTransform( ndims );
@@ -368,10 +375,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			seq.add( movingPixelToPhysical );
 			seq.add( transform.inverse() );
 			seq.add( outputResolution2Pixel.inverse() );
-
-			final FinalInterval interval = new FinalInterval(
-					Intervals.minAsLongArray( rai ),
-					Intervals.maxAsLongArray( rai ));
 
 			return bboxEst.estimatePixelInterval(seq, interval);
 			//			return BigWarpExporter.estimateBounds( seq, interval );
