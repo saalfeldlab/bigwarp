@@ -51,6 +51,7 @@ import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.AffineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.DisplacementFieldCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.ReferencedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.SequenceCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.TranslationCoordinateTransform;
 
@@ -657,6 +658,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		writeN5( n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, format, false, flatten, inverse, invTolerance, invMaxIters  );
 	}
 
+	@SuppressWarnings("rawtypes")
 	public static void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
@@ -720,6 +722,24 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 
+
+		// TODO generalize
+		// get first transformUri for a moving source
+		ReferencedCoordinateTransform<?> refCt = null;
+		if( !flatten )
+		{
+			for ( final Entry<Integer, SourceInfo> e : data.sourceInfos.entrySet() )
+			{
+				final SourceInfo i = e.getValue();
+				if( i.isMoving() &&  i.getTransformUri() != null && !i.getTransformUri().isEmpty())
+				{
+					refCt = new ReferencedCoordinateTransform( i.getTransformUri() );
+					break;
+				}
+			}
+		}
+
+
 		final RandomAccessibleInterval< DoubleType > dfield;
 		if( splitAffine )
 		{
@@ -739,9 +759,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			else
 			{
 				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+
+				// the transform sequence needs to have a reference to whatever transform was imported, if requested
+				final CoordinateTransform[] ctList = refCt == null ? new CoordinateTransform[]{ dfieldTform, ngffAffine  } : new CoordinateTransform[]{ dfieldTform, ngffAffine, refCt };
+
 				// the total transform
-				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform( inputSpace, outputSpace,
-						new CoordinateTransform[]{ dfieldTform, ngffAffine  });
+				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform( inputSpace, outputSpace, ctList );
 
 				NgffTransformations.addCoordinateTransformations( n5, "/", totalTform );
 			}
@@ -760,7 +783,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			else
 			{
-				final DisplacementFieldCoordinateTransform<?> ngffTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+
+				final CoordinateTransform<?> ngffTform;
+				if( refCt == null )
+					ngffTform = dfieldTform;
+				else
+					ngffTform = new SequenceCoordinateTransform( refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{ dfieldTform, refCt });
+
+
 				NgffTransformations.addCoordinateTransformations( n5, "/", ngffTform );
 			}
 		}
