@@ -118,7 +118,7 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
-		<imglib2.version>6.0.0</imglib2.version>
+		<imglib2.version>6.2.0</imglib2.version>
 		<imglib2-realtransform.version>4.0.1</imglib2-realtransform.version>
 
 		<jcommander.version>1.48</jcommander.version>
