@@ -555,9 +555,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel2D)tform).createInverse().getTranslation());
+				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel2D)tform).getTranslation());
 			else if (tform instanceof TranslationModel3D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel3D)tform).createInverse().getTranslation());
+				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel3D)tform).getTranslation());
 			break;
 		case BigWarpTransform.SIMILARITY:
 			double[] simparams;
