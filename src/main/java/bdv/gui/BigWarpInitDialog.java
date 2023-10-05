@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
@@ -34,17 +35,22 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
-import org.janelia.saalfeldlab.n5.ij.N5Importer;
+import org.janelia.saalfeldlab.n5.bdv.N5ViewerTreeCellRenderer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
+import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
+import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
-import org.janelia.saalfeldlab.n5.ui.N5DatasetTreeCellRenderer;
 import org.janelia.saalfeldlab.n5.ui.N5SwingTreeNode;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5DatasetMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5GenericSingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalDatasetMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5SingleScaleMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
 import org.jdom2.JDOMException;
 
 import com.formdev.flatlaf.util.UIScale;
@@ -64,7 +70,6 @@ import bigwarp.transforms.metadata.N5TransformMetadata;
 import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Macro;
 import ij.Prefs;
@@ -123,9 +128,23 @@ public class BigWarpInitDialog extends JFrame
 
 	private boolean initialRecorderState;
 
-	public BigWarpInitDialog()
-	{
-	}
+
+	public static final N5MetadataParser<?>[] n5Parsers = new N5MetadataParser[]{
+			new N5CosemMetadataParser(),
+			new N5SingleScaleMetadataParser(),
+			new CanonicalMetadataParser(),
+			new ImagePlusLegacyMetadataParser(),
+			new N5GenericSingleScaleMetadataParser()
+	};
+
+	public static final N5MetadataParser<?>[] n5vGroupParsers = new N5MetadataParser[]{
+//			new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser(),
+//    		new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v03.OmeNgffMetadataParser(), // TODO test later
+			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
+			new N5ViewerMultiscaleMetadataParser(),
+			new CanonicalMetadataParser(),
+			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
+	};
 
 	public BigWarpInitDialog( final String title )
 	{
@@ -168,36 +187,10 @@ public class BigWarpInitDialog extends JFrame
 		};
 	}
 
+
 	public void setInitialRecorderState( final boolean initialRecorderState )
 	{
 		this.initialRecorderState = initialRecorderState;
-	}
-
-	public static void main( final String[] args ) throws IOException
-	{
-//		ImageJ ij2 = new ImageJ();
-//		ij2.ui().showUI();
-
-//		ImageJ ij = new ImageJ();
-//
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boatsBlur.tif" ).show();
-//		IJ.openImage( "/groups/saalfeld/home/bogovicj/tmp/boats.tif" ).show();
-//
-//		IJ.openImage( "/home/john/tmp/boats.tif" ).show();
-//		IJ.openImage( "/home/john/tmp/boatsBlur.tif" ).show();
-//
-//		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-//		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
-
-		new ImageJ();
-//		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-//		String macroOptions = "images=imagej://mri-stack.tif,imagej://mri-stack.tif moving=true,false transforms=,";
-//		runMacro( macroOptions );
-
-//		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
-		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
-
-		createAndShow();
 	}
 
 	public static <T> BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
@@ -614,15 +607,12 @@ public class BigWarpInitDialog extends JFrame
 		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
 
 		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-				lastOpenedContainer, new N5MetadataParser[] {},
-				N5Importer.PARSERS );
+				lastOpenedContainer,
+				n5vGroupParsers,
+				n5Parsers);
 
 		selectionDialog.setLoaderExecutor( exec );
-		selectionDialog.setTreeRenderer( new N5DatasetTreeCellRenderer( true ) );
-
-		// restrict canonical metadata to those with spatial metadata, but
-		// without multiscale
-		selectionDialog.getTranslationPanel().setFilter( x -> ( x instanceof CanonicalDatasetMetadata ) );
+		selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
 
 		selectionDialog.setContainerPathUpdateCallback( x -> {
 			if ( x != null )
@@ -635,8 +625,8 @@ public class BigWarpInitDialog extends JFrame
 //			Recorder.record = initialRecorderState;
 //		} );
 
-		selectionDialog.setVirtualOption( true );
-		selectionDialog.setCropOption( true );
+		selectionDialog.setVirtualOption( false );
+		selectionDialog.setCropOption( false );
 
 
 		// transform
@@ -748,7 +738,6 @@ public class BigWarpInitDialog extends JFrame
 		final ArrayList<String> titleList = new ArrayList<>();
 		if( datasetService != null )
 		{
-			final int i = 0;
 			for( final Dataset d : datasetService.getDatasets() )
 				titleList.add(d.getSource());
 		}
@@ -1007,7 +996,7 @@ public class BigWarpInitDialog extends JFrame
 				return;
 			}
 			// TODO fix transforms
-			runBigWarp( null, images, moving, null );
+			runBigWarp( null, images, moving, transforms );
 		}
 
 //		System.out.println( "BigWarpInitDialog runMacro");

@@ -10,7 +10,9 @@ import bdv.gui.BigWarpInitDialog;
 import ij.Macro;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.Recorder;
+import net.imagej.Dataset;
 import net.imagej.DatasetService;
+import net.imagej.ImageJ;
 
 @Plugin(type = Command.class, menuPath = "Plugins>BigDataViewer>Big Warp Command" )
 public class BigWarpCommand implements Command, PlugIn
@@ -40,6 +42,13 @@ public class BigWarpCommand implements Command, PlugIn
 			BigWarpInitDialog.runMacro( macroOptions );
 		else
 		{
+//			if( datasetService != null )
+//			{
+//				System.out.println( "dset service exists");
+//				for( final Dataset d :  datasetService.getDatasets() )
+//					System.out.println( d.getName());
+//			}
+
 			final BigWarpInitDialog dialog = BigWarpInitDialog.createAndShow( datasetService );
 			// dialog sets recorder to its initial state on cancel or execution
 			dialog.setInitialRecorderState( initialRecorderState );
@@ -64,17 +73,21 @@ public class BigWarpCommand implements Command, PlugIn
 //		System.out.println( moving );
 //		System.out.println( transforms );
 
-//		ImageJ ij2 = new ImageJ();
-//		ij2.ui().showUI();
-//
-////		Object im1 = ij2.io().open( "/home/john/tmp/mri-stack.tif" );
-////		Object im2 = ij2.io().open( "/home/john/tmp/t1-head.tif" );
-//
-//		Object im1 = ij2.io().open( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
-//		Object im2 = ij2.io().open( "/groups/saalfeld/home/bogovicj/tmp/t1-head.tif" );
-//
+		final ImageJ ij2 = new ImageJ();
+		ij2.ui().showUI();
+
+//		final Object im1 = ij2.io().open( "/home/john/tmp/mri-stack.tif" );
+//		final Object im2 = ij2.io().open( "/home/john/tmp/t1-head.tif" );
+////
+////		Object im1 = ij2.io().open( "/groups/saalfeld/home/bogovicj/tmp/mri-stack.tif" );
+////		Object im2 = ij2.io().open( "/groups/saalfeld/home/bogovicj/tmp/t1-head.tif" );
+////
 //		ij2.ui().show( im1 );
 //		ij2.ui().show( im2 );
+
+
+		final Object im1 = ij2.io().open( "/home/john/tmp/boats.tif" );
+		ij2.ui().show( im1 );
 
 
 //		String args = "images=[a, b, c], isMoving=[true, true, false], transforms=[,,]";

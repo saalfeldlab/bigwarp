@@ -930,9 +930,6 @@ public class BigWarpInit
 
 		final int[] movingSourceIndices = ImagePlusLoader.range( 0, numMovingSources );
 		final int[] targetSourceIndices = ImagePlusLoader.range( numMovingSources, numTargetSources );
-//		List<Integer> movingSourceIndices = IntStream.range( 0, numMovingSources ).collect( Collectors.toList());
-//		List<Integer> targetSourceIndices = IntStream.range( numMovingSources, numTargetSources + numMovingSources )
-//				.collect( Collectors.toList());
 
 		/* Load the second source */
 		BigWarpInit.initSetups( spimDataQ, converterSetups, sources );
@@ -1082,8 +1079,6 @@ public class BigWarpInit
 	 */
 	public static < T > BigWarpData< T > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
-//		return createBigWarpData( new ImagePlusLoader( impP ), new ImagePlusLoader( impQ ), null );
-
 		int id = 0;
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		final LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
