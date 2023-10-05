@@ -412,7 +412,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 		ctxt.gridx = 3;
 		panel.add( new JLabel( "Format:" ), ctxt );
 		gbcCheck.gridx = 4;
-		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_SLICER } );
+//		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_SLICER } );
+		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF } );
 		panel.add( formatComboBox, gbcCheck );
 
 		ctxt.gridx = 5;
