@@ -14,8 +14,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+
+import bdv.ui.convertersetupeditor.MaskBoundsRangePanel;
 
 public class MaskOptionsPanel extends JPanel
 {
@@ -28,8 +28,8 @@ public class MaskOptionsPanel extends JPanel
 			+ "in the mask transition region.\n"
 			+ "If your transformation has lots of rotation, try selecting \"ROTATION\" or \"SIMILARITY\".";
 
-	public static final String[] maskTypes = new String[] { 
-			"NONE",
+	public static final String[] maskTypes = new String[] {
+			BigWarpTransform.NO_MASK_INTERP,
 			BigWarpTransform.MASK_INTERP,
 			BigWarpTransform.ROT_MASK_INTERP,
 			BigWarpTransform.SIM_MASK_INTERP,
@@ -46,6 +46,8 @@ public class MaskOptionsPanel extends JPanel
 	private final JLabel maskTypeLabel;
 	private final JComboBox< String > maskTypeDropdown;
 
+	private final MaskBoundsRangePanel maskRangePanel;
+
 	private ActionListener falloffListener;
 
 	public MaskOptionsPanel( BigWarp<?> bw )
@@ -60,29 +62,13 @@ public class MaskOptionsPanel extends JPanel
 						BorderFactory.createEtchedBorder(),
 						"Mask options" ),
 				BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-		
+
 		autoEstimateMaskButton = new JCheckBox( "Auto-estimate mask", true );
 		autoEstimateMaskButton.setToolTipText( AUTO_ESTIMATE_HELP_TEXT );
-		autoEstimateMaskButton.addChangeListener( new ChangeListener()
-		{
-			@Override
-			public void stateChanged( ChangeEvent e )
-			{
-				if( autoEstimateMaskButton.isSelected() )
-					bw.autoEstimateMask();
-			}
-		} );
 
 		showMaskOverlayButton = new JCheckBox( "Show mask overlay", true );
 		showMaskOverlayButton.setToolTipText( SHOW_MASK_OVERLAY_HELP_TEXT );
-		showMaskOverlayButton.addChangeListener( new ChangeListener()
-		{
-			@Override
-			public void stateChanged( ChangeEvent e )
-			{
-				bw.setMaskOverlayVisibility( showMaskOverlayButton.isSelected() && isMask() );
-			}
-		} );
+
 
 		falloffTypeLabel = new JLabel( "Mask falloff");
 		falloffTypeLabel.setToolTipText( FALLOFF_HELP_TEXT );
@@ -93,17 +79,8 @@ public class MaskOptionsPanel extends JPanel
 		maskTypeLabel.setToolTipText( INTERPOLATION_HELP_TEXT );
 		maskTypeDropdown = new JComboBox<>( maskTypes );
 		maskTypeDropdown.setToolTipText( INTERPOLATION_HELP_TEXT );
-		maskTypeDropdown.addActionListener( new ActionListener() {
-			@Override
-			public void actionPerformed( ActionEvent e )
-			{
-				bw.setMaskOverlayVisibility( autoEstimateMaskButton.isSelected() && isMask() );
-				bw.getBwTransform().setMaskInterpolationType( maskTypeDropdown.getItemAt( maskTypeDropdown.getSelectedIndex() ) );
-				bw.restimateTransformation();
-				bw.getViewerFrameP().getViewerPanel().requestRepaint();
-				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
-			}
-		});
+
+		maskRangePanel = new MaskBoundsRangePanel(bw);
 
 		// layout
 		final GridBagConstraints gbc = new GridBagConstraints();
@@ -116,21 +93,21 @@ public class MaskOptionsPanel extends JPanel
 		gbc.anchor = GridBagConstraints.LINE_END;
 		gbc.fill = GridBagConstraints.NONE;
 		gbc.insets = new Insets( 5, 5, 5, 5 );
-		add( maskTypeLabel, gbc );	
+		add( maskTypeLabel, gbc );
 
 		gbc.gridx = 2;
 		gbc.weightx = 0.0;
 		gbc.anchor = GridBagConstraints.LINE_START;
-		add( maskTypeDropdown, gbc );	
+		add( maskTypeDropdown, gbc );
 
 		gbc.gridx = 0;
 		gbc.gridy = 1;
 		gbc.anchor = GridBagConstraints.LINE_END;
-		add( falloffTypeLabel, gbc );	
+		add( falloffTypeLabel, gbc );
 
 		gbc.gridx = 2;
 		gbc.anchor = GridBagConstraints.LINE_START;
-		add( falloffTypeDropdown, gbc );	
+		add( falloffTypeDropdown, gbc );
 
 		gbc.gridx = 0;
 		gbc.gridy = 2;
@@ -141,6 +118,33 @@ public class MaskOptionsPanel extends JPanel
 		gbc.gridy = 2;
 		gbc.anchor = GridBagConstraints.LINE_START;
 		add( showMaskOverlayButton, gbc );
+
+		gbc.gridx = 0;
+		gbc.gridy = 3;
+		gbc.anchor = GridBagConstraints.LINE_START;
+		add( new JLabel("Imported mask intensity range:"), gbc );
+
+		gbc.gridy = 4;
+		gbc.gridwidth = 3;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.anchor = GridBagConstraints.LINE_START;
+		add( maskRangePanel, gbc );
+	}
+
+	public void addActions()
+	{
+		autoEstimateMaskButton.addActionListener( e -> {
+			if ( autoEstimateMaskButton.isSelected() )
+				bw.autoEstimateMask();
+		} );
+
+		showMaskOverlayButton.addActionListener( e -> {
+			bw.setMaskOverlayVisibility( showMaskOverlayButton.isSelected() && isMask() );
+		} );
+
+		maskTypeDropdown.addActionListener( e -> {
+			bw.updateTransformMask();
+		} );
 	}
 
 	public void setMask( PlateauSphericalMaskSource maskSource )
@@ -154,7 +158,7 @@ public class MaskOptionsPanel extends JPanel
 			{
 				maskSource.getRandomAccessible().setFalloffShape( (FalloffShape)falloffTypeDropdown.getSelectedItem() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
-				bw.getViewerFrameQ().getViewerPanel().requestRepaint();	
+				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			}
 		});
 
@@ -170,12 +174,27 @@ public class MaskOptionsPanel extends JPanel
 		return showMaskOverlayButton;
 	}
 
-	public JComboBox< FalloffShape > getFalloffShapeDropdown()
+	public JComboBox< String > getMaskTypeDropdown()
+	{
+		return maskTypeDropdown;
+	}
+
+	public JComboBox< FalloffShape > getMaskFalloffTypeDropdown()
 	{
 		return falloffTypeDropdown;
 	}
 
-	/**
+	public MaskBoundsRangePanel getMaskRangeSlider()
+	{
+		return maskRangePanel;
+	}
+
+	public String getType()
+	{
+		return ( String ) maskTypeDropdown.getSelectedItem();
+	}
+
+	/*
 	 * @return true if a mask is applied to the transformation
 	 */
 	public boolean isMask()
@@ -183,4 +202,8 @@ public class MaskOptionsPanel extends JPanel
 		return maskTypeDropdown.getSelectedIndex() > 0;
 	}
 
+	public boolean showMaskOverlay()
+	{
+		return showMaskOverlayButton.isSelected();
+	}
 }

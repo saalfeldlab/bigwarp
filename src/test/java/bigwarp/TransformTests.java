@@ -25,7 +25,6 @@ package bigwarp;
 import bdv.gui.BigWarpViewerOptions;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.viewer.TransformListener;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import ij.ImagePlus;
 import mpicbg.spim.data.SpimDataException;
@@ -63,7 +62,7 @@ public class TransformTests
 		BigWarpData<?> data = BigWarpInit.createBigWarpDataFromImages( imp, imp );
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		BigWarp<?> bw = new BigWarp( data, "bigwarp", opts, null );
+		BigWarp<?> bw = new BigWarp( data, opts, null );
 
 		LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 
@@ -105,7 +104,7 @@ public class TransformTests
 		BigWarpData<?> data = BigWarpInit.createBigWarpDataFromImages( imp, imp );
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		BigWarp<?> bw = new BigWarp( data, "bigwarp", opts, null );
+		BigWarp<?> bw = new BigWarp( data, opts, null );
 
 		LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 

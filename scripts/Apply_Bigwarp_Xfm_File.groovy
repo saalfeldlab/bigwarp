@@ -16,6 +16,7 @@ import java.io.IOException;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.viewer.Interpolation;
 import bigwarp.landmarks.LandmarkTableModel;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import ij.IJ;
 import ij.ImagePlus;
 
@@ -36,7 +37,9 @@ try
 }
 
 res = [ resX, resY, resZ ] as double[];
-fov = [ sizeX, sizeY, sizeZ ] as double[]; 
+fov = [ sizeX, sizeY, sizeZ ] as double[];
+
+bboxEst = new BoundingBoxEstimation();
 
 Interpolation interp = Interpolation.NLINEAR;
 if( interpType.equals( "Nearest Neighbor" ))
@@ -45,7 +48,7 @@ if( interpType.equals( "Nearest Neighbor" ))
 emptyWriteOpts = new ApplyBigwarpPlugin.WriteDestinationOptions( "", "", null, null );
 warpedIpList = ApplyBigwarpPlugin.apply(
 		movingIp, movingIp, ltm, transformType,
-		ApplyBigwarpPlugin.SPECIFIED_PIXEL, "", ApplyBigwarpPlugin.SPECIFIED,
+		ApplyBigwarpPlugin.SPECIFIED_PIXEL, "", bboxEst, ApplyBigwarpPlugin.SPECIFIED,
 		res, fov, [0,0,0] as double[],
 		interp, false, nThreads, true, emptyWriteOpts );
 

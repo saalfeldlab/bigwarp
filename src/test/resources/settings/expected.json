@@ -1,10 +1,28 @@
 {
+    "Sources": {
+        "0": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": true
+        },
+        "1": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": true
+        },
+        "2": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": false
+        },
+        "3": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": false
+        }
+    },
     "ViewerP": {
         "Sources": [
-            true,
-            false,
-            true,
-            false,
             false,
             false,
             false,
@@ -14,32 +32,38 @@
             {
                 "active": true,
                 "name": "moving images",
+                "id": []
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": []
+            },
+            {
+                "active": false,
+                "name": "moving images",
                 "id": [
                     0,
                     1
                 ]
             },
             {
-                "active": true,
-                "name": "fixed images",
+                "active": false,
+                "name": "target images",
                 "id": [
                     2,
                     3
                 ]
             }
         ],
-        "DisplayMode": "ss",
-        "Interpolation": "nlinear",
+        "DisplayMode": "sg",
+        "Interpolation": "nearestneighbor",
         "CurrentSource": 0,
-        "CurrentGroup": 0,
+        "CurrentGroup": 3,
         "CurrentTimePoint": 0
     },
     "ViewerQ": {
         "Sources": [
-            true,
-            false,
-            true,
-            false,
             false,
             false,
             false,
@@ -49,97 +73,49 @@
             {
                 "active": true,
                 "name": "moving images",
-                "id": [
-                    0,
-                    1
-                ]
+                "id": []
             },
             {
                 "active": true,
                 "name": "fixed images",
-                "id": [
-                    2,
-                    3
-                ]
+                "id": []
             }
         ],
-        "DisplayMode": "fs",
+        "DisplayMode": "sg",
         "Interpolation": "nearestneighbor",
-        "CurrentSource": 2,
+        "CurrentSource": 0,
         "CurrentGroup": 1,
         "CurrentTimePoint": 0
     },
     "SetupAssignments": {
-        "ConverterSetups": [
-            {
-                "id": 0,
-                "min": 0.0,
-                "max": 860.4,
-                "color": -10027213,
-                "groupId": 0
-            },
-            {
-                "id": 1,
+        "ConverterSetups": {
+            "0": {
                 "min": 0.0,
                 "max": 255.0,
-                "color": 0,
+                "color": -1,
+                "groupId": 0
+            },
+            "1": {
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
                 "groupId": 1
             },
-            {
-                "id": 2,
+            "2": {
                 "min": 0.0,
-                "max": 2000.0,
-                "color": -39169,
+                "max": 255.0,
+                "color": -1,
                 "groupId": 2
             },
-            {
-                "id": 3,
-                "min": 0.0,
-                "max": 433.408,
+            "3": {
+                "min": 10.0,
+                "max": 571.0,
                 "color": -1,
                 "groupId": 3
-            },
-            {
-                "id": 956736363,
-                "min": 0.0,
-                "max": 65535.0,
-                "color": -1,
-                "groupId": 4
-            },
-            {
-                "id": 1006827158,
-                "min": 0.0,
-                "max": 65535.0,
-                "color": -1,
-                "groupId": 5
-            },
-            {
-                "id": 1696993146,
-                "min": 0.0,
-                "max": 65535.0,
-                "color": -1,
-                "groupId": 6
-            },
-            {
-                "id": 33872301,
-                "min": 0.0,
-                "max": 65535.0,
-                "color": -1,
-                "groupId": 7
             }
-        ],
-        "MinMaxGroups": [
-            {
-                "id": 0,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 4000.0,
-                "currentMin": 0.0,
-                "currentMax": 860.4
-            },
-            {
-                "id": 1,
+        },
+        "MinMaxGroups": {
+            "0": {
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
@@ -147,17 +123,15 @@
                 "currentMin": 0.0,
                 "currentMax": 255.0
             },
-            {
-                "id": 2,
+            "1": {
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
-                "rangeMax": 2000.0,
+                "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 2000.0
+                "currentMax": 65535.0
             },
-            {
-                "id": 3,
+            "2": {
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
@@ -165,43 +139,15 @@
                 "currentMin": 0.0,
                 "currentMax": 255.0
             },
-            {
-                "id": 4,
+            "3": {
                 "fullRangeMin": -2.147483648E9,
                 "fullRangeMax": 2.147483647E9,
                 "rangeMin": 0.0,
                 "rangeMax": 65535.0,
                 "currentMin": 0.0,
-                "currentMax": 512.0
-            },
-            {
-                "id": 5,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 65535.0,
-                "currentMin": 0.0,
-                "currentMax": 512.0
-            },
-            {
-                "id": 6,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 65535.0,
-                "currentMin": 0.0,
-                "currentMax": 512.0
-            },
-            {
-                "id": 7,
-                "fullRangeMin": -2.147483648E9,
-                "fullRangeMax": 2.147483647E9,
-                "rangeMin": 0.0,
-                "rangeMax": 65535.0,
-                "currentMin": 0.0,
-                "currentMax": 512.0
+                "currentMax": 65535.0
             }
-        ]
+        }
     },
     "Bookmarks": {
         "bookmarks": {}
@@ -212,7 +158,6 @@
     },
     "Transform": {
         "type": "Thin Plate Spline",
-        "maskInterpolationType": "NONE",
         "landmarks": {
             "type": "BigWarpLandmarks",
             "numDimensions": 3,

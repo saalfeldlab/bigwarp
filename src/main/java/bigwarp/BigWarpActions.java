@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -45,7 +45,6 @@ import bdv.util.Prefs;
 import bdv.viewer.LandmarkPointMenu;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.AbstractViewerPanel.AlignPlane;
-import bigwarp.BigWarp.BigWarpData;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import bigwarp.util.BigWarpUtils;
@@ -65,6 +64,8 @@ public class BigWarpActions extends Actions
 	// General options
 	public static final String CLOSE_DIALOG = "close dialog window";
 	public static final String[] CLOSE_DIALOG_KEYS = new String[] { NOT_MAPPED };
+	public static final String LOAD_PROJECT = "load project";
+	public static final String SAVE_PROJECT = "save project";
 
 	public static final String EXPAND_CARDS = "expand and focus cards panel";
 	public static final String[] EXPAND_CARDS_KEYS = new String[] { "P" };
@@ -138,6 +139,7 @@ public class BigWarpActions extends Actions
 	// Navigation options
 	public static final String   RESET_VIEWER = "reset active viewer";
 	public static final String[] RESET_VIEWER_KEYS = new String[]{"R"};
+
 
 	public static final String ALIGN_VIEW_TRANSFORMS = "align view transforms %s";
 	public static final String ALIGN_OTHER_TO_ACTIVE = String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE );
@@ -214,6 +216,8 @@ public class BigWarpActions extends Actions
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
+	public static final String MASK_IMPORT = "import mask";
+	public static final String MASK_REMOVE = "remove mask";
 	public static final String MASK_SIZE_EDIT = "mask edit";
 	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
 
@@ -352,7 +356,7 @@ public class BigWarpActions extends Actions
 			descriptions.add( YZPLANE, YZPLANE_KEYS, "yz plane" );
 		}
 	}
-	
+
 	@Plugin( type = CommandDescriptionProvider.class )
 	public static class TableDescriptions extends CommandDescriptionProvider
 	{
@@ -383,8 +387,8 @@ public class BigWarpActions extends Actions
 			descriptions.add( LANDMARK_DESELECT_ALL, LANDMARK_DESELECT_ALL_KEYS, "Deselect all landmarks." );
 
 			descriptions.add( LANDMARK_DELETE_SELECTED, LANDMARK_DELETE_SELECTED_KEYS, "Delete selected landmarks." );
-			descriptions.add( LANDMARK_ACTIVATE_SELECTED, LANDMARK_ACTIVATE_SELECTED_KEYS, "Activate selected landmarks." ); 
-			descriptions.add( LANDMARK_DEACTIVATE_SELECTED, LANDMARK_DEACTIVATE_SELECTED_KEYS, "Deactivate selected landmarks." ); 
+			descriptions.add( LANDMARK_ACTIVATE_SELECTED, LANDMARK_ACTIVATE_SELECTED_KEYS, "Activate selected landmarks." );
+			descriptions.add( LANDMARK_DEACTIVATE_SELECTED, LANDMARK_DEACTIVATE_SELECTED_KEYS, "Deactivate selected landmarks." );
 
 			descriptions.add( LANDMARK_SELECT_ABOVE, LANDMARK_SELECT_ABOVE_KEYS, "Add the row above the curent selection to the selection" );
 			descriptions.add( LANDMARK_SELECT_ALL_ABOVE, LANDMARK_SELECT_ALL_ABOVE_KEYS, "Add the all rows above the curent selection to the selection" );
@@ -433,10 +437,10 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bwFrame::expandAndFocusCardPanel, EXPAND_CARDS, EXPAND_CARDS_KEYS );
 		actions.runnableAction( bwFrame::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
 
-		// export 
+		// export
 		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
 		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
-		
+
 		// dialogs
 		actions.namedAction( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ), SHOW_HELP_KEYS );
 		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_MVG, bw.activeSourcesDialogP ), VISIBILITY_AND_GROUPING_MVG_KEYS );
@@ -564,7 +568,7 @@ public class BigWarpActions extends Actions
 		inputActionBindings.addActionMap( "bwV", createActionMapViewer( bw ) );
 		inputActionBindings.addInputMap( "bwv", createInputMapViewer( keyProperties ) );
 	}
-	
+
 	public static void installLandmarkPanelActionBindings(
 			final InputActionBindings inputActionBindings,
 			final BigWarp< ? > bw,
@@ -574,13 +578,13 @@ public class BigWarpActions extends Actions
 		inputActionBindings.addActionMap( "bw", createActionMap( bw ) );
 		inputActionBindings.addInputMap( "bw", createInputMap( keyProperties ) );
 
-		TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
-		Component c = celled.getTableCellEditorComponent(landmarkTable, Boolean.TRUE, true, 0, 1 );
+		final TableCellEditor celled = landmarkTable.getCellEditor( 0, 1 );
+		final Component c = celled.getTableCellEditorComponent(landmarkTable, Boolean.TRUE, true, 0, 1 );
 
-		InputMap parentInputMap = ((JCheckBox)c).getInputMap().getParent();
+		final InputMap parentInputMap = ((JCheckBox)c).getInputMap().getParent();
 		parentInputMap.clear();
-		KeyStroke enterDownKS = KeyStroke.getKeyStroke("pressed ENTER" );
-		KeyStroke enterUpKS = KeyStroke.getKeyStroke("released ENTER" );
+		final KeyStroke enterDownKS = KeyStroke.getKeyStroke("pressed ENTER" );
+		final KeyStroke enterUpKS = KeyStroke.getKeyStroke("released ENTER" );
 
 		parentInputMap.put( enterDownKS, "pressed" );
 		parentInputMap.put(   enterUpKS, "released" );
@@ -592,11 +596,11 @@ public class BigWarpActions extends Actions
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
 		map.put(RESET_VIEWER, "R");
-		
+
 		map.put( String.format( VISIBILITY_AND_GROUPING, "moving" ), "F3" );
 		map.put( String.format( VISIBILITY_AND_GROUPING, "target" ), "F4" );
 		map.put( TRANSFORM_TYPE, "F2" );
-		
+
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ), "Q" );
 		map.put( String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ), "W" );
 
@@ -650,6 +654,9 @@ public class BigWarpActions extends Actions
 		new SaveSettingsAction( bw ).put( actionMap );
 		new LoadSettingsAction( bw ).put( actionMap );
 
+		new SaveProjectAction( bw ).put( actionMap );
+		new LoadProjectAction( bw ).put( actionMap );
+
 		return actionMap;
 	}
 
@@ -663,6 +670,26 @@ public class BigWarpActions extends Actions
 		map.put( TOGGLE_LANDMARK_MODE, "SPACE" );
 
 		map.put( BRIGHTNESS_SETTINGS, "S" );
+//		map.put( LANDMARK_MODE_ON, "pressed SPACE" );
+//		// the few lines below are super ugly, but are necessary for robustness
+//		map.put( LANDMARK_MODE_ON, "shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "ctrl pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt ctrl pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "ctrl shift pressed SPACE" );
+//		map.put( LANDMARK_MODE_ON, "alt ctrl shift pressed SPACE" );
+//
+//		map.put( LANDMARK_MODE_OFF, "released SPACE", "released" );
+//		// the few lines below are super ugly, but are necessary for robustness
+//		map.put( LANDMARK_MODE_OFF, "shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "ctrl released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt ctrl released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "ctrl shift released SPACE", "released" );
+//		map.put( LANDMARK_MODE_OFF, "alt ctrl shift released SPACE", "released" );
+
 		map.put( SHOW_HELP, "F1", "H" );
 
 		map.put( TOGGLE_POINTS_VISIBLE, "V" );
@@ -723,7 +750,6 @@ public class BigWarpActions extends Actions
 
 		new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ).put( actionMap );
 
-		new ToggleDialogAction( BRIGHTNESS_SETTINGS, bw.brightnessDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_HELP, bw.helpDialog ).put( actionMap );
 		new ToggleDialogAction( SHOW_SOURCE_INFO, bw.sourceInfoDialog ).put( actionMap );
 
@@ -748,6 +774,8 @@ public class BigWarpActions extends Actions
 		// MASK
 		new MaskSizeEdit( bw ).put(actionMap);
 		new MaskVisToggle( bw ).put(actionMap);
+		new MaskImport( bw ).put(actionMap);
+		new MaskRemove( bw ).put(actionMap);
 
 		for( int i = 0; i < bw.baseXfmList.length; i++ ){
 			final AbstractModel<?> xfm = bw.baseXfmList[ i ];
@@ -777,7 +805,7 @@ public class BigWarpActions extends Actions
 		{
 			super( name );
 			this.bw = bw;
-			
+
 			isRedo = false;
 
 			if ( name.equals( REDO ) )
@@ -791,7 +819,7 @@ public class BigWarpActions extends Actions
 			// I would love for this check to work instead of using a try-catch
 			// bug it doesn't seem to be consistent
 //			if( isRedo && manager.canRedo() ){
-			try { 
+			try {
 
 				if( isRedo )
 				{
@@ -816,7 +844,7 @@ public class BigWarpActions extends Actions
 				// repaint
 				this.bw.getLandmarkPanel().repaint();
 			}
-			catch( Exception ex )
+			catch( final Exception ex )
 			{
 				if( isRedo )
 				{
@@ -871,7 +899,7 @@ public class BigWarpActions extends Actions
 		}
 	}
 
-	public static class ToggleAlwaysEstimateTransformAction extends AbstractNamedAction 
+	public static class ToggleAlwaysEstimateTransformAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 2909830484701853577L;
 
@@ -890,7 +918,7 @@ public class BigWarpActions extends Actions
 		}
 	}
 
-	public static class GarbageCollectionAction extends AbstractNamedAction 
+	public static class GarbageCollectionAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -4487441057212703143L;
 
@@ -906,13 +934,13 @@ public class BigWarpActions extends Actions
 			System.gc();
 		}
 	}
-	
+
 	public static class PrintTransformAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 6065343788485350279L;
 
 		private BigWarp< ? > bw;
- 
+
 		public PrintTransformAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
@@ -950,32 +978,31 @@ public class BigWarpActions extends Actions
 			// System.out.println( ltm.getChangedSinceWarp() );
 //			 System.out.println( ltm.getWarpedPoints() );
 //			ltm.printWarpedPoints();
-			
-			AffineTransform3D xfm = new AffineTransform3D();
+
+			final AffineTransform3D xfm = new AffineTransform3D();
 			bw.viewerP.state().getViewerTransform( xfm );
 			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
 
 			bw.viewerQ.state().getViewerTransform( xfm );
 			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			BigWarpData< ? > data = bw.getData();
-			for( int mi : data.movingSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "mvg src xfm " + xfm  );
-			}
-
-			for( int ti : data.targetSourceIndices )
-			{
-				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
-				System.out.println( "tgt src xfm " + xfm  );
-			}
-
-
-			System.out.println( " " );
+//			BigWarpData< ? > data = bw.getData();
+//			for( int mi : data.movingSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( mi )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "mvg src xfm " + xfm  );
+//			}
+//
+//			for( int ti : data.targetSourceIndices )
+//			{
+//				((SourceAndConverter<?>)data.sources.get( ti )).getSpimSource().getSourceTransform( 0, 0, xfm );
+//				System.out.println( "tgt src xfm " + xfm  );
+//			}
+//
+//			System.out.println( " " );
 		}
 	}
-	
+
 	public static class EstimateWarpAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -210012348709096037L;
@@ -994,13 +1021,13 @@ public class BigWarpActions extends Actions
 			bw.restimateTransformation();
 		}
 	}
-	
+
 	public static class ToggleMovingImageDisplayAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 6495981071796613953L;
-		
+
 		private BigWarp< ? > bw;
-		
+
 		public ToggleMovingImageDisplayAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
@@ -1013,7 +1040,7 @@ public class BigWarpActions extends Actions
 			bw.toggleMovingImageDisplay();
 		}
 	}
-	
+
 	public static class TogglePointNameVisibleAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 2639535533224809586L;
@@ -1029,7 +1056,7 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.toggleNameVisibility();	
+			bw.toggleNameVisibility();
 		}
 	}
 
@@ -1064,7 +1091,7 @@ public class BigWarpActions extends Actions
 	{
 		private static final long serialVersionUID = 8747830204501341125L;
 		private BigWarp< ? > bw;
-		
+
 		public TogglePointsVisibleAction( final String name, final BigWarp< ? > bw )
 		{
 			super( name );
@@ -1074,44 +1101,46 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			bw.togglePointVisibility();	
+			bw.togglePointVisibility();
 		}
 	}
-	
+
 	public static class ResetActiveViewerAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -130575800163574517L;
-		
+
 		private BigWarp< ? > bw;
-		
+
 		public ResetActiveViewerAction( final BigWarp< ? > bw )
 		{
 			super( String.format( RESET_VIEWER ) );
 			this.bw = bw;
 		}
-		
+
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			bw.resetView();
 		}
 	}
-	
+
 	public static class AlignViewerPanelAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -7023242695323421450L;
-		
-		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE };
-		
+
+		public enum TYPE { ACTIVE_TO_OTHER, OTHER_TO_ACTIVE }
+
 		private BigWarp< ? >bw;
 		private TYPE type;
-		
+
 		public AlignViewerPanelAction( final BigWarp< ? > bw, TYPE type )
 		{
 			super( String.format( ALIGN_VIEW_TRANSFORMS, type ) );
 			this.bw = bw;
 			this.type = type;
 		}
-		
+
+		@Override
 		public void actionPerformed( ActionEvent e )
 		{
 			if( type == TYPE.ACTIVE_TO_OTHER )
@@ -1124,10 +1153,10 @@ public class BigWarpActions extends Actions
 	public static class SetWarpMagBaseAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
-		
+
 		private BigWarp< ? > bw;
 		private int i;
-		
+
 		public SetWarpMagBaseAction( final String name, final BigWarp< ? > bw, int i )
 		{
 			super( name );
@@ -1141,14 +1170,14 @@ public class BigWarpActions extends Actions
 			bw.setWarpMagBaselineIndex( i );
 		}
 	}
-	
+
 	public static class SetWarpVisGridTypeAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
-		
+
 		private final BigWarp< ? > bw;
 		private final GridSource.GRID_TYPE type;
-		
+
 		public SetWarpVisGridTypeAction( final String name, final BigWarp< ? > bw, final GridSource.GRID_TYPE type )
 		{
 			super( name );
@@ -1162,20 +1191,20 @@ public class BigWarpActions extends Actions
 			bw.setWarpVisGridType( type );
 		}
 	}
-	
+
 	public static class SetWarpVisTypeAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 7370813069619338918L;
-		
+
 		private BigWarp< ? > bw;
 		private BigWarpViewerFrame p;
 		private BigWarp.WarpVisType type;
-		
+
 		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw )
 		{
 			this( type, bw, null );
 		}
-		
+
 		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw, BigWarpViewerFrame p )
 		{
 			super( getName( type, p ));
@@ -1192,7 +1221,7 @@ public class BigWarpActions extends Actions
 			else
 				bw.setWarpVisMode( type, p, false );
 		}
-		
+
 		public static String getName( final BigWarp.WarpVisType type, BigWarpViewerFrame p )
 		{
 			if( p == null )
@@ -1203,7 +1232,7 @@ public class BigWarpActions extends Actions
 				return String.format( SET_WARPTYPE_VIS_Q, type.name() );
 		}
 	}
-	
+
 	public static class TableSelectionAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = -4647679094757721276L;
@@ -1307,6 +1336,23 @@ public class BigWarpActions extends Actions
 		private static final long serialVersionUID = 1L;
 	}
 
+	public static class SaveProjectAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = -965388576691467002L;
+		BigWarp< ? > bw;
+		public SaveProjectAction( final BigWarp< ? > bw )
+		{
+			super( SAVE_PROJECT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.saveProject();
+		}
+	}
+
 	public static class LoadSettingsAction extends AbstractNamedAction
 	{
 		BigWarp< ? > bw;
@@ -1325,6 +1371,23 @@ public class BigWarpActions extends Actions
 		private static final long serialVersionUID = 1L;
 	}
 
+	public static class LoadProjectAction extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 1793182816804229398L;
+		BigWarp< ? > bw;
+		public LoadProjectAction( final BigWarp< ? > bw )
+		{
+			super( LOAD_PROJECT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed( final ActionEvent e )
+		{
+			bw.loadProject();
+		}
+	}
+
 	public static class WarpToSelectedAction extends AbstractNamedAction
 	{
 		final BigWarp< ? > bw;
@@ -1338,7 +1401,7 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
+			final int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
 
 			int row = 0;
 			if( selectedRows.length > 0 )
@@ -1391,7 +1454,13 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
+			if ( bw.landmarkModel.getRowCount() < 1 )
+			{
+				bw.message.showMessage( "No landmarks found." );
+				return;
+			}
+
+			final int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
 
 			int row = 0;
 			if( selectedRows.length > 0 )
@@ -1484,7 +1553,7 @@ public class BigWarpActions extends Actions
 			bw.exportAsImagePlus( false );
 		}
 	}
-	
+
 	public static class ExportWarpAction extends AbstractNamedAction
 	{
 		private static final long serialVersionUID = 4626378501415886468L;
@@ -1585,8 +1654,8 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.maskSourceMouseListenerP.toggleActive();
-			bw.maskSourceMouseListenerQ.toggleActive();
+			if( bw.maskSourceMouseListenerQ != null )
+				bw.maskSourceMouseListenerQ.toggleActive();
 		}
 	}
 
@@ -1604,8 +1673,43 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			bw.getViewerFrameP().getViewerPanel().getMaskOverlay().toggleVisible();
 			bw.getViewerFrameQ().getViewerPanel().getMaskOverlay().toggleVisible();
+		}
+	}
+
+	public static class MaskImport extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 493457851797644046L;
+		private final BigWarp< ? > bw;
+
+		public MaskImport( final BigWarp< ? > bw )
+		{
+			super( MASK_IMPORT );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.importTransformMaskSourceDialog();
+		}
+	}
+
+	public static class MaskRemove extends AbstractNamedAction
+	{
+		private static final long serialVersionUID = 4103338122650843631L;
+		private final BigWarp< ? > bw;
+
+		public MaskRemove( final BigWarp< ? > bw )
+		{
+			super( MASK_REMOVE );
+			this.bw = bw;
+		}
+
+		@Override
+		public void actionPerformed(ActionEvent e)
+		{
+			bw.removeMaskSource();
 		}
 	}
 

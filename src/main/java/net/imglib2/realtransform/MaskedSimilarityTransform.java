@@ -31,39 +31,29 @@ public class MaskedSimilarityTransform<T extends RealType<T>> implements RealTra
 
 	private final double[] c;
 
-	private final boolean flip;
+//	private final boolean flip;
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda ) {
-		this( transform, lambda, new double[3], Interpolators.SIMILARITY, false );
+		this( transform, lambda, new double[3], Interpolators.SIMILARITY );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, boolean flip ) {
-		this( transform, lambda, new double[3], Interpolators.SIMILARITY, flip );
+		this( transform, lambda, new double[3], Interpolators.SIMILARITY );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c ) {
-		this( transform, lambda, c, Interpolators.SIMILARITY, false );
+		this( transform, lambda, c, Interpolators.SIMILARITY );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, Interpolators interp ) {
-		this( transform, lambda, new double[3], interp, false );
-	}
-
-	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, Interpolators interp, boolean flip ) {
-		this( transform, lambda, new double[3], interp, flip );
+		this( transform, lambda, new double[3], interp );
 	}
 
 	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c, Interpolators interp ) {
-		this( transform, lambda, c, interp, false );
-	}
-
-	public MaskedSimilarityTransform(final AffineTransform3D transform, final RealRandomAccessible<T> lambda, double[] c, Interpolators interp, boolean flip ) {
 
 		assert ( transform.numSourceDimensions() == lambda.numDimensions() );
 		this.transform = transform;
 		this.c = c;
-		this.flip = flip;
-
 		this.lambda = lambda;
 		lambdaAccess = lambda.realRandomAccess();
 
@@ -89,20 +79,14 @@ public class MaskedSimilarityTransform<T extends RealType<T>> implements RealTra
 	public void apply(double[] source, double[] target) {
 		lambdaAccess.setPosition(source);
 		final double lam = lambdaAccess.get().getRealDouble();
-		if( flip )
-			interpolator.get( 1-lam ).apply( source, target );
-		else
-			interpolator.get( lam ).apply( source, target );
+		interpolator.get( lam ).apply( source, target );
 	}
 
 	@Override
 	public void apply(RealLocalizable source, RealPositionable target) {
 		lambdaAccess.setPosition(source);
 		final double lam = lambdaAccess.get().getRealDouble();
-		if( flip )
-			interpolator.get( 1-lam ).apply( source, target );
-		else
-			interpolator.get( lam ).apply( source, target );
+		interpolator.get( lam ).apply( source, target );
 	}
 
 	@Override

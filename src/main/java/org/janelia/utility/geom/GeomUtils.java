@@ -4,6 +4,8 @@ import java.util.List;
 
 import net.imglib2.RealLocalizable;
 import net.imglib2.RealPoint;
+import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform2D;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 
@@ -75,6 +77,125 @@ public class GeomUtils {
 		}
 
 		return dist;
+	}
+
+	public static AffineTransform2D fromScalesAngle( double... p )
+	{
+		return fromScalesAngle( p[0], p[1], p[2] );
+	}
+
+	public static AffineTransform2D fromScalesAngle( double sx, double sy, double tht )
+	{
+		AffineTransform2D t = new AffineTransform2D();
+		double cosTht = Math.cos( tht );
+		double sinTht = Math.sin( tht );
+		t.set(	sx * cosTht, -sx * sinTht, 0.0,
+				sy * sinTht,  sy * cosTht, 0.0 );
+
+		return t;
+	}
+
+	/**
+	 * Returns an array containing [sx, sy, tht], where
+	 * sx : the x scale
+	 * sy : the y scale
+	 * tht : the angle
+	 *
+	 * @param t the transformations
+	 * @return
+	 */
+	public static double[] scalesAngle( final AffineTransform2D t )
+	{
+		final double a = t.get( 0, 0 ); final double b = t.get( 0, 1 );
+		final double c = t.get( 1, 0 ); final double d = t.get( 1, 1 );
+
+		final double sa = a >= 0 ? 1 : -1;
+		final double sd = d >= 0 ? 1 : -1;
+
+		final double mab = Math.sqrt( a * a + b * b );
+		final double mcd = Math.sqrt( c * c + d * d );
+
+		final double sx = sa * mab;
+		final double sy = sd * mcd;
+		final double tht = Math.atan2( -b, a );
+		return new double[] { sx, sy, tht };
+
+//		final double tht1 = Math.atan2( -b, a );
+//		final double tht2 = Math.atan2( c, d );
+//		System.out.println( "tht1 : " + tht1 );
+//		System.out.println( "tht2 : " + tht2 );
+//		return new double[] { sx, sy, tht1, tht2 };
+	}
+
+	/**
+	 * Returns an array containing [sx, sy, tht], where
+	 * sx : the x scale
+	 * sy : the y scale
+	 * tht : the angle
+	 *
+	 * @param t the transformations
+	 * @return
+	 */
+	public static double[] scalesAngle( final AffineTransform2D t, final double[] center ) 
+	{
+		final double a = t.get( 0, 0 ); final double b = t.get( 0, 1 ); 
+		final double c = t.get( 1, 0 ); final double d = t.get( 1, 1 ); 
+
+		// don't allow flips
+//		final double sa = a >= 0 ? 1 : -1;
+//		final double sd = d >= 0 ? 1 : -1;
+		final double sa = 1.0;
+		final double sd = 1.0;
+
+		final double mab = Math.sqrt( a * a + b * b );
+		final double mcd = Math.sqrt( c * c + d * d );
+
+		final double sx = sa * mab;
+		final double sy = sd * mcd;
+		final double tht = Math.atan2( -b, a );
+		return new double[] { sx, sy, tht };
+
+//		final double tht1 = Math.atan2( -b, a );
+//		final double tht2 = Math.atan2( c, d );
+//		System.out.println( "tht1 : " + tht1 );
+//		System.out.println( "tht2 : " + tht2 );
+//		return new double[] { sx, sy, tht1, tht2 };
+	}
+
+	public static double[] evals2d( AffineGet a )
+	{
+		final double m = trace2d( a ) / 2.0;
+		final double p = det2d( a );
+		final double d = Math.sqrt( m * m - p );
+		return new double[] { m + d, m - d };
+	}
+
+	public static double det2d( AffineGet a ) {
+		return 	a.get( 0, 0 ) * a.get( 1, 1 ) -
+				a.get( 1, 0 ) * a.get( 0, 1 );
+	}
+
+	public static double trace2d( AffineGet a ) {
+		return a.get( 0, 0 ) + a.get( 1, 1 );
+	}
+
+	public static AffineTransform2D centeredRotation( final double tht, final double[] c )
+	{
+		final AffineTransform2D t = new AffineTransform2D();
+		t.translate( -c[ 0 ], -c[ 1 ] );
+		t.rotate( tht );
+		t.translate( c );
+		return t;
+	}
+
+	public static AffineTransform2D centeredSimilarity( final double tht, final double scale, final double[] c )
+	{
+		final AffineTransform2D t = new AffineTransform2D();
+		t.translate( -c[ 0 ], -c[ 1 ] );
+		t.rotate( tht );
+		t.scale( scale );
+		t.translate( c );
+		return t;
 	}
 
 }

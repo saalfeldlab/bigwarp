@@ -13,6 +13,8 @@ import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bigwarp.BigWarp;
 import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.transforms.AbstractTransformSolver;
+import bigwarp.transforms.MaskedSimRotTransformSolver;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
 
@@ -47,9 +49,9 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		overlays.add( bw.getViewerFrameP().getViewerPanel().getMaskOverlay() );
 		overlays.add( bw.getViewerFrameQ().getViewerPanel().getMaskOverlay() );
 
-		p = new RealPoint( nd );
-		c = new RealPoint( nd );
-		pressPt = new RealPoint( nd );
+		p = new RealPoint( 3 );
+		c = new RealPoint( 3 );
+		pressPt = new RealPoint( 3 );
 		active = false;
 	}
 
@@ -109,7 +111,8 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		// store starting center at start of drag
 		if( !dragged )
 		{
-			c.setPosition( mask.getCenter() );
+//			c.setPosition( mask.getCenter() );
+			mask.getCenter().localize( c );
 			viewer.getGlobalMouseCoordinates( pressPt );
 			dragged = true;
 		}
@@ -119,7 +122,8 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		
 		if( e.isControlDown() )
 		{
-			final double d = PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() );
+			mask.getCenter().localize( c );
+			final double d = PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, c );
 			synchronized ( mask )
 			{
 				mask.setSquaredRadius( d );
@@ -127,7 +131,8 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		}
 		else if( e.isShiftDown() )
 		{
-			final double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, mask.getCenter() ));
+			mask.getCenter().localize( c );
+			final double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, c ));
 			synchronized ( mask )
 			{
 				mask.setSigma( d - Math.sqrt( mask.getSquaredRadius()) );
@@ -144,6 +149,12 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 			synchronized ( mask )
 			{
 				mask.setCenter(p);
+			}
+
+			AbstractTransformSolver< ? > solver = bw.getBwTransform().getSolver();
+			if( solver instanceof MaskedSimRotTransformSolver )
+			{
+				((MaskedSimRotTransformSolver)solver).setCenter( p );
 			}
 		}
 

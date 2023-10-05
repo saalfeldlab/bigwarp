@@ -34,7 +34,7 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 
 	public BigWarpMaskSphereOverlay( final BigWarpViewerPanel viewer, boolean is3d )
 	{
-		this( viewer, new double[]{}, new Color[]{ Color.ORANGE, Color.YELLOW }, is3d );
+		this( viewer, new double[]{0,0}, new Color[]{ Color.ORANGE, Color.YELLOW }, is3d );
 	}
 
 	public BigWarpMaskSphereOverlay( final BigWarpViewerPanel viewer, final Color[] colors, boolean is3d )
@@ -82,10 +82,10 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 	{
 		this.radii = radii;
 	}
-	
+
 	public void setInnerRadius( double inner )
 	{
-		double del = radii[1] - radii[0];
+		final double del = radii[1] - radii[0];
 		radii[0] = inner;
 		radii[1] = inner + del;
 	}
@@ -125,16 +125,14 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 			g2d.setRenderingHint( RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON );
 			g2d.setComposite( AlphaComposite.SrcOver );
 
-			final double scale;
 			viewer.state().getViewerTransform( viewerTransform ); // synchronized
-			scale = Affine3DHelpers.extractScale( viewerTransform, 0 );
-
+			final double scale = Affine3DHelpers.extractScale( viewerTransform, 0 );
 			viewerTransform.apply( center, viewerCoords );
 
 			final double zv;
 			if( is3d )
 				zv = viewerCoords[ 2 ];
-			else 
+			else
 				zv = 0;
 
 			final double dz2 = zv * zv;
@@ -142,16 +140,18 @@ public class BigWarpMaskSphereOverlay implements OverlayRenderer
 			{
 				final double rad = radii[i];
 				final double scaledRadius = scale * rad;
-				final double arad;
-				if( is3d )
-					arad = Math.sqrt( scaledRadius * scaledRadius - dz2 );
-				else
-					arad = rad;
-				
-				final int rarad = (int)Math.round( arad );
-				if ( viewerCoords[0] + scaledRadius > 0 && viewerCoords[0] - scaledRadius < width
-						&& viewerCoords[1] + scaledRadius > 0 && viewerCoords[1] - scaledRadius < height )
+
+				if ( viewerCoords[0] + scaledRadius > 0 && viewerCoords[0] - scaledRadius < width &&
+					 viewerCoords[1] + scaledRadius > 0 && viewerCoords[1] - scaledRadius < height )
 				{
+					final double arad;
+					if( is3d )
+						arad = Math.sqrt( scaledRadius * scaledRadius - dz2 );
+					else
+						arad = scaledRadius;
+
+					final int rarad = (int)Math.round( arad );
+
 					g2d.setColor( colors[ i ] );
 					g2d.setStroke( stroke );
 					g2d.drawOval( (int)viewerCoords[0] - rarad, (int)viewerCoords[1] - rarad,

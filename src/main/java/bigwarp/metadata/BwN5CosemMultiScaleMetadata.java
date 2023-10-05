@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -46,26 +46,7 @@
  */
 package bigwarp.metadata;
 
-import java.text.Collator;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-
-import org.janelia.saalfeldlab.n5.DatasetAttributes;
-import org.janelia.saalfeldlab.n5.N5TreeNode;
-import org.janelia.saalfeldlab.n5.metadata.MultiscaleMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5CosemMetadata;
-import org.janelia.saalfeldlab.n5.metadata.N5Metadata;
-
-import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineTransform3D;
-import se.sawano.java.text.AlphanumericComparator;
-
-public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMetadata> implements N5Metadata, 
+public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMetadata> implements N5Metadata,
 	//N5GroupParser< BwN5CosemMultiScaleMetadata >, PhysicalMetadata
 {
 
@@ -137,7 +118,6 @@ public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMet
 //		final List<String> paths = new ArrayList<>();
 //
 //        children.forEach( c -> {
-////            System.out.println( c.getPath() );
 //			if( scaleLevelNodes.containsKey( c.getNodeName() ))
 //			{
 //				paths.add( c .getPath());
@@ -151,11 +131,11 @@ public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMet
 //				transforms.toArray( new AffineTransform3D[ 0 ] ),
 //				units);
 //	}
-//	
+//
 //	@Override
 //	public AffineGet physicalTransform()
 //	{
-//		// spatial transforms are specified by the individual scales 
+//		// spatial transforms are specified by the individual scales
 //		return null;
 //	}
 //

@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -22,12 +22,14 @@
 package bigwarp.util;
 
 import java.awt.Dimension;
+import java.util.HashMap;
 
 import bdv.util.Affine3DHelpers;
 import bdv.viewer.Source;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
 import net.imglib2.Interval;
+import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.util.LinAlgHelpers;
 
@@ -70,12 +72,12 @@ public class BigWarpUtils
 		if( det( xfm ) < 0 )
 			flipX( xfm );
 	}
-	
+
 	public static double det( final AffineTransform3D xfm )
 	{
 		return LinAlgHelpers.det3x3(
-				xfm.get(0, 0), xfm.get(0, 1), xfm.get(0, 2), 
-				xfm.get(1, 0), xfm.get(1, 1), xfm.get(1, 2), 
+				xfm.get(0, 0), xfm.get(0, 1), xfm.get(0, 2),
+				xfm.get(1, 0), xfm.get(1, 1), xfm.get(1, 2),
 				xfm.get(2, 0), xfm.get(2, 1), xfm.get(2, 2) );
 	}
 
@@ -188,7 +190,7 @@ public class BigWarpUtils
 	/**
 	 * Computes the angle of rotation between the two input quaternions,
 	 * returning the result in radians.  Assumes the inputs are unit quaternions.
-	 * 
+	 *
 	 * @param q1 first quaternion
 	 * @param q2 second quaternion
 	 * @return the angle in radians
@@ -201,7 +203,7 @@ public class BigWarpUtils
 
 		return Math.acos( 2 * dot * dot  - 1);
 	}
-	
+
 //	public static double angleBetween( final AffineTransform3D xfm1, final AffineTransform3D xfm2 )
 //	{
 //		double[][] tmpMat = new double[ 3 ][ 4 ];
@@ -210,7 +212,7 @@ public class BigWarpUtils
 //
 //		xfm1.toMatrix( tmpMat );
 //		LinAlgHelpers.qu
-//	
+//
 //		normalize( q1 );
 //		normalize( q2 );
 //
@@ -226,17 +228,82 @@ public class BigWarpUtils
 			x[ i ] /= magSqr;
 	}
 
+	public static HashMap<String,String> parseMacroArguments( String input )
+	{
+		return parseMacroArguments( input, "=", "[", "]" );
+	}
+
+	public static HashMap<String,String> parseMacroArguments( String input, String keyDelim, String startDelim, String endDelim )
+	{
+		final HashMap<String,String> output = new HashMap<>();
+
+		String arguments = input.trim();
+		boolean done = false;
+		while( !done )
+		{
+			int i = arguments.indexOf( keyDelim );
+			final String key = arguments.substring( 0, i );
+			output.put( key, parse( arguments, startDelim, endDelim ));
+
+			i = arguments.indexOf( endDelim );
+			if( i < 0 || i +1 > arguments.length() )
+				done = true;
+
+			arguments = arguments.substring( i + 1 ).trim();
+			if( arguments.length() == 0 )
+				done = true;
+			else
+				arguments = arguments.substring( 1 ).trim(); // remove comma
+		}
+
+		return output;
+	}
+
+	public static String parse( String arg, String start, String end )
+	{
+		final int startIdx = arg.indexOf( start ) + 1;
+		final int endIdx = arg.indexOf( end );
+		if ( startIdx < 0 || endIdx < 0 )
+			return null;
+
+		return arg.substring( startIdx, endIdx );
+	}
+
+	/**
+	 * Return a 3D {@link AffineGet} from a lower-dimensional (1D or 2D) AffineGet.
+	 * The input instance is returned if it is 3D.
+	 *
+	 * @param affine the input affine.
+	 * @return the 3D affine
+	 */
+	public static AffineGet toAffine3D( final AffineGet affine )
+	{
+		if( affine.numSourceDimensions() == 3)
+			return affine;
+
+		final AffineTransform3D out = new AffineTransform3D();
+		final int N = affine.numSourceDimensions();
+		for (int i = 0; i < N; i++)
+			for (int j = 0; j < N; j++)
+				out.set(affine.get(i, j), i, j);
+
+		// translation part
+		for (int i = 0; i < N; i++)
+			out.set(affine.get(i, N+1), i, 3);
+
+		return out;
+	}
 
 //	/**
 //	 * Computes the angle of rotation between the two input quaternions,
 //	 * returning the result in degrees.  Assumes the inputs are unit quaternions.
-//	 * 
+//	 *
 //	 * @param q1 first quaternion
 //	 * @param q2 second quaternion
 //	 * @return the angle in degrees
 //	 */
 //	public static double quaternionAngleD( double[] q1, double q2 )
 //	{
-//		
+//
 //	}
 }

@@ -45,7 +45,7 @@ import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
 import bdv.viewer.Interpolation;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import net.imglib2.Interval;
 
 public class BigwarpLandmarkSelectionPanel<T> extends JPanel

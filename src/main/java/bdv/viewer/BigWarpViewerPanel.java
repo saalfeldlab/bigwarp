@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -26,10 +26,11 @@ import bdv.gui.BigWarpViewerOptions;
 import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
-import bdv.viewer.animate.MessageOverlayAnimator;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
+import bigwarp.BigWarpData;
+import bigwarp.source.SourceInfo;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -47,6 +48,8 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final int TARGET_GROUP_INDEX = 1;
 
+	protected final BigWarpData<?> bwData;
+
 	protected BigWarpViewerSettings viewerSettings;
 
 	protected BigWarpOverlay overlay;
@@ -63,13 +66,9 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	protected int ndims;
 
-	final protected int[] movingSourceIndexList;
+	protected boolean boxOverlayVisible = true;
 
-	final protected int[] targetSourceIndexList;
-
-//	protected boolean boxOverlayVisible = true;
-//
-//	protected boolean textOverlayVisible = true;
+	protected boolean textOverlayVisible = true;
 
 	protected ArrayList< AffineTransform3D > orthoTransforms;
 
@@ -78,23 +77,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	ViewerOptions options;
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList )
+	public BigWarpViewerPanel( final BigWarpData bwData , final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving )
 	{
-		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
+		this( bwData, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving );
 	}
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList  )
+	public BigWarpViewerPanel( final BigWarpData bwData, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving )
 	{
-		super( sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		// TODO compiler complains if the first argument is 'final BigWarpData<?> bwData'
+		super( bwData.sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		this.bwData = bwData;
 		this.viewerSettings = viewerSettings;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed
 										// image by default
-		this.movingSourceIndexList = movingSourceIndexList;
-		this.targetSourceIndexList = targetSourceIndexList;
-
 		getDisplay().overlays().add( g -> {
 			if ( null != overlay ) {
 				overlay.setViewerState( state() );
@@ -106,7 +102,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			}
 		} );
 
-		updateGrouping();
+		//updateGrouping();
 	}
 
 	@Override
@@ -118,14 +114,14 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public void precomputeRotations2d( final AffineTransform3D initialViewTransform )
 	{
 		orthoTransforms = new ArrayList<>();
-		AffineTransform3D rot = new AffineTransform3D();
+		final AffineTransform3D rot = new AffineTransform3D();
 		rot.rotate( 2, -Math.PI / 2 );
 
 		AffineTransform3D xfm = initialViewTransform;
 		orthoTransforms.add( xfm );
 		for( int i = 1; i < 4; i++ )
 		{
-			AffineTransform3D newXfm = xfm.copy();
+			final AffineTransform3D newXfm = xfm.copy();
 			newXfm.rotate( 2, -Math.PI/2);
 			orthoTransforms.add( newXfm );
 			xfm = newXfm;
@@ -158,23 +154,30 @@ public class BigWarpViewerPanel extends ViewerPanel
 	/**
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
+	 * <p>
+	 * Deprecated. use {@link BigWarp#createMovingTargetGroup()}
 	 *
 	 * @return the number sources in the moving group
 	 */
+	@Deprecated
 	public int updateGrouping()
 	{
 		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{
-			// TODO: work backwards to find out whether movingSourceIndexList
-			//  and targetSourceIndexList are required, or whether a
-			//  List<SourceAndConverter<?>> can be used directly
 			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
-			for ( int i : movingSourceIndexList )
-				moving.add( state.getSources().get( i ) );
 			final List< SourceAndConverter< ? > > target = new ArrayList<>();
-			for ( int i : targetSourceIndexList )
-				target.add( state.getSources().get( i ) );
+
+			int idx = 0;
+			for ( final SourceInfo sourceInfo : bwData.sourceInfos.values() )
+			{
+				if (sourceInfo.isMoving()) {
+					moving.add( state.getSources().get( idx ) );
+				} else {
+					target.add( state.getSources().get( idx ) );
+				}
+				idx++;
+			}
 
 			state.clearGroups();
 
@@ -206,7 +209,20 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+		if( bwData.numMovingSources() < 1 )
+			return true;
+		else
+		{
+			// final Source< ? > spimSource = bwData.getMovingSource( 0 ).getSpimSource();
+			// final boolean isTransformed;
+			// if (spimSource instanceof  WarpedSource<?>) {
+			// 	isTransformed = ( ( WarpedSource< ? > ) spimSource ).isTransformed();
+			// } else {
+			// 	isTransformed = false;
+			// }
+			// return !isMoving || isTransformed;
+			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
+		}
 	}
 
 	public boolean doUpdateOnDrag()
@@ -308,7 +324,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 				newTransform = Rotation2DHelpers.targetViewerTransform2d( transform , isClockwise );
 				break;
 			}
-			catch(Exception e)
+			catch(final Exception e)
 			{
 				if( isClockwise )
 					transform.rotate( 2, -0.1 );
@@ -317,7 +333,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			}
 		}
 
-		double[] qNew = new double[ 4 ];
+		final double[] qNew = new double[ 4 ];
 		Affine3DHelpers.extractRotation( newTransform, qNew );
 		setTransformAnimator( new RotationAnimator(transform, centerX, centerY, qNew, 300 ) );
 	}

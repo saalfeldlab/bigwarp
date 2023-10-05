@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -39,7 +39,7 @@ import bigwarp.transforms.BigWarpTransform;
 public class TransformTypeSelectDialog extends JDialog
 {
 	private static final long serialVersionUID = 1L;
-	
+
 	@Deprecated
 	public static final String TPS = "Thin Plate Spline";
 	@Deprecated
@@ -70,7 +70,7 @@ public class TransformTypeSelectDialog extends JDialog
 	/**
 	 * Instantiates and displays a JFrame that enables
 	 * the selection of the transformation type.
-	 * 
+	 *
 	 * @param owner the parent frame
 	 * @param bw a bigwarp instance
 	 */
@@ -88,7 +88,7 @@ public class TransformTypeSelectDialog extends JDialog
 		similarityButton = new JRadioButton( BigWarpTransform.SIMILARITY );
 		rotationButton = new JRadioButton( BigWarpTransform.ROTATION );
 		translationButton = new JRadioButton( BigWarpTransform.TRANSLATION );
-		
+
 		group = new ButtonGroup();
 		group.add( tpsButton );
 		group.add( affineButton );
@@ -104,13 +104,13 @@ public class TransformTypeSelectDialog extends JDialog
 		addActionListender( rotationButton );
 		addActionListender( translationButton );
 
-		JPanel radioPanel = new JPanel( new GridLayout(0, 1));
+		final JPanel radioPanel = new JPanel( new GridLayout(0, 1));
 		radioPanel.add( tpsButton );
 		radioPanel.add( affineButton );
 		radioPanel.add( similarityButton );
 		radioPanel.add( rotationButton );
 		radioPanel.add( translationButton );
-		
+
 		radioPanel.setBorder( BorderFactory.createCompoundBorder(
 				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
 				BorderFactory.createCompoundBorder(
@@ -168,7 +168,7 @@ public class TransformTypeSelectDialog extends JDialog
 			@Override
 			public void actionPerformed( ActionEvent e )
 			{
-				bw.getTransformMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
+				bw.getTransformPlateauMaskSource().getRandomAccessible().setFalloffShape( button.getText() );
 				bw.getViewerFrameP().getViewerPanel().requestRepaint();
 				bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			}

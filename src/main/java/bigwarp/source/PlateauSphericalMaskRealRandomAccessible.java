@@ -58,8 +58,8 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public static enum FalloffShape
 	{
-		GAUSSIAN( it -> new GaussianFalloff( it ) ),
 		COSINE( it -> new CosineFalloff( it ) ),
+		GAUSSIAN( it -> new GaussianFalloff( it ) ),
 		LINEAR( it -> new LinearFalloff( it ) );
 
 		private final Function< PlateauSphericalMaskRealRandomAccessible, BiConsumer< RealLocalizable, DoubleType > > fallOffProvider;
@@ -243,7 +243,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public void setCenter( RealLocalizable p )
 	{
-		center.setPosition( p );
+		p.localize( center );
 		if ( overlays != null )
 			overlays.stream().forEach( o -> o.setCenter( p ) );
 	}

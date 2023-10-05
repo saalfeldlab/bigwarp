@@ -7,6 +7,8 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.BigWarpViewerPanel;
 import bdv.viewer.DisplayMode;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
+import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.state.SourceGroup;
@@ -14,8 +16,9 @@ import bdv.viewer.state.SourceState;
 import bdv.viewer.state.ViewerState;
 import bdv.viewer.state.XmlIoViewerState;
 import bigwarp.landmarks.LandmarkTableModel;
-import bigwarp.source.PlateauSphericalMaskRealRandomAccessible;
+import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import bigwarp.transforms.io.TransformWriterJson;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -28,10 +31,17 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.ARGBType;
 import org.scijava.listeners.Listeners;
 
@@ -51,6 +61,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	private final BigWarpTransform transform;
 
+	private final Map<Integer, SourceInfo> sourceInfos;
+
 	BigWarpViewerPanel viewerP;
 
 	BigWarpViewerPanel viewerQ;
@@ -61,7 +73,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 	BigWarpAutoSaver autoSaver;
 
-	final PlateauSphericalMaskRealRandomAccessible transformMask;
+	boolean overwriteSources = false;
 
 	public BigwarpSettings(
 			final BigWarp<?> bigWarp,
@@ -70,9 +82,9 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			final SetupAssignments setupAssignments,
 			final Bookmarks bookmarks,
 			final BigWarpAutoSaver autoSaver,
-			final PlateauSphericalMaskRealRandomAccessible transformMask,
 			final LandmarkTableModel landmarks,
-			final BigWarpTransform transform
+			final BigWarpTransform transform,
+			final Map< Integer, SourceInfo > sourceInfos
 	)
 	{
 
@@ -82,9 +94,14 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		this.setupAssignments = setupAssignments;
 		this.bookmarks = bookmarks;
 		this.autoSaver = autoSaver;
-		this.transformMask = transformMask;
 		this.landmarks = landmarks;
 		this.transform = transform;
+		this.sourceInfos = sourceInfos;
+	}
+
+	public void setOverwriteSources( final boolean overwriteSources )
+	{
+		this.overwriteSources = overwriteSources;
 	}
 
 	public void serialize( String jsonFilename ) throws IOException
@@ -98,7 +115,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	@Override
 	public void write( final JsonWriter out, final BigwarpSettings value ) throws IOException
 	{
+
 		out.beginObject();
+		out.name( "Sources" );
+		new BigWarpSourcesAdapter( bigWarp, overwriteSources ).write( out, sourceInfos );
 		out.name( "ViewerP" );
 		new BigWarpViewerPanelAdapter( viewerP ).write( out, viewerP );
 		out.name( "ViewerQ" );
@@ -120,39 +140,172 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	@Override
 	public BigwarpSettings read( final JsonReader in ) throws IOException
 	{
-		in.beginObject();
-		while ( in.hasNext() )
+		final JsonObject json = JsonParser.parseReader(in).getAsJsonObject();
+		if( json.has("Sources"))
 		{
-			final String nextName = in.nextName();
-			switch ( nextName )
-			{
-			case "ViewerP":
-				new BigWarpViewerPanelAdapter( viewerP ).read( in );
-				break;
-			case "ViewerQ":
-				new BigWarpViewerPanelAdapter( viewerQ ).read( in );
-				break;
-			case "SetupAssignments":
-				new SetupAssignmentsAdapter( setupAssignments ).read( in );
-				break;
-			case "Bookmarks":
-				bookmarks = gson.fromJson( in, Bookmarks.class );
-				bigWarp.setBookmarks( bookmarks );
-				break;
-			case "Autosave":
-				autoSaver = gson.fromJson( in, BigWarpAutoSaver.class );
-				bigWarp.setAutoSaver( autoSaver );
-				break;
-			case "Transform":
-				final JsonObject transformObject = ( JsonObject ) JsonParser.parseReader( in );
-				TransformWriterJson.read( bigWarp, transformObject );
-				break;
-			default:
-				throw new RuntimeException( "Unknown BigWarpSetting: " + nextName );
+			new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).fromJsonTree(json.get("Sources"));
+			final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
+			if (is2D != bigWarp.options.values.is2D()) {
+				bigWarp.changeDimensionality( is2D );
 			}
 		}
-		in.endObject();
+
+		// need to parse transform first
+		if( json.has("Transform"))
+			TransformWriterJson.read( bigWarp, json.get("Transform").getAsJsonObject());
+
+		if( json.has("ViewerP"))
+			new BigWarpViewerPanelAdapter( viewerP ).fromJsonTree( json.get("ViewerP") );
+
+		if( json.has("ViewerQ"))
+			new BigWarpViewerPanelAdapter( viewerQ ).fromJsonTree( json.get("ViewerQ") );
+
+		if( json.has("SetupAssignments"))
+			new SetupAssignmentsAdapter(setupAssignments).fromJsonTree(json.get("SetupAssignments"));
+
+		if( json.has("Bookmarks"))
+			bigWarp.setBookmarks(gson.fromJson(json.get("Bookmarks"), Bookmarks.class));
+
+		if( json.has("Autosave"))
+			bigWarp.setAutoSaver( gson.fromJson( json.get("Autosave"), BigWarpAutoSaver.class ));
+
 		return this;
+	}
+
+	public static class BigWarpSourcesAdapter< T > extends TypeAdapter< Map< Integer, SourceInfo > >
+	{
+
+		private BigWarp< T > bigwarp;
+
+		private boolean overwriteExisting;
+
+		public BigWarpSourcesAdapter( final BigWarp< T > bigwarp, boolean overwriteSources )
+		{
+			this.bigwarp = bigwarp;
+			this.overwriteExisting = overwriteSources;
+		}
+
+		@Override
+		public void write( final JsonWriter out, final Map< Integer, SourceInfo > value ) throws IOException
+		{
+			out.beginObject();
+
+			/* We only want the lowest setupId with the same url*/
+
+			for ( final Map.Entry< Integer, SourceInfo > entry : value.entrySet() )
+			{
+				if ( !entry.getValue().isSerializable() )
+					continue;
+
+				final SourceInfo sourceInfo = entry.getValue();
+				final int id = sourceInfo.getId();
+				final URI uriObj;
+				String uri = sourceInfo.getUri();
+				final String name = sourceInfo.getName();
+				out.name( "" + id );
+				out.beginObject();
+				if ( uri == null && name != null && !name.trim().isEmpty() )
+				{
+					uri = "imagej:///" + name;
+				}
+				if ( uri != null )
+				{
+					out.name( "uri" ).value( uri );
+				}
+				if ( sourceInfo.getName() != null )
+				{
+					out.name( "name" ).value( sourceInfo.getName() );
+				}
+				out.name( "isMoving" ).value( sourceInfo.isMoving() );
+
+				final String transformUri = sourceInfo.getTransformUri();
+				if( transformUri != null )
+					out.name( "transform" ).value( transformUri );
+
+				out.endObject();
+			}
+			out.endObject();
+		}
+
+		@Override
+		public Map< Integer, SourceInfo > read( final JsonReader in ) throws IOException
+		{
+			in.beginObject();
+			while ( in.hasNext() )
+			{
+				//TODO Caleb: What to do if `data` alrread has a source for this `id`?
+				final int id = Integer.parseInt( in.nextName() );
+				in.beginObject();
+				String uri = null;
+				String transformUri = null;
+				String name = null;
+				Boolean isMoving = null;
+				while ( in.hasNext() )
+				{
+					final String key = in.nextName();
+					switch ( key )
+					{
+					case "uri":
+						uri = in.nextString();
+						break;
+					case "name":
+						name = in.nextString();
+						break;
+					case "isMoving":
+						isMoving = in.nextBoolean();
+						break;
+					case "transform":
+						transformUri = in.nextString();
+						break;
+					}
+				}
+				/* Only add if we either are told to override (in which case remove previous) or don't have. */
+				SourceInfo existingInfo = bigwarp.data.sourceInfos.get( id );
+				int targetIdx = -1;
+				if ( existingInfo != null && overwriteExisting )
+				{
+					targetIdx = bigwarp.data.remove( existingInfo );
+					existingInfo = null;
+				}
+				if ( existingInfo == null && uri != null )
+				{
+
+					final LinkedHashMap< Source< T >, SourceInfo > sources;
+					try
+					{
+						sources = BigWarpInit.createSources( bigwarp.data, uri, id, isMoving );
+					}
+					catch ( URISyntaxException | SpimDataException e )
+					{
+						throw new RuntimeException( e );
+					}
+
+					RealTransform transform = null;
+					final String tformUri = transformUri;
+					if( transformUri != null )
+						transform = NgffTransformations.open(transformUri);
+
+					BigWarpInit.add( bigwarp.data, sources, transform, () -> tformUri );
+
+					if ( targetIdx >= 0 )
+					{
+						/* move the source and converterSetup to the correct idx */
+						final SourceAndConverter< T > sacToMove = bigwarp.data.sources.remove( bigwarp.data.sources.size() - 1 );
+						bigwarp.data.sources.add( targetIdx, sacToMove );
+
+						final ConverterSetup setupToMove = bigwarp.data.converterSetups.remove( bigwarp.data.converterSetups.size() - 1 );
+						bigwarp.data.converterSetups.add( targetIdx, setupToMove );
+					}
+				}
+				in.endObject();
+			}
+			in.endObject();
+
+			bigwarp.data.applyTransformations();
+			bigwarp.initialize();
+
+			return bigwarp.data.sourceInfos;
+		}
 	}
 
 	public static class BigWarpViewerPanelAdapter extends TypeAdapter< BigWarpViewerPanel >
@@ -165,11 +318,13 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		public BigWarpViewerPanelAdapter( final BigWarpViewerPanel viewerP )
 		{
 			this.panel = viewerP;
+
+			final Field deprecatedState;
 			try
 			{
-				final Field stateField = ViewerPanel.class.getDeclaredField( "state" );
-				stateField.setAccessible( true );
-				this.state = ( ViewerState ) stateField.get( panel );
+				deprecatedState = ViewerPanel.class.getDeclaredField( "deprecatedState" );
+				deprecatedState.setAccessible( true );
+				this.state = ( ViewerState ) deprecatedState.get( panel );
 			}
 			catch ( NoSuchFieldException | IllegalAccessException e )
 			{
@@ -287,23 +442,26 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		private void readGroups( final JsonReader in ) throws IOException
 		{
 			in.beginArray();
-			int i = 0;
+			final SynchronizedViewerState state = panel.state();
+			state.setGroupsActive( state.getActiveGroups(), false );
+			state.removeGroups( state.getGroups() );
 			while ( in.hasNext() )
 			{
 				in.beginObject();
-				final SynchronizedViewerState state = panel.state();
-				final bdv.viewer.SourceGroup group = state.getGroups().get( i++ );
-
+				final bdv.viewer.SourceGroup group = new bdv.viewer.SourceGroup();
+				state.addGroup( group );
 				while ( in.hasNext() )
 				{
 
 					switch ( in.nextName() )
 					{
 					case XmlIoViewerState.VIEWERSTATE_GROUP_ACTIVE_TAG:
-						state.setGroupActive( group, in.nextBoolean() );
+						final boolean active = in.nextBoolean();
+						state.setGroupActive( group, active );
 						break;
 					case XmlIoViewerState.VIEWERSTATE_GROUP_NAME_TAG:
-						state.setGroupName( group, in.nextString() );
+						final String name = in.nextString();
+						state.setGroupName( group, name );
 						break;
 					case XmlIoViewerState.VIEWERSTATE_GROUP_SOURCEID_TAG:
 						state.removeSourcesFromGroup( new ArrayList<>( state.getSourcesInGroup( group ) ), group );
@@ -400,16 +558,18 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		{
 			out.beginObject();
 			out.name( "ConverterSetups" );
-			out.beginArray();
+			out.beginObject();
 			final List< ConverterSetup > converterSetups = value.getConverterSetups();
 			final ConverterSetupAdapter converterSetupAdapter = new ConverterSetupAdapter( value );
 			for ( final ConverterSetup converterSetup : converterSetups )
 			{
+				out.name(Integer.toString( converterSetup.getSetupId() ));
 				out.beginObject();
+				converterSetupAdapter.setSetupId( converterSetup.getSetupId() );
 				converterSetupAdapter.write( out, converterSetup );
 				out.endObject();
 			}
-			out.endArray();
+			out.endObject();
 			final List< MinMaxGroup > minMaxGroups = value.getMinMaxGroups();
 			out.name( "MinMaxGroups" );
 			new MinMaxGroupsAdapter().write( out, minMaxGroups );
@@ -442,15 +602,33 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				switch ( name )
 				{
 				case "ConverterSetups":
-					in.beginArray();
+					final ConverterSetupAdapter converterSetupAdapter = new ConverterSetupAdapter( setupAssignments );
+					in.beginObject();
 					while ( in.hasNext() )
 					{
+						final int id = Integer.parseInt( in.nextName() );
+						converterSetupAdapter.setSetupId( id );
 						in.beginObject();
-						final ConverterSetupDTO dto = ( ConverterSetupDTO ) new ConverterSetupAdapter( setupAssignments ).read( in );
+						final ConverterSetupDTO dto = ( ConverterSetupDTO ) converterSetupAdapter.read( in);
 						converters.add( dto );
+
 						in.endObject();
 					}
-					in.endArray();
+					in.endObject();
+
+					final List< ConverterSetup > converterSetups = setupAssignments.getConverterSetups();
+					final List<Integer> originalSetupIdOrder = converterSetups.stream().map( ConverterSetup::getSetupId ).collect( Collectors.toList());
+					for ( int idx = 0; idx < converters.size(); idx++ )
+					{
+						final ConverterSetupDTO converterSetupDTO = converters.get( idx );
+						final int setupId = converterSetupDTO.getSetupId();
+
+						final int idxOfConverterSetup = originalSetupIdOrder.indexOf( setupId );
+						if (idxOfConverterSetup >= 0 && idx != idxOfConverterSetup) {
+							converters.remove( idx );
+							converters.add( idxOfConverterSetup, converterSetupDTO );
+						}
+					}
 					break;
 				case "MinMaxGroups":
 					minMaxGroups.addAll( new MinMaxGroupsAdapter().read( in ) );
@@ -480,11 +658,11 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		@Override
 		public void write( final JsonWriter out, final List< MinMaxGroup > value ) throws IOException
 		{
-			out.beginArray();
+			out.beginObject();
 			for ( int i = 0; i < value.size(); i++ )
 			{
+				out.name( Integer.toString( i ));
 				out.beginObject();
-				out.name( "id" ).value( i );
 				out.name( "fullRangeMin" ).value( value.get( i ).getFullRangeMin() );
 				out.name( "fullRangeMax" ).value( value.get( i ).getFullRangeMax() );
 				out.name( "rangeMin" ).value( value.get( i ).getRangeMin() );
@@ -493,7 +671,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				out.name( "currentMax" ).value( value.get( i ).getMaxBoundedValue().getCurrentValue() );
 				out.endObject();
 			}
-			out.endArray();
+			out.endObject();
 		}
 
 		@Override
@@ -501,10 +679,10 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		{
 			final HashMap< Integer, MinMaxGroup > groupMap = new HashMap<>();
 			final ArrayList< MinMaxGroup > groups = new ArrayList<>();
-			in.beginArray();
+			in.beginObject();
 			while ( in.hasNext() )
 			{
-				int id = 0;
+				final int id = Integer.parseInt( in.nextName() );
 				double fullRangeMin = 0;
 				double fullRangeMax = 0;
 				double rangeMin = 0;
@@ -516,9 +694,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				{
 					switch ( in.nextName() )
 					{
-					case "id":
-						id = in.nextInt();
-						break;
 					case "fullRangeMin":
 						fullRangeMin = in.nextDouble();
 						break;
@@ -552,7 +727,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				groupMap.put( id, group );
 				in.endObject();
 			}
-			in.endArray();
+			in.endObject();
 			for ( int i = 0; i < groupMap.size(); i++ )
 			{
 				/* We require that the `id` of the deserialized group matches the index of the returned list. */
@@ -566,16 +741,22 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 	{
 		private final SetupAssignments setupAssignments;
 
+		private int setupId = -1;
+
 		public ConverterSetupAdapter( final SetupAssignments setupAssignments )
 		{
 			this.setupAssignments = setupAssignments;
+		}
+
+		public void setSetupId( final int setupId )
+		{
+			this.setupId = setupId;
 		}
 
 		@Override
 		public void write( final JsonWriter out, final ConverterSetup value ) throws IOException
 		{
 			final List< MinMaxGroup > minMaxGroups = setupAssignments.getMinMaxGroups();
-			out.name( "id" ).value( value.getSetupId() );
 			out.name( "min" ).value( value.getDisplayRangeMin() );
 			out.name( "max" ).value( value.getDisplayRangeMax() );
 			out.name( "color" ).value( value.getColor().get() );
@@ -585,7 +766,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		@Override
 		public ConverterSetup read( final JsonReader in ) throws IOException
 		{
-			int tmpid = 0;
 			double tmpmin = 0;
 			double tmpmax = 0;
 			int tmpcolor = 0;
@@ -594,9 +774,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 			{
 				switch ( in.nextName() )
 				{
-				case "id":
-					tmpid = in.nextInt();
-					break;
 				case "min":
 					tmpmin = in.nextDouble();
 					break;
@@ -612,7 +789,6 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				}
 			}
 
-			final int id = tmpid;
 			final double min = tmpmin;
 			final double max = tmpmax;
 			final int color = tmpcolor;
@@ -620,6 +796,8 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 
 			final ConverterSetup converterSetupDTO = new ConverterSetupDTO()
 			{
+
+				private final int id = setupId;
 
 				@Override
 				public int getGroupId()

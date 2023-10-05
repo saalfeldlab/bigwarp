@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -36,7 +36,7 @@ public class MaskedTransformSolver<T extends RealType<T>, S extends AbstractTran
 {
 	private final S solver;
 
-	private final RealRandomAccessible<T> lambda;
+	private RealRandomAccessible<T> lambda;
 
 	public MaskedTransformSolver( final S solver, final RealRandomAccessible<T> lambda )
 	{
@@ -49,16 +49,24 @@ public class MaskedTransformSolver<T extends RealType<T>, S extends AbstractTran
 		return solver;
 	}
 
+	public void setMask( final RealRandomAccessible<T> lambda )
+	{
+		this.lambda = lambda;
+	}
+
+	@Override
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
 		return wrap( solver.solve( mvgPts, tgtPts ), lambda );
 	}
 
+	@Override
 	public WrappedIterativeInvertibleRealTransform< ? > solve( final LandmarkTableModel landmarkTable )
 	{
 		return wrap( solver.solve( landmarkTable ), lambda );
 	}
 
+	@Override
 	public WrappedIterativeInvertibleRealTransform< ? > solve( final LandmarkTableModel landmarkTable, final int indexChanged )
 	{
 		return wrap( solver.solve( landmarkTable, indexChanged ), lambda );

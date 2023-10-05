@@ -37,6 +37,7 @@
  */
 package bigwarp.loader;
 
+import bigwarp.source.SourceInfo;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +51,7 @@ import bdv.spimdata.WrapBasicImgLoader;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import ij.ImagePlus;
 import ij.process.LUT;
 import mpicbg.spim.data.generic.sequence.BasicImgLoader;
@@ -159,9 +160,13 @@ public class ImagePlusLoader implements Loader
 		for( Integer key : settingsMap.keySet() )
 		{
 			SourceAndConverter<?> sac = data.sources.get( key.intValue() );
-			data.setupSettings.put( key, settingsMap.get( key ) );
-			data.sourceColorSettings.put( sac, settingsMap.get( key ));
+			data.getSourceInfo( key ).setColorSettings( settingsMap.get( key ) );
 		}
+	}
+
+	public void update( final SourceInfo sourceInfo )
+	{
+		sourceInfo.setColorSettings( settingsMap.get( sourceInfo.getId() ) );
 	}
 
 	@SuppressWarnings( "unchecked" )
@@ -266,7 +271,8 @@ public class ImagePlusLoader implements Loader
 		for ( int s = 0; s < numSetups; ++s )
 		{
 			final int id = setupIdOffset + s;
-			final BasicViewSetup setup = new BasicViewSetup( setupIdOffset + s, String.format( "%s channel %d", imp.getTitle(), id + 1 ), size, voxelSize );
+			final String title = numSetups > 1 ? String.format( "%s channel %d", imp.getTitle(), id + 1 ) : imp.getTitle();
+			final BasicViewSetup setup = new BasicViewSetup( setupIdOffset + s, title, size, voxelSize );
 			setup.setAttribute( new Channel( id + 1 ) );
 			setups.put( id, setup );
 

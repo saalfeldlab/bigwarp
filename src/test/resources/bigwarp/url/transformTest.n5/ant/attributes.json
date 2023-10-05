@@ -1,0 +1,28 @@
+{
+    "coordinateTransformations" : [
+        {
+            "type" : "scale",
+            "scale" : [1,1],
+            "input" : "ct0-in",
+            "output" : "ct0-out"
+        },
+        {
+            "type" : "translation",
+            "translation" : [5,5],
+            "input" : "ct1-in",
+            "output" : "ct1-out"
+        }
+    ],
+    "scale" : {
+        "type" : "scale",
+        "scale" : [-1,-1],
+        "input" : "scale-in",
+        "output" : "scale-out"
+    },
+    "translation" : {
+        "type" : "translation",
+        "translation" : [-5,-5],
+        "input" : "translation-in",
+        "output" : "translation-out"
+    }
+}
