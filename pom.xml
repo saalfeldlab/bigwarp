@@ -11,7 +11,7 @@
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>8.0.1-SNAPSHOT</version>
+	<version>9.0.0-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -129,7 +129,7 @@
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
 		<n5.version>3.0.2</n5.version>
-		<n5-ij.version>3.2.6-SNAPSHOT</n5-ij.version>
+		<n5-ij.version>3.2.6</n5-ij.version>
 		<n5-hdf5.version>2.0.1</n5-hdf5.version>
 		<n5-aws-s3.version>4.0.1</n5-aws-s3.version>
 		<n5-google-cloud.version>4.0.0</n5-google-cloud.version>
