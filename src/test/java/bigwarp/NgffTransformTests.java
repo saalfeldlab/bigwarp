@@ -2,7 +2,7 @@ package bigwarp;
 
 import java.util.Arrays;
 
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.Common;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
 
 import net.imglib2.realtransform.RealTransform;
 

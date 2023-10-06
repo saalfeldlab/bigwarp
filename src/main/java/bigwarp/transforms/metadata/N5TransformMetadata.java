@@ -1,7 +1,7 @@
 package bigwarp.transforms.metadata;
 
 import org.janelia.saalfeldlab.n5.universe.metadata.AbstractN5Metadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.prototype.transformations.CoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 
 public class N5TransformMetadata extends AbstractN5Metadata {
 
