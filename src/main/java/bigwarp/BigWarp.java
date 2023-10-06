@@ -3177,7 +3177,7 @@ public class BigWarp< T >
 
 			final ProgressWriterIJ progress = new ProgressWriterIJ();
 			BigWarp bw;
-			BigWarpData<?> bwdata;
+			BigWarpData bwdata;
 			if ( fnP.endsWith( "xml" ) && fnQ.endsWith( "xml" ) )
 			{
 				bwdata = BigWarpInit.createBigWarpDataFromXML( fnP, fnQ );

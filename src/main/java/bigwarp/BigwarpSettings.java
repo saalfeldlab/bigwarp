@@ -42,6 +42,7 @@ import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import org.scijava.listeners.Listeners;
 
@@ -143,7 +144,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		final JsonObject json = JsonParser.parseReader(in).getAsJsonObject();
 		if( json.has("Sources"))
 		{
-			new BigWarpSourcesAdapter<>( bigWarp, overwriteSources ).fromJsonTree(json.get("Sources"));
+			new BigWarpSourcesAdapter( bigWarp, overwriteSources ).fromJsonTree(json.get("Sources"));
 			final boolean is2D = BigWarp.detectNumDims(bigWarp.getSources()) == 2;
 			if (is2D != bigWarp.options.values.is2D()) {
 				bigWarp.changeDimensionality( is2D );
@@ -172,7 +173,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 		return this;
 	}
 
-	public static class BigWarpSourcesAdapter< T > extends TypeAdapter< Map< Integer, SourceInfo > >
+	public static class BigWarpSourcesAdapter< T extends NativeType<T> > extends TypeAdapter< Map< Integer, SourceInfo > >
 	{
 
 		private BigWarp< T > bigwarp;

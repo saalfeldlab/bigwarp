@@ -38,6 +38,7 @@ import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
+import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
@@ -56,6 +57,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataP
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 
 import bdv.BigDataViewer;
+import bdv.cache.SharedQueue;
 import bdv.img.BwRandomAccessibleIntervalSource;
 import bdv.img.RenamableSource;
 import bdv.spimdata.SpimDataMinimal;
@@ -65,6 +67,7 @@ import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.RandomAccessibleIntervalSource;
+import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.loader.ImagePlusLoader;
@@ -88,12 +91,16 @@ import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.CalibratedAxis;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.cache.img.CachedCellImg;
+import net.imglib2.cache.volatiles.CacheHints;
+import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
@@ -105,6 +112,24 @@ import net.imglib2.view.Views;
 
 public class BigWarpInit
 {
+
+
+	public static final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
+			new N5CosemMetadataParser(),
+			new N5SingleScaleMetadataParser(),
+			new CanonicalMetadataParser(),
+			new ImagePlusLegacyMetadataParser(),
+			new N5GenericSingleScaleMetadataParser()
+	};
+
+	public static final N5MetadataParser<?>[] GROUP_PARSERS = new N5MetadataParser[]{
+//			new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser(),
+//    		new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v03.OmeNgffMetadataParser(), // TODO test later
+			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
+			new N5ViewerMultiscaleMetadataParser(),
+			new CanonicalMetadataParser(),
+			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
+	};
 
 	private static String createSetupName( final BasicViewSetup setup )
 	{
@@ -467,7 +492,7 @@ public class BigWarpInit
 
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
-
+		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 		final URI encodedUri = N5URI.encodeAsUri( uri );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
@@ -492,7 +517,7 @@ public class BigWarpInit
 				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
 			}
 
-			final Source< T > source = loadN5Source( n5reader, n5URL.getGroupPath() );
+			final Source< T > source = (Source<T>)loadN5Source( n5reader, n5URL.getGroupPath(), sharedQueue );
 			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
 		}
 		else
@@ -503,7 +528,7 @@ public class BigWarpInit
 				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
 				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
 				final String group = n5URL.getGroupPath();
-				final Source< T > source = loadN5Source( n5reader, group );
+				final Source< T > source = (Source<T>)loadN5Source( n5reader, group, sharedQueue );
 
 				if( source != null )
 					sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
@@ -559,7 +584,7 @@ public class BigWarpInit
 	/**
 	 * @return
 	 *
-	 * @Deprecated Use output froom
+	 * @Deprecated Use output from
 	 *             {@link #createSources(BigWarpData, boolean, int, String, String)}
 	 *             and add with
 	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
@@ -579,8 +604,9 @@ public class BigWarpInit
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
 
-	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
+	private static < T  > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
 	{
+		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 		if ( rootPath.endsWith( "xml" ) )
 		{
 			SpimData spimData;
@@ -623,7 +649,7 @@ public class BigWarpInit
 		else
 		{
 			final LinkedHashMap< Source< T >, SourceInfo > map = new LinkedHashMap<>();
-			final Source< T > source = loadN5Source( rootPath, dataset );
+			final Source< T > source = (Source<T>)loadN5Source( rootPath, dataset, sharedQueue );
 			final SourceInfo info = new SourceInfo( setupId, isMoving, dataset, () -> rootPath + "$" + dataset );
 			info.setSerializable( true );
 			map.put( source, info );
@@ -632,7 +658,7 @@ public class BigWarpInit
 	}
 
 
-	public static < T > Source< T > loadN5Source( final String n5Root, final String n5Dataset )
+	public static < T extends NativeType<T> > Source< T > loadN5Source( final String n5Root, final String n5Dataset, final SharedQueue queue )
 	{
 		final N5Reader n5;
 		try
@@ -643,16 +669,11 @@ public class BigWarpInit
 			e.printStackTrace();
 			return null;
 		}
-		return loadN5Source( n5, n5Dataset );
+		return loadN5Source( n5, n5Dataset, queue );
 	}
 
-	public static < T > Source< T > loadN5Source( final N5Reader n5, final String n5Dataset )
+	public static < T extends NativeType<T>> Source< T > loadN5Source( final N5Reader n5, final String n5Dataset, final SharedQueue queue )
 	{
-		final N5MetadataParser< ? >[] PARSERS = new N5MetadataParser[] { new ImagePlusLegacyMetadataParser(), new N5CosemMetadataParser(), new N5SingleScaleMetadataParser(), new CanonicalMetadataParser(), new N5GenericSingleScaleMetadataParser()
-		};
-
-		final N5MetadataParser< ? >[] GROUP_PARSERS = new N5MetadataParser[] { new N5CosemMultiScaleMetadata.CosemMultiScaleParser(), new N5ViewerMultiscaleMetadataParser(), new CanonicalMetadataParser(),
-		};
 
 		N5Metadata meta = null;
 		try
@@ -667,16 +688,16 @@ public class BigWarpInit
 
 		if ( meta instanceof MultiscaleMetadata )
 		{
-			return openAsSourceMulti( n5, ( MultiscaleMetadata< ? > ) meta, true );
+			return openAsSourceMulti( n5, ( MultiscaleMetadata< ? > ) meta, queue, true );
 		}
 		else
 		{
-			return openAsSource( n5, meta, true );
+			return openAsSource( n5, meta, queue, true );
 		}
 	}
 
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
-	public static < T, M extends N5Metadata > Source< T > openAsSource( final N5Reader n5, final M meta, final boolean isVolatile )
+	public static < T extends NativeType<T>, M extends N5Metadata > Source< T > openAsSource( final N5Reader n5, final M meta, final SharedQueue sharedQueue, final boolean isVolatile )
 	{
 		final RandomAccessibleInterval imageRaw;
 		final RandomAccessibleInterval image;
@@ -686,7 +707,10 @@ public class BigWarpInit
 		try
 		{
 			if ( isVolatile )
-				imageRaw = to3d( N5Utils.openVolatile( n5, meta.getPath() ) );
+			{
+				final CachedCellImg<T, ?> rai = N5Utils.openVolatile( n5, meta.getPath() );
+				imageRaw = to3d( VolatileViews.wrapAsVolatile( rai, sharedQueue, new CacheHints(LoadingStrategy.VOLATILE, 0, true)) );
+			}
 			else
 				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ) );
 
@@ -716,7 +740,7 @@ public class BigWarpInit
 		return null;
 	}
 
-	public static < T > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final boolean isVolatile )
+	public static < T extends NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
 		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
@@ -725,12 +749,16 @@ public class BigWarpInit
 		@SuppressWarnings( "rawtypes" )
 		final RandomAccessibleInterval[] images = new RandomAccessibleInterval[ paths.length ];
 		final double[][] mipmapScales = new double[ images.length ][ 3 ];
+		final CacheHints cacheHints = new CacheHints(LoadingStrategy.VOLATILE, 0, true);
 		for ( int s = 0; s < images.length; ++s )
 		{
 			try
 			{
 				if ( isVolatile )
-					images[ s ] = to3d( N5Utils.openVolatile( n5, paths[ s ] ) );
+				{
+					final CachedCellImg<T, ?> rai = N5Utils.openVolatile( n5, paths[ s ] );
+					images[ s ] = to3d( VolatileViews.wrapAsVolatile( rai, sharedQueue, cacheHints) );
+				}
 				else
 					images[ s ] = to3d( N5Utils.open( n5, paths[ s ] ) );
 			}
@@ -1039,7 +1067,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static < T > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
+	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
 //		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
@@ -1142,7 +1170,7 @@ public class BigWarpInit
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static < T > BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
+	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
@@ -1194,7 +1222,7 @@ public class BigWarpInit
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static < T > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
 //		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();

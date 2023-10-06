@@ -34,8 +34,8 @@ public class StartupTests {
 //		IJ.openImage( "/home/john/tmp/t1-head.tif" ).show();
 //		IJ.openImage( "/home/john/tmp/mri-stack.tif" ).show();
 
-//		final String proj = "/home/john/Desktop/bw-boats.json";
-		final String proj = "/home/john/Desktop/bw-boats-affine2d.json";
+		final String proj = "/home/john/Desktop/bw-boats.json";
+//		final String proj = "/home/john/Desktop/bw-boats-affine2d.json";
 //		final String proj = "/home/john/Desktop/bw-boats-tlation.json";
 //		final String proj = "/home/john/Desktop/bw-boats-tlationImported-fineTune.json";
 
@@ -87,9 +87,9 @@ public class StartupTests {
 
 //		runBigWarp(null, new String[] {jrc18, jrc18}, new String[] {"true", "false" }, new String[]{ jrc18RotTotSeqRev, null });
 
-//		runBigWarp(proj, new String[] {}, new String[] {}, null);
+		BigWarpInitDialog.runBigWarp(proj, new String[] {}, new String[] {}, null);
 
-		BigWarpInitDialog.createAndShow();
+//		BigWarpInitDialog.createAndShow();
 
 
 		// below this are from BigWarpCommand

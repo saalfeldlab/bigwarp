@@ -33,6 +33,8 @@ import mpicbg.spim.data.SpimDataException;
 import net.imglib2.FinalInterval;
 import net.imglib2.RealPoint;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.type.NativeType;
+
 import org.custommonkey.xmlunit.XMLAssert;
 import org.custommonkey.xmlunit.XMLUnit;
 import org.jdom2.JDOMException;
@@ -59,8 +61,8 @@ public class SerializationTest
 	@Test
 	public void maskTest()
 	{
-		PlateauSphericalMaskSource mask = PlateauSphericalMaskSource.build( new RealPoint( 3 ), new FinalInterval( 5, 10, 20 ) );
-		Gson gson = BigwarpSettings.gson;
+		final PlateauSphericalMaskSource mask = PlateauSphericalMaskSource.build( new RealPoint( 3 ), new FinalInterval( 5, 10, 20 ) );
+		final Gson gson = BigwarpSettings.gson;
 		final JsonElement actual = gson.toJsonTree( mask.getRandomAccessible() );
 
 		final JsonObject expected = new JsonObject();
@@ -90,7 +92,7 @@ public class SerializationTest
 		bookmarks.put( "translate", translate );
 		translate.translate( Math.random(), Math.random(), Math.random(), Math.random() );
 
-		Gson gson = BigwarpSettings.gson;
+		final Gson gson = BigwarpSettings.gson;
 		final JsonElement actual = gson.toJsonTree( bookmarks );
 
 		final JsonObject expected = new JsonObject();
@@ -230,9 +232,9 @@ public class SerializationTest
 	}
 
 	@Test
-	public void sourceFromFileTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	public < T extends NativeType<T> > void sourceFromFileTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
-		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp( "/tmp/img8270806677315563879.tif" );
+		final BigWarp< T > bw = BigWarpTestUtils.createBigWarp( "/tmp/img8270806677315563879.tif" );
 		bw.loadSettings("src/test/resources/settings/expected.json");
 		// Grab the sources
 		// Compare the ids, urls, isMoving status, and isActive
@@ -249,7 +251,7 @@ public class SerializationTest
 	}
 
 	@Test
-	public void sourceFromImageJTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	public < T extends NativeType<T> > void sourceFromImageJTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final ImagePlus img = BigWarpTestUtils.generateImagePlus( "generated image" );
 		img.setDisplayRange( 5, 15 );
@@ -266,7 +268,7 @@ public class SerializationTest
 					}
 				});
 
-		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		final BigWarp< T > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
 		// Grab the sources
 		// Compare the ids, urls, isMoving status, and isActive
@@ -285,7 +287,7 @@ public class SerializationTest
 		assertExpectedSettingsToCurrent( xmlSourceSettings, bw );
 	}
 
-	private static void assertExpectedSettingsToCurrent( final Path expectedSettings, final BigWarp< Object > bw ) throws IOException
+	private static void assertExpectedSettingsToCurrent( final Path expectedSettings, final BigWarp< ? > bw ) throws IOException
 	{
 		/* Save the settings and compare with initial to test the deserialization */
 		final Path tempSettings = Files.createTempFile( "deserialization", ".json" );
@@ -297,7 +299,7 @@ public class SerializationTest
 	}
 
 	@Test
-	public void sourceFromXmlTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	public < T extends NativeType<T> > void sourceFromXmlTest() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final String xmlUri = "src/test/resources/mri-stack.xml";
 		final Path xmlSourceSettings = createNewSettingsWithReplacement(
@@ -310,7 +312,7 @@ public class SerializationTest
 					}
 				});
 
-		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		final BigWarp< T > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
 		// Grab the sources
 		// Compare the ids, urls, isMoving status, and isActive
@@ -331,7 +333,7 @@ public class SerializationTest
 	}
 
 	@Test
-	public void sourceFromN5Test() throws SpimDataException, URISyntaxException, IOException, JDOMException
+	public < T extends NativeType<T> > void sourceFromN5Test() throws SpimDataException, URISyntaxException, IOException, JDOMException
 	{
 		final String n5Uri = "src/test/resources/bigwarp/url/transformTest.n5?img";
 
@@ -346,7 +348,7 @@ public class SerializationTest
 				}
 		);
 
-		final BigWarp< Object > bw = BigWarpTestUtils.createBigWarp(  );
+		final BigWarp< T > bw = BigWarpTestUtils.createBigWarp(  );
 		bw.loadSettings(xmlSourceSettings.toFile().getCanonicalPath());
 		// Grab the sources
 		// Compare the ids, urls, isMoving status, and isActive
@@ -410,7 +412,7 @@ public class SerializationTest
 	@Test
 	public void compareKnownXmlComparisonTest() throws SpimDataException, IOException, JDOMException, SAXException, URISyntaxException
 	{
-		BigWarp< ? > bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
+		final BigWarp< ? > bw = BigWarpTestUtils.createBigWarp( true, false, false, false );
 
 		final String originalXmlSettings = "src/test/resources/settings/compareKnownXml.bigwarp.settings.xml";
 		bw.loadSettings( originalXmlSettings );

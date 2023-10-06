@@ -29,6 +29,7 @@ import mpicbg.spim.data.SpimDataException;
 import net.imglib2.FinalInterval;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.position.FunctionRandomAccessible;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.view.Views;
 import org.junit.Assert;
@@ -53,7 +54,7 @@ public class BigWarpTestUtils
 			//noinspection ResultOfMethodCallIgnored
 			tmpImgPath.toFile().delete();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			throw new RuntimeException( e );
 		}
@@ -63,7 +64,7 @@ public class BigWarpTestUtils
 
 	private static String create3DImage( final Path tmpImgPath ) throws IOException
 	{
-		ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
+		final ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
 		IJ.save( img3d, tmpImgPath.toFile().getCanonicalPath() );
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
@@ -81,7 +82,7 @@ public class BigWarpTestUtils
 		{
 			return create3DImage( imagePath );
 		}
-		catch ( Exception e )
+		catch ( final Exception e )
 		{
 			//noinspection ResultOfMethodCallIgnored
 			imagePath.toFile().delete();
@@ -91,7 +92,7 @@ public class BigWarpTestUtils
 
 	private static String create2DImage( final Path tmpImgPath ) throws IOException
 	{
-		ImagePlus img2d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 1, NewImage.FILL_RAMP );
+		final ImagePlus img2d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 1, NewImage.FILL_RAMP );
 		IJ.save( img2d, tmpImgPath.toFile().getCanonicalPath() );
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
@@ -115,7 +116,7 @@ public class BigWarpTestUtils
 			tmpImg.toFile().delete();
 			return create2DImage( tmpImg);
 		}
-		catch ( Exception e )
+		catch ( final Exception e )
 		{
 			if (tmpImg != null) {
 				//noinspection ResultOfMethodCallIgnored
@@ -144,7 +145,7 @@ public class BigWarpTestUtils
 			StackWriter.save( img3d ,tmpStackDir.toString() + "/", "format=tiff");
 			return tmpStackDir.toString();
 		}
-		catch ( IOException e )
+		catch ( final IOException e )
 		{
 			throw new RuntimeException( e );
 		}
@@ -154,11 +155,11 @@ public class BigWarpTestUtils
 	{
 		final Gson gson = new Gson();
 		//noinspection UnstableApiUsage
-		Type mapType = new TypeToken< Map< String, Object > >()
+		final Type mapType = new TypeToken< Map< String, Object > >()
 		{
 		}.getType();
-		Map< String, Object > expectedMap = gson.fromJson( expectedJson, mapType );
-		Map< String, Object > actualMap = gson.fromJson( actualJson, mapType );
+		final Map< String, Object > expectedMap = gson.fromJson( expectedJson, mapType );
+		final Map< String, Object > actualMap = gson.fromJson( actualJson, mapType );
 		final MapDifference< String, Object > difference = Maps.difference( expectedMap, actualMap );
 		if ( !difference.areEqual() )
 		{
@@ -232,18 +233,18 @@ public class BigWarpTestUtils
 		return new GsonBuilder().setPrettyPrinting().create().toJson( json );
 	}
 
-	static < T > BigWarp< T > createBigWarp(boolean... moving ) throws SpimDataException, URISyntaxException, IOException
+	static < T extends NativeType<T> >BigWarp< T > createBigWarp(boolean... moving ) throws SpimDataException, URISyntaxException, IOException
 	{
 		return createBigWarp( null, moving );
 	}
 
-	static < T > BigWarp< T > createBigWarp(String sourcePath,   boolean... moving ) throws SpimDataException, URISyntaxException, IOException
+	static < T extends NativeType<T> > BigWarp< T > createBigWarp(String sourcePath,   boolean... moving ) throws SpimDataException, URISyntaxException, IOException
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		if (sourcePath != null) {
 			createTemp3DImage( Paths.get(sourcePath) );
 		}
-		
+
 		final String tmpPath = sourcePath != null ? sourcePath : createTemp3DImage( "img", "tif" );
 
 		for ( int i = 0; i < moving.length; i++ )
@@ -251,13 +252,13 @@ public class BigWarpTestUtils
 			final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, tmpPath, i, moving[ i ] );
 			BigWarpInit.add( data, sources );
 		}
-		BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
+		final BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );
 		return new BigWarp<>( data, opts, null );
 	}
 
 	static ImagePlus generateImagePlus( final String title )
 	{
-		FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
+		final FunctionRandomAccessible< UnsignedByteType > fimg = new FunctionRandomAccessible<>(
 				3,
 				( l, v ) -> v.setOne(),
 				UnsignedByteType::new );

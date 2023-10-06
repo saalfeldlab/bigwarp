@@ -28,6 +28,7 @@ import bigwarp.BigWarpInit;
 import bigwarp.BigWarpTestUtils;
 import bigwarp.source.SourceInfo;
 import mpicbg.spim.data.SpimDataException;
+import net.imglib2.type.NativeType;
 
 public class UrlParseTest
 {
@@ -134,7 +135,7 @@ public class UrlParseTest
 	}
 
 	@Test
-	public void n5FileUrlEquivalencyTest() throws IOException, SpimDataException, URISyntaxException
+	public < T extends NativeType<T> > void n5FileUrlEquivalencyTest() throws IOException, SpimDataException, URISyntaxException
 	{
 		final String relativePath = "src/test/resources/bigwarp/url/transformTest.n5";
 		final String absolutePath = Paths.get( relativePath ).toAbsolutePath().toFile().getCanonicalPath();
@@ -155,7 +156,7 @@ public class UrlParseTest
 				relativePath + "?img"
 		};
 
-		final BigWarpData< Object > data = BigWarpInit.initData();
+		final BigWarpData<T> data = BigWarpInit.initData();
 		final AtomicInteger id = new AtomicInteger( 1 );
 		for ( final String uri : variants )
 		{
@@ -171,7 +172,7 @@ public class UrlParseTest
 		return null;
 	}
 
-	private < T > Source< ? > loadSourceFromUri( final String uri ) throws SpimDataException, URISyntaxException, IOException
+	private < T extends NativeType<T> > Source< ? > loadSourceFromUri( final String uri ) throws SpimDataException, URISyntaxException, IOException
 	{
 
 		final BigWarpData< T > data = BigWarpInit.initData();
