@@ -64,8 +64,12 @@ public class BigWarpActions extends Actions
 	// General options
 	public static final String CLOSE_DIALOG = "close dialog window";
 	public static final String[] CLOSE_DIALOG_KEYS = new String[] { NOT_MAPPED };
+
 	public static final String LOAD_PROJECT = "load project";
+	public static final String[] LOAD_PROJECT_KEYS  = new String[]{ "ctrl shift O" };
+
 	public static final String SAVE_PROJECT = "save project";
+	public static final String[] SAVE_PROJECT_KEYS  = new String[]{ "ctrl shift S" };
 
 	public static final String EXPAND_CARDS = "expand and focus cards panel";
 	public static final String[] EXPAND_CARDS_KEYS = new String[] { "P" };
@@ -297,6 +301,9 @@ public class BigWarpActions extends Actions
 		{
 			descriptions.add( CLOSE_DIALOG, CLOSE_DIALOG_KEYS, "Close bigwarp." );
 
+			descriptions.add( SAVE_PROJECT, SAVE_PROJECT_KEYS, "Save a bigwarp project." );
+			descriptions.add( LOAD_PROJECT, LOAD_PROJECT_KEYS, "Load a bigwarp project." );
+
 			descriptions.add( TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS, "Toggle landmark mode." );
 			descriptions.add( TOGGLE_MOVING_IMAGE_DISPLAY, TOGGLE_MOVING_IMAGE_DISPLAY_KEYS, "Toggle landmark mode." );
 
@@ -368,6 +375,9 @@ public class BigWarpActions extends Actions
 		@Override
 		public void getCommandDescriptions( final CommandDescriptions descriptions )
 		{
+			descriptions.add( SAVE_PROJECT, SAVE_PROJECT_KEYS, "Save a bigwarp project." );
+			descriptions.add( LOAD_PROJECT, LOAD_PROJECT_KEYS, "Load a bigwarp project." );
+
 			descriptions.add( CLEAR_MOVING, CLEAR_MOVING_KEYS, "Clears moving landmark under the mouse cursor." );
 			descriptions.add( CLEAR_FIXED, CLEAR_FIXED_KEYS, "Clears fixed landmark under the mouse cursor." );
 			descriptions.add( CLEAR_SELECTED_MOVING, CLEAR_SELECTED_MOVING_KEYS, "Clears moving landmark for currently selected row." );
@@ -411,6 +421,9 @@ public class BigWarpActions extends Actions
 
 		final InputActionBindings inputActionBindings = bwFrame.getKeybindings();
 		actions.install( inputActionBindings, "bw" );
+
+		actions.runnableAction( bw::saveProject, SAVE_PROJECT, SAVE_PROJECT_KEYS );
+		actions.runnableAction( bw::loadProject, LOAD_PROJECT, LOAD_PROJECT_KEYS );
 
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
 		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
@@ -485,6 +498,9 @@ public class BigWarpActions extends Actions
 			final BigWarp< ? > bw )
 	{
 		actions.install( inputActionBindings, "bw-table" );
+
+		actions.runnableAction( bw::saveProject, SAVE_PROJECT, SAVE_PROJECT_KEYS );
+		actions.runnableAction( bw::loadProject, LOAD_PROJECT, LOAD_PROJECT_KEYS );
 
 		// unmapped
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
@@ -662,7 +678,6 @@ public class BigWarpActions extends Actions
 
 	public static InputMap createInputMap( final KeyStrokeAdder.Factory keyProperties )
 	{
-		System.out.println( "create input map" );
 		final InputMap inputMap = new InputMap();
 		final KeyStrokeAdder map = keyProperties.keyStrokeAdder( inputMap );
 
