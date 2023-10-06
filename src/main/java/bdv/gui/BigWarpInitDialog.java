@@ -79,6 +79,7 @@ import mpicbg.spim.data.SpimDataException;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.type.NativeType;
 
 public class BigWarpInitDialog extends JFrame
 {
@@ -129,22 +130,6 @@ public class BigWarpInitDialog extends JFrame
 	private boolean initialRecorderState;
 
 
-	public static final N5MetadataParser<?>[] n5Parsers = new N5MetadataParser[]{
-			new N5CosemMetadataParser(),
-			new N5SingleScaleMetadataParser(),
-			new CanonicalMetadataParser(),
-			new ImagePlusLegacyMetadataParser(),
-			new N5GenericSingleScaleMetadataParser()
-	};
-
-	public static final N5MetadataParser<?>[] n5vGroupParsers = new N5MetadataParser[]{
-//			new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser(),
-//    		new org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v03.OmeNgffMetadataParser(), // TODO test later
-			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
-			new N5ViewerMultiscaleMetadataParser(),
-			new CanonicalMetadataParser(),
-			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
-	};
 
 	public BigWarpInitDialog( final String title )
 	{
@@ -193,7 +178,7 @@ public class BigWarpInitDialog extends JFrame
 		this.initialRecorderState = initialRecorderState;
 	}
 
-	public static <T> BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
+	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProjectLandmarkArg = projectLandmarkPath != null && !projectLandmarkPath.isEmpty();
@@ -281,7 +266,7 @@ public class BigWarpInitDialog extends JFrame
 		return bw;
 	}
 
-	public <T> void runBigWarp()
+	public <T extends NativeType<T>> void runBigWarp()
 	{
 		if (Recorder.record)
 		{
@@ -492,6 +477,29 @@ public class BigWarpInitDialog extends JFrame
 		panel.add( addN5Button, cn5 );
 
 		addN5Button.addActionListener( e -> {
+
+			selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+					lastOpenedContainer,
+					BigWarpInit.GROUP_PARSERS,
+					BigWarpInit.PARSERS);
+
+			selectionDialog.setLoaderExecutor( exec );
+			selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
+
+			selectionDialog.setContainerPathUpdateCallback( x -> {
+				if ( x != null )
+					lastOpenedContainer = x;
+			} );
+
+			// figure this out
+//			selectionDialog.setCancelCallback( x -> {
+//				// set back recorder state if canceled
+//				Recorder.record = initialRecorderState;
+//			} );
+
+			selectionDialog.setVirtualOption( false );
+			selectionDialog.setCropOption( false );
+
 			selectionDialog.run( this::n5DialogCallback );
 		});
 
@@ -523,6 +531,19 @@ public class BigWarpInitDialog extends JFrame
 				IJ.showMessage("Please highlight the row you would like to transform.");
 			else
 			{
+
+				final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
+
+				transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+						lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
+
+				transformSelectionDialog.setLoaderExecutor( exec );
+				transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
+				transformSelectionDialog.setContainerPathUpdateCallback( x -> {
+					if ( x != null )
+						lastOpenedContainer = x;
+				} );
+
 				transformSelectionDialog.run(this::n5DialogTransformCallback);
 
 				// remove any existing selection listeners
@@ -606,42 +627,47 @@ public class BigWarpInitDialog extends JFrame
 	{
 		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
 
-		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-				lastOpenedContainer,
-				n5vGroupParsers,
-				n5Parsers);
 
-		selectionDialog.setLoaderExecutor( exec );
-		selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
+		/*
+		 * The Dialogs need to be created anew by the action listener
+		 */
 
-		selectionDialog.setContainerPathUpdateCallback( x -> {
-			if ( x != null )
-				lastOpenedContainer = x;
-		} );
-
-		// figure this out
-//		selectionDialog.setCancelCallback( x -> {
-//			// set back recorder state if canceled
-//			Recorder.record = initialRecorderState;
+//		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+//				lastOpenedContainer,
+//				n5vGroupParsers,
+//				n5Parsers);
+//
+//		selectionDialog.setLoaderExecutor( exec );
+//		selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
+//
+//		selectionDialog.setContainerPathUpdateCallback( x -> {
+//			if ( x != null )
+//				lastOpenedContainer = x;
 //		} );
+//
+//		// figure this out
+////		selectionDialog.setCancelCallback( x -> {
+////			// set back recorder state if canceled
+////			Recorder.record = initialRecorderState;
+////		} );
+//
+//		selectionDialog.setVirtualOption( false );
+//		selectionDialog.setCropOption( false );
 
-		selectionDialog.setVirtualOption( false );
-		selectionDialog.setCropOption( false );
 
-
-		// transform
-
-		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
-
-		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-				lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
-
-		transformSelectionDialog.setLoaderExecutor( exec );
-		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
-		transformSelectionDialog.setContainerPathUpdateCallback( x -> {
-			if ( x != null )
-				lastOpenedContainer = x;
-		} );
+//		// transform
+//
+//		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
+//
+//		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+//				lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
+//
+//		transformSelectionDialog.setLoaderExecutor( exec );
+//		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
+//		transformSelectionDialog.setContainerPathUpdateCallback( x -> {
+//			if ( x != null )
+//				lastOpenedContainer = x;
+//		} );
 
 	}
 
