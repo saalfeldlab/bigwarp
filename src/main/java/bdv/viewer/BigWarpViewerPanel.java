@@ -77,11 +77,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	ViewerOptions options;
 
+	@SuppressWarnings("rawtypes")
 	public BigWarpViewerPanel( final BigWarpData bwData , final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving )
 	{
 		this( bwData, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving );
 	}
 
+	@SuppressWarnings("unchecked")
 	public BigWarpViewerPanel( final BigWarpData bwData, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving )
 	{
 		// TODO compiler complains if the first argument is 'final BigWarpData<?> bwData'
@@ -97,7 +99,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 				overlay.paint( ( Graphics2D ) g );
 			}
 			if ( dragOverlay != null ) {
-				//dragOverlay.setViewerState( state );
 				dragOverlay.paint( ( Graphics2D ) g );
 			}
 		} );
@@ -213,14 +214,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 			return true;
 		else
 		{
-			// final Source< ? > spimSource = bwData.getMovingSource( 0 ).getSpimSource();
-			// final boolean isTransformed;
-			// if (spimSource instanceof  WarpedSource<?>) {
-			// 	isTransformed = ( ( WarpedSource< ? > ) spimSource ).isTransformed();
-			// } else {
-			// 	isTransformed = false;
-			// }
-			// return !isMoving || isTransformed;
 			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
 		}
 	}
