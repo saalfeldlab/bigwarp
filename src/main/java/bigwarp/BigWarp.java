@@ -2032,7 +2032,7 @@ public class BigWarp< T >
 	 *
 	 * @param inc the increment
 	 */
-	public void warpToLandmarkRelative( int inc )
+	public void jumpToLandmarkRelative( int inc )
 	{
 		final int[] selectedRows =  getLandmarkPanel().getJTable().getSelectedRows();
 
@@ -2053,33 +2053,35 @@ public class BigWarp< T >
 
 		if( getViewerFrameP().isActive() )
 		{
-			warpToLandmark( row, getViewerFrameP().getViewerPanel() );
+			jumpToLandmark( row, getViewerFrameP().getViewerPanel() );
 		}
 		else
 		{
-			warpToLandmark( row, getViewerFrameQ().getViewerPanel() );
+			jumpToLandmark( row, getViewerFrameQ().getViewerPanel() );
 		}
 	}
 
-	public void warpToNextLandmark()
+	public void jumpToNextLandmark()
 	{
-		warpToLandmarkRelative( 1 );
+		System.out.println("warp to next");
+		jumpToLandmarkRelative( 1 );
 	}
 
-	public void warpToPrevLandmark()
+	public void jumpToPrevLandmark()
 	{
-		warpToLandmarkRelative( -1 );
+		System.out.println("warp to prev");
+		jumpToLandmarkRelative( -1 );
 	}
 
-	public void warpToNearestLandmark()
+	public void jumpToNearestLandmark()
 	{
 		if( getViewerFrameP().isActive() )
-			warpToNearest( getViewerFrameP().getViewerPanel() );
+			jumpToNearestLandmark( getViewerFrameP().getViewerPanel() );
 		else
-			warpToNearest( getViewerFrameQ().getViewerPanel() );
+			jumpToNearestLandmark( getViewerFrameQ().getViewerPanel() );
 	}
 
-	public void warpToNearest( BigWarpViewerPanel viewer )
+	public void jumpToNearestLandmark( BigWarpViewerPanel viewer )
 	{
 		if ( inLandmarkMode )
 		{
@@ -2089,10 +2091,10 @@ public class BigWarp< T >
 
 		final RealPoint mousePt = new RealPoint( 3 ); // need 3d point even for 2d images
 		viewer.getGlobalMouseCoordinates( mousePt );
-		warpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
+		jumpToLandmark( landmarkModel.getIndexNearestTo( mousePt, viewer.getIsMoving() ),  viewer );
 	}
 
-	public void warpToSelectedLandmark()
+	public void jumpToSelectedLandmark()
 	{
 		final int[] selectedRows = getLandmarkPanel().getJTable().getSelectedRows();
 
@@ -2101,12 +2103,12 @@ public class BigWarp< T >
 			row = selectedRows[ 0 ];
 
 		if( getViewerFrameP().isActive() )
-			warpToLandmark( row, getViewerFrameP().getViewerPanel() );
+			jumpToLandmark( row, getViewerFrameP().getViewerPanel() );
 		else
-			warpToLandmark( row, getViewerFrameQ().getViewerPanel() );
+			jumpToLandmark( row, getViewerFrameQ().getViewerPanel() );
 	}
 
-	public void warpToLandmark( int row, BigWarpViewerPanel viewer )
+	public void jumpToLandmark( int row, BigWarpViewerPanel viewer )
 	{
 		if( inLandmarkMode )
 		{

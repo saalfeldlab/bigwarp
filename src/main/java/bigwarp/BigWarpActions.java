@@ -152,17 +152,17 @@ public class BigWarpActions extends Actions
 	public static final String ALIGN_ACTIVE_TO_OTHER = String.format( ALIGN_VIEW_TRANSFORMS, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER );
 	public static final String[] ALIGN_ACTIVE_TO_OTHER_KEYS = new String[] { "W" };
 
-	public static final String WARP_TO_SELECTED_POINT = "center on selected landmark";
-	public static final String[] WARP_TO_SELECTED_POINT_KEYS = new String[]{ "D" };
+	public static final String JUMP_TO_SELECTED_POINT = "center on selected landmark";
+	public static final String[] JUMP_TO_SELECTED_POINT_KEYS = new String[]{ "D" };
 
-	public static final String WARP_TO_NEXT_POINT = "center on next landmark";
-	public static final String[] WARP_TO_NEXT_POINT_KEYS = new String[]{ "ctrl D"};
+	public static final String JUMP_TO_NEXT_POINT = "center on next landmark";
+	public static final String[] JUMP_TO_NEXT_POINT_KEYS = new String[]{ "ctrl D"};
 
-	public static final String WARP_TO_PREV_POINT = "center on prev landmark";
-	public static final String[] WARP_TO_PREV_POINT_KEYS = new String[]{ "ctrl shift D"};
+	public static final String JUMP_TO_PREV_POINT = "center on prev landmark";
+	public static final String[] JUMP_TO_PREV_POINT_KEYS = new String[]{ "ctrl shift D"};
 
-	public static final String WARP_TO_NEAREST_POINT = "center on nearest landmark";
-	public static final String[] WARP_TO_NEAREST_POINT_KEYS = new String[]{ "E" };
+	public static final String JUMP_TO_NEAREST_POINT = "center on nearest landmark";
+	public static final String[] JUMP_TO_NEAREST_POINT_KEYS = new String[]{ "E" };
 
 	// landmark options
 	public static final String LOAD_LANDMARKS = "load landmarks";
@@ -324,10 +324,10 @@ public class BigWarpActions extends Actions
 			descriptions.add( RESET_VIEWER, RESET_VIEWER_KEYS, "Resets the view to the view on startup." );
 			descriptions.add( ALIGN_OTHER_TO_ACTIVE, ALIGN_OTHER_TO_ACTIVE_KEYS, "Sets the view of the non-active viewer to match the active viewer." );
 			descriptions.add( ALIGN_ACTIVE_TO_OTHER, ALIGN_ACTIVE_TO_OTHER_KEYS, "Sets the view of the active viewer to match the non-active viewer." );
-			descriptions.add( WARP_TO_SELECTED_POINT, WARP_TO_SELECTED_POINT_KEYS, "Center the viewer on the selected landmark." );
-			descriptions.add( WARP_TO_NEAREST_POINT, WARP_TO_NEAREST_POINT_KEYS, "Center the viewer on the nearest landmark." );
-			descriptions.add( WARP_TO_NEXT_POINT, WARP_TO_NEXT_POINT_KEYS, "Center the viewer on the next landmark." );
-			descriptions.add( WARP_TO_PREV_POINT, WARP_TO_PREV_POINT_KEYS, "Center the viewer on the previous landmark." );
+			descriptions.add( JUMP_TO_SELECTED_POINT, JUMP_TO_SELECTED_POINT_KEYS, "Center the viewer on the selected landmark." );
+			descriptions.add( JUMP_TO_NEAREST_POINT, JUMP_TO_NEAREST_POINT_KEYS, "Center the viewer on the nearest landmark." );
+			descriptions.add( JUMP_TO_NEXT_POINT, JUMP_TO_NEXT_POINT_KEYS, "Center the viewer on the next landmark." );
+			descriptions.add( JUMP_TO_PREV_POINT, JUMP_TO_PREV_POINT_KEYS, "Center the viewer on the previous landmark." );
 
 			// cards
 			descriptions.add( EXPAND_CARDS, EXPAND_CARDS_KEYS, "Expand and focus the BigDataViewer card panel" );
@@ -436,10 +436,10 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bw::resetView, RESET_VIEWER, RESET_VIEWER_KEYS);
 		actions.runnableAction( bw::matchOtherViewerPanelToActive, ALIGN_OTHER_TO_ACTIVE, ALIGN_OTHER_TO_ACTIVE_KEYS );
 		actions.runnableAction( bw::matchActiveViewerPanelToOther, ALIGN_ACTIVE_TO_OTHER, ALIGN_ACTIVE_TO_OTHER_KEYS );
-		actions.runnableAction( bw::warpToSelectedLandmark, WARP_TO_SELECTED_POINT, WARP_TO_SELECTED_POINT_KEYS );
-		actions.runnableAction( bw::warpToNearestLandmark, WARP_TO_NEAREST_POINT, WARP_TO_NEAREST_POINT_KEYS );
-		actions.runnableAction( bw::warpToNextLandmark, WARP_TO_NEXT_POINT, WARP_TO_NEXT_POINT_KEYS );
-		actions.runnableAction( bw::warpToPrevLandmark, WARP_TO_PREV_POINT, WARP_TO_PREV_POINT_KEYS );
+		actions.runnableAction( bw::jumpToSelectedLandmark, JUMP_TO_SELECTED_POINT, JUMP_TO_SELECTED_POINT_KEYS );
+		actions.runnableAction( bw::jumpToNearestLandmark, JUMP_TO_NEAREST_POINT, JUMP_TO_NEAREST_POINT_KEYS );
+		actions.runnableAction( bw::jumpToNextLandmark, JUMP_TO_NEXT_POINT, JUMP_TO_NEXT_POINT_KEYS );
+		actions.runnableAction( bw::jumpToPrevLandmark, JUMP_TO_PREV_POINT, JUMP_TO_PREV_POINT_KEYS );
 
 		// bookmarks
 		actions.runnableAction( bw::goToBookmark, GO_TO_BOOKMARK, GO_TO_BOOKMARK_KEYS );
@@ -511,10 +511,10 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bw::resetView, RESET_VIEWER, NOT_MAPPED );
 		actions.runnableAction( bw::matchOtherViewerPanelToActive, ALIGN_OTHER_TO_ACTIVE, NOT_MAPPED );
 		actions.runnableAction( bw::matchActiveViewerPanelToOther, ALIGN_ACTIVE_TO_OTHER, NOT_MAPPED );
-		actions.runnableAction( bw::warpToSelectedLandmark, WARP_TO_SELECTED_POINT, NOT_MAPPED );
-		actions.runnableAction( bw::warpToNearestLandmark, WARP_TO_NEAREST_POINT, NOT_MAPPED );
-		actions.runnableAction( bw::warpToNextLandmark, WARP_TO_NEXT_POINT, NOT_MAPPED );
-		actions.runnableAction( bw::warpToPrevLandmark, WARP_TO_PREV_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::jumpToSelectedLandmark, JUMP_TO_SELECTED_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::jumpToNearestLandmark, JUMP_TO_NEAREST_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::jumpToNextLandmark, JUMP_TO_NEXT_POINT, NOT_MAPPED );
+		actions.runnableAction( bw::jumpToPrevLandmark, JUMP_TO_PREV_POINT, NOT_MAPPED );
 
 		// bookmarks
 		actions.runnableAction( bw::goToBookmark, GO_TO_BOOKMARK, NOT_MAPPED );
@@ -622,10 +622,10 @@ public class BigWarpActions extends Actions
 
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 
-		map.put( WARP_TO_SELECTED_POINT, "D" );
-		map.put( String.format( WARP_TO_NEXT_POINT, true), "ctrl D" );
-		map.put( String.format( WARP_TO_NEXT_POINT, false), "ctrl shift D" );
-		map.put( WARP_TO_NEAREST_POINT, "E" );
+		map.put( JUMP_TO_SELECTED_POINT, "D" );
+		map.put( String.format( JUMP_TO_NEXT_POINT, true), "ctrl D" );
+		map.put( String.format( JUMP_TO_NEXT_POINT, false), "ctrl shift D" );
+		map.put( JUMP_TO_NEAREST_POINT, "E" );
 
 		map.put( EXPORT_WARP, "ctrl W" );
 		map.put( EXPORT_AFFINE, "ctrl A" );
@@ -656,9 +656,9 @@ public class BigWarpActions extends Actions
 		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ).put( actionMap );
 		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ).put( actionMap );
 		new WarpToSelectedAction( bw ).put( actionMap );
-		new WarpToNextAction( bw, true ).put( actionMap );
-		new WarpToNextAction( bw, false ).put( actionMap );
-		new WarpToNearest( bw ).put( actionMap );
+		new JumpToNextAction( bw, true ).put( actionMap );
+		new JumpToNextAction( bw, false ).put( actionMap );
+		new JumpToNearest( bw ).put( actionMap );
 
 		for( final GridSource.GRID_TYPE t : GridSource.GRID_TYPE.values())
 			new SetWarpVisGridTypeAction( String.format( WARPVISGRID, t.name()), bw, t ).put( actionMap );
@@ -1409,7 +1409,7 @@ public class BigWarpActions extends Actions
 
 		public WarpToSelectedAction( final BigWarp< ? > bw )
 		{
-			super( WARP_TO_SELECTED_POINT );
+			super( JUMP_TO_SELECTED_POINT );
 			this.bw = bw;
 		}
 
@@ -1423,20 +1423,20 @@ public class BigWarpActions extends Actions
 				row = selectedRows[ 0 ];
 
 			if( bw.getViewerFrameP().isActive() )
-				bw.warpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
+				bw.jumpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
 			else
-				bw.warpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
+				bw.jumpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
 		}
 
 		private static final long serialVersionUID = 5233843444920094805L;
 	}
 
-	public static class WarpToNearest extends AbstractNamedAction
+	public static class JumpToNearest extends AbstractNamedAction
 	{
 		final BigWarp< ? > bw;
-		public WarpToNearest( final BigWarp< ? > bw )
+		public JumpToNearest( final BigWarp< ? > bw )
 		{
-			super( WARP_TO_NEAREST_POINT );
+			super( JUMP_TO_NEAREST_POINT );
 			this.bw = bw;
 		}
 
@@ -1444,21 +1444,21 @@ public class BigWarpActions extends Actions
 		public void actionPerformed( ActionEvent e )
 		{
 			if( bw.getViewerFrameP().isActive() )
-				bw.warpToNearest( bw.getViewerFrameP().getViewerPanel() );
+				bw.jumpToNearestLandmark( bw.getViewerFrameP().getViewerPanel() );
 			else
-				bw.warpToNearest( bw.getViewerFrameQ().getViewerPanel() );
+				bw.jumpToNearestLandmark( bw.getViewerFrameQ().getViewerPanel() );
 		}
 		private static final long serialVersionUID = 3244181492305479433L;
 	}
 
-	public static class WarpToNextAction extends AbstractNamedAction
+	public static class JumpToNextAction extends AbstractNamedAction
 	{
 		final BigWarp< ? > bw;
 		final int inc;
 
-		public WarpToNextAction( final BigWarp< ? > bw, boolean fwd )
+		public JumpToNextAction( final BigWarp< ? > bw, boolean fwd )
 		{
-			super( String.format( WARP_TO_NEXT_POINT, fwd) );
+			super( String.format( JUMP_TO_NEXT_POINT, fwd) );
 			this.bw = bw;
 			if( fwd )
 				inc = 1;
@@ -1494,11 +1494,11 @@ public class BigWarpActions extends Actions
 
 			if( bw.getViewerFrameP().isActive() )
 			{
-				bw.warpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
+				bw.jumpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
 			}
 			else
 			{
-				bw.warpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
+				bw.jumpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
 			}
 		}
 		private static final long serialVersionUID = 8515568118251877405L;
