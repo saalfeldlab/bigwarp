@@ -38,17 +38,16 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.RealTransformRealRandomAccessible;
 import net.imglib2.realtransform.RealTransformSequence;
-import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 import net.imglib2.view.Views;
 
-public class WarpedSource < T > implements Source< T >, MipmapOrdering
+public class RealTransformedSource < T > implements Source< T >, MipmapOrdering
 {
 
 	public static < T > SourceAndConverter< T > wrap( final SourceAndConverter< T > wrap, final String name, int ndims )
 	{
 		return new SourceAndConverter< T >(
-				new WarpedSource< T >( wrap.getSpimSource(), name ),
+				new RealTransformedSource< T >( wrap.getSpimSource(), name ),
 				wrap.getConverter(),
 				wrap.asVolatile() == null ? null : wrap( wrap.asVolatile(), name, ndims ) );
 	}
@@ -76,12 +75,12 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private BoundingBoxEstimation bboxEst;
 
-	public WarpedSource( final Source< T > source, final String name )
+	public RealTransformedSource( final Source< T > source, final String name )
 	{
 		this( source, name, null );
 	}
 
-	public WarpedSource( final Source< T > source, final String name,
+	public RealTransformedSource( final Source< T > source, final String name,
 			final Supplier< Boolean > doBoundingBoxCulling )
 	{
 		this.source = source;
@@ -153,14 +152,29 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public RandomAccessibleInterval< T > getSource( final int t, final int level )
 	{
+//		if( isTransformed )
+//		{
+//			return Views.interval(
+//					Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
+//					boundingIntervalsPerLevel[level] );
+//		}
+//		return source.getSource( t, level );
+
 		if( isTransformed )
 		{
-			return Views.interval(
-					Views.raster( getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR ) ),
-					boundingIntervalsPerLevel[level] );
+			final RealTransformRealRandomAccessible<T,?> interpSrc = (RealTransformRealRandomAccessible<T,?>)getInterpolatedSource( t, level, Interpolation.NEARESTNEIGHBOR );
 
+			final AffineTransform3D transform = new AffineTransform3D();
+			source.getSourceTransform( t, level, transform );
+			final RealTransformSequence totalInverseTransform = new RealTransformSequence();
+			totalInverseTransform.add( transform.inverse() );
+			totalInverseTransform.add( transform.inverse() );
+			totalInverseTransform.add( transform );
+
+			return Views.interval( Views.raster(interpSrc), boundingIntervalsPerLevel[level] );
 		}
-		return source.getSource( t, level );
+		else
+			return source.getSource( t, level );
 	}
 
 	private Interval estimateBoundingInterval( final int t, final int level )
@@ -186,12 +200,13 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
-			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
 
-			if( xfm == null )
-				return srcRaTransformed;
-			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm);
+			final RealTransformSequence totalTransform = new RealTransformSequence();
+			totalTransform.add( transform.inverse() );
+			totalTransform.add( xfm );
+			totalTransform.add( transform );
+
+			return new RealTransformRealRandomAccessible< T, RealTransform >( realSrc, xfm );
 		}
 		else
 		{
