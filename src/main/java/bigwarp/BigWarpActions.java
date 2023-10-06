@@ -655,7 +655,7 @@ public class BigWarpActions extends Actions
 		new ResetActiveViewerAction( bw ).put( actionMap );
 		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.ACTIVE_TO_OTHER ).put( actionMap );
 		new AlignViewerPanelAction( bw, AlignViewerPanelAction.TYPE.OTHER_TO_ACTIVE ).put( actionMap );
-		new WarpToSelectedAction( bw ).put( actionMap );
+		new JumpToSelectedAction( bw ).put( actionMap );
 		new JumpToNextAction( bw, true ).put( actionMap );
 		new JumpToNextAction( bw, false ).put( actionMap );
 		new JumpToNearest( bw ).put( actionMap );
@@ -1403,11 +1403,11 @@ public class BigWarpActions extends Actions
 		}
 	}
 
-	public static class WarpToSelectedAction extends AbstractNamedAction
+	public static class JumpToSelectedAction extends AbstractNamedAction
 	{
 		final BigWarp< ? > bw;
 
-		public WarpToSelectedAction( final BigWarp< ? > bw )
+		public JumpToSelectedAction( final BigWarp< ? > bw )
 		{
 			super( JUMP_TO_SELECTED_POINT );
 			this.bw = bw;
@@ -1416,16 +1416,7 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			final int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
-
-			int row = 0;
-			if( selectedRows.length > 0 )
-				row = selectedRows[ 0 ];
-
-			if( bw.getViewerFrameP().isActive() )
-				bw.jumpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
-			else
-				bw.jumpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
+			bw.jumpToSelectedLandmark();
 		}
 
 		private static final long serialVersionUID = 5233843444920094805L;
@@ -1443,10 +1434,7 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( bw.getViewerFrameP().isActive() )
-				bw.jumpToNearestLandmark( bw.getViewerFrameP().getViewerPanel() );
-			else
-				bw.jumpToNearestLandmark( bw.getViewerFrameQ().getViewerPanel() );
+			bw.jumpToNearestLandmark();
 		}
 		private static final long serialVersionUID = 3244181492305479433L;
 	}
@@ -1458,7 +1446,7 @@ public class BigWarpActions extends Actions
 
 		public JumpToNextAction( final BigWarp< ? > bw, boolean fwd )
 		{
-			super( String.format( JUMP_TO_NEXT_POINT, fwd) );
+			super( fwd ? JUMP_TO_NEXT_POINT : JUMP_TO_PREV_POINT );
 			this.bw = bw;
 			if( fwd )
 				inc = 1;
@@ -1469,37 +1457,7 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if ( bw.landmarkModel.getRowCount() < 1 )
-			{
-				bw.message.showMessage( "No landmarks found." );
-				return;
-			}
-
-			final int[] selectedRows =  bw.getLandmarkPanel().getJTable().getSelectedRows();
-
-			int row = 0;
-			if( selectedRows.length > 0 )
-				row = selectedRows[ selectedRows.length - 1 ];
-
-			row = row + inc; // increment to get the *next* row
-
-			// wrap to start if necessary
-			if( row >= bw.getLandmarkPanel().getTableModel().getRowCount() )
-				row = 0;
-			else if( row < 0 )
-				row = bw.getLandmarkPanel().getTableModel().getRowCount() - 1;
-
-			// select new row
-			bw.getLandmarkPanel().getJTable().setRowSelectionInterval( row, row );
-
-			if( bw.getViewerFrameP().isActive() )
-			{
-				bw.jumpToLandmark( row, bw.getViewerFrameP().getViewerPanel() );
-			}
-			else
-			{
-				bw.jumpToLandmark( row, bw.getViewerFrameQ().getViewerPanel() );
-			}
+			bw.jumpToLandmarkRelative(inc);
 		}
 		private static final long serialVersionUID = 8515568118251877405L;
 	}

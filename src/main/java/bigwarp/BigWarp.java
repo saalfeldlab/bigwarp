@@ -2063,13 +2063,11 @@ public class BigWarp< T >
 
 	public void jumpToNextLandmark()
 	{
-		System.out.println("warp to next");
 		jumpToLandmarkRelative( 1 );
 	}
 
 	public void jumpToPrevLandmark()
 	{
-		System.out.println("warp to prev");
 		jumpToLandmarkRelative( -1 );
 	}
 
