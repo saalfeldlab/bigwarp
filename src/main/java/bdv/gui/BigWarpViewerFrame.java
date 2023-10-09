@@ -230,6 +230,11 @@ public class BigWarpViewerFrame extends JFrame
 		return keybindings;
 	}
 
+	public TriggerBehaviourBindings getTriggerBindings() {
+
+		return triggerbindings;
+	}
+
 	public void setTransformEnabled( final boolean enabled )
 	{
 		viewer.setTransformEnabled( enabled );
