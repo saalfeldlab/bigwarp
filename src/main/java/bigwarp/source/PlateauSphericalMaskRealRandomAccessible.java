@@ -101,14 +101,14 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public static void main( String[] args )
 	{
-		long S = 50;
-		double[] center = new double[] { S, S, S };
-		RealPoint pt = RealPoint.wrap( center );
+		final long S = 50;
+		final double[] center = new double[] { S, S, S };
+		final RealPoint pt = RealPoint.wrap( center );
 
-		PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( pt );
+		final PlateauSphericalMaskRealRandomAccessible img = new PlateauSphericalMaskRealRandomAccessible( pt );
 		img.setRadius( 10 );
 		img.setSigma( 10 );
-		Interval interval = Intervals.createMinSize( 0, 0, 0, 2 * S, 2 * S, 2 * S );
+		final Interval interval = Intervals.createMinSize( 0, 0, 0, 2 * S, 2 * S, 2 * S );
 //
 ////		BdvOptions options = BdvOptions.options().screenScales( new double[] { 1 } );
 //		BdvOptions options = BdvOptions.options();
@@ -127,7 +127,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 ////		bdv.getBdvHandle().getViewerPanel().getDisplay().addMouseListener( ml );
 //
 		double x = 50;
-		RealRandomAccess< DoubleType > access = img.realRandomAccess();
+		final RealRandomAccess< DoubleType > access = img.realRandomAccess();
 		access.setPosition( center );
 		while ( x < 100 )
 		{
@@ -337,12 +337,12 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 	}
 
 	/**
-	 * Re.turns the sigma that makes a Gaussian shape most like a cosine with period T.
+	 * Returns the sigma that makes a Gaussian shape most like a cosine with period T.
 	 * <p>
 	 * see https://gist.github.com/bogovicj/d212b236868c76798edfd11150b2c9a0
 	 *
 	 * @param T the cosine period
-	 * @return
+	 * @return the appropriate sigma
 	 */
 	public static double gaussSigma( double T )
 	{
@@ -363,7 +363,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		public void accept( RealLocalizable x, DoubleType v )
 		{
 			v.setZero();
-			double r2 = squaredDistance( x, mask.center );
+			final double r2 = squaredDistance( x, mask.center );
 			if ( r2 <= mask.plateauR2 )
 				v.setOne();
 			else
@@ -403,7 +403,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 //				final double t = (r2 - plateauR2);
 //				final double r = Math.sqrt( r2 );
 				final double t = ( r - mask.plateauR );
-				double val = 0.5 + 0.5 * Math.cos( t * PI / mask.sigma );
+				final double val = 0.5 + 0.5 * Math.cos( t * PI / mask.sigma );
 				v.set( val );
 			}
 		}
@@ -463,7 +463,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		public RealPoint read( final JsonReader in ) throws IOException
 		{
 			in.beginArray();
-			ArrayList< Double > pos = new ArrayList<>();
+			final ArrayList< Double > pos = new ArrayList<>();
 			while ( in.hasNext() )
 			{
 				pos.add( in.nextDouble() );

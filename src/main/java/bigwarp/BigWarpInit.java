@@ -257,12 +257,12 @@ public class BigWarpInit
 	}
 
 	/**
-	 * @return
+	 * Initialize BigWarp.
 	 *
-	 * @Deprecated Use
-	 *             {@link #createSources(BigWarpData, ImagePlus, int, int, boolean)}
-	 *             instaed, and pass output to
-	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
+	 * @return the number of sources
+	 *
+	 * @deprecated Use {@code createSources(BigWarpData,ImagePlus,int,int,boolean)} instead, and pass output to
+	 *             {@code add(BigWarpData,LinkedHashMap)}
 	 */
 	@Deprecated
 	public static < T > int add( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
@@ -315,9 +315,11 @@ public class BigWarpInit
 	}
 
 	/**
-	 * @return
+	 * Initialize BigWarp.
 	 *
-	 * @Deprecated Use the output from one of the
+	 * @return a {@link BigWarpData} instance
+	 *
+	 * @deprecated Use the output from one of the
 	 *             {{@link #createSources(BigWarpData, String, int, boolean)}}
 	 *             to call {{@link #add(BigWarpData, LinkedHashMap)}} instead
 	 */
@@ -346,12 +348,13 @@ public class BigWarpInit
 	}
 
 	/**
-	 * @return
+	 * Initialize BigWarp.
 	 *
-	 * @Deprecated Use the output from one of the
-	 *             {{@link #createSources(BigWarpData, String, int, boolean)}}
-	 *             to call
-	 *             {{@link #add(BigWarpData, LinkedHashMap, RealTransform)}}
+	 * @return a {@link BigWarpData} instance
+	 *
+	 * @deprecated Use the output from one of the
+	 *             {{@code createSources(BigWarpData, String, int, boolean)}}
+	 *             to call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
 	 *             instead
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
@@ -582,13 +585,13 @@ public class BigWarpInit
 	}
 
 	/**
-	 * @return
+	 * Initialize BigWarp.
 	 *
-	 * @Deprecated Use output from
-	 *             {@link #createSources(BigWarpData, boolean, int, String, String)}
-	 *             and add with
-	 *             {@link #add(BigWarpData, LinkedHashMap, RealTransform)}
-	 *             instead.
+	 * @return a {@link SpimData} instance
+	 *
+	 * @deprecated Use output from
+	 *             {@code createSources(BigWarpData, boolean, int, String, String)} and add with
+	 *             {@code add(BigWarpData, LinkedHashMap, RealTransform)} instead.
 	 */
 	@Deprecated
 	public static < T > SpimData addToData( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )

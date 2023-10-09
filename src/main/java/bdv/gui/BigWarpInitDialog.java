@@ -788,10 +788,7 @@ public class BigWarpInitDialog extends JFrame
 	}
 
 	/**
-	 * Adds first two image plus images to the sourc list automatically.
-	 *
-	 * Make sure to call {@link updateImagePlusDropdown} before calling this
-	 * method.
+	 * Adds first two image plus images to the source list automatically.
 	 */
 	public void initializeImagePlusSources()
 	{

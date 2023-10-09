@@ -10,10 +10,10 @@ import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 
 public class GeomUtils {
-	
+
 	/**
 	 * Finds the parameters of the smallest hypersphere containing the points.
-	 * 
+	 *
 	 * @param pts a list of points
 	 * @return a pair containing the center and the squared distance
 	 */
@@ -25,7 +25,7 @@ public class GeomUtils {
 		// find pair of points with the largest distance
 		for( int i = 0; i < pts.size(); i++)
 			for( int j = i+1; j < pts.size(); j++) {
-				double d = squaredDistance( pts.get( i ), pts.get( j ));
+				final double d = squaredDistance( pts.get( i ), pts.get( j ));
 				if( d < maxSqrDist )
 				{
 					maxSqrDist = d;
@@ -33,11 +33,11 @@ public class GeomUtils {
 					q = pts.get( j );
 				}
 			}
-		
+
 		final RealPoint center = new RealPoint( p.numDimensions());
 		for( int d = 0; d < p.numDimensions(); d++ )
 		{
-			center.setPosition( 
+			center.setPosition(
 					0.5 * p.getDoublePosition(d) + 0.5 * q.getDoublePosition(d),
 					d );
 		}
@@ -63,7 +63,7 @@ public class GeomUtils {
 		}
 
 		return dist;
-	}	
+	}
 
 	final public static double squaredDistance( final double[] position1, final double[] position2 )
 	{
@@ -86,9 +86,9 @@ public class GeomUtils {
 
 	public static AffineTransform2D fromScalesAngle( double sx, double sy, double tht )
 	{
-		AffineTransform2D t = new AffineTransform2D();
-		double cosTht = Math.cos( tht );
-		double sinTht = Math.sin( tht );
+		final AffineTransform2D t = new AffineTransform2D();
+		final double cosTht = Math.cos( tht );
+		final double sinTht = Math.sin( tht );
 		t.set(	sx * cosTht, -sx * sinTht, 0.0,
 				sy * sinTht,  sy * cosTht, 0.0 );
 
@@ -102,7 +102,7 @@ public class GeomUtils {
 	 * tht : the angle
 	 *
 	 * @param t the transformations
-	 * @return
+	 * @return the scales and angle [sx, sy, tht]
 	 */
 	public static double[] scalesAngle( final AffineTransform2D t )
 	{
@@ -119,12 +119,6 @@ public class GeomUtils {
 		final double sy = sd * mcd;
 		final double tht = Math.atan2( -b, a );
 		return new double[] { sx, sy, tht };
-
-//		final double tht1 = Math.atan2( -b, a );
-//		final double tht2 = Math.atan2( c, d );
-//		System.out.println( "tht1 : " + tht1 );
-//		System.out.println( "tht2 : " + tht2 );
-//		return new double[] { sx, sy, tht1, tht2 };
 	}
 
 	/**
@@ -134,12 +128,14 @@ public class GeomUtils {
 	 * tht : the angle
 	 *
 	 * @param t the transformations
-	 * @return
+	 * @return the scales and angle [sx, sy, tht]
 	 */
-	public static double[] scalesAngle( final AffineTransform2D t, final double[] center ) 
+	public static double[] scalesAngle( final AffineTransform2D t, final double[] center )
 	{
-		final double a = t.get( 0, 0 ); final double b = t.get( 0, 1 ); 
-		final double c = t.get( 1, 0 ); final double d = t.get( 1, 1 ); 
+		// TODO why does the center arg do nothing?
+
+		final double a = t.get( 0, 0 ); final double b = t.get( 0, 1 );
+		final double c = t.get( 1, 0 ); final double d = t.get( 1, 1 );
 
 		// don't allow flips
 //		final double sa = a >= 0 ? 1 : -1;

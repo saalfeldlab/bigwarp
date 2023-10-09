@@ -225,7 +225,7 @@ public class BigWarpData< T >
 	}
 
 	/**
-	 * @Deprecated only handled maintaing the moving lists, now a no-op
+	 * @deprecated only handled maintaing the moving lists, now a no-op
 	 */
 	@Deprecated
 	public void wrapUp()

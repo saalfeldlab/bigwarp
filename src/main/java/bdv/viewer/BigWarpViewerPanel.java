@@ -29,6 +29,7 @@ import bdv.util.Prefs;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
+import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.source.SourceInfo;
 import bigwarp.util.Rotation2DHelpers;
@@ -156,7 +157,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
 	 * <p>
-	 * Deprecated. use {@link BigWarp#createMovingTargetGroup()}
+	 * @deprecated use {@link BigWarp#createMovingTargetGroups}
 	 *
 	 * @return the number sources in the moving group
 	 */

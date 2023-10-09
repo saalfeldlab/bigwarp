@@ -3,10 +3,10 @@ package org.janelia.utility.geom;
 import java.util.List;
 
 /**
- * Estimates the smallest sphere that bounds given points. 
+ * Estimates the smallest sphere that bounds given points.
  * <p>
- * Ritter, Jack (1990), "An efficient bounding sphere", in Glassner, Andrew S. (ed.), Graphics Gems, San Diego, CA, US: Academic Press Professional, Inc., pp. 301–303, 
- * 
+ * Ritter, Jack (1990), "An efficient bounding sphere", in Glassner, Andrew S. (ed.), Graphics Gems, San Diego, CA, US: Academic Press Professional, Inc., pp. 301–303,
+ *
  * @author John Bogovic
  *
  */
@@ -14,9 +14,9 @@ public class BoundingSphereRitter
 {
 
 	/**
-	 * Returns an estimate of the smallest {@link ImmutableSphere} that contains the input points.
-	 * 
-	 * @param points a collection of points 
+	 * Returns an estimate of the smallest {@link Sphere} that contains the input points.
+	 *
+	 * @param points a collection of points
 	 * @return the bounding sphere
 	 */
 	public static Sphere boundingSphere( final List<double[]> points )
@@ -45,13 +45,13 @@ public class BoundingSphereRitter
 		for ( int d = 0; d < nd; d++ )
 			center[d] = 0.5 * ( x[d] + y[d] );
 
-		Sphere sph = new Sphere( center, Math.sqrt( maxSqrDist ) / 2 );
+		final Sphere sph = new Sphere( center, Math.sqrt( maxSqrDist ) / 2 );
 		boolean allCovered = false;
 		int k = 0;
 		while( !allCovered && k < 5)
 		{
 			allCovered = false;
-			for( double[] p : points )
+			for( final double[] p : points )
 			{
 				allCovered |= updateSphere( sph, p );
 			}
@@ -59,10 +59,10 @@ public class BoundingSphereRitter
 		}
 		return sph;
 	}
-	
+
 	/**
 	 * return the point in point farthest from p
-	 * 
+	 *
 	 * @param points a list of points
 	 * @param p a base point
 	 * @return the point farthest from p
@@ -82,19 +82,19 @@ public class BoundingSphereRitter
 		}
 		return points.get( maxIndex );
 	}
-	
+
 	/**
 	 * Changes the value of the input sphere such that it contains the given point p.
 	 * Returns true if the sphere was modified.
-	 * 
+	 *
 	 * @param sphere
 	 * @param p
 	 * @return true if the sphere was changed
 	 */
 	public static boolean updateSphere( final Sphere sphere, final double[] p )
 	{
-		double sqrDist = GeomUtils.squaredDistance( sphere.getCenterArray(), p );
-		double r = sphere.getRadius();
+		final double sqrDist = GeomUtils.squaredDistance( sphere.getCenterArray(), p );
+		final double r = sphere.getRadius();
 		if ( sqrDist <= r*r )
 		{
 			return false;

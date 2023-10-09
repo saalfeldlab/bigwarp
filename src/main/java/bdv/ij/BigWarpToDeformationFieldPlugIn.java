@@ -474,7 +474,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	 *
 	 * @param data the bigwarp data storing the fixed transformations
 	 * @param transform the current transformation
-	 * @param concat concatenate the current with fixed transformation
+	 * @param concatPreTransforms concatenate the current with fixed transformation
 	 * @param ignoreAffine whether the output should include the affine part of the transformation
 	 * @return the transformation
 	 */
@@ -857,9 +857,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	}
 
 	/**
-	 * @param tps
+	 * Get the affine part of a thin-plate spline transform. The affine will  be 2D (3D)
+	 * if the transformation is 2D (3D).
 	 *
-	 * @return
+	 * @param tps the {@link ThinPlateR2LogRSplineKernelTransform} instance
+	 * @return the {@link AffineGet} instance.
 	 *
 	 * @deprecated Use {@link BigWarpTransform} method instead
 	 */

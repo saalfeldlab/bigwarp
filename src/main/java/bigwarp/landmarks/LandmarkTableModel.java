@@ -1267,9 +1267,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	}
 
 	/**
-	 * Loads this table from a file
-	 * @param f the file
-	 * @param invert invert the moving and target point sets
+	 * Loads this table from a file.
+	 *
+	 * @param invert if true, the moving and target point sets are inverted
+	 * @param rows a list of strings containing rows of a csv file
 	 * @throws IOException an exception
 	 */
 	protected void loadCsvHelper( boolean invert, final List<String[]> rows ) throws IOException

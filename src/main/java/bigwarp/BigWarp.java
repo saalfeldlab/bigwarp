@@ -3734,8 +3734,9 @@ public class BigWarp< T >
 	}
 
 	/**
-	 * Use getTps, getTpsBase, or getTransformation instead
-	 * @return
+	 * @deprecated Use getTps, getTpsBase, or getTransformation instead
+	 *
+	 * @return the {@link ThinPlateR2LogRSplineKernelTransform} iinnstance
 	 */
 	@Deprecated
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
@@ -3980,7 +3981,7 @@ public class BigWarp< T >
 	/**
 	 * Returns the {@link BigWarpAutoSaver}.
 	 *
-	 * @return
+	 * @return the {@link BigWarpAutoSaver} instance.
 	 */
 	public BigWarpAutoSaver getAutoSaver()
 	{
