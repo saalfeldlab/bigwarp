@@ -283,6 +283,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if ( params.size != null )
 			dims = params.size;
 
+		ImagePlus imp = null;
 		if ( params.n5Base.isEmpty() )
 		{
 			if( !bwTransform.isNonlinear() ) // is linear
@@ -291,14 +292,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			}
 			else if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 			{
-				toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), false, params.virtual, params.size, params.spacing, params.nThreads );
-				toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), true, params.virtual, params.size, params.spacing, params.nThreads );
+				imp = toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), false, params.virtual, params.size, params.spacing, params.nThreads );
+				imp = toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), true, params.virtual, params.size, params.spacing, params.nThreads );
 			}
 			else
 			{
 				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-				toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), inverse, params.virtual, params.size, params.spacing, params.nThreads );
+				imp = toImagePlus( data, ltm, bwTransform, params.ignoreAffine, params.flatten(), inverse, params.virtual, params.size, params.spacing, params.nThreads );
 			}
+			if( imp != null )
+				imp.show();
 		}
 		else
 		{
@@ -463,7 +466,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			dfieldIp.getCalibration().zOrigin = offset[ 2 ];
 		}
 
-		dfieldIp.show();
 		return dfieldIp;
 	}
 

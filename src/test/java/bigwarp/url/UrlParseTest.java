@@ -117,22 +117,22 @@ public class UrlParseTest
 		}
 	}
 
-	@Test
-	public void testUrlTransforms()
-	{
-		final String n5Path = new File( "src/test/resources/bigwarp/url/transformTest.n5" ).getAbsolutePath();
-
-		final String s0Url = n5Path + "?ant&transform=[0]";
-		final String s0DefaultUrl = n5Path + "?ant&transform=[0]";
-
+//	@Test
+//	public void testUrlTransforms()
+//	{
+//		final String n5Path = new File( "src/test/resources/bigwarp/url/transformTest.n5" ).getAbsolutePath();
+//
+//		final String s0Url = n5Path + "?ant&transform=[0]";
+//		final String s0DefaultUrl = n5Path + "?ant&transform=[0]";
+//
 		// TODO when we're ready
 //		final Object s0 = loadTransformFromUrl( s0Url );
 //		final Object s0Default = loadTransformFromUrl( s0DefaultUrl );
-
+//
 //		assertNotNull( s0 );
 //		assertNotNull( s0Default );
 //		assertEquals( s0, s0Default );
-	}
+//	}
 
 	@Test
 	public < T extends NativeType<T> > void n5FileUrlEquivalencyTest() throws IOException, SpimDataException, URISyntaxException
@@ -166,11 +166,11 @@ public class UrlParseTest
 		}
 	}
 
-	private Object loadTransformFromUrl( final String url )
-	{
-		// TODO Caleb will remove me and replace calls to me with something real
-		return null;
-	}
+//	private Object loadTransformFromUrl( final String url )
+//	{
+//		// TODO Caleb will remove me and replace calls to me with something real
+//		return null;
+//	}
 
 	private < T extends NativeType<T> > Source< ? > loadSourceFromUri( final String uri ) throws SpimDataException, URISyntaxException, IOException
 	{
