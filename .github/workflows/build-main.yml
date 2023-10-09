@@ -23,7 +23,8 @@ jobs:
         run: .github/setup.sh
       - name: Execute the build
         uses: coactions/setup-xvfb@v1
-        run: .github/build.sh
+        with:
+          run: .github/build.sh
         env:
           GPG_KEY_NAME: ${{ secrets.GPG_KEY_NAME }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
