@@ -20,4 +20,5 @@ jobs:
       - name: Set up CI environment
         run: .github/setup.sh
       - name: Execute the build
+        uses: coactions/setup-xvfb@v1
         run: .github/build.sh
