@@ -8,19 +8,19 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
  * #L%
  */
 /**
- * 
+ *
  */
 package bigwarp.landmarks;
 
@@ -30,6 +30,15 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -52,9 +61,16 @@ import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
 import net.imglib2.RealLocalizable;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.reflect.TypeToken;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvException;
@@ -68,7 +84,7 @@ import bdv.gui.BigWarpMessageAnimator;
 public class LandmarkTableModel extends AbstractTableModel implements TransformListener< InvertibleRealTransform >{
 
 	private static final long serialVersionUID = -5865789085410559166L;
-	
+
 	private final double[] PENDING_PT;
 
 	public static final int NAMECOLUMN = 0;
@@ -76,14 +92,14 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	public static Color WARNINGBGCOLOR = new Color( 255, 204, 0 );
 	public static Color DEFAULTBGCOLOR = new Color( 255, 255, 255 );
-	
+
 	private boolean DEBUG = false;
-	
+
 	protected int ndims = 3;
-	
+
 	protected int numCols = 8;
 	protected int numRows = 0;
-	
+
 	protected int nextRowP = 0;
 	protected int nextRowQ = 0;
 
@@ -95,26 +111,26 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	protected ArrayList<Double[]>	targetPts;
 
 	// this list contains as many elemnts as the table, and
-	// contains a unique integer >= 0 if the row is active, or -1 otherwise 
+	// contains a unique integer >= 0 if the row is active, or -1 otherwise
 	protected ArrayList<Integer> tableIndexToActiveIndex;
 
 	protected boolean pointUpdatePending = false; //
 	protected boolean pointUpdatePendingMoving = false; //
 	protected Double[] pointToOverride;	// hold a backup of a point for fallback
-	
+
 	// keeps track of whether points have been updated
 	protected ArrayList<Boolean> doesPointHaveAndNeedWarp;
 	protected ArrayList<Integer> indicesOfChangedPoints;
 	protected boolean			 elementDeleted = false;
 	protected ArrayList<Boolean> needsInverse;
-	
+
 	// true for a row if, after the transform is updated,
 	// the warped point has a higher error than the specified tolerance
 	protected ArrayList<Boolean> movingDisplayPointUnreliable;
 
-	// the transformation 
+	// the transformation
 	protected ThinPlateR2LogRSplineKernelTransform estimatedXfm;
-	
+
 	// keeps track of warped points so we don't always have to do it on the fly
 	protected ArrayList<Double[]> warpedPoints;
 
@@ -128,13 +144,13 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	// keep track of the value of the last point that was edited but not-undoable
 	// this lets us both render points correctly, and create desirable undo behavior
 	// for point drags.
-	protected double[] lastPoint; 
+	protected double[] lastPoint;
 
 	protected double[] tmp;
 
 	// keep track of edits for undo's and redo's
 	protected LandmarkUndoManager undoRedoManager;
-	
+
 	protected BigWarpMessageAnimator message;
 
 	protected boolean modifiedSinceLastSave;
@@ -145,16 +161,16 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			"mvg-x","mvg-y","mvg-z",
 			"fix-x","fix-y","fix-z"
 			};
-	
+
 	final static String[] columnNames2d = new String[]
 			{
 			"Name", "Active",
 			"mvg-x","mvg-y",
 			"fix-x","fix-y"
 			};
-	
+
 	final String[] columnNames;
-	
+
 	public final Logger logger = LoggerFactory.getLogger( LandmarkTableModel.class );
 
 	public LandmarkTableModel( int ndims )
@@ -164,32 +180,32 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		PENDING_PT = new double[ ndims ];
 		Arrays.fill( PENDING_PT, Double.POSITIVE_INFINITY );
 		lastPoint = PENDING_PT;
-		
+
 		names = new ArrayList<>();
 		activeList = new ArrayList<>();
 		tableIndexToActiveIndex = new ArrayList<>();
-		
+
 		movingPts = new ArrayList<Double[]>();
 		targetPts = new ArrayList<Double[]>();
 
 		pointToOverride = new Double[ ndims ];
 		Arrays.fill( pointToOverride, Double.POSITIVE_INFINITY );
-		
+
 		if( ndims == 2 ){
 			columnNames = columnNames2d;
 			numCols = 6;
 		}else{
 			columnNames = columnNames3d;
 		}
-		
+
 		warpedPoints = new ArrayList<Double[]>();
 		doesPointHaveAndNeedWarp = new ArrayList<Boolean>();
 		movingDisplayPointUnreliable = new ArrayList<Boolean>();
 		indicesOfChangedPoints  = new ArrayList<Integer>();
 		needsInverse = new ArrayList<Boolean>();
-		
+
 		setTableListener();
-		
+
 		undoRedoManager = new LandmarkUndoManager();
 
 		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform ( ndims );
@@ -206,18 +222,18 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		return ndims;
 	}
-	
+
 	public double[] getPendingPoint()
 	{
 		return PENDING_PT;
 	}
-	
+
 	@Deprecated
 	public ThinPlateR2LogRSplineKernelTransform getTransform()
 	{
 		return estimatedXfm;
 	}
-	
+
 	@Deprecated
 	public void printDistances()
 	{
@@ -231,13 +247,14 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			}
 		}
 	}
-	
+
 	public void printState()
 	{
 		System.out.println("nextRowP: " + nextRowP );
 		System.out.println("nextRowQ: " + nextRowQ );
 	}
 
+	@Override
 	public String toString()
 	{
 		String str = "";
@@ -263,10 +280,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				}
 			}
 		}
-		
+
 		return true;
 	}
-	
+
 	public void setTableListener()
 	{
 		addTableModelListener( new TableModelListener()
@@ -274,9 +291,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			@Override
 			public void tableChanged( TableModelEvent e )
 			{
-				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active 
+				if( estimatedXfm != null && e.getColumn() == 1 && e.getType() == TableModelEvent.UPDATE ) // if its active
 				{
-					int row = e.getFirstRow();
+					final int row = e.getFirstRow();
 					indicesOfChangedPoints.add( row );
 				}
 			}
@@ -290,13 +307,13 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	protected void importTransformation( File ffwd, File finv ) throws IOException
 	{
-		byte[] data = FileUtils.readFileToByteArray( ffwd );
+		final byte[] data = FileUtils.readFileToByteArray( ffwd );
 		estimatedXfm = (ThinPlateR2LogRSplineKernelTransform) SerializationUtils.deserialize( data );
 	}
-	
+
 	protected void exportTransformation( File ffwd, File finv ) throws IOException
 	{
-	    byte[] data    = SerializationUtils.serialize( estimatedXfm );
+	    final byte[] data    = SerializationUtils.serialize( estimatedXfm );
 	    FileUtils.writeByteArrayToFile( ffwd, data );
 	}
 
@@ -304,16 +321,16 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		return pointUpdatePending;
 	}
-	
+
 	public boolean isPointUpdatePendingMoving()
 	{
 		return pointUpdatePendingMoving;
 	}
-	
+
 	public void restorePendingUpdate( )
 	{
 		ArrayList< Double[] > pts;
-		
+
 		int i = 0;
 		if( pointUpdatePendingMoving )
 		{
@@ -325,17 +342,17 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			i = nextRowQ;
 			pts = movingPts;
 		}
-		
+
 		for( int d = 0; d < ndims; d++ )
 			pts.get( i )[ d ] = pointToOverride[ d ];
-		
+
 		activeList.set( i, true );
 		buildTableToActiveIndex();
 		pointUpdatePending = false;
-		
+
 		fireTableRowsUpdated( i, i );
 	}
-	
+
 	@Override
 	public int getColumnCount()
 	{
@@ -355,30 +372,30 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 //		//TODO consider keeping track of this actively instead of recomputing
 //		int N = 0;
 //		for( Boolean b : activeList )
-//			if( b ) 
+//			if( b )
 //				N++;
 //
 //		return N;
 	}
 
-	@Override 
+	@Override
 	public String getColumnName( int col ){
 		return columnNames[col];
 	}
-	
+
 	public ArrayList<Double[]> getPoints( boolean moving ) {
 		if( moving )
 			return movingPts;
-		else 
+		else
 			return targetPts;
 	}
 
 
-	public ArrayList<String> getNames() 
+	public ArrayList<String> getNames()
 	{
 		return names;
 	}
-	
+
 	public void setColumnName( int row, String name )
 	{
 		names.set( row, name );
@@ -436,6 +453,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return tableIndexToActiveIndex.get( tableIndex );
 	}
 
+	@Override
 	public Class<?> getColumnClass( int col ){
 		if( col == NAMECOLUMN ){
 			return String.class;
@@ -445,7 +463,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			return Double.class;
 		}
 	}
-	
+
 	public boolean isActive( int i ){
 		if( i < 0 || i >= getRowCount() ){
 			return false;
@@ -504,25 +522,25 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	}
 
 	/**
-	 * Returns true if the ith row is unpaired - i.e., 
+	 * Returns true if the ith row is unpaired - i.e.,
 	 * if either of the moving or target points are unset.
-	 * 
+	 *
 	 * @param i row index
-	 * @return true of the 
+	 * @return true of the
 	 */
 	public boolean isRowUnpaired( final int i )
 	{
 		for( int d = 0; d < ndims; d++ )
-			if( Double.isInfinite( movingPts.get( i )[ d ] ) || 
+			if( Double.isInfinite( movingPts.get( i )[ d ] ) ||
 				Double.isInfinite( targetPts.get( i )[ d ] ))
 					return true;
 
 		return false;
 	}
-	
+
 	/**
 	 * Returns true if any row is unpaired.
-	 * 
+	 *
 	 * @return is update pending
 	 */
 	public boolean isUpdatePending()
@@ -530,7 +548,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		for( int i = 0; i < movingPts.size(); i++ )
 			if( isRowUnpaired( i ))
 				return true;
-		
+
 		return false;
 	}
 
@@ -586,10 +604,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			// nextRowQ = ( nextRowQ == numRows ) ? -1 : numRows;
 		}
 	}
-	
+
 	/**
 	 * Returns the next row to be updated for the moving or target columns.
-	 * 
+	 *
 	 * @param isMoving isMoving
 	 * @return index of the next row
 	 */
@@ -621,11 +639,11 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			doesPointHaveAndNeedWarp.set( i, true );
 		}
 	}
-	
+
 	public void printWarpedPoints()
 	{
 		String s = "";
-		int N = doesPointHaveAndNeedWarp.size();
+		final int N = doesPointHaveAndNeedWarp.size();
 		for( int i = 0; i < N; i++ )
 		{
 			if( doesPointHaveAndNeedWarp.get( i ))
@@ -634,7 +652,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				s += String.format("%04d : ", i);
 				for ( int d = 0; d < ndims; d++ )
 					s += String.format("%f\t", warpedPoints.get( i )[ d ] );
-				
+
 				s+="\n";
 			}
 		}
@@ -645,7 +663,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		return warpedPoints;
 	}
-	
+
 	public ArrayList<Boolean> getChangedSinceWarp()
 	{
 		return doesPointHaveAndNeedWarp;
@@ -666,7 +684,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	public void resetNeedsInverse(){
 		Collections.fill( needsInverse, false );
 	}
-	
+
 	public void setNeedsInverse( int i )
 	{
 		needsInverse.set( i, true );
@@ -676,7 +694,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		return movingDisplayPointUnreliable.get( row );
 	}
-	
+
 	protected void firePointUpdated( int row, boolean isMoving )
 	{
 		modifiedSinceLastSave = true;
@@ -687,49 +705,55 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	private void addEmptyRow( int index )
 	{
 		synchronized(this) {
-			Double[] movingPt = new Double[ ndims ];
-			Double[] targetPt = new Double[ ndims ];
+			final Double[] movingPt = new Double[ ndims ];
+			final Double[] targetPt = new Double[ ndims ];
 
 			Arrays.fill( targetPt, Double.POSITIVE_INFINITY );
 			Arrays.fill( movingPt, Double.POSITIVE_INFINITY );
 
 			movingPts.add( index, movingPt );
 			targetPts.add( index, targetPt );
-			
+
 			names.add( index, nextName( index ));
 			activeList.add( index, false );
 			warpedPoints.add( index, new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( index, false );
 			movingDisplayPointUnreliable.add( index, false );
 			tableIndexToActiveIndex.add( -1 );
-			
+
 			numRows++;
 			modifiedSinceLastSave = true;
 		}
 
 		fireTableRowsInserted( index, index );
 	}
-	
+
 	public void clearPt( int row, boolean isMoving )
 	{
 		pointEdit( row, PENDING_PT, false, isMoving, null, true );
 	}
-	
+
 	public boolean add( double[] pt, boolean isMoving )
 	{
 		return pointEdit( -1, pt, true, isMoving, false, true, null );
+	}
+
+	public boolean add( final double[] mvg, final double[] tgt ) {
+		add( mvg, true);
+		setPoint( numRows - 1, false, tgt, null );
+		return true;
 	}
 
 	public boolean add( double[] pt, boolean isMoving, final RealTransform xfm )
 	{
 		return pointEdit( -1, pt, true, isMoving, false, true, xfm );
 	}
-	
+
 	public void setPoint( int row, boolean isMoving, double[] pt, final RealTransform xfm )
 	{
 		setPoint( row, isMoving, pt, true, xfm );
 	}
-	
+
 	public void setPoint( int row, boolean isMoving, double[] pt, boolean isUndoable, final RealTransform xfm )
 	{
 		pointEdit( row, pt, false, isMoving, false, isUndoable, xfm );
@@ -750,7 +774,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	/**
 	 * Changes a point's position, or adds a new point.
 	 * <p>
-	 * 
+	 *
 	 * @param index The index into this table that this edit will affect ( a value of -1 will add a new point )
 	 * @param pt the point position
 	 * @param forceAdd force addition of a new point at the specified index
@@ -764,7 +788,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		boolean isAdd;
 		synchronized ( this ) {
 
-			// this means we should add a new point.  
+			// this means we should add a new point.
 			// index of this point should be the next free row in the table
 			if( index == -1 )
 			{
@@ -794,7 +818,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 						oldpt = toPrimitive( targetPts.get( index ) );
 				}
 			}
-			
+
 			ArrayList< Double[] > pts;
 
 			/********************
@@ -807,7 +831,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				pts = targetPts;
 
 			// create a new point and add it
-			Double[] exPts = new Double[ ndims ];
+			final Double[] exPts = new Double[ ndims ];
 			for( int i = 0; i < ndims; i++ ){
 				exPts[ i ] = pt[ i ];
 			}
@@ -874,14 +898,14 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	/**
 	 * Looks through the table for points where there is a point in moving space but not fixed space.
 	 * For any such landmarks that are found, compute the inverse transform and add the result to the fixed points line.
-	 * 
+	 *
 	 *  @param xfm the new transformation
 	 */
 	public void updateAllWarpedPoints( final InvertibleRealTransform xfm )
 	{
 		final InvertibleRealTransform xfmToUse;
-		if (xfm instanceof Wrapped2DTransformAs3D && ndims == 2)
-			xfmToUse = ((Wrapped2DTransformAs3D) xfm).transform;
+		if (xfm instanceof InvertibleWrapped2DTransformAs3D && ndims == 2)
+			xfmToUse = ((InvertibleWrapped2DTransformAs3D) xfm).transform;
 		else
 			xfmToUse = xfm;
 
@@ -903,7 +927,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 * If these conditions are satisfied, the position of the moving point in
 	 * target space by iteratively estimating the inverse of the thin plate
 	 * spline transformation.
-	 * 
+	 *
 	 * @param i the row in the table
 	 * @param xfm the invertible transformation
 	 */
@@ -915,15 +939,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			// TODO Perhaps move this into its own thread. and expose the parameters for solving the inverse.
 			if ( !isFixedPoint( i ) && isMovingPoint( i ) && xfm != null )
 			{
-				double[] tgt = toPrimitive( movingPts.get( i ) );
+				final double[] tgt = toPrimitive( movingPts.get( i ) );
 
-				double[] warpedPt = new double[ ndims ];
+				final double[] warpedPt = new double[ ndims ];
 				xfm.applyInverse( warpedPt, tgt );
 
 				if( xfm instanceof WrappedIterativeInvertibleRealTransform )
 				{
-					WrappedIterativeInvertibleRealTransform<?> inv = (WrappedIterativeInvertibleRealTransform<?>)xfm;
-					double error = inv.getOptimzer().getError();
+					final WrappedIterativeInvertibleRealTransform<?> inv = (WrappedIterativeInvertibleRealTransform<?>)xfm;
+					final double error = inv.getOptimzer().getError();
 
 					if( error > inverseThreshold )
 					{
@@ -936,8 +960,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				}
 
 				// TODO should check for failure or non-convergence here
-				// can use the error returned by the inverse method to do this. 
-				// BUT - it's not clear what to do upon failure 
+				// can use the error returned by the inverse method to do this.
+				// BUT - it's not clear what to do upon failure
 				updateWarpedPoint( i, warpedPt );
 			}
 		}
@@ -960,7 +984,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		for( int i = 0; i < numRows; i++ )
 		{
 			p = getPoint( isMoving, i );
-			double thisdist = squaredDistance( p, pt );
+			final double thisdist = squaredDistance( p, pt );
 			if( thisdist < minDist )
 			{
 				minDist = thisdist;
@@ -988,7 +1012,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		for( int i = 0; i < numRows; i++ )
 		{
 			p = getPoint( isMoving, i );
-			double thisdist = squaredDistance( p, pt );
+			final double thisdist = squaredDistance( p, pt );
 			if( thisdist < minDist )
 			{
 				minDist = thisdist;
@@ -1026,6 +1050,44 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		return targetPts.get( index );
 	}
 
+	public ArrayList< Double[] > getMovingPoints()
+	{
+		return movingPts;
+	}
+
+	public ArrayList< Double[] > getFixedPoints()
+	{
+		return targetPts;
+	}
+
+	public ArrayList<double[]> getMovingPointsCopy()
+	{
+		final ArrayList< double[] > out = new ArrayList<double[]>();
+		for( final Double[] p : movingPts )
+		{
+			final double[] q = new double[ ndims ];
+			for( int d = 0; d < ndims; d++ )
+				q[d] = p[d];
+
+			out.add( q );
+		}
+		return out;
+	}
+
+	public ArrayList<double[]> getFixedPointsCopy()
+	{
+		final ArrayList< double[] > out = new ArrayList<double[]>();
+		for( final Double[] p : targetPts )
+		{
+			final double[] q = new double[ ndims ];
+			for( int d = 0; d < ndims; d++ )
+				q[d] = p[d];
+
+			out.add( q );
+		}
+		return out;
+	}
+
 	public boolean isMovingPoint( int index )
 	{
 		return !Double.isInfinite( movingPts.get( index )[ 0 ] );
@@ -1061,7 +1123,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				{
 					activate = false;
 					break;
-				}	
+				}
 			}
 			changed = activate != activeList.get( index );
 
@@ -1080,7 +1142,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	/**
 	 * Returns a name for a row to be inserted at the given index.
-	 * 
+	 *
 	 * @param index index of the row
 	 * @return a name for the new row
 	 */
@@ -1099,18 +1161,18 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				// Increment the index in the name of the previous row
 				i = 1 + Integer.parseInt( names.get( index - 1 ).replaceAll( "Pt-", "" ));
 			}
-			catch ( Exception e ){}
+			catch ( final Exception e ){}
 
 			s = String.format( "Pt-%d", i );
 		}
 		return s;
 	}
-	
+
 	/**
 	 * Sets a flag that indicates the point at the input index has changed
 	 * since the last time a transform was estimated.
-	 * 
-	 * Not currently in use, but may be in the future 
+	 *
+	 * Not currently in use, but may be in the future
 	 * @param index the row index
 	 */
 	@SuppressWarnings("unused")
@@ -1119,7 +1181,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		for( int i = 0; i < this.numRows; i++ )
 		{
 			if( !indicesOfChangedPoints.contains( i ))
-				indicesOfChangedPoints.add( i ); 
+				indicesOfChangedPoints.add( i );
 		}
 	}
 
@@ -1129,7 +1191,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		indicesOfChangedPoints.clear();
 		elementDeleted = false;
 	}
-	
+
 	@Deprecated
 	public void transferUpdatesToModel()
 	{
@@ -1141,12 +1203,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		resetUpdated(); // not strictly necessary
 
 	}
-	
+
 	public void load( File f ) throws IOException
 	{
 		load( f, false );
 	}
-	
+
 	/**
 	 * Loads this table from a file
 	 * @param f the file
@@ -1155,17 +1217,67 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public void load( File f, boolean invert ) throws IOException
 	{
+		if( f.getCanonicalPath().endsWith("csv"))
+			loadCsv(f, invert);
+		else if( f.getCanonicalPath().endsWith("json"))
+			fromJson( f );
+	}
+
+	public static LandmarkTableModel loadFromCsv( File f, boolean invert ) throws IOException
+	{
+		final CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ) );
+		List< String[] > rows = null;
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch ( final CsvException e ) {}
+
+		LandmarkTableModel ltm = null;
+		if ( rows.get( 0 ).length == 6 )
+			ltm = new LandmarkTableModel( 2 );
+		else if ( rows.get( 0 ).length == 8 )
+			ltm = new LandmarkTableModel( 3 );
+
+		if( ltm != null )
+			ltm.loadCsvHelper( invert, rows );
+
+		return ltm;
+	}
+
+	/**
+	 * Loads this table from a file
+	 * @param f the file
+	 * @param invert invert the moving and target point sets
+	 * @throws IOException an exception
+	 */
+	public void loadCsv( File f, boolean invert ) throws IOException
+	{
+		final CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
+		List< String[] > rows = null;
+		try
+		{
+			rows = reader.readAll();
+			reader.close();
+		}
+		catch( final CsvException e ){}
+
+		loadCsvHelper( invert, rows );
+	}
+
+	/**
+	 * Loads this table from a file.
+	 *
+	 * @param invert if true, the moving and target point sets are inverted
+	 * @param rows a list of strings containing rows of a csv file
+	 * @throws IOException an exception
+	 */
+	protected void loadCsvHelper( boolean invert, final List<String[]> rows ) throws IOException
+	{
 		synchronized(this) {
 			clear();
 
-			CSVReader reader = new CSVReader( new FileReader( f.getAbsolutePath() ));
-			List< String[] > rows = null;
-			try
-			{
-				rows = reader.readAll();
-				reader.close();
-			}
-			catch( CsvException e ){}
 			if( rows == null || rows.size() < 1 )
 			{
 				System.err.println("Error reading csv");
@@ -1176,7 +1288,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			int expectedRowLength = 8;
 
 			int i = 0;
-			for( String[] row : rows )
+			for( final String[] row : rows )
 			{
 				// detect a file with 2d landmarks
 				if( i == 0 && // only check for the first row
@@ -1192,8 +1304,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				names.add( row[ 0 ] );
 				activeList.add( Boolean.parseBoolean( row[ 1 ]) );
 
-				Double[] movingPt = new Double[ ndims ];
-				Double[] targetPt = new Double[ ndims ];
+				final Double[] movingPt = new Double[ ndims ];
+				final Double[] targetPt = new Double[ ndims ];
 
 				int k = 2;
 				for( int d = 0; d < ndims; d++ )
@@ -1238,7 +1350,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	/**
 	 * Copies point values from this table into a destination array.
-	 * Checks whether the provided index exists, returns false if no 
+	 * Checks whether the provided index exists, returns false if no
 	 * point exists for the requested index.
 	 *
 	 * @param point the destination array
@@ -1263,7 +1375,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	/**
 	 * Copies moving point values from this table into a destination array.
-	 * Checks whether the provided index exists, returns false if no 
+	 * Checks whether the provided index exists, returns false if no
 	 * point exists for the requested index.
 	 *
 	 * @param point the destination array
@@ -1284,7 +1396,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	/**
 	 * Copies warped moving point values from this table into a destination array.
-	 * Checks whether the provided index exists, returns false if no 
+	 * Checks whether the provided index exists, returns false if no
 	 * point exists for the requested index.
 	 *
 	 * @param point the destination array
@@ -1305,7 +1417,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	/**
 	 * Copies target point values from this table into a destination array.
-	 * Checks whether the provided index exists, returns false if no 
+	 * Checks whether the provided index exists, returns false if no
 	 * point exists for the requested index.
 	 *
 	 * @param point the destination array
@@ -1358,7 +1470,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 			if ( activeList.get( tableIndex ) )
 			{
-				int activeIndex = getActiveIndex( tableIndex );
+				final int activeIndex = getActiveIndex( tableIndex );
 				for ( int d = 0; d < ndims; d++ )
 				{
 					movingLandmarks[ d ][ activeIndex ] = movingPts.get( tableIndex )[ d ];
@@ -1394,18 +1506,18 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	@Deprecated
 	public void initTransformation()
 	{
-		int numActive = numActive();
+		final int numActive = numActive();
 		// TODO: better to pass a factory here so the transformation can be any
 		// CoordinateTransform ( not just a TPS )
-		double[][] mvgPts = new double[ ndims ][ numActive ];
-		double[][] tgtPts = new double[ ndims ][ numActive ];
+		final double[][] mvgPts = new double[ ndims ][ numActive ];
+		final double[][] tgtPts = new double[ ndims ][ numActive ];
 
 		copyLandmarks( mvgPts, tgtPts );
 
 		// need to find the "inverse TPS" so exchange moving and tgt
 		estimatedXfm = new ThinPlateR2LogRSplineKernelTransform( ndims, tgtPts, mvgPts );
 	}
-	
+
 	/**
 	 * Saves the table to a file
 	 * @param f the file
@@ -1413,16 +1525,16 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public void save( File f ) throws IOException
 	{
-		CSVWriter csvWriter = new CSVWriter(new FileWriter( f.getAbsoluteFile() )); 
+		final CSVWriter csvWriter = new CSVWriter(new FileWriter( f.getAbsoluteFile() ));
 
-		synchronized(this) { 
-			int N = names.size();
-			List<String[]> rows = new ArrayList<String[]>( N );
-			
-			int rowLength = 2 * ndims + 2;
+		synchronized(this) {
+			final int N = names.size();
+			final List<String[]> rows = new ArrayList<String[]>( N );
+
+			final int rowLength = 2 * ndims + 2;
 			for( int i = 0; i < N; i++ )
 			{
-				String[] row = new String[ rowLength ];
+				final String[] row = new String[ rowLength ];
 				row[ 0 ] = names.get( i );
 				row[ 1 ] = activeList.get( i ).toString();
 
@@ -1442,19 +1554,104 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			modifiedSinceLastSave = false;
 		}
 	}
-	
+
+	public JsonElement toJson()
+	{
+		final Gson gson = new GsonBuilder().serializeSpecialFloatingPointValues().create();
+		final JsonObject out = new JsonObject();
+		final JsonElement mvgPtsObj = gson.toJsonTree(getMovingPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		final JsonElement fixedPtsObj = gson.toJsonTree(getFixedPoints(), new TypeToken<List<Double[]> >() {}.getType());
+		final JsonElement activeObj = gson.toJsonTree( activeList );
+		final JsonElement namesObj = gson.toJsonTree( names );
+
+		out.add("type", new JsonPrimitive("BigWarpLandmarks"));
+		out.add("numDimensions", new JsonPrimitive( ndims ));
+		out.add("movingPoints", mvgPtsObj );
+		out.add("fixedPoints", fixedPtsObj );
+		out.add("active", activeObj );
+		out.add("names", namesObj );
+
+		return out;
+	}
+
+	public void fromJson( File f )
+	{
+		final Gson gson = new Gson();
+		final OpenOption[] options = new OpenOption[]{StandardOpenOption.READ};
+		try {
+			final Reader reader = Channels.newReader(FileChannel.open(Paths.get( f.getCanonicalPath()), options), StandardCharsets.UTF_8.name());
+			fromJson( gson.fromJson(reader, JsonObject.class ));
+		} catch (final IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void fromJson( JsonElement json )
+	{
+		if( !json.isJsonObject())
+			return;
+
+		final JsonObject obj = json.getAsJsonObject();
+		final JsonObject landmarks = obj.get("landmarks").getAsJsonObject();
+
+		synchronized(this) {
+			clear();
+
+			final JsonArray namesArr = landmarks.get("names").getAsJsonArray();
+			final JsonArray activeArr = landmarks.get("active").getAsJsonArray();
+			final JsonArray mvgArr = landmarks.get("movingPoints").getAsJsonArray();
+			final JsonArray fixedArr = landmarks.get("fixedPoints").getAsJsonArray();
+
+			numRows = namesArr.size();
+			final int ndims = landmarks.get("numDimensions").getAsInt();
+
+			for( int i = 0; i < numRows; i++ )
+			{
+
+				names.add( namesArr.get(i).getAsString() );
+				activeList.add( activeArr.get(i).getAsBoolean() );
+
+				final JsonElement mvg = mvgArr.get( i );
+				final JsonElement fixed = fixedArr.get( i );
+				final Double[] movingPt = new Double[ ndims ];
+				final Double[] targetPt = new Double[ ndims ];
+
+				for( int d = 0; d < ndims; d++ )
+				{
+					movingPt[ d ] = mvg.getAsJsonArray().get(d).getAsDouble();
+					targetPt[ d ] = fixed.getAsJsonArray().get(d).getAsDouble();
+				}
+
+				movingPts.add( movingPt );
+				targetPts.add( targetPt );
+
+				warpedPoints.add( new Double[ ndims ] );
+				doesPointHaveAndNeedWarp.add( false );
+				movingDisplayPointUnreliable.add( false );
+			}
+
+			this.ndims = ndims;
+			updateNextRows( 0 );
+			buildTableToActiveIndex();
+		}
+
+		for( int i = 0; i < numRows; i++ )
+			fireTableRowsInserted( i, i );
+	}
+
 	public static String print( Double[] d )
 	{
 		String out = "";
 		for( int i=0; i<d.length; i++)
 			out += d[i] + " ";
-		
+
 		return out;
 	}
-	
+
+	@Override
 	public void setValueAt(Object value, int row, int col)
 	{
-		synchronized( this ) { 
+		synchronized( this ) {
 
 			if( row < 0 || col < 0
 				|| row >= numRows || col >= numCols )
@@ -1481,12 +1678,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			}
 			else if( col < 2 + ndims )
 			{
-				Double[] thesePts = movingPts.get(row);
+				final Double[] thesePts = movingPts.get(row);
 				thesePts[ col - 2 ] = ((Double)value).doubleValue();
 			}
 			else
 			{
-				Double[] thesePts = targetPts.get(row);
+				final Double[] thesePts = targetPts.get(row);
 				thesePts[ col - ndims - 2 ] = ((Double)value).doubleValue();
 			}
 
@@ -1494,7 +1691,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
         fireTableCellUpdated(row, col);
     }
-	
+
 	@Override
 	public Object getValueAt( int rowIndex, int columnIndex )
 	{
@@ -1511,9 +1708,10 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	}
 
 	/**
-	 * Only allow editing of the first ("Name") and 
+	 * Only allow editing of the first ("Name") and
 	 * second ("Active") column
 	 */
+	@Override
 	public boolean isCellEditable( int row, int col )
 	{
 		return ( col <= ACTIVECOLUMN );
@@ -1526,15 +1724,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	 */
 	public LandmarkTableModel invert()
 	{
-		LandmarkTableModel inv = new LandmarkTableModel( ndims );
+		final LandmarkTableModel inv = new LandmarkTableModel( ndims );
 
-		int N = this.getRowCount();
+		final int N = this.getRowCount();
 
-		double[] tmp = new double[ ndims ];
+		final double[] tmp = new double[ ndims ];
 		for ( int i = 0; i < N; i++ )
 		{
-			Double[] thisMoving = movingPts.get( i );
-			Double[] thisTarget = targetPts.get( i );
+			final Double[] thisMoving = movingPts.get( i );
+			final Double[] thisTarget = targetPts.get( i );
 
 			for ( int d = 0; d < ndims; d++ )
 				tmp[ d ] = thisMoving[ d ];
@@ -1557,16 +1755,16 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	public static double[] copy( double[] in )
 	{
-		double[] out = new double[ in.length ];
+		final double[] out = new double[ in.length ];
 		for ( int i = 0; i < in.length; i++ )
 			out[ i ] = in [ i ];
-		
+
 		return out;
 	}
-	
+
 	public static double[] toPrimitive( Double[] in )
 	{
-		double[] out = new double[ in.length ];
+		final double[] out = new double[ in.length ];
 		for ( int i = 0; i < in.length; i++ )
 			out[ i ] = in[ i ];
 

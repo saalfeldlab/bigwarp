@@ -1,0 +1,230 @@
+{
+    "Sources": {
+        "0": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": true
+        },
+        "1": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": true
+        },
+        "2": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": false
+        },
+        "3": {
+            "uri": "/tmp/img8270806677315563879.tif",
+            "name": "img8270806677315563879.tif",
+            "isMoving": false
+        }
+    },
+    "ViewerP": {
+        "Sources": [
+            false,
+            false,
+            false,
+            false
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": []
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": []
+            },
+            {
+                "active": false,
+                "name": "moving images",
+                "id": [
+                    0,
+                    1
+                ]
+            },
+            {
+                "active": false,
+                "name": "target images",
+                "id": [
+                    2,
+                    3
+                ]
+            }
+        ],
+        "DisplayMode": "sg",
+        "Interpolation": "nearestneighbor",
+        "CurrentSource": 0,
+        "CurrentGroup": 3,
+        "CurrentTimePoint": 0
+    },
+    "ViewerQ": {
+        "Sources": [
+            false,
+            false,
+            false,
+            false
+        ],
+        "SourceGroups": [
+            {
+                "active": true,
+                "name": "moving images",
+                "id": []
+            },
+            {
+                "active": true,
+                "name": "fixed images",
+                "id": []
+            }
+        ],
+        "DisplayMode": "sg",
+        "Interpolation": "nearestneighbor",
+        "CurrentSource": 0,
+        "CurrentGroup": 1,
+        "CurrentTimePoint": 0
+    },
+    "SetupAssignments": {
+        "ConverterSetups": {
+            "0": {
+                "min": 0.0,
+                "max": 255.0,
+                "color": -1,
+                "groupId": 0
+            },
+            "1": {
+                "min": 0.0,
+                "max": 65535.0,
+                "color": -1,
+                "groupId": 1
+            },
+            "2": {
+                "min": 0.0,
+                "max": 255.0,
+                "color": -1,
+                "groupId": 2
+            },
+            "3": {
+                "min": 10.0,
+                "max": 571.0,
+                "color": -1,
+                "groupId": 3
+            }
+        },
+        "MinMaxGroups": {
+            "0": {
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            "1": {
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 65535.0
+            },
+            "2": {
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 255.0
+            },
+            "3": {
+                "fullRangeMin": -2.147483648E9,
+                "fullRangeMax": 2.147483647E9,
+                "rangeMin": 0.0,
+                "rangeMax": 65535.0,
+                "currentMin": 0.0,
+                "currentMax": 65535.0
+            }
+        }
+    },
+    "Bookmarks": {
+        "bookmarks": {}
+    },
+    "Transform": {
+        "type": "Thin Plate Spline",
+        "landmarks": {
+            "type": "BigWarpLandmarks",
+            "numDimensions": 3,
+            "movingPoints": [
+                [
+                    193.1527102803737,
+                    163.57943925233658,
+                    130.00000000000003
+                ],
+                [
+                    132.8910280373831,
+                    248.17757009345803,
+                    130.00000000000003
+                ],
+                [
+                    222.70411214953256,
+                    272.51401869158883,
+                    130.00000000000003
+                ],
+                [
+                    182.72280373831765,
+                    159.52336448598143,
+                    170.5607476635514
+                ],
+                [
+                    176.92841121495317,
+                    255.1308411214954,
+                    170.5607476635514
+                ]
+            ],
+            "fixedPoints": [
+                [
+                    216.01797508417232,
+                    233.3341910984992,
+                    126.86263579832789
+                ],
+                [
+                    145.77520051769838,
+                    213.26482693664948,
+                    126.8626357983279
+                ],
+                [
+                    146.49196352347872,
+                    298.5596246245108,
+                    126.86263579832789
+                ],
+                [
+                    182.72280373831765,
+                    159.52336448598143,
+                    170.5607476635514
+                ],
+                [
+                    176.92841121495317,
+                    255.1308411214954,
+                    170.5607476635514
+                ]
+            ],
+            "active": [
+                true,
+                true,
+                true,
+                true,
+                true
+            ],
+            "names": [
+                "Pt-0",
+                "Pt-1",
+                "Pt-2",
+                "Pt-3",
+                "Pt-4"
+            ]
+        }
+    }
+}

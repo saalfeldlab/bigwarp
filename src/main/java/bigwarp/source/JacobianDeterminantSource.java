@@ -25,10 +25,8 @@ import java.util.Arrays;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
-import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AbstractModel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
@@ -37,7 +35,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
-import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
@@ -64,9 +62,17 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 		sourceData = data;
 
 		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+//		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
+//		interval = sourceData.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 );
 
-		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		final BoundingBoxEstimation bbe = new BoundingBoxEstimation();
+		final AffineTransform3D affine = new AffineTransform3D();
+		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
+		interval = bbe.estimatePixelInterval(  affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
+
+
+//		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		VoxelDimensions srcVoxDims = sourceData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 		String unit = "pix";
 		if( srcVoxDims != null )
 			unit = srcVoxDims.unit();

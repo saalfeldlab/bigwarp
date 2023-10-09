@@ -88,7 +88,7 @@ public class BwN5ViewerMultiscaleMetadataParser //implements N5GroupParser< N5Mu
 //		final List<String> paths = new ArrayList<>();
 //
 //        children.forEach( c -> {
-////            System.out.println( c.getPath() );
+////            System.out.println( c.getPath() )
 //			if( scaleLevelNodes.containsKey( c.getNodeName() ))
 //			{
 //				paths.add( c .getPath());

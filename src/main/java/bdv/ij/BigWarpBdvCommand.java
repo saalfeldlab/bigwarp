@@ -23,6 +23,7 @@ package bdv.ij;
 
 import bdv.ij.util.ProgressWriterIJ;
 import bigwarp.BigWarp;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
 import mpicbg.spim.data.SpimData;
 import mpicbg.spim.data.SpimDataException;
@@ -61,8 +62,8 @@ public class BigWarpBdvCommand implements Command
 			final SpimData fixedSpimData = new XmlIoSpimData().load( fixedImageXml.getAbsolutePath() );
 			final SpimData movingSpimData = new XmlIoSpimData().load( movingImageXml.getAbsolutePath() );
 			new RepeatingReleasedEventsFixer().install();
-			final BigWarp.BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
-			bw = new BigWarp( bigWarpData, "Big Warp",  new ProgressWriterIJ() );
+			final BigWarpData< ? > bigWarpData = BigWarpInit.createBigWarpData( movingSpimData, fixedSpimData );
+			bw = new BigWarp( bigWarpData,  new ProgressWriterIJ() );
 			bw.getViewerFrameP().getViewerPanel().requestRepaint();
 			bw.getViewerFrameQ().getViewerPanel().requestRepaint();
 			bw.getLandmarkFrame().repaint();

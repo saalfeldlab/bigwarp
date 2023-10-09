@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -28,6 +28,10 @@ import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
 import bdv.viewer.animate.RotationAnimator;
 import bdv.viewer.animate.SimilarityTransformAnimator3D;
+import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
+import bigwarp.BigWarp;
+import bigwarp.BigWarpData;
+import bigwarp.source.SourceInfo;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -45,11 +49,15 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public static final int TARGET_GROUP_INDEX = 1;
 
+	protected final BigWarpData<?> bwData;
+
 	protected BigWarpViewerSettings viewerSettings;
 
 	protected BigWarpOverlay overlay;
 
 	protected BigWarpDragOverlay dragOverlay;
+
+	protected BigWarpMaskSphereOverlay maskOverlay;
 
 	protected boolean isMoving;
 
@@ -58,10 +66,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	protected boolean transformEnabled = true;
 
 	protected int ndims;
-
-	final protected int[] movingSourceIndexList;
-
-	final protected int[] targetSourceIndexList;
 
 	protected boolean boxOverlayVisible = true;
 
@@ -74,35 +78,33 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	ViewerOptions options;
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList )
+	@SuppressWarnings("rawtypes")
+	public BigWarpViewerPanel( final BigWarpData bwData , final BigWarpViewerSettings viewerSettings, final CacheControl cache, boolean isMoving )
 	{
-		this( sources, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving, movingSourceIndexList, targetSourceIndexList );
+		this( bwData, viewerSettings, cache, BigWarpViewerOptions.options(), isMoving );
 	}
 
-	public BigWarpViewerPanel( final List< SourceAndConverter< ? > > sources, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving,
-			int[] movingSourceIndexList, int[] targetSourceIndexList  )
+	@SuppressWarnings("unchecked")
+	public BigWarpViewerPanel( final BigWarpData bwData, final BigWarpViewerSettings viewerSettings, final CacheControl cache, final BigWarpViewerOptions optional, boolean isMoving )
 	{
-		super( sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		// TODO compiler complains if the first argument is 'final BigWarpData<?> bwData'
+		super( bwData.sources, 1, cache, optional.getViewerOptions( isMoving ) );
+		this.bwData = bwData;
 		this.viewerSettings = viewerSettings;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed
 										// image by default
-		this.movingSourceIndexList = movingSourceIndexList;
-		this.targetSourceIndexList = targetSourceIndexList;
-
 		getDisplay().overlays().add( g -> {
 			if ( null != overlay ) {
 				overlay.setViewerState( state() );
 				overlay.paint( ( Graphics2D ) g );
 			}
 			if ( dragOverlay != null ) {
-				//dragOverlay.setViewerState( state );
 				dragOverlay.paint( ( Graphics2D ) g );
 			}
 		} );
 
-		updateGrouping();
+		//updateGrouping();
 	}
 
 	@Override
@@ -114,29 +116,29 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public void precomputeRotations2d( final AffineTransform3D initialViewTransform )
 	{
 		orthoTransforms = new ArrayList<>();
-		AffineTransform3D rot = new AffineTransform3D();
+		final AffineTransform3D rot = new AffineTransform3D();
 		rot.rotate( 2, -Math.PI / 2 );
 
 		AffineTransform3D xfm = initialViewTransform;
 		orthoTransforms.add( xfm );
 		for( int i = 1; i < 4; i++ )
 		{
-			AffineTransform3D newXfm = xfm.copy();
+			final AffineTransform3D newXfm = xfm.copy();
 			newXfm.rotate( 2, -Math.PI/2);
 			orthoTransforms.add( newXfm );
 			xfm = newXfm;
 		}
 	}
 
-	public void toggleTextOverlayVisible()
-	{
-		textOverlayVisible = !textOverlayVisible;
-	}
-
-	public void toggleBoxOverlayVisible()
-	{
-		boxOverlayVisible = !boxOverlayVisible;
-	}
+//	public void toggleTextOverlayVisible()
+//	{
+//		textOverlayVisible = !textOverlayVisible;
+//	}
+//
+//	public void toggleBoxOverlayVisible()
+//	{
+//		boxOverlayVisible = !boxOverlayVisible;
+//	}
 
 	public void setHoveredIndex( int index )
 	{
@@ -154,23 +156,30 @@ public class BigWarpViewerPanel extends ViewerPanel
 	/**
 	 * Makes the first group contain all the moving images and the second group
 	 * contain all the fixed images
+	 * <p>
+	 * @deprecated use {@link BigWarp#createMovingTargetGroups}
 	 *
 	 * @return the number sources in the moving group
 	 */
+	@Deprecated
 	public int updateGrouping()
 	{
 		final SynchronizedViewerState state = state();
 		synchronized ( state )
 		{
-			// TODO: work backwards to find out whether movingSourceIndexList
-			//  and targetSourceIndexList are required, or whether a
-			//  List<SourceAndConverter<?>> can be used directly
 			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
-			for ( int i : movingSourceIndexList )
-				moving.add( state.getSources().get( i ) );
 			final List< SourceAndConverter< ? > > target = new ArrayList<>();
-			for ( int i : targetSourceIndexList )
-				target.add( state.getSources().get( i ) );
+
+			int idx = 0;
+			for ( final SourceInfo sourceInfo : bwData.sourceInfos.values() )
+			{
+				if (sourceInfo.isMoving()) {
+					moving.add( state.getSources().get( idx ) );
+				} else {
+					target.add( state.getSources().get( idx ) );
+				}
+				idx++;
+			}
 
 			state.clearGroups();
 
@@ -202,7 +211,12 @@ public class BigWarpViewerPanel extends ViewerPanel
 
 	public boolean isInFixedImageSpace()
 	{
-		return !isMoving || ( ( WarpedSource< ? > ) ( state().getSources().get( movingSourceIndexList[ 0 ] ).getSpimSource() ) ).isTransformed();
+		if( bwData.numMovingSources() < 1 )
+			return true;
+		else
+		{
+			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
+		}
 	}
 
 	public boolean doUpdateOnDrag()
@@ -236,8 +250,24 @@ public class BigWarpViewerPanel extends ViewerPanel
 		this.dragOverlay = dragOverlay;
 	}
 
+	public void addOverlay( OverlayRenderer overlay )
+	{
+		super.getDisplay().overlays().add( overlay );
+	}
+
 	public BigWarpDragOverlay getDragOverlay(){
 		return dragOverlay;
+	}
+
+	public BigWarpMaskSphereOverlay getMaskOverlay()
+	{
+		return maskOverlay;
+	}
+
+	public void setMaskOverlay( final BigWarpMaskSphereOverlay maskOverlay )
+	{
+		this.maskOverlay = maskOverlay;
+		addOverlay( maskOverlay );
 	}
 
 	public boolean getIsMoving()
@@ -288,7 +318,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 				newTransform = Rotation2DHelpers.targetViewerTransform2d( transform , isClockwise );
 				break;
 			}
-			catch(Exception e)
+			catch(final Exception e)
 			{
 				if( isClockwise )
 					transform.rotate( 2, -0.1 );
@@ -297,7 +327,7 @@ public class BigWarpViewerPanel extends ViewerPanel
 			}
 		}
 
-		double[] qNew = new double[ 4 ];
+		final double[] qNew = new double[ 4 ];
 		Affine3DHelpers.extractRotation( newTransform, qNew );
 		setTransformAnimator( new RotationAnimator(transform, centerX, centerY, qNew, 300 ) );
 	}
@@ -369,12 +399,12 @@ public class BigWarpViewerPanel extends ViewerPanel
 		final boolean prefsShowTextOverlay = Prefs.showTextOverlay();
 		final boolean prefsShowMultibox = Prefs.showMultibox();
 
-		Prefs.showTextOverlay( textOverlayVisible );
-		Prefs.showMultibox( boxOverlayVisible );
+//		Prefs.showTextOverlay( textOverlayVisible );
+//		Prefs.showMultibox( boxOverlayVisible );
 		super.drawOverlays( g );
 
-		// restore Prefs settings
-		Prefs.showTextOverlay( prefsShowTextOverlay );
-		Prefs.showMultibox( prefsShowMultibox );
+//		// restore Prefs settings
+//		Prefs.showTextOverlay( prefsShowTextOverlay );
+//		Prefs.showMultibox( prefsShowMultibox );
 	}
 }

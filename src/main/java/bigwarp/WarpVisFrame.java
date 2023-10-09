@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -34,9 +34,6 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.io.File;
 import java.util.Enumeration;
 
 import javax.swing.AbstractButton;
@@ -51,48 +48,51 @@ import javax.swing.JCheckBox;
 import javax.swing.JColorChooser;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
-import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.WindowConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import bdv.gui.AutosaveOptionsPanel;
+import bdv.gui.MaskOptionsPanel;
+import bdv.gui.TransformTypePanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
 import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.miginfocom.swing.MigLayout;
 
-public class WarpVisFrame extends JDialog 
+public class WarpVisFrame extends JDialog
 {
 	private static final long serialVersionUID = 7561228647761694686L;
 
 	private final BigWarp<?> bw;
 	private final BigWarpViewerSettings settings;
-	
+
 	protected ButtonGroup visTypeGroup;
 	protected JRadioButton setWarpVisOffButton;
 	protected JRadioButton setWarpGridButton;
 	protected JRadioButton setWarpMagButton;
-	
+	protected JRadioButton setJacobianDetButton;
+
 	protected JLabel noOptionsLabel;
-	
+
 	// landmark point options
 	protected final JButton landmarkColorButton;
 	private final JColorChooser colorChooser;
 	protected final JSlider landmarkSizeSlider;
-	
+
 	// warp magnitude
 	protected ButtonGroup warpMagButtons;
 	protected JRadioButton warpMagAffineButton;
 	protected JRadioButton warpMagSimilarityButton;
 	protected JRadioButton warpMagRigidButton;
-	
+
 	// grid spacing
 	protected ButtonGroup warpGridButtons;
 	protected JRadioButton warpGridLineButton;
@@ -112,41 +112,45 @@ public class WarpVisFrame extends JDialog
 	final JComboBox bboxMethodDropdown;
 	final JSpinner samplesPerDimSpinner;
 
+	// mask
+	final MaskOptionsPanel maskOptionsPanel;
+
+	// transform type
+	final TransformTypePanel transformTypePanel;
+
 	// autosave
-	final SpinnerNumberModel savePeriodModel;
-	final JSpinner autoSavePeriodSpinner;
-	final JCheckBox doAutoSaveBox;
-	final JTextField autoSaveFolderText;
+	private final AutosaveOptionsPanel autoSaveOptionsPanel;
+
 
 	public static final int minGridSpacing = 5;
 	public static final int maxGridSpacing = 400;
 	public static final int defaultGridSpacing = 100;
-	
+
 	public static final int minGridWidth = 1;
 	public static final int maxGridWidth = 50;
 	public static final int defaultGridWidth = 5;
-	
+
 	public WarpVisFrame( final Frame owner, final BigWarp<?> bw )
 	{
-		super( owner, "big warp options", false );
+		super( owner, "Bigwarp options", false );
 		this.bw = bw;
 		this.settings = bw.viewerSettings;
-		
+
 		final Container content = getContentPane();
-		
+
 		setSize( 500, 400 );
-		
-		JPanel landmarkPointOptionsPanel = new JPanel();
+
+		final JPanel landmarkPointOptionsPanel = new JPanel();
 		landmarkPointOptionsPanel.setLayout( new BoxLayout( landmarkPointOptionsPanel, BoxLayout.X_AXIS ));
 
 		landmarkColorButton = new JButton( new ColorIcon( settings.getSpotColor() ) );
 		colorChooser = new JColorChooser();
-		
+
 		landmarkSizeSlider = new JSlider();
 		landmarkSizeSlider.setValue( (int)settings.getSpotSize() );
 		landmarkSizeSlider.setMinimum( 1 );
 		landmarkSizeSlider.setMaximum( 96 );
-		
+
 		landmarkPointOptionsPanel.add( landmarkColorButton );
 		landmarkPointOptionsPanel.add( landmarkSizeSlider );
 		landmarkPointOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
@@ -156,9 +160,9 @@ public class WarpVisFrame extends JDialog
 								BorderFactory.createEtchedBorder(),
 								"landmark size & color" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-		
-		// 
-		JPanel visTypePanel = new JPanel();
+
+		//
+		final JPanel visTypePanel = new JPanel();
 		visTypePanel.setLayout(  new BoxLayout( visTypePanel, BoxLayout.Y_AXIS) );
 		visTypePanel.setBorder( BorderFactory.createCompoundBorder(
 				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
@@ -168,8 +172,8 @@ public class WarpVisFrame extends JDialog
 								"warp display" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
 
-		
-		JPanel typeOptionPanel = new JPanel();
+
+		final JPanel typeOptionPanel = new JPanel();
 		typeOptionPanel.setLayout(  new BoxLayout( typeOptionPanel, BoxLayout.Y_AXIS) );
 		typeOptionPanel.setBorder( BorderFactory.createCompoundBorder(
 				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
@@ -178,25 +182,28 @@ public class WarpVisFrame extends JDialog
 								BorderFactory.createEtchedBorder(),
 								"options" ),
 						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-		
+
 		// label indicating that there are no options to be had
 		noOptionsLabel = new JLabel( "None" );
-		
+
 		// buttons choosing if and how the warp should be visualized
 		visTypeGroup = new ButtonGroup();
 		setWarpVisOffButton = new JRadioButton( "Off" );
 		setWarpGridButton = new JRadioButton( "Grid" );
 		setWarpMagButton = new JRadioButton( "Magnitude" );
-		
+		setJacobianDetButton = new JRadioButton( "Jacobian Determinant" );
+
 		visTypeGroup.add( setWarpVisOffButton );
 		visTypeGroup.add( setWarpGridButton );
 		visTypeGroup.add( setWarpMagButton );
-		
+		visTypeGroup.add( setJacobianDetButton );
+		setWarpVisOffButton.setSelected( true );
+
 		visTypePanel.add( setWarpVisOffButton );
 		visTypePanel.add( setWarpGridButton );
 		visTypePanel.add( setWarpMagButton );
-		
-		
+		visTypePanel.add( setJacobianDetButton );
+
 		// buttons for warp magnitude options
 		warpMagAffineButton = new JRadioButton( "Affine baseline" );
 		warpMagSimilarityButton = new JRadioButton("Similarity baseline");
@@ -206,15 +213,16 @@ public class WarpVisFrame extends JDialog
 		warpMagButtons.add( warpMagAffineButton );
 		warpMagButtons.add( warpMagSimilarityButton );
 		warpMagButtons.add( warpMagRigidButton );
-		
-		// buttons for warp grid options 
+
+		// buttons for warp grid options
 		warpGridLineButton = new JRadioButton( "Line grid " );
 		warpGridModButton  = new JRadioButton( "Modulo grid" );
-		
+
 		warpGridButtons = new ButtonGroup();
 		warpGridButtons.add( warpGridLineButton );
 		warpGridButtons.add( warpGridModButton );
-		
+		warpGridLineButton.setSelected( true );
+
 		gridSpacingSlider = new JSlider( JSlider.HORIZONTAL, minGridSpacing, maxGridSpacing, defaultGridSpacing );
 		gridWidthSlider = new JSlider( JSlider.HORIZONTAL, minGridWidth, maxGridWidth, defaultGridWidth );
 		// label the sliders
@@ -228,7 +236,7 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( warpMagAffineButton );
 		typeOptionPanel.add( warpMagSimilarityButton );
 		typeOptionPanel.add( warpMagRigidButton );
-		
+
 		typeOptionPanel.add( warpGridLineButton );
 		typeOptionPanel.add( warpGridModButton );
 		typeOptionPanel.add( bigSpace );
@@ -238,128 +246,6 @@ public class WarpVisFrame extends JDialog
 		typeOptionPanel.add( gridWidthLabel );
 		typeOptionPanel.add( gridWidthSlider );
 		typeOptionPanel.add( noOptionsLabel );
-
-		// autoSave Options panel
-		final JPanel autoSaveOptionsPanel = new JPanel();
-		autoSaveOptionsPanel.setBorder( BorderFactory.createCompoundBorder(
-				BorderFactory.createEmptyBorder( 4, 2, 4, 2 ),
-				BorderFactory.createCompoundBorder(
-						BorderFactory.createTitledBorder(
-								BorderFactory.createEtchedBorder(),
-								"Auto-save options" ),
-						BorderFactory.createEmptyBorder( 2, 2, 2, 2 ) ) ) );
-		autoSaveOptionsPanel.setLayout( new GridBagLayout() );
-
-		final JLabel autosaveLabel = new JLabel("Auto-save landmarks");
-		doAutoSaveBox = new JCheckBox();
-
-		final JLabel autoSavePeriodLabel = new JLabel("save frequency (minutes)");
-		autoSavePeriodSpinner = new JSpinner();
-		savePeriodModel = new SpinnerNumberModel( 5, 1, 5000, 1 );
-		autoSavePeriodSpinner.setModel( savePeriodModel );
-		autoSavePeriodSpinner.addChangeListener( new ChangeListener()
-		{
-			@Override
-			public void stateChanged( ChangeEvent e )
-			{
-				if( doAutoSaveBox.isSelected() )
-				{
-					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
-					BigWarpAutoSaver autoSaver = bw.getAutoSaver();
-					if ( autoSaver != null )
-						autoSaver.stop();
-
-					new BigWarpAutoSaver( bw, periodMillis );
-				}
-			}
-		} );
-
-		doAutoSaveBox.addItemListener( new ItemListener()
-		{
-			@Override
-			public void itemStateChanged( ItemEvent e )
-			{
-				bw.stopAutosave();
-
-				if ( doAutoSaveBox.isSelected() )
-				{
-					long periodMillis = ( ( Integer ) savePeriodModel.getValue() ).longValue() * 60000;
-					new BigWarpAutoSaver( bw, periodMillis );
-				}
-			}
-		});
-
-		final JLabel destDirLabel = new JLabel("Directory");
-		final File startingFolder = bw.getBigwarpSettingsFolder();
-		autoSaveFolderText = new JTextField();
-		autoSaveFolderText.setText( startingFolder.getAbsolutePath() );
-
-		final JButton browseBtn = new JButton( "Browse" );
-		browseBtn.addActionListener( e -> {
-
-			final JFileChooser fileChooser = new JFileChooser();
-			fileChooser.setFileSelectionMode( JFileChooser.DIRECTORIES_ONLY );
-			fileChooser.setCurrentDirectory( startingFolder );
-
-			final int ret = fileChooser.showOpenDialog(content); 
-			if (ret == JFileChooser.APPROVE_OPTION)
-			{
-				final File folder = fileChooser.getSelectedFile();
-				autoSaveFolderText.setText( folder.getAbsolutePath() );
-				bw.setAutosaveFolder( folder );
-			}
-		});
-
-		final GridBagConstraints gbcAutoSave = new GridBagConstraints();
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridy = 0;
-		gbcAutoSave.gridwidth = 2;
-		gbcAutoSave.gridheight = 1;
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.weighty = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		gbcAutoSave.fill = GridBagConstraints.HORIZONTAL;
-		gbcAutoSave.insets = new Insets( 5, 5, 5, 5 );
-
-		autoSaveOptionsPanel.add( autosaveLabel, gbcAutoSave ); 
-
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.gridwidth = 1;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( doAutoSaveBox, gbcAutoSave );
-
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridwidth = 2;
-		gbcAutoSave.gridy = 1;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( autoSavePeriodLabel, gbcAutoSave );
-
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( autoSavePeriodSpinner, gbcAutoSave );
-
-		gbcAutoSave.gridy = 2;
-		gbcAutoSave.gridx = 0;
-		gbcAutoSave.gridwidth = 1;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( destDirLabel, gbcAutoSave );
-
-		gbcAutoSave.gridy = 2;
-		gbcAutoSave.gridx = 1;
-		gbcAutoSave.weightx = 1.0;
-		gbcAutoSave.anchor = GridBagConstraints.EAST;
-		autoSaveOptionsPanel.add( autoSaveFolderText, gbcAutoSave );
-
-		gbcAutoSave.gridx = 2;
-		gbcAutoSave.weightx = 0.0;
-		gbcAutoSave.anchor = GridBagConstraints.WEST;
-		autoSaveOptionsPanel.add( browseBtn, gbcAutoSave );
-
-
 
 		final JPanel inverseOptionsPanel = new JPanel();
 		inverseOptionsPanel.setLayout( new BorderLayout( 10, 10 ));
@@ -403,7 +289,7 @@ public class WarpVisFrame extends JDialog
 		} );
 		maxIterPanel.add( new JLabel( "Max iterations", SwingConstants.CENTER ), BorderLayout.WEST );
 		maxIterPanel.add( maxIterSpinner, BorderLayout.EAST );
-		
+
 		inverseOptionsPanel.add( tolerancePanel, BorderLayout.NORTH );
 		inverseOptionsPanel.add( maxIterPanel, BorderLayout.SOUTH );
 
@@ -431,7 +317,7 @@ public class WarpVisFrame extends JDialog
 		bboxMethodDropdown.addActionListener( new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				String methodString = (String)(bboxMethodDropdown.getSelectedItem());
+				final String methodString = (String)(bboxMethodDropdown.getSelectedItem());
 				bw.getBoxEstimation().setMethod( methodString );
 				bw.updateSourceBoundingBoxEstimators();
 			}
@@ -459,6 +345,17 @@ public class WarpVisFrame extends JDialog
 		bboxPanel.add( samplerPerDimPanel, BorderLayout.SOUTH );
 
 
+		// mask options
+		maskOptionsPanel = new MaskOptionsPanel( bw );
+		maskOptionsPanel.addActions();
+
+		// type options
+		transformTypePanel = new TransformTypePanel( bw );
+
+		// autosaver options
+		autoSaveOptionsPanel = new AutosaveOptionsPanel( bw, content );
+
+		// organize panels
 		content.setLayout( new GridBagLayout() );
 		final GridBagConstraints gbcContent = new GridBagConstraints();
 		gbcContent.gridx = 0;
@@ -469,35 +366,49 @@ public class WarpVisFrame extends JDialog
 		gbcContent.weightx = 1.0;
 		gbcContent.weighty = 1.0;
 		gbcContent.insets = new Insets( 1, 1, 1, 1 );
-		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		content.add( transformTypePanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 1;
+		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 2;
 		gbcContent.gridwidth = 1;
 		gbcContent.anchor = GridBagConstraints.WEST;
 		content.add( visTypePanel, gbcContent );
 
-		gbcContent.gridy = 1;
 		gbcContent.gridx = 1;
 		gbcContent.gridwidth = 2;
 		gbcContent.anchor = GridBagConstraints.EAST;
 		content.add( typeOptionPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 2;
+		gbcContent.gridy = 3;
 		gbcContent.gridwidth = 3;
 		content.add( inverseOptionsPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 3;
+		gbcContent.gridy = 4;
 		gbcContent.gridwidth = 3;
 		content.add( bboxPanel, gbcContent );
 
-		gbcContent.gridy = 4;
-		content.add( autoSaveOptionsPanel , gbcContent );
-		
+		gbcContent.gridy = 5;
+		content.add( maskOptionsPanel, gbcContent );
+
+		gbcContent.gridy = 6;
+		final JPanel toggle2DPanel = new JPanel(new MigLayout("", "[grow][][grow]"));
+		final JCheckBox toggle2D = new JCheckBox("Is 2D");
+		toggle2DPanel.add(toggle2D, "cell 1 0");
+		toggle2D.addActionListener(e ->  bw.changeDimensionality(toggle2D.isSelected()) );
+		content.add(toggle2DPanel, gbcContent);
+
+		gbcContent.gridy = 7;
+		content.add( getAutoSaveOptionsPanel(), gbcContent );
+
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );
-		
+
 		addListeners();
 		updateOptions();
 	}
@@ -528,87 +439,90 @@ public class WarpVisFrame extends JDialog
 				d.setVisible( true );
 			}
 		} );
-		
+
 		landmarkSizeSlider.addChangeListener( new ChangeListener()
 		{
 			@Override
 			public void stateChanged( ChangeEvent e )
 			{
 				if( e.getSource() != landmarkSizeSlider ) return;
-				
+
 				settings.setSpotSize( landmarkSizeSlider.getValue() );
 				bw.viewerP.requestRepaint();
 				bw.viewerQ.requestRepaint();
 			}
 		});
-		
-		setWarpVisOffButton.setAction( 
+
+		setWarpVisOffButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.NONE )));
-		setWarpGridButton.setAction( 
+		setWarpGridButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.GRID )));
-		setWarpMagButton.setAction( 
+		setWarpMagButton.setAction(
 				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.WARPMAG )));
-		
+		setJacobianDetButton.setAction(
+				actionMap.get( String.format( BigWarpActions.SET_WARPTYPE_VIS, BigWarp.WarpVisType.JACDET )));
+
 		setWarpVisOffButton.setText("Off");
 		setWarpGridButton.setText("Grid");
 		setWarpMagButton.setText("Magnitude");
-		
-		warpMagAffineButton.setAction( 
+		setJacobianDetButton.setText("Jacobian Determinant");
+
+		warpMagAffineButton.setAction(
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 0 ].getClass().getName() )));
-		warpMagSimilarityButton .setAction( 
+		warpMagSimilarityButton .setAction(
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 1 ].getClass().getName() ) ));
-		warpMagRigidButton.setAction( 
+		warpMagRigidButton.setAction(
 				actionMap.get( String.format( BigWarpActions.WARPMAG_BASE, bw.baseXfmList[ 2 ].getClass().getName() ) ));
-		
+
 		warpMagAffineButton.setText("Affine");
 		warpMagSimilarityButton.setText("Similarity");
 		warpMagRigidButton.setText("Rigid");
-		
-		warpGridLineButton.setAction( 
+
+		warpGridLineButton.setAction(
 				actionMap.get( String.format( BigWarpActions.WARPVISGRID, GridSource.GRID_TYPE.LINE )));
-		warpGridModButton.setAction( 
+		warpGridModButton.setAction(
 				actionMap.get( String.format( BigWarpActions.WARPVISGRID, GridSource.GRID_TYPE.MOD )));
-		
+
 		warpGridLineButton.setText( "Line" );
 		warpGridModButton.setText( "Modulo" );
-		
+
 		// turn on the default values
-		setWarpVisOffButton.doClick();
-		warpMagAffineButton.doClick();
-		warpGridLineButton.doClick();
+//		setWarpVisOffButton.doClick();
+//		warpMagAffineButton.doClick();
+//		warpGridLineButton.doClick();
 	}
-	
+
 	public void addListeners()
 	{
-		MyChangeListener mylistener = new MyChangeListener();
-		setWarpVisOffButton.addChangeListener( mylistener );
-		setWarpGridButton.addChangeListener( mylistener );
-		setWarpMagButton.addChangeListener( mylistener );
-		
+		final VisOptUiListener visOptListener = new VisOptUiListener();
+		setWarpVisOffButton.addChangeListener( visOptListener );
+		setWarpGridButton.addChangeListener( visOptListener );
+		setWarpMagButton.addChangeListener( visOptListener );
+
 		gridSpacingSlider.addChangeListener( new ChangeListener()
 		{
 			@Override
 			public void stateChanged( ChangeEvent e )
 			{
 				if( e.getSource() != gridSpacingSlider ) return;
-				
+
 				WarpVisFrame.this.bw.setWarpGridSpacing( gridSpacingSlider.getValue() );
 			}
 		});
-		
+
 		gridWidthSlider.addChangeListener( new ChangeListener()
 		{
 			@Override
 			public void stateChanged( ChangeEvent e )
 			{
 				if( e.getSource() != gridWidthSlider ) return;
-				
+
 				WarpVisFrame.this.bw.setWarpGridWidth( gridWidthSlider.getValue() );
 			}
 		});
 	}
-	
-	public class MyChangeListener implements ChangeListener
+
+	private class VisOptUiListener implements ChangeListener
 	{
 		@Override
 		public void stateChanged( ChangeEvent e )
@@ -616,13 +530,13 @@ public class WarpVisFrame extends JDialog
 			WarpVisFrame.this.updateOptions();
 		}
 	}
-	
+
 	private void setGridOptionsVisibility( boolean isVisible )
 	{
 		// disable all options
-		Enumeration< AbstractButton > elems = warpGridButtons.getElements();
+		final Enumeration< AbstractButton > elems = warpGridButtons.getElements();
 		while( elems.hasMoreElements())
-			elems.nextElement().setVisible( isVisible ); 
+			elems.nextElement().setVisible( isVisible );
 
 		gridSpacingSlider.setVisible( isVisible );
 		gridWidthSlider.setVisible( isVisible );
@@ -630,15 +544,15 @@ public class WarpVisFrame extends JDialog
 		gridSpacingLabel.setVisible( isVisible );
 		gridWidthLabel.setVisible( isVisible );
 	}
-	
+
 	private void setMagOptionsVisibility( boolean isVisible )
 	{
 		// disable all options
-		Enumeration< AbstractButton > elems = warpMagButtons.getElements();
+		final Enumeration< AbstractButton > elems = warpMagButtons.getElements();
 		while( elems.hasMoreElements())
-			elems.nextElement().setVisible( isVisible ); 
+			elems.nextElement().setVisible( isVisible );
 	}
-	
+
 	public synchronized void updateOptions()
 	{
 		if( setWarpVisOffButton.isSelected() )
@@ -665,7 +579,7 @@ public class WarpVisFrame extends JDialog
 		}
 		pack();
 	}
-	
+
 	private static class ColorIcon implements Icon
 	{
 		private final int size = 16;
@@ -697,5 +611,15 @@ public class WarpVisFrame extends JDialog
 		{
 			return size;
 		}
+	}
+
+	public boolean autoEstimateMask()
+	{
+		return maskOptionsPanel.getAutoEstimateMaskButton().isSelected();
+	}
+
+	public AutosaveOptionsPanel getAutoSaveOptionsPanel()
+	{
+		return autoSaveOptionsPanel;
 	}
 }

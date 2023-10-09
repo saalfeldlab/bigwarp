@@ -30,3 +30,10 @@ hs_err_pid*
 /bin/
 /target/
 
+# ignore files generated during test
+/src/test/resources/bigwarp/url/imgDir3d/img3d0000.tif
+/src/test/resources/bigwarp/url/imgDir3d/img3d0001.tif
+/src/test/resources/bigwarp/url/imgDir3d/img3d0002.tif
+/src/test/resources/bigwarp/url/imgDir3d/img3d0003.tif
+/src/test/resources/bigwarp/url/img.tif
+/src/test/resources/bigwarp/url/img2d.png

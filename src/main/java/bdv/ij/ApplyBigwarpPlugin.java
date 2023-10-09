@@ -46,14 +46,13 @@ import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
 
 import bdv.export.ProgressWriter;
-import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarp;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import bigwarp.BigWarpExporter;
 import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
@@ -167,17 +166,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final String resolutionOption )
 	{
 		String unit = "pix";
-		final boolean doTargetImagesExist = bwData.targetSourceIndices != null  && bwData.targetSourceIndices.length > 0;
+		final boolean doTargetImagesExist = bwData.numTargetSources()  > 0;
 		if( resolutionOption.equals( MOVING ) || resolutionOption.equals( MOVING_WARPED ) || !doTargetImagesExist )
 		{
-			final VoxelDimensions mvgVoxDims = bwData.sources.get( bwData.movingSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			final VoxelDimensions mvgVoxDims = bwData.getMovingSource( 0 ).getSpimSource().getVoxelDimensions();
 			if( mvgVoxDims != null )
 				unit = mvgVoxDims.unit();
 		}
 		else
 		{
 			// use target units even if
-			final VoxelDimensions tgtVoxDims = bwData.sources.get( bwData.targetSourceIndices[0] ).getSpimSource().getVoxelDimensions();
+			final VoxelDimensions tgtVoxDims = bwData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 			if( tgtVoxDims != null )
 				unit = tgtVoxDims.unit();
 		}
@@ -194,21 +193,18 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		if( resolutionOption.equals( TARGET ))
 		{
-			if( bwData.targetSourceIndices.length <= 0 )
+			if( bwData.numTargetSources() <= 0 )
 				return null;
 
-			final Source< ? > spimSource = bwData.sources.get(
-					bwData.targetSourceIndices[ 0 ]).getSpimSource();
-
+			final Source< ? > spimSource = bwData.getTargetSource(0 ).getSpimSource();
 			return getResolution( spimSource, resolutionOption, resolutionSpec );
 		}
-		else if( resolutionOption.equals( MOVING ))
+		else if( resolutionOption.equals( MOVING ) )
 		{
-			if( bwData.targetSourceIndices.length <= 0 )
+			if( bwData.numTargetSources() <= 0 )
 				return null;
 
-			final Source< ? > spimSource = bwData.sources.get(
-					bwData.movingSourceIndices[ 0 ]).getSpimSource();
+			final Source< ? > spimSource = bwData.getMovingSource( 0 ).getSpimSource();
 			return getResolution( spimSource, resolutionOption, resolutionSpec );
 		}
 		else if( resolutionOption.equals( SPECIFIED ))
@@ -343,8 +339,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			final double[] inputres = resolutionFromSource( source );
 
+			final int N  = outputResolution.length <= rai.numDimensions() ? outputResolution.length : rai.numDimensions();
 			final long[] max = new long[ rai.numDimensions() ];
-			for( int d = 0; d < rai.numDimensions(); d++ )
+			for( int d = 0; d < N; d++ )
 			{
 				max[ d ] = (long)Math.ceil( ( inputres[ d ] * rai.dimension( d )) / outputResolution[ d ]);
 			}
@@ -353,6 +350,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
 		{
+			final FinalInterval interval = new FinalInterval(
+					Intervals.minAsLongArray( rai ),
+					Intervals.maxAsLongArray( rai ));
+
+			if( transform == null )
+				return interval;
+
 			final double[] movingRes = resolutionFromSource( source );
 			final int ndims = transform.numSourceDimensions();
 			final AffineTransform movingPixelToPhysical = new AffineTransform( ndims );
@@ -371,10 +375,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			seq.add( movingPixelToPhysical );
 			seq.add( transform.inverse() );
 			seq.add( outputResolution2Pixel.inverse() );
-
-			final FinalInterval interval = new FinalInterval(
-					Intervals.minAsLongArray( rai ),
-					Intervals.maxAsLongArray( rai ));
 
 			return bboxEst.estimatePixelInterval(seq, interval);
 			//			return BigWarpExporter.estimateBounds( seq, interval );
@@ -450,26 +450,26 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] outputResolution) {
 
 		if (fieldOfViewOption.equals(TARGET)) {
-			if (bwData.targetSourceIndices.length <= 0) {
+			if (bwData.numTargetSources() <= 0) {
 				System.err.println("Requested target fov but target image is missing.");
 				return null;
 			}
 
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.targetSourceIndices[0]).getSpimSource(),
+							bwData.getTargetSource( 0 ).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(MOVING_WARPED)) {
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							bwData.getMovingSource( 0 ).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(UNION_TARGET_MOVING)) {
 			return Stream.of(
 					getPixelInterval(
-							bwData.sources.get(bwData.movingSourceIndices[0]).getSpimSource(),
+							bwData.getMovingSource( 0 ).getSpimSource(),
 							landmarks, transform, fieldOfViewOption, bboxEst, outputResolution))
 					.collect(Collectors.toList());
 		} else if (fieldOfViewOption.equals(SPECIFIED_PIXEL)) {
@@ -820,18 +820,21 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
-		final int numChannels = bwData.movingSourceIndices.length;
-		final int[] movingSourceIndexList = bwData.movingSourceIndices;
+//		int numChannels = bwData.movingSourceIndexList.size();
+		final int numChannels = bwData.numMovingSources();
 		final List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-				bwData.sources,
+				bwData.sourceInfos,
 				landmarks.getNumdims(),
 				bwData );
 
 		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).updateTransform( invXfm );
-			((WarpedSource< ? >) (sourcesxfm.get( movingSourceIndexList[ i ]).getSpimSource())).setIsTransformed( true );
+			final SourceAndConverter< T > originalMovingSource = bwData.getMovingSource( i );
+			final int originalIdx =  bwData.sources.indexOf( originalMovingSource );
+
+			((WarpedSource< ? >) (sourcesxfm.get( originalIdx).getSpimSource())).updateTransform( invXfm );
+			((WarpedSource< ? >) (sourcesxfm.get( originalIdx).getSpimSource())).setIsTransformed( true );
 		}
 
 		final ProgressWriter progressWriter = new ProgressWriterIJ();
@@ -982,10 +985,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 		pixelRenderToPhysical.concatenate( offsetTransform );
 
 		// render and write
-		final int N = data.movingSourceIndices.length;
+		final int N = data.numMovingSources();
 		for ( int i = 0; i < N; i++ )
 		{
-			final int movingSourceIndex = data.movingSourceIndices[ i ];
+			final SourceAndConverter< S > originalMovingSource = data.getMovingSource( i );
+			final int movingSourceIndex = data.sources.indexOf( originalMovingSource );
 			@SuppressWarnings( "unchecked" )
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > )sources.get( movingSourceIndex ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
@@ -994,7 +998,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			final IntervalView< T > img = Views.interval( Views.raster( rai ),
 					Intervals.zeroMin( outputInterval ) );
-			final String srcName = data.sources.get( data.movingSourceIndices[ i ]).getSpimSource().getName();
+			final String srcName = originalMovingSource.getSpimSource().getName();
 
 			String destDataset = dataset;
 			if( N >  1 )
@@ -1067,12 +1071,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		gd.addChoice( "Transform type",
 				new String[] {
-					TransformTypeSelectDialog.TPS,
-					TransformTypeSelectDialog.AFFINE,
-					TransformTypeSelectDialog.SIMILARITY,
-					TransformTypeSelectDialog.ROTATION,
-					TransformTypeSelectDialog.TRANSLATION },
-				TransformTypeSelectDialog.TPS);
+					BigWarpTransform.TPS,
+					BigWarpTransform.AFFINE,
+					BigWarpTransform.SIMILARITY,
+					BigWarpTransform.ROTATION,
+					BigWarpTransform.TRANSLATION },
+				BigWarpTransform.TPS);
 
 		gd.addMessage( "Field of view and resolution:" );
 		gd.addChoice( "Resolution",

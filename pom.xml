@@ -11,7 +11,7 @@
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>8.0.1-SNAPSHOT</version>
+	<version>9.0.0-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
@@ -118,16 +118,25 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
+		<imglib2.version>6.2.0</imglib2.version>
+		<imglib2-realtransform.version>4.0.1</imglib2-realtransform.version>
+
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
+		<jitk-tps.version>3.0.3</jitk-tps.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<n5.version>3.0.0</n5.version>
-		<n5-ij.version>3.2.4</n5-ij.version>
+		<n5.version>3.0.2</n5.version>
+		<n5-ij.version>3.2.6</n5-ij.version>
+		<n5-hdf5.version>2.0.1</n5-hdf5.version>
+		<n5-aws-s3.version>4.0.1</n5-aws-s3.version>
+		<n5-google-cloud.version>4.0.0</n5-google-cloud.version>
 		<n5-imglib2.version>7.0.0</n5-imglib2.version>
-		<n5-universe.version>1.0.1</n5-universe.version>
+		<n5-universe.version>1.2.0</n5-universe.version>
+		<n5-viewer_fiji.version>5.3.1</n5-viewer_fiji.version>
+		<n5-zarr.version>1.0.1</n5-zarr.version>
 		<bigdataviewer-core.version>10.4.8</bigdataviewer-core.version>
 
 	</properties>
@@ -144,6 +153,10 @@
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>ij</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej</artifactId>
 		</dependency>
 
 		<!-- ImgLib2 dependencies -->
@@ -238,11 +251,25 @@
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-aws-s3</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-google-cloud</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-viewer_fiji</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
+			<artifactId>n5-zarr</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.janelia.saalfeldlab</groupId>
 			<artifactId>n5-universe</artifactId>
 			<version>${n5-universe.version}</version>
 		</dependency>
-
-
 		<!-- OME dependencies -->
 		<dependency>
 			<groupId>ome</groupId>
@@ -306,6 +333,10 @@
 			<artifactId>alphanumeric-comparator</artifactId>
 			<version>${alphanumeric-comparator.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.formdev</groupId>
+			<artifactId>flatlaf</artifactId>
+		</dependency>
 
 		<!-- Test scope dependencies -->
 		<dependency>
@@ -313,5 +344,45 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>xmlunit</groupId>
+			<artifactId>xmlunit</artifactId>
+			<version>1.5</version>
+		</dependency>
+
 	</dependencies>
+
+	<profiles>
+		<profile>
+			<id>default</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<excludes>
+								<exclude>**/SerializationTest.java</exclude>
+							</excludes>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>uiTests</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
 </project>

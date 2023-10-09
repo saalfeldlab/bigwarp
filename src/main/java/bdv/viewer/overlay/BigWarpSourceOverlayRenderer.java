@@ -24,23 +24,60 @@ package bdv.viewer.overlay;
 import java.awt.Font;
 import java.awt.Graphics2D;
 
+import bdv.img.WarpedSource;
+import bdv.viewer.Source;
+import bdv.viewer.SourceAndConverter;
+import bdv.viewer.ViewerState;
+
 public class BigWarpSourceOverlayRenderer extends SourceInfoOverlayRenderer
 {
+	private boolean indicateTransformed = true;
+
+	// are any visible source in this viewer transformed
+	private boolean anyTransformed = false;
 
 	@Override
 	public synchronized void paint( final Graphics2D g )
 	{
-		g.setFont( new Font( "Monospaced", Font.PLAIN, 12 ) );
-
-		int actual_width = g.getFontMetrics().stringWidth( sourceName );
-		g.drawString( sourceName, ( int ) g.getClipBounds().getWidth() - actual_width - 10, 12 );
-
-		if( !groupName.isEmpty() )
+		super.paint( g );
+		if( indicateTransformed && anyTransformed )
 		{
-			String groupStringBracket = "[ " + groupName + " ]";
-			int actual_width_group = g.getFontMetrics().stringWidth( groupStringBracket );
-			g.drawString( groupStringBracket,
-					( int ) g.getClipBounds().getWidth() - actual_width - actual_width_group - 20, 12 );
+			g.setFont( new Font( "Monospaced", Font.BOLD, 16 ) );
+			int tformedWidth = g.getFontMetrics().stringWidth( "TRANSFORMED" );
+			g.drawString( "TRANSFORMED", 
+					( int ) ( g.getClipBounds().getWidth()  - tformedWidth ) / 2,
+					( int ) g.getClipBounds().getHeight() - 16 );
 		}
+	}
+
+	/**
+	 * Update data to show in the overlay.
+	 *
+	 * Checks whether any sources in this viewer are transformed in order to indicate that fact.
+	 */
+	@Override
+	public synchronized void setViewerState( final ViewerState state )
+	{
+		super.setViewerState( state );
+
+		anyTransformed = false;
+		for( SourceAndConverter<?> vs : state.getVisibleSources())
+		{
+			Source< ? > src = vs.getSpimSource();
+			if( src instanceof WarpedSource )
+			{
+				WarpedSource<?> ws = (WarpedSource<?>)src;
+				if( ws.isTransformed() )
+				{
+					anyTransformed = true;
+					break;
+				}
+			}
+		}
+	}
+
+	public void setIndicateTransformed( final boolean indicateTransformed )
+	{
+		this.indicateTransformed = indicateTransformed;
 	}
 }

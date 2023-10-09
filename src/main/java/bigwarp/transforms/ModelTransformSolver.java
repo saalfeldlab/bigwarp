@@ -28,18 +28,23 @@ import mpicbg.models.InvertibleCoordinateTransform;
 import mpicbg.models.Model;
 import mpicbg.models.NotEnoughDataPointsException;
 
-public class ModelTransformSolver implements TransformSolver< WrappedCoordinateTransform >
+public class ModelTransformSolver extends AbstractTransformSolver< WrappedCoordinateTransform >
 {
-	private Model< ? > model;
+	private final Model< ? > model;
 
 	public ModelTransformSolver( Model< ? > model )
 	{
 		this.model = model;
 	}
-	
+
+	public Model< ? > getModel()
+	{
+		return model;
+	}
+
 	public WrappedCoordinateTransform solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
-		double[] w = new double[ mvgPts[ 0 ].length ];
+		final double[] w = new double[ mvgPts[ 0 ].length ];
 		Arrays.fill( w, 1.0 );
 
 		try {

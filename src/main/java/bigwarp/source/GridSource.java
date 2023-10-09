@@ -23,14 +23,14 @@ package bigwarp.source;
 
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
-import bdv.viewer.SourceAndConverter;
-import bigwarp.BigWarp.BigWarpData;
+import bigwarp.BigWarpData;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
@@ -78,7 +78,11 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	private static Interval getInterval( BigWarpData<?> data )
 	{
 //		return new FinalInterval( data.sources.get( data.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
-		return new FinalInterval( data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+//		return new FinalInterval( data.sources.get( data.movingSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 ));
+		BoundingBoxEstimation bbe = new BoundingBoxEstimation();
+		AffineTransform3D affine = new AffineTransform3D();
+		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
+		return bbe.estimatePixelInterval(  affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
 	}
 
 	public void setGridSpacing( double spacing )
@@ -143,7 +147,8 @@ public class GridSource< T extends RealType< T >> implements Source< T >
 	@Override
 	public VoxelDimensions getVoxelDimensions()
 	{
-		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+//		return sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
+		return sourceData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 	}
 
 	@Override

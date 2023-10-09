@@ -118,7 +118,6 @@ public class BwN5CosemMultiScaleMetadata //extends MultiscaleMetadata<N5CosemMet
 //		final List<String> paths = new ArrayList<>();
 //
 //        children.forEach( c -> {
-////            System.out.println( c.getPath() );
 //			if( scaleLevelNodes.containsKey( c.getNodeName() ))
 //			{
 //				paths.add( c .getPath());
