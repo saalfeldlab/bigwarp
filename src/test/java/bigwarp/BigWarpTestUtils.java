@@ -59,13 +59,15 @@ public class BigWarpTestUtils
 			throw new RuntimeException( e );
 		}
 
-		return createTemp3DImage( tmpImgPath );
+		return createTemp3DImage( format, tmpImgPath );
 	}
 
-	private static String create3DImage( final Path tmpImgPath ) throws IOException
+	private static String create3DImage( final String format, final Path tmpImgPath ) throws IOException
 	{
 		final ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
-		IJ.save( img3d, tmpImgPath.toFile().getCanonicalPath() );
+		System.out.println( tmpImgPath.toString());
+		IJ.saveAs(img3d, format, tmpImgPath.toString());
+
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
 	}
@@ -76,11 +78,11 @@ public class BigWarpTestUtils
 	 * @param imagePath of the temporary image file
 	 * @return the path to the temporary image file
 	 */
-	public static String createTemp3DImage( Path imagePath )
+	public static String createTemp3DImage( final String format, Path imagePath )
 	{
 		try
 		{
-			return create3DImage( imagePath );
+			return create3DImage( format, imagePath );
 		}
 		catch ( final Exception e )
 		{
@@ -90,10 +92,11 @@ public class BigWarpTestUtils
 		}
 	}
 
-	private static String create2DImage( final Path tmpImgPath ) throws IOException
+	private static String create2DImage( final String format, final Path tmpImgPath ) throws IOException
 	{
 		final ImagePlus img2d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 1, NewImage.FILL_RAMP );
-		IJ.save( img2d, tmpImgPath.toFile().getCanonicalPath() );
+		System.out.println( tmpImgPath.toString());
+		IJ.saveAs(img2d, format, tmpImgPath.toString());
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
 	}
@@ -114,7 +117,7 @@ public class BigWarpTestUtils
 			tmpImg = Files.createTempFile( title, "." + format );
 			//noinspection ResultOfMethodCallIgnored
 			tmpImg.toFile().delete();
-			return create2DImage( tmpImg);
+			return create2DImage( format, tmpImg );
 		}
 		catch ( final Exception e )
 		{
@@ -242,7 +245,7 @@ public class BigWarpTestUtils
 	{
 		final BigWarpData< T > data = BigWarpInit.initData();
 		if (sourcePath != null) {
-			createTemp3DImage( Paths.get(sourcePath) );
+			createTemp3DImage( "tif", Paths.get(sourcePath) );
 		}
 
 		final String tmpPath = sourcePath != null ? sourcePath : createTemp3DImage( "img", "tif" );

@@ -25,18 +25,17 @@ import org.junit.Test;
 import bdv.viewer.Source;
 import bigwarp.BigWarpData;
 import bigwarp.BigWarpInit;
-import bigwarp.BigWarpTestUtils;
 import bigwarp.source.SourceInfo;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.type.NativeType;
 
 public class UrlParseTest
 {
-	public static final String TIFF_FILE_3D = BigWarpTestUtils.createTemp3DImage( "img3d", "tif" );
+	public static final String TIFF_FILE_3D = "src/test/resources/testdata/img3d.tif";
 
-	public static final String PNG_FILE_2D = BigWarpTestUtils.createTemp2DImage( "img2d", "png" );
+	public static final String PNG_FILE_2D = "src/test/resources/testdata/img2d.png";
 
-	public static final String TIFF_STACK_DIR = BigWarpTestUtils.createTemp3DImageStack( "imgDir3d" );
+	public static final String TIFF_STACK_DIR = "src/test/resources/testdata/imgDir";
 
 	private Class< N5FSReader > n5Clazz;
 
