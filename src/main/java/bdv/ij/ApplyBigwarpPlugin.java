@@ -822,19 +822,18 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 //		int numChannels = bwData.movingSourceIndexList.size();
 		final int numChannels = bwData.numMovingSources();
-		final List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-				bwData.sourceInfos,
-				landmarks.getNumdims(),
-				bwData );
+//		final List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
+//				bwData.sourceInfos,
+//				landmarks.getNumdims(),
+//				bwData );
 
 		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final SourceAndConverter< T > originalMovingSource = bwData.getMovingSource( i );
-			final int originalIdx =  bwData.sources.indexOf( originalMovingSource );
-
-			((WarpedSource< ? >) (sourcesxfm.get( originalIdx).getSpimSource())).updateTransform( invXfm );
-			((WarpedSource< ? >) (sourcesxfm.get( originalIdx).getSpimSource())).setIsTransformed( true );
+			final SourceAndConverter< T > movingSource = bwData.getMovingSource( i );
+//			final int originalIdx = bwData.sources.indexOf(movingSource);
+			((WarpedSource<?>)(movingSource.getSpimSource())).updateTransform(invXfm);
+			((WarpedSource<?>)(movingSource.getSpimSource())).setIsTransformed(true);
 		}
 
 		final ProgressWriter progressWriter = new ProgressWriterIJ();
@@ -855,7 +854,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final String unit = ApplyBigwarpPlugin.getUnit( bwData, resolutionOption );
-			runN5Export( bwData, sourcesxfm, fieldOfViewOption,
+			runN5Export( bwData, bwData.sources, fieldOfViewOption,
 					outputIntervalList.get( 0 ), interp,
 					offset, res, unit,
 					progressWriter, writeOpts,
@@ -865,12 +864,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		else
 		{
 			final boolean show;
-			if( writeOpts == null || writeOpts.pathOrN5Root == null )
+			if( writeOpts == null || writeOpts.pathOrN5Root == null || writeOpts.pathOrN5Root.isEmpty())
 				show = true;
 			else
 				show = false;
 
-			return runExport( bwData, sourcesxfm, fieldOfViewOption,
+			return runExport( bwData, bwData.sources, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
 					offset, res, isVirtual, nThreads,
 					progressWriter, show, wait, writeOpts );
@@ -1228,9 +1227,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 
 		}
-		bigwarpdata.wrapUp();
 
 		final int nd = BigWarp.detectNumDims( bigwarpdata.sources );
+		BigWarp.wrapMovingSources(nd, bigwarpdata);
 
 		final int[] blockSize = ApplyBigwarpPlugin.parseBlockSize( blockSizeString, nd );
 		final Compression compression = ApplyBigwarpPlugin.getCompression( compressionString );

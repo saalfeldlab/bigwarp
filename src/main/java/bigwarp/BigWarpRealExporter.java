@@ -138,7 +138,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final SourceAndConverter< T > msrcTmp = bwData.getMovingSource( i );
 			final RealRandomAccessible< T > raiRaw = ( RealRandomAccessible< T > ) bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
 
 			// apply the transformations
@@ -159,7 +158,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public ImagePlus export()
 	{
 		final int numChannels = bwData.numMovingSources();
@@ -229,7 +227,6 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			ip.getCalibration().zOrigin = offsetTransform.get( 2, 3 );
 		}
 
-//		ip.setTitle( sources.get( movingSourceIndexList[ 0 ]).getSpimSource().getName() + nameSuffix );
 		ip.setTitle( bwData.getMovingSource( 0 ).getSpimSource().getName() + nameSuffix );
 
 		return ip;
