@@ -1118,10 +1118,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addNumericField( "threads", 4, 0 );
 
 		gd.addMessage( "Writing options (leave empty to opena new image window)" );
-		gd.addDirectoryOrFileField( "File or n5 root", "" );
-		gd.addStringField( "n5 dataset", "" );
-		gd.addStringField( "n5 block size", "32" );
-		gd.addChoice( "n5 compression", new String[] {
+		gd.addDirectoryOrFileField( "File_or_n5_root", "" );
+		gd.addStringField( "n5_dataset", "" );
+		gd.addStringField( "n5_block_size", "32" );
+		gd.addChoice( "n5_compression", new String[] {
 				N5Exporter.GZIP_COMPRESSION,
 				N5Exporter.RAW_COMPRESSION,
 				N5Exporter.LZ4_COMPRESSION,
