@@ -595,16 +595,18 @@ public class BigWarp< T >
 		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
 		NavigationKeys.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
-		final BigWarpActions bwActions = new BigWarpActions( inputTriggerConfig, "bigwarp" );
-		BigWarpActions.installViewerActions( bwActions, getViewerFrameP(), this );
-		BigWarpActions.installViewerActions( bwActions, getViewerFrameQ(), this );
+		final BigWarpActions bwActionsP = new BigWarpActions( inputTriggerConfig, "bigwarp" );
+		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarp" );
+		BigWarpActions.installViewerActions( bwActionsP, getViewerFrameP(), this );
+		BigWarpActions.installViewerActions( bwActionsQ, getViewerFrameQ(), this );
 		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
 //		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
 		keymap.updateListeners().add( () -> {
 
-			bwActions.updateKeyConfig( keymap.getConfig() );
+			bwActionsP.updateKeyConfig( keymap.getConfig() );
+			bwActionsQ.updateKeyConfig( keymap.getConfig() );
 			tableActions.updateKeyConfig( keymap.getConfig() );
 
 			viewerFrameP.getTransformBehaviours().updateKeyConfig( keymap.getConfig() );
