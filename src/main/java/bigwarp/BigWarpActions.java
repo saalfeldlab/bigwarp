@@ -623,8 +623,8 @@ public class BigWarpActions extends Actions
 		map.put( TOGGLE_MOVING_IMAGE_DISPLAY, "T" );
 
 		map.put( JUMP_TO_SELECTED_POINT, "D" );
-		map.put( String.format( JUMP_TO_NEXT_POINT, true), "ctrl D" );
-		map.put( String.format( JUMP_TO_NEXT_POINT, false), "ctrl shift D" );
+		map.put( JUMP_TO_NEXT_POINT, "ctrl D" );
+		map.put( JUMP_TO_PREV_POINT, "ctrl shift D" );
 		map.put( JUMP_TO_NEAREST_POINT, "E" );
 
 		map.put( EXPORT_WARP, "ctrl W" );
@@ -1474,7 +1474,6 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			System.out.println("load landmarks");
 			bw.loadLandmarks();
 		}
 	}
