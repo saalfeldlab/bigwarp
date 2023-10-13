@@ -116,6 +116,7 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.ui.appearance.AppearanceManager;
 import bdv.ui.appearance.AppearanceSettingsPage;
+import bdv.ui.appearance.BwAppearanceManager;
 import bdv.ui.keymap.Keymap;
 import bdv.ui.keymap.KeymapSettingsPage;
 import bdv.util.BoundedRange;
@@ -399,7 +400,7 @@ public class BigWarp< T >
 		final KeymapManager optionsKeymapManager = options.getValues().getKeymapManager();
 		final AppearanceManager optionsAppearanceManager = options.values.getAppearanceManager();
 		keymapManager = optionsKeymapManager != null ? optionsKeymapManager : new KeymapManager( configDir );
-		appearanceManager = optionsAppearanceManager != null ? optionsAppearanceManager : new AppearanceManager( configDir );
+		appearanceManager = optionsAppearanceManager != null ? optionsAppearanceManager : new BwAppearanceManager( configDir );
 
 		InputTriggerConfig inputTriggerConfig = options.values.getInputTriggerConfig();
 		final Keymap keymap = this.keymapManager.getForwardSelectedKeymap();
