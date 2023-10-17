@@ -95,6 +95,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
+
+		updateBoundingIntervals();
 	}
 
 	@Override
