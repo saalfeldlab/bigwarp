@@ -326,7 +326,7 @@ public class BigWarpInit
 	@Deprecated
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
 	{
-		return add( bwdata, src, setupId, numTimepoints, isMoving, null );
+		return add( bwdata, createSources( bwdata, src, setupId, isMoving));
 	}
 
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo )
@@ -361,8 +361,8 @@ public class BigWarpInit
 	@Deprecated
 	public static < T > BigWarpData< T > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
 	{
-		addSourceToListsGenericType( src, setupId, bwdata.converterSetups, bwdata.sources );
-//		bwdata.transforms.add( transform );
+		final LinkedHashMap<Source<T>, SourceInfo> info = createSources(bwdata, src, numTimepoints, isMoving);
+		add( bwdata, info, transform, null );
 		return bwdata;
 	}
 
