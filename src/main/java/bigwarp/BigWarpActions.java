@@ -264,7 +264,10 @@ public class BigWarpActions extends Actions
 	public static final String[] DEACTIVATE_SELECTED_KEYS = new String[]{ NOT_MAPPED };
 
 	public static final String DEBUG = "debug";
+	public static final String[] DEBUG_KEYS = new String[] { "F11" };
+
 	public static final String GARBAGE_COLLECTION = "garbage collection";
+	public static final String[] GARBAGE_COLLECTION_KEYS = new String[] { "F9" };
 
 	public static final String XYPLANE = "xyPlane";
 	public static final String[] XYPLANE_KEYS = new String[] { "shift Z" };
@@ -361,6 +364,9 @@ public class BigWarpActions extends Actions
 			descriptions.add( XYPLANE, XYPLANE_KEYS, "xy plane" );
 			descriptions.add( XZPLANE, XZPLANE_KEYS, "xz plane" );
 			descriptions.add( YZPLANE, YZPLANE_KEYS, "yz plane" );
+
+			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
+			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
 		}
 	}
 
@@ -410,6 +416,9 @@ public class BigWarpActions extends Actions
 
 			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmark points." );
 			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS, "Toggle visibility of landmark point names." );
+
+			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
+			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
 		}
 	}
 
@@ -490,6 +499,9 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( () -> bw.alignActive( AlignPlane.XY ), XYPLANE, XYPLANE_KEYS );
 		actions.runnableAction( () -> bw.alignActive( AlignPlane.XZ ), XZPLANE, XZPLANE_KEYS );
 		actions.runnableAction( () -> bw.alignActive( AlignPlane.ZY ), YZPLANE, YZPLANE_KEYS );
+
+		actions.namedAction( new DebugAction(DEBUG, bw), DEBUG_KEYS);
+		actions.namedAction( new GarbageCollectionAction(GARBAGE_COLLECTION), GARBAGE_COLLECTION_KEYS);
 	}
 
 	public static void installTableActions(
@@ -560,6 +572,9 @@ public class BigWarpActions extends Actions
 		actions.namedAction( new ToggleBoxAndTexOverlayVisibility( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, bw ), NOT_MAPPED );
 		actions.namedAction( new TogglePointsVisibleAction( TOGGLE_POINTS_VISIBLE, bw ),  TOGGLE_POINTS_VISIBLE_KEYS );
 		actions.namedAction( new TogglePointNameVisibleAction( TOGGLE_POINT_NAMES_VISIBLE, bw ), TOGGLE_POINT_NAMES_VISIBLE_KEYS);
+
+		actions.namedAction( new DebugAction(DEBUG, bw), DEBUG_KEYS);
+		actions.namedAction( new GarbageCollectionAction(GARBAGE_COLLECTION), GARBAGE_COLLECTION_KEYS);
 	}
 
 	/**
