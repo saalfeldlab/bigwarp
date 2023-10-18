@@ -2164,28 +2164,36 @@ public class BigWarp< T >
 			else
 				pt = new double[] {
 						(Double) landmarkModel.getValueAt( row, offset + 2 ),
-						(Double) landmarkModel.getValueAt( row, offset + 3 ), 0.0 };
+						(Double) landmarkModel.getValueAt( row, offset + 3 ),
+						0.0 };
 		}
 
 		// we have an unmatched point
 		if ( Double.isInfinite( pt[ 0 ] ) )
 			return;
 
-		final AffineTransform3D transform = viewer.state().getViewerTransform();
-		final AffineTransform3D xfmCopy = transform.copy();
-		xfmCopy.set( 0.0, 0, 3 );
-		xfmCopy.set( 0.0, 1, 3 );
-		xfmCopy.set( 0.0, 2, 3 );
+		final AffineTransform3D startTransform = viewer.state().getViewerTransform();
+		final AffineTransform3D destinationTransform = startTransform.copy();
+		destinationTransform.set( 0.0, 0, 3 );
+		destinationTransform.set( 0.0, 1, 3 );
+		destinationTransform.set( 0.0, 2, 3 );
 
 		final double[] center = new double[] { viewer.getWidth() / 2, viewer.getHeight() / 2, 0 };
 		final double[] ptxfm = new double[ 3 ];
-		xfmCopy.apply( pt, ptxfm );
+		destinationTransform.apply( pt, ptxfm );
 
 		// select appropriate row in the table
 		landmarkTable.setRowSelectionInterval( row, row );
 
+		// if 2d, make sure the viewer transform change doesn't change the z-slice shown
+		final double[] translation; //  = new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] };
+		if( ndims == 2 )
+			translation = new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], startTransform.get(2, 3) };
+		else
+			translation = new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] };
+
 		// this should work fine in the 2d case
-		final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
+		final TranslationAnimator animator = new TranslationAnimator( startTransform, translation, 300 );
 		viewer.setTransformAnimator( animator );
 	}
 
@@ -3608,62 +3616,35 @@ public class BigWarp< T >
 				if( row < 0 )
 					return;
 
-				double[] pt = null;
-				int offset = 0;
-
+				final boolean moving;
 				final BigWarpViewerPanel viewer;
 				if ( column >= ( 2 + ndims ) )
 				{
 					// clicked on a fixed point
 					viewer = BigWarp.this.viewerQ;
-					offset = ndims;
+					moving = false;
 				}
 				else if ( column >= 2 && column < ( 2 + ndims ) )
 				{
 					// clicked on a moving point
 					viewer = BigWarp.this.viewerP;
-
-					if ( BigWarp.this.viewerP.getOverlay().getIsTransformed() )
-						if ( BigWarp.this.landmarkModel.isWarped( row ) )
-							pt = LandmarkTableModel.toPrimitive( BigWarp.this.landmarkModel.getWarpedPoints().get( row ) );
-						else
-							offset = ndims;
+					moving = true;
 				}
 				else
 				{
-					// we're in a column that doesn't correspond to a point and
-					// should do nothing
+					// we're in a column that doesn't correspond to a point and should do nothing
+					moving = true;
 					return;
 				}
 
-				// the pt variable might be set above by grabbing the warped point.
-				// if so, stick with it, else grab the appropriate value from the table
-				if ( pt == null )
-				{
-					if ( ndims == 3 )
-						pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), ( Double ) target.getValueAt( row, offset + 4 ) };
-					else
-						pt = new double[] { ( Double ) target.getValueAt( row, offset + 2 ), ( Double ) target.getValueAt( row, offset + 3 ), 0.0 };
-				}
-
-				// we have an unmatched point
-				if ( Double.isInfinite( pt[ 0 ] ) )
+				final LandmarkTableModel ltm = BigWarp.this.landmarkModel;
+				if( moving && !ltm.isMovingPoint( row ))
 					return;
 
-				final AffineTransform3D transform = viewer.state().getViewerTransform();
-				final AffineTransform3D xfmCopy = transform.copy();
-				xfmCopy.set( 0.0, 0, 3 );
-				xfmCopy.set( 0.0, 1, 3 );
-				xfmCopy.set( 0.0, 2, 3 );
+				if( !moving && !ltm.isFixedPoint( row ))
+					return;
 
-				final double[] center = new double[] { viewer.getWidth() / 2, viewer.getHeight() / 2, 0
-				};
-				final double[] ptxfm = new double[ 3 ];
-				xfmCopy.apply( pt, ptxfm );
-
-				// this should work fine in the 2d case
-				final TranslationAnimator animator = new TranslationAnimator( transform, new double[] { center[ 0 ] - ptxfm[ 0 ], center[ 1 ] - ptxfm[ 1 ], -ptxfm[ 2 ] }, 300 );
-				viewer.setTransformAnimator( animator );
+				jumpToLandmark(row, viewer);
 			}
 			else
 			{
