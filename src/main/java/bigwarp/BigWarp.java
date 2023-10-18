@@ -590,11 +590,13 @@ public class BigWarp< T >
 		appearanceManager.addLafComponent( fileChooser );
 		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
-		final Actions navigationActions = new Actions( inputTriggerConfig, "navigation" );
-		navigationActions.install( getViewerFrameP().getKeybindings(), "navigation" );
-		NavigationKeys.install( navigationActions, getViewerFrameP().getViewerPanel(), options.values.is2D() );
-		navigationActions.install( getViewerFrameQ().getKeybindings(), "navigation" );
-		NavigationKeys.install( navigationActions, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
+		final Actions navigationActionsP = new Actions( inputTriggerConfig, "navigation" );
+		navigationActionsP.install( getViewerFrameP().getKeybindings(), "navigation" );
+		NavigationKeys.install( navigationActionsP, getViewerFrameP().getViewerPanel(), options.values.is2D() );
+
+		final Actions navigationActionsQ = new Actions( inputTriggerConfig, "navigation" );
+		navigationActionsQ.install( getViewerFrameQ().getKeybindings(), "navigation" );
+		NavigationKeys.install( navigationActionsQ, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
 		final BigWarpActions bwActionsP = new BigWarpActions( inputTriggerConfig, "bigwarp" );
 		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarp" );
