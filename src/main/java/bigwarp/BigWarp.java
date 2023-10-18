@@ -821,6 +821,7 @@ public class BigWarp< T >
 
 		updateSourceBoundingBoxEstimators();
 
+		setAllSourcesActiveInFused();
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
 		viewerP.state().setCurrentGroup( tgtGrp );
@@ -938,6 +939,15 @@ public class BigWarp< T >
 			viewerFrameQ.getConverterSetups().put( sac, setup );
 			setupAssignments.addSetup( setup );
 		}
+	}
+
+	/**
+	 * Sets the viewer state so that every source is shown in vused mode
+	 */
+	protected void setAllSourcesActiveInFused() {
+
+		viewerP.state().setSourcesActive(data.sources, true);
+		viewerQ.state().setSourcesActive(data.sources, true);
 	}
 
 	/**
