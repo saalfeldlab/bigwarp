@@ -42,8 +42,6 @@ import org.scijava.ui.behaviour.util.InputActionBindings;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.util.Prefs;
-import bdv.viewer.LandmarkPointMenu;
-import bdv.viewer.SourceAndConverter;
 import bdv.viewer.AbstractViewerPanel.AlignPlane;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
@@ -100,7 +98,7 @@ public class BigWarpActions extends Actions
 	public static final String[] ESTIMATE_WARP_KEYS = new String[] { "C" };
 
 	public static final String PRINT_TRANSFORM = "print transform";
-	public static final String[] PRINT_TRANSFORM_KEYS = new String[]{ "control shift T" };
+	public static final String[] PRINT_TRANSFORM_KEYS = new String[]{ "ctrl shift T" };
 
 	public static final String TOGGLE_ESTIMATE_WARP_ONDRAG = "toggle estimate warp on drag";
 	public static final String[] TOGGLE_ESTIMATE_WARP_ONDRAG_KEYS = new String[]{ NOT_MAPPED };
@@ -166,13 +164,13 @@ public class BigWarpActions extends Actions
 
 	// landmark options
 	public static final String LOAD_LANDMARKS = "load landmarks";
-	public static final String[] LOAD_LANDMARKS_KEYS = new String[]{ "control O" };
+	public static final String[] LOAD_LANDMARKS_KEYS = new String[]{ "ctrl O" };
 
 	public static final String SAVE_LANDMARKS = "save landmarks";
-	public static final String[] SAVE_LANDMARKS_KEYS = new String[]{ "control S" };
+	public static final String[] SAVE_LANDMARKS_KEYS = new String[]{ "ctrl S" };
 
 	public static final String QUICK_SAVE_LANDMARKS = "quick save landmarks";
-	public static final String[] QUICK_SAVE_LANDMARKS_KEYS = new String[]{ "control Q" };
+	public static final String[] QUICK_SAVE_LANDMARKS_KEYS = new String[]{ "ctrl Q" };
 
 	public static final String SET_BOOKMARK = "set bookmark";
 	public static final String[] SET_BOOKMARK_KEYS = new String[]{ "shift B" };
@@ -181,13 +179,13 @@ public class BigWarpActions extends Actions
 	public static final String[] GO_TO_BOOKMARK_KEYS = new String[]{ "B" };
 
 	public static final String GO_TO_BOOKMARK_ROTATION = "go to bookmark rotation";
-	public static final String[] GO_TO_BOOKMARK_ROTATION_KEYS = new String[]{ "control shift B" };
+	public static final String[] GO_TO_BOOKMARK_ROTATION_KEYS = new String[]{ "ctrl shift B" };
 
 	public static final String UNDO = "undo";
-	public static final String[] UNDO_KEYS = new String[]{ "control Z" };
+	public static final String[] UNDO_KEYS = new String[]{ "ctrl Z" };
 
 	public static final String REDO = "redo";
-	public static final String[] REDO_KEYS = new String[]{ "control shift Z", "control Y" };
+	public static final String[] REDO_KEYS = new String[]{ "ctrl shift Z", "ctrl Y" };
 
 	public static final String SELECT_TABLE_ROWS = "select table row %d";
 
@@ -228,16 +226,16 @@ public class BigWarpActions extends Actions
 	// export options
 	public static final String SAVE_WARPED = "save warped";
 	public static final String SAVE_WARPED_XML = "save warped xml";
-	public static final String[] SAVE_WARPED_XML_KEYS = new String[] { "ctrl E" };
+	public static final String[] SAVE_WARPED_XML_KEYS = new String[] { "ctrl shift E" };
 
-	public static final String EXPORT_IP = "export imageplus";
-	public static final String[] EXPORT_IP_KEYS = new String[] { "ctrl shift W" };
+	public static final String EXPORT_IMAGE = "export image";
+	public static final String[] EXPORT_IMAGE_KEYS = new String[] { "ctrl E" };
 
 	public static final String EXPORT_WARP = "export warp field";
 	public static final String[] EXPORT_WARP_KEYS = new String[] { "ctrl W" };
 
-	public static final String EXPORT_AFFINE = "export affine";
-	public static final String[] EXPORT_AFFINE_KEYS = new String[] { "ctrl A" };
+	public static final String EXPORT_AFFINE = "print affine";
+	public static final String[] EXPORT_AFFINE_KEYS = new String[] { "F5" };
 
 	public static final String CLEAR_MOVING = "table clear moving";
 	public static final String[] CLEAR_MOVING_KEYS = new String[] { "BACK_SPACE" };
@@ -254,7 +252,7 @@ public class BigWarpActions extends Actions
 	public static final String DELETE = "table delete";
 	public static final String[] DELETE_KEYS = new String[] { NOT_MAPPED };
 
-	public static final String DELETE_SELECTED = "table delete selected ";
+	public static final String DELETE_SELECTED = "table delete selected";
 	public static final String[] DELETE_SELECTED_KEYS = new String[] { "DELETE" };
 
 	public static final String ACTIVATE_SELECTED = "table activate selected";
@@ -337,11 +335,13 @@ public class BigWarpActions extends Actions
 			descriptions.add( COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS, "Collapse the BigDataViewer card panel" );
 
 			// export
-			descriptions.add( EXPORT_IP, EXPORT_IP_KEYS, "Export moving image to ImageJ." );
+			descriptions.add( EXPORT_IMAGE, EXPORT_IMAGE_KEYS, "Export the image" );
 			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
 			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
 			descriptions.add( PRINT_TRANSFORM,PRINT_TRANSFORM_KEYS, "Prints the current transformation." );
+
+
 
 			// landmarks
 			descriptions.add( LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS, "Load landmark from a file." );
@@ -417,6 +417,14 @@ public class BigWarpActions extends Actions
 			descriptions.add( TOGGLE_POINTS_VISIBLE, TOGGLE_POINTS_VISIBLE_KEYS, "Toggle visibility of landmark points." );
 			descriptions.add( TOGGLE_POINT_NAMES_VISIBLE, TOGGLE_POINT_NAMES_VISIBLE_KEYS, "Toggle visibility of landmark point names." );
 
+			// export
+			descriptions.add( EXPORT_IMAGE, EXPORT_IMAGE_KEYS, "Export the image" );
+			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
+			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
+			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
+			descriptions.add( PRINT_TRANSFORM,PRINT_TRANSFORM_KEYS, "Prints the current transformation." );
+
+
 			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
 			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
 		}
@@ -427,8 +435,8 @@ public class BigWarpActions extends Actions
 			final BigWarpViewerFrame bwFrame,
 			final BigWarp< ? > bw )
 	{
-
 		final InputActionBindings inputActionBindings = bwFrame.getKeybindings();
+
 		actions.install( inputActionBindings, "bw" );
 
 		actions.runnableAction( bw::saveProject, SAVE_PROJECT, SAVE_PROJECT_KEYS );
@@ -460,8 +468,10 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bwFrame::collapseCardPanel, COLLAPSE_CARDS, COLLAPSE_CARDS_KEYS );
 
 		// export
+		actions.runnableAction( () -> { bw.exportAsImagePlus( false ); }, EXPORT_IMAGE, EXPORT_IMAGE_KEYS );
 		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
 		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
+
 
 		// dialogs
 		actions.namedAction( new ToggleDialogAction( SHOW_HELP, bw.helpDialog ), SHOW_HELP_KEYS );
@@ -538,6 +548,7 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( ()->{}, COLLAPSE_CARDS, NOT_MAPPED );
 
 		// export
+		actions.runnableAction( () -> { bw.exportAsImagePlus( false ); }, EXPORT_IMAGE, EXPORT_IMAGE_KEYS );
 		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
 		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
 
@@ -645,6 +656,9 @@ public class BigWarpActions extends Actions
 		map.put( EXPORT_WARP, "ctrl W" );
 		map.put( EXPORT_AFFINE, "ctrl A" );
 
+		map.put( EXPORT_IMAGE, "F6" );
+
+
 		map.put( GO_TO_BOOKMARK, "B" );
 		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
 		map.put( SET_BOOKMARK, "shift B" );
@@ -727,29 +741,26 @@ public class BigWarpActions extends Actions
 		map.put( ESTIMATE_WARP, "C" );
 
 		map.put( MASK_SIZE_EDIT, "M" );
-		map.put( MASK_VIS_TOGGLE, "control M" );
+		map.put( MASK_VIS_TOGGLE, "ctrl M" );
 
-		map.put( UNDO, "control Z" );
-		map.put( REDO, "control Y" );
-		map.put( REDO, "control shift Z" );
+		map.put( UNDO, "ctrl Z" );
+		map.put( REDO, "ctrl Y" );
+		map.put( REDO, "ctrl shift Z" );
 
-		map.put( SAVE_LANDMARKS, "control S" );
-		map.put( QUICK_SAVE_LANDMARKS, "control Q" );
-		map.put( LOAD_LANDMARKS, "control O" );
+		map.put( SAVE_LANDMARKS, "ctrl S" );
+		map.put( QUICK_SAVE_LANDMARKS, "ctrl Q" );
+		map.put( LOAD_LANDMARKS, "ctrl O" );
 
-		map.put( EXPORT_IP, "control E" );
-//		map.put( SAVE_WARPED, "control alt shift E" );
-		map.put( SAVE_WARPED_XML, "control shift E" );
-
+//		map.put( SAVE_WARPED_XML, "ctrl shift E" );
 		map.put( CLEAR_SELECTED_MOVING, "BACK_SPACE" );
-		map.put( CLEAR_SELECTED_FIXED, "control BACK_SPACE" );
+		map.put( CLEAR_SELECTED_FIXED, "ctrl BACK_SPACE" );
 		map.put( DELETE_SELECTED, "DELETE" );
 
 		map.put(  String.format( SELECT_TABLE_ROWS, -1 ), "shift ESCAPE" );
 
 		map.put( TOGGLE_BOX_AND_TEXT_OVERLAY_VISIBLE, "F8" );
 		map.put( GARBAGE_COLLECTION, "F9" );
-		map.put( PRINT_TRANSFORM, "control shift T" );
+		map.put( PRINT_TRANSFORM, "ctrl shift T" );
 		map.put( DEBUG, "F11" );
 
 		return inputMap;
@@ -785,8 +796,8 @@ public class BigWarpActions extends Actions
 
 		new SaveWarpedAction( bw ).put( actionMap );
 		new SaveWarpedXmlAction( bw ).put( actionMap );
-		new ExportImagePlusAction( bw ).put( actionMap );
-		new ExportWarpAction( bw ).put( actionMap );
+//		new ExportImagePlusAction( bw ).put( actionMap );
+//		new ExportWarpAction( bw ).put( actionMap );
 		new ExportAffineAction( bw ).put( actionMap );
 
 		new LoadLandmarksAction( bw ).put( actionMap );
@@ -1531,7 +1542,7 @@ public class BigWarpActions extends Actions
 		BigWarp< ? > bw;
 		public ExportImagePlusAction( final BigWarp< ? > bw )
 		{
-			super( EXPORT_IP );
+			super( EXPORT_IMAGE );
 			this.bw = bw;
 		}
 		@Override
@@ -1622,7 +1633,6 @@ public class BigWarpActions extends Actions
 		@Override
 		public void actionPerformed(ActionEvent e)
 		{
-			System.out.println( "LandmarkGridGenerator.fillFromDialog( bw )" );
 			LandmarkGridGenerator.fillFromDialog( bw );
 		}
 	}

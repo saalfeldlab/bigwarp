@@ -590,18 +590,20 @@ public class BigWarp< T >
 		appearanceManager.addLafComponent( fileChooser );
 		SwingUtilities.invokeLater(() -> appearanceManager.updateLookAndFeel());
 
-		final Actions navigationActionsP = new Actions( inputTriggerConfig, "navigation" );
-		navigationActionsP.install( getViewerFrameP().getKeybindings(), "navigation" );
+		final Actions navigationActionsP = new Actions( inputTriggerConfig, "navigationMvg" );
+		navigationActionsP.install( getViewerFrameP().getKeybindings(), "navigationMvg" );
 		NavigationKeys.install( navigationActionsP, getViewerFrameP().getViewerPanel(), options.values.is2D() );
 
-		final Actions navigationActionsQ = new Actions( inputTriggerConfig, "navigation" );
-		navigationActionsQ.install( getViewerFrameQ().getKeybindings(), "navigation" );
+		final Actions navigationActionsQ = new Actions( inputTriggerConfig, "navigationFix" );
+		navigationActionsQ.install( getViewerFrameQ().getKeybindings(), "navigationFix" );
 		NavigationKeys.install( navigationActionsQ, getViewerFrameQ().getViewerPanel(), options.values.is2D() );
 
-		final BigWarpActions bwActionsP = new BigWarpActions( inputTriggerConfig, "bigwarp" );
-		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarp" );
+		final BigWarpActions bwActionsP = new BigWarpActions( inputTriggerConfig, "bigwarpMvg" );
 		BigWarpActions.installViewerActions( bwActionsP, getViewerFrameP(), this );
+
+		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarpFix" );
 		BigWarpActions.installViewerActions( bwActionsQ, getViewerFrameQ(), this );
+
 		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
 //		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
@@ -1184,7 +1186,7 @@ public class BigWarp< T >
 		if( ij != null )
 		{
 			fileMenu.addSeparator();
-			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ));
+			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ));
 			exportToImagePlus.setText( "Export moving image" );
 			fileMenu.add( exportToImagePlus );
 
@@ -1239,7 +1241,7 @@ public class BigWarp< T >
 	{
 		final ActionMap actionMap = landmarkFrame.getKeybindings().getConcatenatedActionMap();
 
-		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IP ) );
+		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ) );
 		exportToImagePlus.setText( "Export moving image" );
 		fileMenu.add( exportToImagePlus );
 
