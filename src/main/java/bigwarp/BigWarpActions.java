@@ -480,6 +480,10 @@ public class BigWarpActions extends Actions
 		actions.namedAction( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ), SHOW_WARPTYPE_DIALOG_KEYS );
 		actions.namedAction( new ToggleDialogAction( PREFERENCES_DIALOG, bw.preferencesDialog ), PREFERENCES_DIALOG_KEYS );
 
+		// warp vis options
+		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
+			actions.namedAction( new SetWarpVisTypeAction( t, bw ), NOT_MAPPED );
+
 		// landmarks unbound
 		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().selectAll(); }, LANDMARK_SELECT_ALL, NOT_MAPPED );
 		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().clearSelection(); }, LANDMARK_DESELECT_ALL, NOT_MAPPED );
@@ -558,6 +562,10 @@ public class BigWarpActions extends Actions
 		actions.namedAction( new ToggleDialogAction( VISIBILITY_AND_GROUPING_TGT, bw.activeSourcesDialogQ ), VISIBILITY_AND_GROUPING_TGT_KEYS );
 		actions.namedAction( new ToggleDialogAction( SHOW_WARPTYPE_DIALOG, bw.warpVisDialog ), SHOW_WARPTYPE_DIALOG_KEYS );
 		actions.namedAction( new ToggleDialogAction( PREFERENCES_DIALOG, bw.preferencesDialog ), PREFERENCES_DIALOG_KEYS );
+
+		// warp vis options
+		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
+			actions.namedAction( new SetWarpVisTypeAction( t, bw ), NOT_MAPPED );
 
 		// landmarks
 		actions.runnableAction( () -> { bw.getLandmarkPanel().getJTable().selectAll(); }, LANDMARK_SELECT_ALL, LANDMARK_SELECT_ALL_KEYS );
@@ -653,11 +661,9 @@ public class BigWarpActions extends Actions
 		map.put( JUMP_TO_PREV_POINT, "ctrl shift D" );
 		map.put( JUMP_TO_NEAREST_POINT, "E" );
 
+		map.put( EXPORT_IMAGE, "ctrl E" );
 		map.put( EXPORT_WARP, "ctrl W" );
 		map.put( EXPORT_AFFINE, "ctrl A" );
-
-		map.put( EXPORT_IMAGE, "F6" );
-
 
 		map.put( GO_TO_BOOKMARK, "B" );
 		map.put( GO_TO_BOOKMARK_ROTATION, "O" );
@@ -677,8 +683,6 @@ public class BigWarpActions extends Actions
 		for( final BigWarp.WarpVisType t: BigWarp.WarpVisType.values())
 		{
 			new SetWarpVisTypeAction( t, bw ).put( actionMap );
-			new SetWarpVisTypeAction( t, bw, bw.getViewerFrameP() ).put( actionMap );
-			new SetWarpVisTypeAction( t, bw, bw.getViewerFrameQ() ).put( actionMap );
 		}
 
 		new ResetActiveViewerAction( bw ).put( actionMap );
@@ -1238,39 +1242,36 @@ public class BigWarpActions extends Actions
 		private static final long serialVersionUID = 7370813069619338918L;
 
 		private BigWarp< ? > bw;
-		private BigWarpViewerFrame p;
 		private BigWarp.WarpVisType type;
 
 		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw )
 		{
-			this( type, bw, null );
+			super( getName( type ));
+			this.bw = bw;
+			this.type = type;
 		}
 
+		@Deprecated
 		public SetWarpVisTypeAction( final BigWarp.WarpVisType type, final BigWarp< ? > bw, BigWarpViewerFrame p )
 		{
-			super( getName( type, p ));
-			this.bw = bw;
-			this.p = p;
-			this.type = type;
+			this( type, bw );
 		}
 
 		@Override
 		public void actionPerformed( ActionEvent e )
 		{
-			if( p == null )
-				bw.setWarpVisMode( type, p, true );
-			else
-				bw.setWarpVisMode( type, p, false );
+			bw.setWarpVisMode( type );
 		}
 
+		@Deprecated
 		public static String getName( final BigWarp.WarpVisType type, BigWarpViewerFrame p )
 		{
-			if( p == null )
-				return String.format( SET_WARPTYPE_VIS, type.name() );
-			else if( p.isMoving() )
-				return String.format( SET_WARPTYPE_VIS_P, type.name() );
-			else
-				return String.format( SET_WARPTYPE_VIS_Q, type.name() );
+			return getName( type );
+		}
+
+		protected static String getName( final BigWarp.WarpVisType type )
+		{
+			return String.format( SET_WARPTYPE_VIS, type.name() );
 		}
 	}
 

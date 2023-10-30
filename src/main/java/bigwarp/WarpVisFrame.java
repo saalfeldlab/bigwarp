@@ -416,7 +416,6 @@ public class WarpVisFrame extends JDialog
 	public void setActions()
 	{
 		final ActionMap actionMap = bw.getViewerFrameP().getKeybindings().getConcatenatedActionMap();
-
 		landmarkColorButton.addActionListener( new ActionListener()
 		{
 			@Override
@@ -478,18 +477,25 @@ public class WarpVisFrame extends JDialog
 		warpMagSimilarityButton.setText("Similarity");
 		warpMagRigidButton.setText("Rigid");
 
-		warpGridLineButton.setAction(
-				actionMap.get( String.format( BigWarpActions.WARPVISGRID, GridSource.GRID_TYPE.LINE )));
-		warpGridModButton.setAction(
-				actionMap.get( String.format( BigWarpActions.WARPVISGRID, GridSource.GRID_TYPE.MOD )));
+		warpGridLineButton.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				if( warpGridLineButton.isSelected() )
+					WarpVisFrame.this.bw.setWarpVisGridType( GridSource.GRID_TYPE.LINE );
+			}
+		});
+
+		warpGridModButton.addChangeListener(new ChangeListener() {
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				if( warpGridModButton.isSelected() )
+					WarpVisFrame.this.bw.setWarpVisGridType( GridSource.GRID_TYPE.MOD );
+			}
+
+		});
 
 		warpGridLineButton.setText( "Line" );
 		warpGridModButton.setText( "Modulo" );
-
-		// turn on the default values
-//		setWarpVisOffButton.doClick();
-//		warpMagAffineButton.doClick();
-//		warpGridLineButton.doClick();
 	}
 
 	public void addListeners()

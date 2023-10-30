@@ -2409,8 +2409,9 @@ public class BigWarp< T >
 		return magSource;
 	}
 
-	private static < T > GridSource addGridSource( final int ndims, final BigWarpData< T > data, final String name )
+	private static < T > GridSource addGridSource( final int ndims, final BigWarpData< T > data, final String name, boolean isTransformed )
 	{
+		// this does not set the transformation
 		// TODO think about whether its worth it to pass a type parameter.
 		final GridSource gridSource = new GridSource<>( name, data, new FloatType(), null );
 		gridSource.setMethod( GridSource.GRID_TYPE.LINE );
@@ -2419,6 +2420,10 @@ public class BigWarp< T >
 		id2Info.put( GRID_SOURCE_ID, infos.get( gridSource ) );
 		BigWarpInit.add( data, infos );
 		wrapMovingSources( ndims, data, GRID_SOURCE_ID );
+
+		// the source is transformed
+		final SourceAndConverter<?> sourceAndConverter = data.sourceInfos.get(GRID_SOURCE_ID).getSourceAndConverter();
+		( ( WarpedSource< ? > ) sourceAndConverter.getSpimSource() ).setIsTransformed( isTransformed );
 
 		return gridSource;
 	}
@@ -2772,29 +2777,20 @@ public class BigWarp< T >
 		NONE, WARPMAG, JACDET, GRID
 	}
 
+	@Deprecated
 	public void setWarpVisMode( final WarpVisType type, BigWarpViewerFrame viewerFrame, final boolean both )
 	{
-		if ( viewerFrame == null )
-		{
-			if ( viewerFrameP.isActive() )
-			{
-				viewerFrame = viewerFrameP;
-			}
-			else if ( viewerFrameQ.isActive() )
-			{
-				viewerFrame = viewerFrameQ;
-			}
-			else if ( both )
-			{
-				setWarpVisMode( type, viewerFrameP, false );
-				setWarpVisMode( type, viewerFrameQ, false );
-				return;
-			}
-			else
-			{
-				return;
-			}
-		}
+		setWarpVisMode( type );
+	}
+
+	protected void setWarpVisMode( final WarpVisType type )
+	{
+		// TODO replace the above with this method
+		BigWarpViewerFrame viewerFrame ;
+		if ( viewerFrameP.isActive() )
+			viewerFrame = viewerFrameP;
+		else
+			viewerFrame = viewerFrameQ;
 
 		if ( currentTransform == null )
 		{
@@ -2845,7 +2841,8 @@ public class BigWarp< T >
 			// turn grid vis on
 			if ( gridSource == null )
 			{
-				gridSource = addGridSource( ndims, data, "Transform grid" );
+				gridSource = addGridSource( ndims, data, "Transform grid", isMovingDisplayTransformed() );
+				setTransform( data.sourceInfos.get(GRID_SOURCE_ID), currentTransform );
 				synchronizeSources();
 				data.getConverterSetup( GRID_SOURCE_ID ).setDisplayRange( 0, 512 );
 			}
@@ -2972,20 +2969,25 @@ public class BigWarp< T >
 	{
 		this.currentTransform = transform;
 		data.sourceInfos.values().forEach( sourceInfo -> {
-			if ( sourceInfo.isMoving() )
-			{
-				// the xfm must always be 3d for bdv to be happy.
-				// when bigwarp has 2d images though, the z- component will be left unchanged
-				// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
-
-				// the updateTransform method creates a copy of the transform
-				final SourceAndConverter< ? > sac = sourceInfo.getSourceAndConverter();
-				final WarpedSource< ? > wsrc = ( WarpedSource< ? > ) sac.getSpimSource();
-				wsrc.updateTransform( transform );
-				if ( sac.asVolatile() != null )
-					( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
-			}
+			setTransform( sourceInfo, transform );
 		} );
+	}
+
+	private void setTransform( final SourceInfo sourceInfo, final InvertibleRealTransform transform )
+	{
+		if ( sourceInfo.isMoving() )
+		{
+			// the xfm must always be 3d for bdv to be happy.
+			// when bigwarp has 2d images though, the z- component will be left unchanged
+			// InverseRealTransform xfm = new InverseRealTransform( new TpsTransformWrapper( 3, transform ));
+
+			// the updateTransform method creates a copy of the transform
+			final SourceAndConverter< ? > sac = sourceInfo.getSourceAndConverter();
+			final WarpedSource< ? > wsrc = ( WarpedSource< ? > ) sac.getSpimSource();
+			wsrc.updateTransform( transform );
+			if ( sac.asVolatile() != null )
+				( ( WarpedSource< ? > ) sourceInfo.getSourceAndConverter().asVolatile().getSpimSource() ).updateTransform( transform );
+		}
 	}
 
 	public void updateSourceBoundingBoxEstimators()
@@ -4251,7 +4253,7 @@ public class BigWarp< T >
 		switch ( id )
 		{
 		case GRID_SOURCE_ID:
-			gridSource = addGridSource( ndims, data, "GridSource" );
+			gridSource = addGridSource( ndims, data, "GridSource", isMovingDisplayTransformed());
 			setGridType( GridSource.GRID_TYPE.LINE );
 			break;
 		case WARPMAG_SOURCE_ID:
