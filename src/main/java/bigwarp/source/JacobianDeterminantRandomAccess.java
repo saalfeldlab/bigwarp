@@ -8,12 +8,12 @@
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -21,8 +21,8 @@
  */
 package bigwarp.source;
 
-import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.dense.row.CommonOps_DDRM;
 
 import net.imglib2.AbstractRealInterval;
 import net.imglib2.AbstractRealLocalizable;
@@ -40,36 +40,43 @@ import net.imglib2.type.numeric.RealType;
 public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends AbstractRealLocalizable implements RealRandomAccess< T >
 {
 	protected DifferentiableRealTransform transform;
-	
+
 	final private T value;
 	final double[] warpRes;
+	double[] x;
+	int nd;
 
 	protected JacobianDeterminantRandomAccess( double[] dimensions )
 	{
 		this( dimensions, null, null );
 	}
-	
+
 	protected JacobianDeterminantRandomAccess( final double[] dimensions, final T value, final DifferentiableRealTransform transform )
 	{
 		super( dimensions.length );
 		setTransform( transform );
 		this.value = value;
-		warpRes = new double[ numDimensions() ]; 
+		warpRes = new double[ numDimensions() ];
 	}
-	
+
 	public void setTransform( final DifferentiableRealTransform transform )
 	{
 		if( transform != null)
 		{
 			this.transform = transform.copy();
+
+			nd = numDimensions() < transform.numSourceDimensions() ?
+					numDimensions() : transform.numSourceDimensions();
+
+			x = new double[ nd ];
 		}
 	}
 
 	@Override
-	public T get() 
+	public T get()
 	{
 		// copy value here so this is thread safe
-		T out = value.copy();
+		final T out = value.copy();
 		if( transform == null )
 		{
 			out.setZero();
@@ -77,29 +84,34 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		}
 
 		// compute the jacobian determinant at this point
-		double[] x = new double[ numDimensions() ];
-		localize( x );
-		AffineTransform jacobian = transform.jacobian( x );
-		DenseMatrix64F jacMtx = new DenseMatrix64F();
-		jacMtx.data = jacobian.getRowPackedCopy(); 
-		out.setReal( CommonOps.det( jacMtx ) );
+		safeLocalize( x );
+		final AffineTransform jacobian = transform.jacobian( x );
+		final DMatrixRMaj jacMtx = DMatrixRMaj.wrap( nd, nd, jacobian.getRowPackedCopy() );
+		out.setReal( CommonOps_DDRM.det( jacMtx ) );
 
 		return out;
 	}
 
-	public RealRandomAccess<T> copy() 
+	private void safeLocalize( double[] pos )
 	{
-		return new JacobianDeterminantRandomAccess< T >( new double[ position.length ], value.copy(), 
+		for( int i = 0; i < pos.length; i++ )
+			pos[i] = getDoublePosition(i);
+	}
+
+	@Override
+	public RealRandomAccess<T> copy()
+	{
+		return new JacobianDeterminantRandomAccess< T >( new double[ position.length ], value.copy(),
 				transform );
 	}
 
-	public RealRandomAccess<T> copyRandomAccess() 
+	public RealRandomAccess<T> copyRandomAccess()
 	{
 		return copy();
 	}
-	
+
 	@Override
-	public RealRandomAccess<T> copyRealRandomAccess() 
+	public RealRandomAccess<T> copyRealRandomAccess()
 	{
 		return copy();
 	}
@@ -250,7 +262,7 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		for ( int d = 0; d < n; ++d )
 		{
 			position[ d ] = p[ d ];
-		}	
+		}
 	}
 
 	@Override
@@ -262,8 +274,8 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 	public void setPosition(double p, int d) {
 		position[ d ] = p;
 	}
-	
-	public static class JacobianDeterminantRandomAccessibleInterval<T extends RealType<T>> extends AbstractRealInterval implements RealRandomAccessibleRealInterval<T> 
+
+	public static class JacobianDeterminantRandomAccessibleInterval<T extends RealType<T>> extends AbstractRealInterval implements RealRandomAccessibleRealInterval<T>
 	{
 		protected final JacobianDeterminantRandomAccess< T > ra;
 
@@ -282,12 +294,12 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		public RealRandomAccess<T> realRandomAccess(RealInterval interval) {
 			return realRandomAccess();
 		}
-		
+
 		public void setTransform( final DifferentiableRealTransform transform )
 		{
 			ra.setTransform( transform );
 		}
-		
+
 	}
 
 }

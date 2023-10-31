@@ -123,7 +123,7 @@
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
-		<jitk-tps.version>3.0.3</jitk-tps.version>
+		<jitk-tps.version>3.0.4-SNAPSHOT</jitk-tps.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
