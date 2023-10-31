@@ -2807,6 +2807,7 @@ public class BigWarp< T >
 			if ( jacDetSource == null )
 			{
 				jacDetSource = addJacobianDeterminantSource( ndims, data, "Jacobian determinant" );
+				updateJacobianTransformation(currentTransform);
 				synchronizeSources();
 			}
 			showSourceFused( viewerFrame, JACDET_SOURCE_ID );
@@ -3013,6 +3014,28 @@ public class BigWarp< T >
 			l.transformChanged( currentTransform );
 	}
 
+	private void updateJacobianTransformation( final InvertibleRealTransform transform )
+	{
+		if( transform instanceof ThinplateSplineTransform )
+		{
+			jacDetSource.setTransform( (ThinplateSplineTransform)transform );
+		}
+		else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
+		{
+			final RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
+			if( xfm instanceof ThinplateSplineTransform )
+				jacDetSource.setTransform( (ThinplateSplineTransform) xfm );
+			else
+				jacDetSource.setTransform( new RealTransformFiniteDerivatives( xfm ));
+		}
+		else if ( transform instanceof InvertibleWrapped2DTransformAs3D )
+		{
+			updateJacobianTransformation(((InvertibleWrapped2DTransformAs3D)transform).getTransform());
+		}
+		else
+			jacDetSource.setTransform( null );
+	}
+
 	private void setTransformationAll( final InvertibleRealTransform transform )
 	{
 		setTransformationMovingSourceOnly( transform );
@@ -3024,22 +3047,7 @@ public class BigWarp< T >
 		}
 
 		if( jacDetSource != null )
-		{
-			if( transform instanceof ThinplateSplineTransform )
-			{
-				jacDetSource.setTransform( (ThinplateSplineTransform)transform );
-			}
-			else if ( transform instanceof WrappedIterativeInvertibleRealTransform )
-			{
-				final RealTransform xfm = ((WrappedIterativeInvertibleRealTransform)transform).getTransform();
-				if( xfm instanceof ThinplateSplineTransform )
-					jacDetSource.setTransform( (ThinplateSplineTransform) xfm );
-				else
-					jacDetSource.setTransform( new RealTransformFiniteDerivatives( xfm ));
-			}
-			else
-				jacDetSource.setTransform( null );
-		}
+			updateJacobianTransformation(transform);
 	}
 
 	public boolean restimateTransformation()
