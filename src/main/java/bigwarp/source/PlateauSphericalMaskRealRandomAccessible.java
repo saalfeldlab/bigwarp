@@ -218,7 +218,7 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 
 	public void setSquaredSigma( double squaredSigma )
 	{
-		setSigma( Math.sqrt( sqrSigma ));
+		setSigma( Math.sqrt( squaredSigma ));
 	}
 
 	public void incSquaredSigma( double increment )

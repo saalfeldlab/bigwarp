@@ -99,6 +99,7 @@ public class TransformWriterJson {
 				bw.setTransformMaskProperties(
 						maskFromJson.getFallOffShape(),
 						maskFromJson.getSquaredRadius(),
+						maskFromJson.getSquaredSigma(),
 						maskFromJson.getCenter().positionAsDoubleArray());
 			}else
 				bw.connectMaskSource();

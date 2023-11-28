@@ -2489,6 +2489,20 @@ public class BigWarp< T >
 		mask.setCenter( center );
 	}
 
+	public void setTransformMaskProperties( final FalloffShape falloffShape,
+			final double squaredRadius,
+			final double squaredSigma,
+			double[] center )
+	{
+		warpVisDialog.maskOptionsPanel.getMaskFalloffTypeDropdown().setSelectedItem(falloffShape);
+
+		final PlateauSphericalMaskRealRandomAccessible mask = getTransformPlateauMaskSource().getRandomAccessible();
+		mask.setFalloffShape( falloffShape );
+		mask.setSquaredRadius( squaredRadius );
+		mask.setSquaredSigma( squaredSigma );
+		mask.setCenter( center );
+	}
+
 	public void importTransformMaskSourceDialog() {
 
 		final JFileChooser fileChooser = new JFileChooser();
