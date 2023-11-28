@@ -1183,17 +1183,15 @@ public class BigWarp< T >
 		miSaveSettings.setText( "Save settings" );
 		fileMenu.add( miSaveSettings );
 
-		if( ij != null )
-		{
-			fileMenu.addSeparator();
-			final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ));
-			exportToImagePlus.setText( "Export moving image" );
-			fileMenu.add( exportToImagePlus );
 
-			final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ));
-			exportWarpField.setText( "Export transformation" );
-			fileMenu.add( exportWarpField );
-		}
+		fileMenu.addSeparator();
+		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ));
+		exportToImagePlus.setText( "Export moving image" );
+		fileMenu.add( exportToImagePlus );
+
+		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ));
+		exportWarpField.setText( "Export transformation" );
+		fileMenu.add( exportWarpField );
 
 		final JMenu settingsMenu = new JMenu( "Settings" );
 		viewerMenuBar.add( settingsMenu );
