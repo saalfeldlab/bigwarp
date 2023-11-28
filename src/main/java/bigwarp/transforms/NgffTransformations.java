@@ -140,7 +140,7 @@ public class NgffTransformations
 		// detect transformations
 		final N5URI uri;
 		try {
-			uri = new N5URI(url);
+			uri = new N5URI(url.trim());
 		} catch (final URISyntaxException e) {
 			return null;
 		}
@@ -175,7 +175,7 @@ public class NgffTransformations
 
 	private static boolean isValidTransformUri(final String uri) {
 
-		final Pair<CoordinateTransform<?>, N5Reader> out = openTransformN5(uri);
+		final Pair<CoordinateTransform<?>, N5Reader> out = openTransformN5(uri.trim());
 		if (out != null && out.getA() != null)
 			return true;
 
@@ -184,6 +184,9 @@ public class NgffTransformations
 
 	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url )
 	{
+		if( url == null )
+			return null;
+
 		try
 		{
 			final N5URI n5url = new N5URI( url );
@@ -197,7 +200,6 @@ public class NgffTransformations
 				final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
 				final String attribute = n5url.getAttributePath();
-//				final String attribute = n5url.getAttributePath() != null ? n5url.getAttributePath() : "coordinateTransformations[0]";
 
 				try {
 					final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
@@ -207,9 +209,6 @@ public class NgffTransformations
 				try {
 					return openReference( url, n5, dataset, attribute ); // try to open a reference
 				} catch( N5Exception | ClassCastException e ) {}
-
-//				final CoordinateTransform<?> nct = CoordinateTransform.create(ct);
-//				return new ValuePair<>( nct, n5 );
 			}
 		}
 		catch ( final URISyntaxException e ) { }

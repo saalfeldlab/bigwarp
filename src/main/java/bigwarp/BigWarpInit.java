@@ -496,7 +496,7 @@ public class BigWarpInit
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
 		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
-		final URI encodedUri = N5URI.encodeAsUri( uri );
+		final URI encodedUri = N5URI.encodeAsUri( uri.trim() );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
 		{
@@ -560,7 +560,7 @@ public class BigWarpInit
 					}
 					else
 					{
-						ijp = IJ.openImage( uri );
+						ijp = IJ.openImage( uri.trim() );
 					}
 					sourceStateMap.putAll( createSources( bwData, ijp, setupId, 0, isMoving ) );
 				}

@@ -229,7 +229,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		{
 			RealTransform transform = null;
 			if( transformUrl!= null && !transformUrl.isEmpty() )
-				transform = NgffTransformations.open( transformUrl );
+				transform = NgffTransformations.open( transformUrl.trim() );
 
 			return transform;
 		}
