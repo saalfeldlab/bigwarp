@@ -2392,6 +2392,8 @@ public class BigWarp< T >
 		id2Info.put( JACDET_SOURCE_ID, infos.get( jdSource ) );
 		BigWarpInit.add( data, infos );
 
+		data.getConverterSetup( JACDET_SOURCE_ID ).setDisplayRange( -1, 2 );
+
 		return jdSource;
 	}
 
