@@ -23,6 +23,7 @@ package bigwarp;
 
 import java.awt.Component;
 import java.awt.event.ActionEvent;
+import java.util.Arrays;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -43,11 +44,12 @@ import bdv.gui.BigWarpViewerFrame;
 import bdv.tools.ToggleDialogAction;
 import bdv.util.Prefs;
 import bdv.viewer.AbstractViewerPanel.AlignPlane;
+import bdv.viewer.Interpolation;
 import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
-import bigwarp.util.BigWarpUtils;
 import mpicbg.models.AbstractModel;
-import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.RealRandomAccessible;
+import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarpActions extends Actions
 {
@@ -218,10 +220,18 @@ public class BigWarpActions extends Actions
 
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
+	// mask
 	public static final String MASK_IMPORT = "import mask";
+	public static final String[] MASK_IMPORT_KEYS = new String[]{ "ctrl shift M"};
+
 	public static final String MASK_REMOVE = "remove mask";
+	public static final String[] MASK_REMOVE_KEYS = new String[] { "alt M" };
+
 	public static final String MASK_SIZE_EDIT = "mask edit";
+	public static final String[] MASK_SIZE_EDIT_KEYS = new String[] { "M" };
+
 	public static final String MASK_VIS_TOGGLE = "mask vis toggle";
+	public static final String[] MASK_VIS_TOGGLE_KEYS = new String[] { "ctrl M" };
 
 	// export options
 	public static final String SAVE_WARPED = "save warped";
@@ -367,6 +377,15 @@ public class BigWarpActions extends Actions
 
 			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
 			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
+
+			// mask
+			descriptions.add( MASK_IMPORT, MASK_IMPORT_KEYS, "Imports a transformation mask from file." );
+			descriptions.add( MASK_REMOVE, MASK_REMOVE_KEYS, "Remove the transformation mask." );
+			descriptions.add( MASK_SIZE_EDIT, MASK_SIZE_EDIT_KEYS, "Edit the transformation mask." );
+			descriptions.add( MASK_VIS_TOGGLE, MASK_VIS_TOGGLE_KEYS, "Toggles visibility of the transform mask." );
+
+			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
+			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
 		}
 	}
 
@@ -424,6 +443,11 @@ public class BigWarpActions extends Actions
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
 			descriptions.add( PRINT_TRANSFORM,PRINT_TRANSFORM_KEYS, "Prints the current transformation." );
 
+			// mask
+			descriptions.add( MASK_IMPORT, MASK_IMPORT_KEYS, "Imports a transformation mask from file." );
+			descriptions.add( MASK_REMOVE, MASK_REMOVE_KEYS, "Remove the transformation mask." );
+			descriptions.add( MASK_SIZE_EDIT, MASK_SIZE_EDIT_KEYS, "Edit the transformation mask." );
+			descriptions.add( MASK_VIS_TOGGLE, MASK_VIS_TOGGLE_KEYS, "Toggles visibility of the transform mask." );
 
 			descriptions.add(DEBUG, DEBUG_KEYS, "Print debugging information");
 			descriptions.add(GARBAGE_COLLECTION, GARBAGE_COLLECTION_KEYS, "Manually trigger Java's garbage collection");
@@ -516,6 +540,12 @@ public class BigWarpActions extends Actions
 
 		actions.namedAction( new DebugAction(DEBUG, bw), DEBUG_KEYS);
 		actions.namedAction( new GarbageCollectionAction(GARBAGE_COLLECTION), GARBAGE_COLLECTION_KEYS);
+
+		// mask
+		actions.namedAction( new MaskSizeEdit(bw), MASK_SIZE_EDIT_KEYS );
+		actions.namedAction( new MaskVisToggle(bw), MASK_VIS_TOGGLE_KEYS );
+		actions.namedAction( new MaskImport(bw), MASK_IMPORT_KEYS );
+		actions.namedAction( new MaskRemove(bw), MASK_REMOVE_KEYS );
 	}
 
 	public static void installTableActions(
@@ -594,6 +624,12 @@ public class BigWarpActions extends Actions
 
 		actions.namedAction( new DebugAction(DEBUG, bw), DEBUG_KEYS);
 		actions.namedAction( new GarbageCollectionAction(GARBAGE_COLLECTION), GARBAGE_COLLECTION_KEYS);
+
+		// mask
+		actions.namedAction( new MaskSizeEdit(bw), MASK_SIZE_EDIT_KEYS );
+		actions.namedAction( new MaskVisToggle(bw), MASK_VIS_TOGGLE_KEYS );
+		actions.namedAction( new MaskImport(bw), MASK_IMPORT_KEYS );
+		actions.namedAction( new MaskRemove(bw), MASK_REMOVE_KEYS );
 	}
 
 	/**
@@ -1024,12 +1060,26 @@ public class BigWarpActions extends Actions
 //			 System.out.println( ltm.getWarpedPoints() );
 //			ltm.printWarpedPoints();
 
-			final AffineTransform3D xfm = new AffineTransform3D();
-			bw.viewerP.state().getViewerTransform( xfm );
-			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
+//			final AffineTransform3D xfm = new AffineTransform3D();
+//			bw.viewerP.state().getViewerTransform( xfm );
+//			System.out.println( "mvg xfm " + xfm  + "   DET = " + BigWarpUtils.det( xfm ));
+//
+//			bw.viewerQ.state().getViewerTransform( xfm );
+//			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			bw.viewerQ.state().getViewerTransform( xfm );
-			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
+			final double[] p = new double[] { 200, 325, 0 };
+//			final double[] q = new double[3];
+
+			if( bw.jacDetSource != null ) {
+
+				final RealRandomAccessible<FloatType> jsrc = bw.jacDetSource.getInterpolatedSource(0, 0, Interpolation.NLINEAR );
+				final FloatType q = jsrc.getAt(p);
+				System.out.println( "Jacobian det at " + Arrays.toString( p ) + " " + q.get() );
+			}
+			else
+			{
+				System.out.println( "no jacobian source");
+			}
 
 //			BigWarpData< ? > data = bw.getData();
 //			for( int mi : data.movingSourceIndices )
@@ -1047,6 +1097,7 @@ public class BigWarpActions extends Actions
 //			System.out.println( " " );
 		}
 	}
+
 
 	public static class EstimateWarpAction extends AbstractNamedAction
 	{
