@@ -40,6 +40,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -4074,10 +4075,19 @@ public class BigWarp< T >
 
 	public void loadLandmarks( final String filename )
 	{
-		final File file = new File( filename );
-		setLastDirectory( file.getParentFile() );
 
-		if( filename.endsWith( "csv" ))
+		final String filenameTrim = filename.trim();
+		String name = filenameTrim;
+		try {
+			final URI uri = new URI( filenameTrim );
+			if( !uri.getScheme().isEmpty())
+				name = uri.getSchemeSpecificPart();
+		}
+		catch ( URISyntaxException e ) { }
+
+		final File file = new File( name );
+		setLastDirectory( file.getParentFile() );
+		if( name.endsWith( "csv" ))
 		{
 			try
 			{
@@ -4088,7 +4098,7 @@ public class BigWarp< T >
 				e1.printStackTrace();
 			}
 		}
-		else if( filename.endsWith( "json" ))
+		else if( name.endsWith( "json" ))
 		{
 			TransformWriterJson.read( file, this );
 		}
@@ -4301,10 +4311,19 @@ public class BigWarp< T >
 	public void loadSettings( final String jsonOrXmlFilename, boolean overwriteSources ) throws IOException,
 			JDOMException
 	{
-		if ( jsonOrXmlFilename.endsWith( ".xml" ) )
+		final String filenameTrim = jsonOrXmlFilename.trim();
+		String name = filenameTrim;
+		try {
+			final URI uri = new URI( filenameTrim );
+			if( uri != null && uri.getScheme() != null )
+				name = uri.getSchemeSpecificPart();
+		}
+		catch ( URISyntaxException e ) { }
+
+		if ( name.endsWith( ".xml" ) )
 		{
 			final SAXBuilder sax = new SAXBuilder();
-			final Document doc = sax.build( jsonOrXmlFilename );
+			final Document doc = sax.build( name );
 			final Element root = doc.getRootElement();
 
 			/* add default sources if present */
@@ -4338,7 +4357,7 @@ public class BigWarp< T >
 		{
 			final BigwarpSettings settings = getSettings();
 			settings.setOverwriteSources( overwriteSources );
-			settings.read( new JsonReader( new FileReader( jsonOrXmlFilename ) ) );
+			settings.read( new JsonReader( new FileReader( name ) ) );
 
 			// TODO I may need this
 //			Executors.newSingleThreadExecutor().execute(new Runnable() {
