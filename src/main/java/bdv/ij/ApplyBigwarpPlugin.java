@@ -350,9 +350,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( MOVING_WARPED ))
 		{
+			final RandomAccessibleInterval< ? > raiSrc = ((WarpedSource<?>)source).getWrappedSource().getSource( 0, 0 );
 			final FinalInterval interval = new FinalInterval(
-					Intervals.minAsLongArray( rai ),
-					Intervals.maxAsLongArray( rai ));
+					Intervals.minAsLongArray( raiSrc ),
+					Intervals.maxAsLongArray( raiSrc ));
 
 			if( transform == null )
 				return interval;
