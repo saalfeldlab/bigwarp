@@ -4080,7 +4080,7 @@ public class BigWarp< T >
 		String name = filenameTrim;
 		try {
 			final URI uri = new URI( filenameTrim );
-			if( !uri.getScheme().isEmpty())
+			if( uri != null && uri.getScheme() != null )
 				name = uri.getSchemeSpecificPart();
 		}
 		catch ( URISyntaxException e ) { }
