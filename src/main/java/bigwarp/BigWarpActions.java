@@ -402,6 +402,8 @@ public class BigWarpActions extends Actions
 		{
 			descriptions.add( SAVE_PROJECT, SAVE_PROJECT_KEYS, "Save a bigwarp project." );
 			descriptions.add( LOAD_PROJECT, LOAD_PROJECT_KEYS, "Load a bigwarp project." );
+			descriptions.add( SAVE_SETTINGS, SAVE_SETTINGS_KEYS, "Save the BigDataViewer settings to a settings.xml file." );
+			descriptions.add( LOAD_SETTINGS, LOAD_SETTINGS_KEYS, "Load the BigDataViewer settings from a settings.xml file." );
 
 			descriptions.add( CLEAR_MOVING, CLEAR_MOVING_KEYS, "Clears moving landmark under the mouse cursor." );
 			descriptions.add( CLEAR_FIXED, CLEAR_FIXED_KEYS, "Clears fixed landmark under the mouse cursor." );
@@ -465,6 +467,8 @@ public class BigWarpActions extends Actions
 
 		actions.runnableAction( bw::saveProject, SAVE_PROJECT, SAVE_PROJECT_KEYS );
 		actions.runnableAction( bw::loadProject, LOAD_PROJECT, LOAD_PROJECT_KEYS );
+		actions.runnableAction( bw::saveSettings, SAVE_SETTINGS, SAVE_SETTINGS_KEYS );
+		actions.runnableAction( bw::loadSettings, LOAD_SETTINGS, LOAD_SETTINGS_KEYS );
 
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
 		actions.runnableAction( bw::toggleInLandmarkMode, TOGGLE_LANDMARK_MODE, TOGGLE_LANDMARK_MODE_KEYS);
@@ -557,6 +561,8 @@ public class BigWarpActions extends Actions
 
 		actions.runnableAction( bw::saveProject, SAVE_PROJECT, SAVE_PROJECT_KEYS );
 		actions.runnableAction( bw::loadProject, LOAD_PROJECT, LOAD_PROJECT_KEYS );
+		actions.runnableAction( bw::saveSettings, SAVE_SETTINGS, SAVE_SETTINGS_KEYS );
+		actions.runnableAction( bw::loadSettings, LOAD_SETTINGS, LOAD_SETTINGS_KEYS );
 
 		// unmapped
 		actions.runnableAction( () -> { bw.getBwTransform().transformToString(); }, PRINT_TRANSFORM, PRINT_TRANSFORM_KEYS);
