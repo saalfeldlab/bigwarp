@@ -712,7 +712,7 @@ public class BigWarpInit
 			if ( isVolatile )
 			{
 				final CachedCellImg<T, ?> rai = N5Utils.openVolatile( n5, meta.getPath() );
-				imageRaw = to3d( VolatileViews.wrapAsVolatile( rai, sharedQueue, new CacheHints(LoadingStrategy.VOLATILE, 0, true)) );
+				imageRaw = to3d( rai );
 			}
 			else
 				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ) );
