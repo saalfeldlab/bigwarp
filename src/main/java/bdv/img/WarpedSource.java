@@ -74,6 +74,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private final Supplier< Boolean > boundingBoxCullingSupplier;
 
+	private final AffineTransform3D tmpSrcTransform;
+
 	private BoundingBoxEstimation bboxEst;
 
 	public WarpedSource( final Source< T > source, final String name )
@@ -92,6 +94,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 		bboxEst = new BoundingBoxEstimation( BoundingBoxEstimation.Method.FACES, 5 );
 		boundingIntervalsPerLevel = new Interval[source.getNumMipmapLevels()];
+		tmpSrcTransform = new AffineTransform3D();
 
 		sourceMipmapOrdering = MipmapOrdering.class.isInstance( source ) ?
 				( MipmapOrdering ) source : new DefaultMipmapOrdering( source );
@@ -175,25 +178,41 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 		{
 			// getSource can be called by multiple threads, so need ensure application of
 			// the transform is thread safe here by copying
-			return bboxEst.estimatePixelInterval( xfm.copy().inverse(), source.getSource( t, level ) );
+
+			source.getSourceTransform(t, level, tmpSrcTransform);
+			RealTransformSequence seq = new RealTransformSequence();
+			// build the inverse transform
+			seq.add(tmpSrcTransform);
+			seq.add(xfm.copy().inverse());
+			seq.add(tmpSrcTransform.inverse());
+
+			final Interval res = bboxEst.estimatePixelInterval( seq, source.getSource( t, level ) );
+			return res;
 		}
 	}
 
 	@Override
 	public RealRandomAccessible< T > getInterpolatedSource( final int t, final int level, final Interpolation method )
 	{
-
 		final RealRandomAccessible<T> realSrc = source.getInterpolatedSource( t, level, method );
 		if( isTransformed && xfm != null )
 		{
 			final AffineTransform3D transform = new AffineTransform3D();
 			source.getSourceTransform( t, level, transform );
-			final RealRandomAccessible< T > srcRaTransformed = RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+
+			final RealTransformSequence seq = new RealTransformSequence();
+			// build the inverse transform
+			seq.add(transform);
+			seq.add(xfm.copy());
+			seq.add(transform.inverse());
 
 			if( xfm == null )
-				return srcRaTransformed;
-			else
-				return new RealTransformRealRandomAccessible< T, RealTransform >( srcRaTransformed, xfm);
+			{
+				return RealViews.affineReal( source.getInterpolatedSource( t, level, method ), transform );
+			}
+			else {
+				return new RealTransformRealRandomAccessible< T, RealTransform >( source.getInterpolatedSource( t, level, method ), seq);
+			}
 		}
 		else
 		{
@@ -204,10 +223,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public synchronized void getSourceTransform( final int t, final int level, final AffineTransform3D transform )
 	{
-		if( isTransformed )
-			transform.identity();
-		else
-			source.getSourceTransform( t, level, transform );
+		source.getSourceTransform( t, level, transform );
 	}
 
 	public RealTransform getTransform()
