@@ -61,6 +61,7 @@ import javax.swing.event.ChangeListener;
 
 import bdv.gui.AutosaveOptionsPanel;
 import bdv.gui.MaskOptionsPanel;
+import bdv.gui.TransformGraphPanel;
 import bdv.gui.TransformTypePanel;
 import bdv.viewer.BigWarpViewerSettings;
 import bigwarp.source.GridSource;
@@ -117,6 +118,9 @@ public class WarpVisFrame extends JDialog
 
 	// transform type
 	final TransformTypePanel transformTypePanel;
+	
+	// transform database
+	final TransformGraphPanel transformGraphPanel;
 
 	// autosave
 	private final AutosaveOptionsPanel autoSaveOptionsPanel;
@@ -352,6 +356,9 @@ public class WarpVisFrame extends JDialog
 		// type options
 		transformTypePanel = new TransformTypePanel( bw );
 
+		// transform graph options
+		transformGraphPanel = new TransformGraphPanel( bw, bw.viewerQ, content );
+
 		// autosaver options
 		autoSaveOptionsPanel = new AutosaveOptionsPanel( bw, content );
 
@@ -370,11 +377,15 @@ public class WarpVisFrame extends JDialog
 		content.add( transformTypePanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 1;
-		content.add( landmarkPointOptionsPanel, gbcContent );
+		gbcContent.gridy = 2;
+		content.add( transformGraphPanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 2;
+		content.add( landmarkPointOptionsPanel, gbcContent );
+
+		gbcContent.gridx = 0;
+		gbcContent.gridy = 3;
 		gbcContent.gridwidth = 1;
 		gbcContent.anchor = GridBagConstraints.WEST;
 		content.add( visTypePanel, gbcContent );
@@ -385,26 +396,26 @@ public class WarpVisFrame extends JDialog
 		content.add( typeOptionPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 3;
+		gbcContent.gridy = 4;
 		gbcContent.gridwidth = 3;
 		content.add( inverseOptionsPanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 4;
+		gbcContent.gridy = 5;
 		gbcContent.gridwidth = 3;
 		content.add( bboxPanel, gbcContent );
 
-		gbcContent.gridy = 5;
+		gbcContent.gridy = 6;
 		content.add( maskOptionsPanel, gbcContent );
 
-		gbcContent.gridy = 6;
+		gbcContent.gridy = 7;
 		final JPanel toggle2DPanel = new JPanel(new MigLayout("", "[grow][][grow]"));
 		final JCheckBox toggle2D = new JCheckBox("Is 2D");
 		toggle2DPanel.add(toggle2D, "cell 1 0");
 		toggle2D.addActionListener(e ->  bw.changeDimensionality(toggle2D.isSelected()) );
 		content.add(toggle2DPanel, gbcContent);
 
-		gbcContent.gridy = 7;
+		gbcContent.gridy = 8;
 		content.add( getAutoSaveOptionsPanel(), gbcContent );
 
 		setDefaultCloseOperation( WindowConstants.HIDE_ON_CLOSE );

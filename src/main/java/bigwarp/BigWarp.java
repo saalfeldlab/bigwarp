@@ -48,10 +48,12 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Supplier;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -73,6 +75,8 @@ import javax.swing.table.TableCellEditor;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformPath;
 import org.janelia.utility.geom.BoundingSphereRitter;
 import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -102,6 +106,7 @@ import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.MaskOptionsPanel;
 import bdv.gui.MaskedSourceEditorMouseListener;
+import bdv.gui.TransformGraphPanel;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
@@ -140,6 +145,8 @@ import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
+import bdv.viewer.ViewerStateChange;
+import bdv.viewer.ViewerStateChangeListener;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
@@ -551,7 +558,6 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this );
-//		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 
 		preferencesDialog = new PreferencesDialog( landmarkFrame, keymap, new String[] { "bigwarp", "navigation", "bw-table" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
@@ -672,7 +678,8 @@ public class BigWarp< T >
 
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerP.state().setCurrentGroup( tgtGrp );
+		viewerQ.state().setCurrentGroup( tgtGrp );
+		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
 		SwingUtilities.invokeLater( () -> {
 			viewerFrameP.setVisible( true );
@@ -2326,22 +2333,50 @@ public class BigWarp< T >
 	{
 		gridSource.setMethod( method );
 	}
+	
+	/**
+	 * 
+	 */
+	public void transformationsFromCoordinateSystem() {
 
-	@SuppressWarnings( "unchecked" )
-	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
-	{
-		int i = 0;
-		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
+		System.out.println( "transformationsFromCoordinateSystem" );
+		final TransformGraph graph = warpVisDialog.transformGraphPanel.getGraph();
+		if( graph == null )
+			return;
+
+		final String destCsName = warpVisDialog.transformGraphPanel.getCoordinateSystem();
+		final boolean isDefault = destCsName.equals(TransformGraphPanel.DEFAULT_COORDINATE_SYSTEM);
+
+		System.out.println( "  : " + destCsName );
+
+		boolean anyUpdated = false;
+		for( SourceInfo srcInfo : data.sourceInfos.values() )
 		{
-			if ( sourceInfo.isMoving() )
+			final String csName = srcInfo.getSourceAndConverter().getSpimSource().getName();
+			Optional<TransformPath> p = graph.path(destCsName, csName);	
+			if( isDefault || csName.equals(destCsName)) 
 			{
-				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
-				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
-				sourceInfo.setSourceAndConverter( newSac );
-				data.sources.set( sourceIdx, newSac );
+				data.setTransformation(srcInfo, null, null);
+				anyUpdated = true;
 			}
-			i++;
+			else if( !p.isPresent())
+			{
+				// presenting coordinate systems in "forward" direction even though we need an "inverse"
+				System.err.println( String.format( "WARNING: no suitable transformation found from %s to %s", csName, destCsName ));
+			}
+			else if( !csName.equals(destCsName)) 
+			{
+				final RealTransform tform = p.get().totalTransform(warpVisDialog.transformGraphPanel.getN5());
+				// TODO make appropriate uri
+				// but this is not trivil when the transform is a sequence that is not explicitly stored 
+				data.setTransformation(srcInfo, tform, null);
+				anyUpdated = true;
+			}
+			// do nothing 
 		}
+
+		if( anyUpdated )
+			synchronizeSources();
 	}
 
 	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
