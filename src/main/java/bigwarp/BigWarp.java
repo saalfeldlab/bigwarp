@@ -2344,44 +2344,20 @@ public class BigWarp< T >
 		}
 	}
 
-	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data, int id )
+	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
 	{
-		final SourceInfo sourceInfo = data.getSourceInfo( id );
-		if( sourceInfo == null )
-			return;
-
-		if ( sourceInfo.isMoving() )
-		{
-			final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm", ndims );
-			final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
-			sourceInfo.setSourceAndConverter( newSac );
-			data.sources.set( sourceIdx, newSac );
-		}
+		data.wrapMovingSources();
 	}
 
-	@SuppressWarnings( "unchecked" )
-	public static < T > List< SourceAndConverter< T > > wrapSourcesAsTransformed( final LinkedHashMap< Integer, SourceInfo > sources,
-			final int ndims,
-			final BigWarpData< T > data )
+	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data, int id )
 	{
-		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
+		data.wrapMovingSources(data.getSourceInfo( id ));
+	}
 
-		int i = 0;
-		for ( final SourceInfo sourceInfo : sources.values() )
-		{
-			if ( sourceInfo.isMoving() )
-			{
-				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
-				wrappedSource.add( newSac );
-			}
-			else
-			{
-				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
-			}
-
-			i++;
-		}
-		return wrappedSource;
+	public static < T > List< SourceAndConverter< T > > wrapSourcesAsTransformed( final LinkedHashMap< Integer, SourceInfo > sources,
+			final int ndims, final BigWarpData< T > data )
+	{
+		return data.wrapSourcesAsTransformed();
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
@@ -2648,18 +2624,6 @@ public class BigWarp< T >
 	public PlateauSphericalMaskSource getTransformPlateauMaskSource()
 	{
 		return plateauTransformMask;
-	}
-
-	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
-	{
-		if ( src.asVolatile() == null )
-		{
-			return new SourceAndConverter< T >( new WarpedSource< T >( src.getSpimSource(), name ), src.getConverter(), null );
-		}
-		else
-		{
-			return new SourceAndConverter< T >( new WarpedSource< T >( src.getSpimSource(), name ), src.getConverter(), wrapSourceAsTransformed( src.asVolatile(), name + "_vol", ndims ) );
-		}
 	}
 
 	public void setupKeyListener()
