@@ -53,6 +53,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.SequenceCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ThinPlateSplineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.TranslationCoordinateTransform;
 
 import bdv.gui.ExportDisplacementFieldFrame;
@@ -169,79 +170,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		ExportDisplacementFieldFrame.createAndShow( bw );
 	}
 
-//	/**
-//	 * @deprecated not necessary access thedesired source this way anymore, use {@link #runFromBigWarpInstance(LandmarkTableModel, SourceAndConverter)}
-//	 * 	on the result of {@link bigwarp.BigWarpData#getTargetSource(int)}
-//	 */
-//	@Deprecated
-//	public <T> void runFromBigWarpInstanceOld(
-//			final BigWarpData<?> data,
-//			final LandmarkTableModel landmarkModel,
-//			final List<SourceAndConverter<T>> sources,
-//			final List<Integer> targetSourceIndexList )
-//	{
-//		runFromBigWarpInstanceOld( data, landmarkModel, data.getTargetSource( 0 ) );
-//	}
-
-//	public <T> void runFromBigWarpInstanceOld(
-//			final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
-//	{
-//		ImageJ ij = IJ.getInstance();
-//		if ( ij == null )
-//			return;
-//
-//		final DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( false, false );
-//		if( params == null )
-//			return;
-//
-//		final RandomAccessibleInterval< ? > tgtInterval = sourceAndConverter.getSpimSource().getSource( 0, 0 );
-//
-//		int ndims = landmarkModel.getNumdims();
-//		long[] dims = tgtInterval.dimensionsAsLongArray();
-//
-//		double[] spacing = new double[ 3 ];
-//		double[] offset = new double[ 3 ];
-//		String unit = "pix";
-//		VoxelDimensions voxelDim = sourceAndConverter.getSpimSource().getVoxelDimensions();
-//		voxelDim.dimensions( spacing );
-//
-//		if( params.spacing != null )
-//			spacing = params.spacing;
-//
-//		if( params.offset != null )
-//			offset = params.offset;
-//
-//		if( params.size != null )
-//			dims = params.size;
-//
-//		if( params.n5Base.isEmpty() )
-//		{
-////			toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
-//			if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
-//			{
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), false, params.virtual, params.size, params.spacing, params.nThreads );
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), true, params.virtual, params.size, params.spacing, params.nThreads );
-//			}
-//			else
-//			{
-//				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), inverse, params.virtual, params.size, params.spacing, params.nThreads );
-//			}
-//		}
-//		else
-//		{
-//			try
-//			{
-//				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-//				writeN5( params.n5Base, params.n5Dataset, landmarkModel, null, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), inverse );
-//			}
-//			catch ( IOException e )
-//			{
-//				e.printStackTrace();
-//			}
-//		}
-//	}
-
 	public static void runFromParameters( final DeformationFieldExportParameters params, final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final BigWarpTransform bwTransform )
 	{
 		final String unit = "pixel";
@@ -308,6 +236,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if( !bwTransform.isNonlinear() ) // is linear
 			{
 				writeAffineN5(params.n5Base, params.n5Dataset, data, bwTransform );
+			}
+			else if ( params.format.equals(ExportDisplacementFieldFrame.FMT_BIGWARP_TPS))
+			{
+				writeTpsN5(params.n5Base, params.n5Dataset, data, bwTransform );
 			}
 			else if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 			{
@@ -539,7 +471,34 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return startingTransform;
 	}
 
+	public static void writeTpsN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final BigWarpData<?> data,
+			final BigWarpTransform bwTransform) {
 
+		if (!bwTransform.getTransformType().equals(BigWarpTransform.TPS)) {
+			System.err.println(String.format("Can not write tranform type (%s) as Bigwarp Thin-plate-spline",
+					bwTransform.getTransformType()));
+			return;
+		}
+
+		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
+		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
+		final String input= mvgSpaceName;
+		final String output= tgtSpaceName;
+		final String name = input + " to " + output;
+
+		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
+		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
+		final N5Writer n5 = factory.openWriter( n5BasePath );
+
+		final ThinPlateSplineCoordinateTransform ct = new ThinPlateSplineCoordinateTransform(name, input, output, bwTransform.getTpsBase());
+		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+
+		// also add reference to root
+		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+	}
 
 	public static void writeAffineN5(
 			final String n5BasePath,

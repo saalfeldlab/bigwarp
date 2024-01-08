@@ -48,6 +48,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	// formats
 	public static final String FMT_NGFF = "NGFF";
+	public static final String FMT_BIGWARP_TPS = "TPS";
 	public static final String FMT_SLICER = "Slicer";
 
 	// macro recording
@@ -412,8 +413,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		ctxt.gridx = 3;
 		panel.add( new JLabel( "Format:" ), ctxt );
 		gbcCheck.gridx = 4;
-//		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_SLICER } );
-		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF } );
+		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_BIGWARP_TPS } );
 		panel.add( formatComboBox, gbcCheck );
 
 		ctxt.gridx = 5;
