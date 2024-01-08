@@ -3101,12 +3101,13 @@ public class BigWarp< T >
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
 //		return ( ( WarpedSource< ? > ) ( data.sources.get( data.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
 
-		// TODO better to explicitly keep track of this
-
+		// TODO better to explicitly keep track of this?
 		if( data.sources.size() < 1 )
 			return true;
-		else
+		else if( data.numMovingSources() > 1 )
 			return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
+		else
+			return false;
 	}
 
 	/**
