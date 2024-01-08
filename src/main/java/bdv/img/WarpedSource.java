@@ -58,7 +58,7 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	 */
 	private final Source< T > source;
 
-	private final String name;
+	private final String suffix;
 
 	/**
 	 * This is either the {@link #source} itself, if it implements
@@ -78,16 +78,16 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 
 	private BoundingBoxEstimation bboxEst;
 
-	public WarpedSource( final Source< T > source, final String name )
+	public WarpedSource( final Source< T > source, final String suffix )
 	{
-		this( source, name, null );
+		this( source, suffix, null );
 	}
 
-	public WarpedSource( final Source< T > source, final String name,
+	public WarpedSource( final Source< T > source, final String suffix,
 			final Supplier< Boolean > doBoundingBoxCulling )
 	{
 		this.source = source;
-		this.name = name;
+		this.suffix = suffix;
 		this.isTransformed = false;
 		this.boundingBoxCullingSupplier = doBoundingBoxCulling;
 		this.xfm = null;
@@ -240,7 +240,10 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 	@Override
 	public String getName()
 	{
-		return source.getName() + "_" + name;
+		if( suffix == null || suffix.isEmpty() )
+			return source.getName();
+		else
+			return source.getName() + "_" + suffix;
 	}
 
 	public String getOriginalName()
