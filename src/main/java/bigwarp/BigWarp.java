@@ -264,6 +264,8 @@ public class BigWarp< T >
 
 	protected final BigWarpViewerPanel viewerQ;
 
+	protected final BigWarpActions tableActions;
+
 	protected AffineTransform3D initialViewP;
 
 	protected AffineTransform3D initialViewQ;
@@ -274,7 +276,7 @@ public class BigWarp< T >
 
 	protected BigWarpLandmarkPanel landmarkPanel;
 
-	protected final LandmarkPointMenu landmarkPopupMenu;
+	protected LandmarkPointMenu landmarkPopupMenu;
 
 	protected BigWarpLandmarkFrame landmarkFrame;
 
@@ -611,7 +613,7 @@ public class BigWarp< T >
 		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarpFix" );
 		BigWarpActions.installViewerActions( bwActionsQ, getViewerFrameQ(), this );
 
-		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
+		tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
 //		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
@@ -704,24 +706,30 @@ public class BigWarp< T >
 			ndims = 3;
 
 		/* update landmark model with new dimensionality */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModel.addTableModelListener( landmarkModellistener );
-		addTransformListener( landmarkModel );
-		landmarkModel.setMessage( message );
+		landmarkModel = new LandmarkTableModel(ndims);
+		landmarkModel.addTableModelListener(landmarkModellistener);
+		addTransformListener(landmarkModel);
+		landmarkModel.setMessage(message);
 
 		landmarkPanel.setTableModel(landmarkModel);
 		setupLandmarkFrame();
+
+		landmarkPopupMenu = new LandmarkPointMenu(this);
+		landmarkPopupMenu.setupListeners();
+		BigWarpActions.installTableActions(tableActions, getLandmarkFrame().getKeybindings(), this);
 
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
 		final Class< ViewerPanel > c_vp = ViewerPanel.class;
 		try
 		{
-			final Field transformEventHandlerField = c_vp.getDeclaredField( "transformEventHandler" );
-			transformEventHandlerField.setAccessible( true );
-			transformEventHandlerField.set( viewerP, options.values.getTransformEventHandlerFactory().create( TransformState.from( viewerP.state()::getViewerTransform, viewerP.state()::setViewerTransform ) ) );
-			transformEventHandlerField.set( viewerQ, options.values.getTransformEventHandlerFactory().create( TransformState.from( viewerQ.state()::getViewerTransform, viewerQ.state()::setViewerTransform ) ) );
-			transformEventHandlerField.setAccessible( false );
+			final Field transformEventHandlerField = c_vp.getDeclaredField("transformEventHandler");
+			transformEventHandlerField.setAccessible(true);
+			transformEventHandlerField.set(viewerP, options.values.getTransformEventHandlerFactory()
+					.create(TransformState.from(viewerP.state()::getViewerTransform, viewerP.state()::setViewerTransform)));
+			transformEventHandlerField.set(viewerQ, options.values.getTransformEventHandlerFactory()
+					.create(TransformState.from(viewerQ.state()::getViewerTransform, viewerQ.state()::setViewerTransform)));
+			transformEventHandlerField.setAccessible(false);
 		}
 		catch ( final Exception e )
 		{
@@ -899,6 +907,9 @@ public class BigWarp< T >
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
 		addDefaultTableMouseListener();
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this, keymapManager );
+
+		landmarkPopupMenu = new LandmarkPointMenu( this );
+		landmarkPopupMenu.setupListeners();
 
 		if( overlayP != null )
 			overlayP.setLandmarkPanel(landmarkPanel);
