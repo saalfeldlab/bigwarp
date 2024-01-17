@@ -527,11 +527,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof SimilarityModel3D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.ROTATION:
@@ -540,11 +542,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof RigidModel3D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.AFFINE:
@@ -553,11 +557,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof AffineModel3D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		}
@@ -565,15 +571,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( ct == null )
 			return;
 
-
-
 		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
 		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
 
 		// also add to root
-		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+//		NgffTransformations.addCoordinateTransformations(n5, "", ct);
 	}
 
 	public static void writeN5(
