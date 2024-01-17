@@ -3148,9 +3148,9 @@ public class BigWarp< T >
 //		return ( ( WarpedSource< ? > ) ( data.sources.get( data.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
 
 		// TODO better to explicitly keep track of this?
-		if( data.sources.size() < 1 )
+		if( data.sources.size() <= 0 )
 			return true;
-		else if( data.numMovingSources() > 1 )
+		else if( data.numMovingSources() > 0 )
 			return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
 		else
 			return false;
