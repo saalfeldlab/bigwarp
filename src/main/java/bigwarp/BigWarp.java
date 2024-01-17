@@ -74,7 +74,7 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
 import org.janelia.saalfeldlab.n5.Compression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformPath;
 import org.janelia.utility.geom.BoundingSphereRitter;
@@ -1469,12 +1469,12 @@ public class BigWarp< T >
 		gd.addStringField( "n5 dataset", "" );
 		gd.addStringField( "n5 block size", "32" );
 		gd.addChoice( "n5 compression", new String[] {
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION },
-			N5Exporter.GZIP_COMPRESSION );
+				N5ScalePyramidExporter.GZIP_COMPRESSION,
+				N5ScalePyramidExporter.RAW_COMPRESSION,
+				N5ScalePyramidExporter.LZ4_COMPRESSION,
+				N5ScalePyramidExporter.XZ_COMPRESSION,
+				N5ScalePyramidExporter.BLOSC_COMPRESSION },
+			N5ScalePyramidExporter.GZIP_COMPRESSION );
 
 		gd.showDialog();
 

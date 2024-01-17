@@ -45,7 +45,7 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
@@ -135,12 +135,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 {
 	public static enum INVERSE_OPTIONS { FORWARD, INVERSE, BOTH };
 
-	public static final String[] compressionOptions = new String[] {
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION };
+	public static final String[] compressionOptions = new String[]{
+			N5ScalePyramidExporter.RAW_COMPRESSION,
+			N5ScalePyramidExporter.GZIP_COMPRESSION,
+			N5ScalePyramidExporter.LZ4_COMPRESSION,
+			N5ScalePyramidExporter.XZ_COMPRESSION,
+			N5ScalePyramidExporter.BLOSC_COMPRESSION};
 
 	public static final String flattenOption = "Flat";
 	public static final String sequenceOption = "Sequence";
@@ -1122,15 +1122,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static Compression getCompression( final String compressionArg )
 	{
 		switch (compressionArg) {
-		case N5Exporter.GZIP_COMPRESSION:
+		case N5ScalePyramidExporter.GZIP_COMPRESSION:
 			return new GzipCompression();
-		case N5Exporter.LZ4_COMPRESSION:
+		case N5ScalePyramidExporter.LZ4_COMPRESSION:
 			return new Lz4Compression();
-		case N5Exporter.XZ_COMPRESSION:
+		case N5ScalePyramidExporter.XZ_COMPRESSION:
 			return new XzCompression();
-		case N5Exporter.RAW_COMPRESSION:
+		case N5ScalePyramidExporter.RAW_COMPRESSION:
 			return new RawCompression();
-		case N5Exporter.BLOSC_COMPRESSION:
+		case N5ScalePyramidExporter.BLOSC_COMPRESSION:
 			return new BloscCompression();
 		default:
 			return new RawCompression();
@@ -1259,7 +1259,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			gd.addDirectoryOrFileField( "n5 root path", "" );
 			gd.addStringField( "n5 dataset", N5DisplacementField.FORWARD_ATTR );
 			gd.addStringField( "n5 block size", "32,32,32");
-			gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
+			gd.addChoice( "n5 compression", compressionOptions, N5ScalePyramidExporter.GZIP_COMPRESSION );
 			gd.showDialog();
 
 			if ( gd.wasCanceled() )

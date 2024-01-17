@@ -39,7 +39,7 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadata;
@@ -1123,12 +1123,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addStringField( "n5_dataset", "" );
 		gd.addStringField( "n5_block_size", "32" );
 		gd.addChoice( "n5_compression", new String[] {
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION },
-			N5Exporter.GZIP_COMPRESSION );
+				N5ScalePyramidExporter.GZIP_COMPRESSION,
+				N5ScalePyramidExporter.RAW_COMPRESSION,
+				N5ScalePyramidExporter.LZ4_COMPRESSION,
+				N5ScalePyramidExporter.XZ_COMPRESSION,
+				N5ScalePyramidExporter.BLOSC_COMPRESSION },
+			N5ScalePyramidExporter.GZIP_COMPRESSION );
 
 		gd.showDialog();
 
@@ -1286,15 +1286,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 	public static Compression getCompression( final String compressionArg ) {
 		switch (compressionArg) {
-		case N5Exporter.GZIP_COMPRESSION:
+		case N5ScalePyramidExporter.GZIP_COMPRESSION:
 			return new GzipCompression();
-		case N5Exporter.LZ4_COMPRESSION:
+		case N5ScalePyramidExporter.LZ4_COMPRESSION:
 			return new Lz4Compression();
-		case N5Exporter.XZ_COMPRESSION:
+		case N5ScalePyramidExporter.XZ_COMPRESSION:
 			return new XzCompression();
-		case N5Exporter.RAW_COMPRESSION:
+		case N5ScalePyramidExporter.RAW_COMPRESSION:
 			return new RawCompression();
-		case N5Exporter.BLOSC_COMPRESSION:
+		case N5ScalePyramidExporter.BLOSC_COMPRESSION:
 			return new BloscCompression();
 		default:
 			return new RawCompression();
