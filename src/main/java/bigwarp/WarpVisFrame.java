@@ -377,12 +377,12 @@ public class WarpVisFrame extends JDialog
 		content.add( transformTypePanel, gbcContent );
 
 		gbcContent.gridx = 0;
-		gbcContent.gridy = 2;
-		content.add( transformGraphPanel, gbcContent );
+		gbcContent.gridy = 1;
+		content.add( landmarkPointOptionsPanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 2;
-		content.add( landmarkPointOptionsPanel, gbcContent );
+		content.add( transformGraphPanel, gbcContent );
 
 		gbcContent.gridx = 0;
 		gbcContent.gridy = 3;
