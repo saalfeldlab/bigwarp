@@ -361,9 +361,16 @@ public class NgffTransformations
 		// the matrix is stored row major (columns are contiguous in memory)
 		final int[] blockSize = new int[]{columns, rows};
 		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affine.getRowPackedCopy(), columns, rows);
-		N5Utils.save(data, n5Writer, metadataDataset, blockSize, compression);
+		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
 
-		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, null, dataset,
+		// TODO make this more robust
+		final String metapath;
+		if (metadataDataset.equals(dataset))
+			metapath = ".";
+		else
+			metapath = metadataDataset;
+
+		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
 				inputCoordinates != null ? inputCoordinates.getName() : null,
 				outputCoordinates != null ? outputCoordinates.getName() : null);
 
@@ -383,9 +390,16 @@ public class NgffTransformations
 
 		final int[] blockSize = new int[] { affineParameters.length };
 		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affineParameters, affineParameters.length);
-		N5Utils.save(data, n5Writer, metadataDataset, blockSize, compression);
+		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
 
-		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, null, dataset,
+		// TODO make this more robust
+		final String metapath;
+		if (metadataDataset.equals(dataset))
+			metapath = ".";
+		else
+			metapath = metadataDataset;
+
+		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
 				inputCoordinates != null ? inputCoordinates.getName() : null,
 				outputCoordinates != null ? outputCoordinates.getName() : null);
 
