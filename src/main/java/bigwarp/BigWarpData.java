@@ -314,7 +314,7 @@ public class BigWarpData< T >
 	{
 		if ( sourceInfo.isMoving() )
 		{
-			final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + sourceInfo.getId());
+			final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), null);
 			final int sourceIdx = sources.indexOf( sourceInfo.getSourceAndConverter() );
 			sourceInfo.setSourceAndConverter( newSac );
 			sources.set( sourceIdx, newSac );
@@ -330,7 +330,7 @@ public class BigWarpData< T >
 		{
 			if ( sourceInfo.isMoving() )
 			{
-				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i );
+				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), null );
 				wrappedSource.add( newSac );
 			}
 			else
@@ -348,7 +348,7 @@ public class BigWarpData< T >
 			return new SourceAndConverter<T>(new WarpedSource<T>(src.getSpimSource(), name), src.getConverter(), null);
 		else
 			return new SourceAndConverter<T>(new WarpedSource<T>(src.getSpimSource(), name), src.getConverter(),
-					wrapSourceAsTransformed(src.asVolatile(), name + "_vol"));
+					wrapSourceAsTransformed(src.asVolatile(), name));
 	}
 
 	public void setSourceTransformation(final int id, final RealTransform transform, final Supplier<String> uriSupplier) {
@@ -404,8 +404,8 @@ public class BigWarpData< T >
 		else
 		{
 			System.err.println( "Inherit Converter can't handle volatile");
-//			inheritConverter( src, sac );
 			return null;
+//			inheritConverter( src, sac );
 //			return new SourceAndConverter< T >( src, sac.getConverter(), wrapSourceAsTransformed( src, name + "_vol", ndims ) );
 		}
 	}
