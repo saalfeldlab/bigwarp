@@ -513,26 +513,27 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final String name = input + " to " + output;
 
 		CoordinateTransform<?> ct = null;
+
 		final InvertibleCoordinateTransform tform = bwTransform.getCoordinateTransform();
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel2D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel2D)tform).getTranslation());
 			else if (tform instanceof TranslationModel3D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel3D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel3D)tform).getTranslation());
 			break;
 		case BigWarpTransform.SIMILARITY:
 			double[] simparams;
 			if (tform instanceof SimilarityModel2D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				ct = new AffineCoordinateTransform(name, output, input, simparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof SimilarityModel3D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				ct = new AffineCoordinateTransform(name, output, input, simparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
@@ -541,13 +542,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (tform instanceof RigidModel2D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				ct = new AffineCoordinateTransform(name, output, input, rotparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof RigidModel3D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				ct = new AffineCoordinateTransform(name, output, input, rotparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
@@ -556,13 +557,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (tform instanceof AffineModel2D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				ct = new AffineCoordinateTransform(name, output, input, affparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof AffineModel3D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				ct = new AffineCoordinateTransform(name, output, input, affparams);
 				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
@@ -575,6 +576,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+		n5.close();
 
 		// also add to root
 //		NgffTransformations.addCoordinateTransformations(n5, "", ct);
