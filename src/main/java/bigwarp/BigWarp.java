@@ -681,7 +681,7 @@ public class BigWarp< T >
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
 		viewerQ.state().setCurrentGroup( tgtGrp );
-		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
+//		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
 		SwingUtilities.invokeLater( () -> {
 			viewerFrameP.setVisible( true );
@@ -4381,6 +4381,9 @@ public class BigWarp< T >
 //					}
 //				}
 //			});
+
+			// TODO when source transformation panel is ready
+//			warpVisDialog.transformGraphPanel.initializeSourceCoordinateSystems();
 
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();

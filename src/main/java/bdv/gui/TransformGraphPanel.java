@@ -18,7 +18,6 @@ import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
@@ -42,17 +41,17 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 
 	private static final String COORD_SYSTEMS_HELP_TEXT = "All available coordinate systems.";
 
+	private static final ViewerStateChange CURRENT_SOURCE_CHANGED = null;
+
 	private final BigWarp< ? > bw;
-
-	private final JLabel srcCoordinateSystemLabel;
-
-	private final JLabel destCoordinateSystemLabel;
 
 	private final ImprovedFormattedTextField transformGraphSourceText;
 	
-//	private final JCheckBox autoDetectTransforms;
+//	private final JLabel srcCoordinateSystemLabel;
+//
+//	private final JComboBox<String> srcCoordinateSystemsDropdown;
 
-	private final JComboBox<String> srcCoordinateSystemsDropdown;
+	private final JLabel destCoordinateSystemLabel;
 
 	private final JComboBox<String> destCoordinateSystemsDropdown;
 
@@ -64,7 +63,7 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 
 	private final ViewerPanel viewerPanel;
 
-	private HashMap<SourceAndConverter, String> sourceToCoordinateSystems;
+	private HashMap<SourceAndConverter<?>, String> sourceToCoordinateSystems;
 
 	public TransformGraphPanel( BigWarp<?> bw, final ViewerPanel viewerPanel, final Container content )
 	{
@@ -82,11 +81,11 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 				BorderFactory.createEmptyBorder( 2, 2, 2, 2 ))));
 
 //		autoDetectTransforms = new JCheckBox("Auto-detect transformations");
-		srcCoordinateSystemsDropdown = new JComboBox<>( new String[] { DEFAULT_COORDINATE_SYSTEM });
+//		srcCoordinateSystemsDropdown = new JComboBox<>( new String[] { DEFAULT_COORDINATE_SYSTEM });
 		destCoordinateSystemsDropdown = new JComboBox<>( new String[] { DEFAULT_COORDINATE_SYSTEM });
 
-		sourceToCoordinateSystems = new HashMap<>();
-		initializeSourceCoordinateSystems();
+//		sourceToCoordinateSystems = new HashMap<>();
+//		initializeSourceCoordinateSystems();
 
 		// browse and directory
 		final JLabel srcDirLabel = new JLabel("Directory");
@@ -112,10 +111,9 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 					coordinateSystems.add( t.getInput() );
 					coordinateSystems.add( t.getOutput() );
 				});
-				
+
 				destCoordinateSystemsDropdown.addItem( DEFAULT_COORDINATE_SYSTEM );
 				coordinateSystems.forEach( x -> { 
-					System.out.println(x);
 					destCoordinateSystemsDropdown.addItem(x); });
 
 				// make sure default is selected after update
@@ -160,19 +158,22 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 			}
 		});
 
-		srcCoordinateSystemLabel = new JLabel("Source coordinate system");
-		srcCoordinateSystemLabel.setToolTipText( TRANSFORM_SOURCE_HELP_TEXT );
-		srcCoordinateSystemsDropdown.setToolTipText( COORD_SYSTEMS_HELP_TEXT );
-		srcCoordinateSystemsDropdown.addActionListener( new ActionListener() {
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-				if( active ) {
-					final String cs = (String)srcCoordinateSystemsDropdown.getSelectedItem();
-					System.out.println( "src coordinateSystem: " + cs );
-//					bw.transformationsFromCoordinateSystem();
-				}
-			}
-		});
+		// TODO add src coordinate system stuff when its ready
+
+//		srcCoordinateSystemLabel = new JLabel("Source coordinate system");
+//		srcCoordinateSystemLabel.setToolTipText( TRANSFORM_SOURCE_HELP_TEXT );
+//		srcCoordinateSystemsDropdown.setToolTipText( COORD_SYSTEMS_HELP_TEXT );
+//		srcCoordinateSystemsDropdown.addActionListener( new ActionListener() {
+//			@Override
+//			public void actionPerformed( ActionEvent e ) {
+//				if( active ) {
+//					final String cs = (String)srcCoordinateSystemsDropdown.getSelectedItem();
+//					System.out.println( "src coordinateSystem: " + cs );
+//					updateSourceCoordinateSystemMap();
+////					bw.transformationsFromCoordinateSystem();
+//				}
+//			}
+//		});
 
 		final GridBagConstraints gbc = new GridBagConstraints();
 		gbc.gridx = 0;
@@ -198,14 +199,14 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		gbc.anchor = GridBagConstraints.LINE_END;
 		add(browseBtn, gbc);
 
-		gbc.gridx = 0;
-		gbc.gridy = 1;
-		add(srcCoordinateSystemLabel, gbc);		
-		gbc.gridx = 1;
-		add(srcCoordinateSystemsDropdown, gbc);
+//		gbc.gridx = 0;
+//		gbc.gridy = 1;
+//		add(srcCoordinateSystemLabel, gbc);
+//		gbc.gridx = 1;
+//		add(srcCoordinateSystemsDropdown, gbc);
 
 		gbc.gridx = 0;
-		gbc.gridy = 2;
+		gbc.gridy = 1;
 		add(destCoordinateSystemLabel, gbc);
 		gbc.gridx = 1;
 		add(destCoordinateSystemsDropdown, gbc);
@@ -231,10 +232,6 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		return transformGraphSourceText;
 	}
 
-//	public JCheckBox getAutoDetectTransformCheckbox() {
-//
-//		return autoDetectTransforms;
-//	}
 
 	public void setDestinationCoordinateSystem(final String coordinateSystem) {
 
@@ -262,39 +259,37 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		active = true;
 	}
 	
-	protected void initializeSourceCoordinateSystems() {
+	public void initializeSourceCoordinateSystems() {
 
-		System.out.println("initializeSourceCoordinateSystems");
 		sourceToCoordinateSystems.clear();
-		viewerPanel.state().getSources().forEach(sac -> {
-			sourceToCoordinateSystems.put(sac, sac.getSpimSource().getName());
-			System.out.println( sac.getSpimSource().getName());
-			srcCoordinateSystemsDropdown.addItem(sac.getSpimSource().getName());
-		});
+//		bw.getData().sources.forEach(sac -> {
+//			sourceToCoordinateSystems.put(sac, sac.getSpimSource().getName());
+//			srcCoordinateSystemsDropdown.addItem(sac.getSpimSource().getName());
+//		});
 	}
 	
 	public void updateSourceDropdownOnSourceChange() {
 
-		srcCoordinateSystemsDropdown.setSelectedItem(
-				sourceToCoordinateSystems.get(viewerPanel.state().getCurrentSource()));
+//		srcCoordinateSystemsDropdown.setSelectedItem(
+//				sourceToCoordinateSystems.get(viewerPanel.state().getCurrentSource()));
 	}
 
 	public void updateSourceCoordinateSystemMap() {
 
-		// TODO
-		SourceAndConverter<?> currentSac = viewerPanel.state().getCurrentSource();
-		sourceToCoordinateSystems.put(currentSac, COORD_SYSTEMS_HELP_TEXT);
+		sourceToCoordinateSystems.put(viewerPanel.state().getCurrentSource(), COORD_SYSTEMS_HELP_TEXT);
 	}
 
 	@Override
 	public void viewerStateChanged(ViewerStateChange change) {
 
-		switch( change )
-		{
-		case CURRENT_SOURCE_CHANGED:
-			SwingUtilities.invokeLater( this::updateSourceDropdownOnSourceChange );
-			break;
-		}
+		// TODO this will be important when the UI is finished, for now, a no-op
+
+//		switch( change )
+//		{
+//		case CURRENT_SOURCE_CHANGED:
+//			SwingUtilities.invokeLater( this::updateSourceDropdownOnSourceChange );
+//			break;
+//		}
 	}
 
 }
