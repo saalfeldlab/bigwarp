@@ -11,6 +11,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Install blosc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libblosc1
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
