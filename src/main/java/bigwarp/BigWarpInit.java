@@ -257,8 +257,14 @@ public class BigWarpInit
 	}
 
 	/**
-	 * Initialize BigWarp.
-	 *
+	 * Add images from an {@link ImagePlus} as sources for BigWarp. Each channel will be added as its own source.
+	 * 
+	 * @param <T> the type 
+	 * @param bwdata the bigwarp data
+	 * @param ip an ImagePlus
+	 * @param setupId id
+	 * @param numTimepoints the number of timepoints
+	 * @param isMoving true for moving sources
 	 * @return the number of sources
 	 *
 	 * @deprecated Use {@code createSources(BigWarpData,ImagePlus,int,int,boolean)} instead, and pass output to

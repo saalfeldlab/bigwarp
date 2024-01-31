@@ -87,8 +87,8 @@ public class BoundingSphereRitter
 	 * Changes the value of the input sphere such that it contains the given point p.
 	 * Returns true if the sphere was modified.
 	 *
-	 * @param sphere
-	 * @param p
+	 * @param sphere the sphere
+	 * @param p the point coordinates
 	 * @return true if the sphere was changed
 	 */
 	public static boolean updateSphere( final Sphere sphere, final double[] p )

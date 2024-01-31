@@ -415,10 +415,8 @@ public class BigWarpData< T >
 	 *
 	 * Only call this if the Source already has a transformation.
 	 *
-	 * @param <T> the type
 	 * @param src the original source
 	 * @param transform the transformation
-	 * @return the transformed source
 	 */
 	public void updateFixedTransform( final Source<T> src, final RealTransform transform )
 	{

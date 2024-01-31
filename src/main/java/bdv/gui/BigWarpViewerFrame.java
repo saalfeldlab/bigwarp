@@ -248,6 +248,8 @@ public class BigWarpViewerFrame extends JFrame
 	 * Get {@code Behaviours} hook where TransformEventHandler behaviours are installed.
 	 * This is installed in {@link #getTriggerBindings} with the id "transform".
 	 * The hook can be used to update the keymap and install additional behaviours.
+	 * 
+	 * @return the behaviours
 	 */
 	public Behaviours getTransformBehaviours()
 	{

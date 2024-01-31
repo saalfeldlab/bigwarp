@@ -427,6 +427,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 *            the BigWarpData
 	 * @param landmarks
 	 *            the landmarks
+	 * @param transform
+	 * 			  the transformation
 	 * @param fieldOfViewOption
 	 *            the field of view option
 	 * @param fieldOfViewPointFilter
