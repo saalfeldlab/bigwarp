@@ -72,6 +72,18 @@ public class BigwarpLandmarkSelectionPanel<T> extends JPanel
 
 	/**
 	 * Displays a dialog showing point matches
+	 * 
+	 * @param data the data
+	 * @param sources list of sources
+	 * @param fieldOfViewOption option for inferring the field of view
+	 * @param outputIntervalList list of output intervals
+	 * @param matchedPtNames names of points for matching
+	 * @param interp interpolation
+	 * @param offsetIn the offset
+	 * @param resolution the resolution
+	 * @param isVirtual if true
+	 * @param nThreads number of threads
+	 * @param progressWriter progress writer
 	 */
 	public BigwarpLandmarkSelectionPanel( 
 			final BigWarpData<T> data,

@@ -33,7 +33,7 @@ import net.imglib2.type.numeric.NumericType;
  * 
  * @author John Bogovic
  *
- * @param <T>
+ * @param <T> type 
  */
 public class BwRandomAccessibleIntervalSource< T extends NumericType< T > > extends RandomAccessibleIntervalSource<T>
 {

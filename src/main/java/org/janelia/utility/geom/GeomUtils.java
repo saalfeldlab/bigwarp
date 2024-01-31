@@ -128,6 +128,7 @@ public class GeomUtils {
 	 * tht : the angle
 	 *
 	 * @param t the transformations
+	 * @param center the coordinates of the center of rotation
 	 * @return the scales and angle [sx, sy, tht]
 	 */
 	public static double[] scalesAngle( final AffineTransform2D t, final double[] center )

@@ -41,6 +41,7 @@ import net.imglib2.img.imageplus.ImagePlusImg;
 import net.imglib2.img.imageplus.ImagePlusImgFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.view.MixedTransformView;
@@ -48,6 +49,7 @@ import net.imglib2.view.Views;
 import bdv.export.ProgressWriter;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.viewer.Interpolation;
+import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 
 public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
@@ -96,6 +98,8 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		final ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >();
 
 		buildTotalRenderTransform();
+		final AffineTransform3D srcXfm = new AffineTransform3D();
+
 
 		final int numChannels = bwData.numMovingSources();
 		final VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
@@ -105,11 +109,19 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final RealRandomAccessible< ARGBType > raiRaw = ( RealRandomAccessible< ARGBType > )bwData.getMovingSource( i ).getSpimSource().getInterpolatedSource( 0, 0, interp );
+			final Source<ARGBType> src = bwData.getMovingSource( i ).getSpimSource();
+			src.getSourceTransform(0, 0, srcXfm);
+
+			// in pixel space
+			final RealRandomAccessible<ARGBType> raiRaw = ( RealRandomAccessible<ARGBType> ) src.getInterpolatedSource( 0, 0, interp );
+
+			// the transform from world to new pixel coordinates
+			final AffineTransform3D pixelToPhysical = pixelRenderToPhysical.copy().inverse();
+			// but first need to transform from original pixel to world coordinates
+			pixelToPhysical.concatenate(srcXfm);
 
 			// apply the transformations
-			final AffineRandomAccessible< ARGBType, AffineGet > rai = RealViews.affine(
-					raiRaw, pixelRenderToPhysical.inverse() );
+			final AffineRandomAccessible<ARGBType, AffineGet> rai = RealViews.affine(raiRaw, pixelToPhysical);
 
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}

@@ -49,6 +49,7 @@ import bigwarp.landmarks.LandmarkGridGenerator;
 import bigwarp.source.GridSource;
 import mpicbg.models.AbstractModel;
 import net.imglib2.RealRandomAccessible;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.type.numeric.real.FloatType;
 
 public class BigWarpActions extends Actions
@@ -1057,6 +1058,17 @@ public class BigWarpActions extends Actions
 		{
 			System.out.println( "Debug" );
 
+			// set a fixed transformations
+//			AffineTransform3D tform = new AffineTransform3D();
+//			tform.setTranslation(-100, 100, 0);
+//			bw.getData().setSourceTransformation(0, tform, null);
+//			bw.synchronizeSources();
+			
+			// print all source names
+			bw.data.sourceInfos.values().stream().forEach( x -> {
+				System.out.println( x.getSourceAndConverter().getSpimSource().getName());
+			});
+
 //			System.out.println( "viewerP is Transformed: " + bw.isMovingDisplayTransformed() );
 //			LandmarkTableModel ltm = this.bw.getLandmarkPanel().getTableModel();
 //			 ltm.printState();
@@ -1073,19 +1085,21 @@ public class BigWarpActions extends Actions
 //			bw.viewerQ.state().getViewerTransform( xfm );
 //			System.out.println( "tgt xfm " + xfm + "   DET = " + BigWarpUtils.det( xfm ));
 
-			final double[] p = new double[] { 200, 325, 0 };
+//			final double[] p = new double[] { 200, 325, 0 };
 //			final double[] q = new double[3];
 
-			if( bw.jacDetSource != null ) {
 
-				final RealRandomAccessible<FloatType> jsrc = bw.jacDetSource.getInterpolatedSource(0, 0, Interpolation.NLINEAR );
-				final FloatType q = jsrc.getAt(p);
-				System.out.println( "Jacobian det at " + Arrays.toString( p ) + " " + q.get() );
-			}
-			else
-			{
-				System.out.println( "no jacobian source");
-			}
+//			if( bw.jacDetSource != null ) {
+//
+//				final RealRandomAccessible<FloatType> jsrc = bw.jacDetSource.getInterpolatedSource(0, 0, Interpolation.NLINEAR );
+//				final FloatType q = jsrc.getAt(p);
+//				System.out.println( "Jacobian det at " + Arrays.toString( p ) + " " + q.get() );
+//			}
+//			else
+//			{
+//				System.out.println( "no jacobian source");
+//			}
+
 
 //			BigWarpData< ? > data = bw.getData();
 //			for( int mi : data.movingSourceIndices )

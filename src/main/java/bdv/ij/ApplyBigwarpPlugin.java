@@ -39,11 +39,12 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.util.ProgressWriterIJ;
@@ -67,6 +68,7 @@ import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
@@ -425,6 +427,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 *            the BigWarpData
 	 * @param landmarks
 	 *            the landmarks
+	 * @param transform
+	 * 			  the transformation
 	 * @param fieldOfViewOption
 	 *            the field of view option
 	 * @param fieldOfViewPointFilter
@@ -925,20 +929,54 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return ipList;
 	}
 
+	/**
+	 * Limits the size of an array to N.
+	 * <p>
+	 * If the input array has N or fewer elements, return it,
+	 * otherwise return a new array with the first N elements.
+	 *
+	 * @param N max elements
+	 * @param x the array
+	 * @return an array with a maximum of N elements
+	 */
+	private static double[] limit(int N, double[] x) {
+
+		if (x.length <= N)
+			return x;
+
+		final double[] out = new double[N];
+		System.arraycopy(x, 0, out, 0, N);
+		return out;
+	}
+
+	private static double[] physicalOffsetFromPixelInterval(final RealInterval interval, final double[] resolution) {
+
+		final int N = Math.min(interval.numDimensions(), resolution.length);
+		final double[] out = new double[N];
+		for (int i = 0; i < N; i++) {
+			out[i] = resolution[i] * interval.realMin(i);
+		}
+		return out;
+	}
+
 	public static <S, T extends NativeType<T> & NumericType<T>> void runN5Export(
 			final BigWarpData<S> data,
 			final List< SourceAndConverter< S >> sources,
 			final String fieldOfViewOption,
 			final Interval outputInterval,
 			final Interpolation interp,
-			final double[] offset,
-			final double[] resolution,
+			final double[] offsetArg,
+			final double[] resolutionArg,
 			final String unit,
 			final ProgressWriter progressWriter,
 			final WriteDestinationOptions writeOpts,
 			final ExecutorService exec )
 	{
 		final int nd = BigWarp.detectNumDims( data.sources );
+		final double[] resolution = limit(nd,resolutionArg);
+
+//		final double[] offset = limit(nd,offsetArg);
+		final double[] offset = physicalOffsetFromPixelInterval(outputInterval, resolution);
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -946,6 +984,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final Compression compression = writeOpts.compression;
 		if( dataset == null || dataset.isEmpty() )
 		{
+			System.err.println("Problem with n5 dataset path: " + dataset);
 			return;
 		}
 		N5Writer n5;
@@ -955,15 +994,17 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		catch ( final RuntimeException e1 )
 		{
+			System.err.println("Could not create n5 writer for: " + writeOpts.pathOrN5Root);
 			e1.printStackTrace();
 			return;
 		}
 
 		// build metadata
-		final String[] axes = nd == 2 ? new String[] { "y", "x" } :new String[]{ "z", "y", "x" } ;
-		final String[] units = nd == 2 ? new String[]{ unit, unit } : new String[] { unit, unit, unit };
-		final N5CosemMetadata metadata = new N5CosemMetadata( "", new N5CosemMetadata.CosemTransform( axes, resolution, offset, units ), null );
-		final N5CosemMetadataParser parser = new N5CosemMetadataParser();
+		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
+		final Axis[] axes = new Axis[nd];
+		for (int i = 0; i < nd; i++)
+			axes[i] = new Axis(Axis.SPACE, axesLabels[i], unit);
 
 		// setup physical to pixel transform
 		final AffineTransform3D resolutionTransform = new AffineTransform3D();
@@ -1010,9 +1051,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			else
 				imgToWrite = img;
 
+			final String name = originalMovingSource.getSpimSource().getName();
+			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, axes, new String[]{"s0"},
+					new double[][]{resolution}, new double[][]{offset});
+
 			try
 			{
-				N5Utils.save( imgToWrite, n5, destDataset, blockSize, compression, exec );
+				N5Utils.save( imgToWrite, n5, destDataset + "/s0", blockSize, compression, exec );
 				if( parser != null && metadata != null )
 					parser.writeMetadata( metadata, n5, destDataset );
 
@@ -1123,12 +1168,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		gd.addStringField( "n5_dataset", "" );
 		gd.addStringField( "n5_block_size", "32" );
 		gd.addChoice( "n5_compression", new String[] {
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION },
-			N5Exporter.GZIP_COMPRESSION );
+				N5ScalePyramidExporter.GZIP_COMPRESSION,
+				N5ScalePyramidExporter.RAW_COMPRESSION,
+				N5ScalePyramidExporter.LZ4_COMPRESSION,
+				N5ScalePyramidExporter.XZ_COMPRESSION,
+				N5ScalePyramidExporter.BLOSC_COMPRESSION },
+			N5ScalePyramidExporter.GZIP_COMPRESSION );
 
 		gd.showDialog();
 
@@ -1286,15 +1331,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 	public static Compression getCompression( final String compressionArg ) {
 		switch (compressionArg) {
-		case N5Exporter.GZIP_COMPRESSION:
+		case N5ScalePyramidExporter.GZIP_COMPRESSION:
 			return new GzipCompression();
-		case N5Exporter.LZ4_COMPRESSION:
+		case N5ScalePyramidExporter.LZ4_COMPRESSION:
 			return new Lz4Compression();
-		case N5Exporter.XZ_COMPRESSION:
+		case N5ScalePyramidExporter.XZ_COMPRESSION:
 			return new XzCompression();
-		case N5Exporter.RAW_COMPRESSION:
+		case N5ScalePyramidExporter.RAW_COMPRESSION:
 			return new RawCompression();
-		case N5Exporter.BLOSC_COMPRESSION:
+		case N5ScalePyramidExporter.BLOSC_COMPRESSION:
 			return new BloscCompression();
 		default:
 			return new RawCompression();

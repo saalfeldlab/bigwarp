@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import bdv.cache.CacheControl;
 import bdv.gui.BigWarpViewerFrame;
@@ -29,6 +30,7 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
+import net.imglib2.util.Intervals;
 
 public class BigWarpData< T >
 {
@@ -155,7 +157,7 @@ public class BigWarpData< T >
 		{
 			final SourceInfo info = idToInfo.getValue();
 			if (!info.isMoving()) {
-				if (curIdx == i) return ( SourceAndConverter< T > ) info.getSourceAndConverter();
+				if (curIdx == i) return (SourceAndConverter< T >) info.getSourceAndConverter();
 				curIdx++;
 			}
 		}
@@ -282,24 +284,116 @@ public class BigWarpData< T >
 		converterSetups.remove( i  );
 	}
 
-	public void applyTransformations()
-	{
-		int i = 0;
-		for ( final SourceAndConverter<T> sac : sources )
-		{
-			final SourceInfo info = getSourceInfo( sac );
-			final RealTransform transform = info.getTransform();
-			if ( transform != null )
-			{
-				final SourceAndConverter<T> newSac = inheritConverter(
-						applyFixedTransform( sac.getSpimSource(), transform),
-						sac );
+	public static Source<?> unwrap( SourceInfo srcInfo ) {
 
-				info.setSourceAndConverter( newSac );
-				sources.set( i, newSac );
+		Source<?> src = srcInfo.getSourceAndConverter().getSpimSource();
+		if (srcInfo.isMoving()) {
+			if (src instanceof WarpedSource) // this check probably not necessary, but be safe
+				src = ((WarpedSource<?>)src).getWrappedSource();
+		}
+
+		if( srcInfo.getTransform() != null ) {
+			// applying a fixed transform might use a WarpedSource or TransformedSource
+			// see the applyFixedTransform meth od
+			if (src instanceof WarpedSource)
+				src = ((WarpedSource<?>)src).getWrappedSource();
+			else if( src instanceof TransformedSource )
+				src = ((TransformedSource)src).getWrappedSource();
+		}
+
+		return src;
+	}
+
+	public void wrapMovingSources() {
+
+		for (final SourceInfo sourceInfo : sourceInfos.values())
+			wrapMovingSources(sourceInfo);
+	}
+
+	public void wrapMovingSources( SourceInfo sourceInfo )
+	{
+		if ( sourceInfo.isMoving() )
+		{
+			final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), null);
+			final int sourceIdx = sources.indexOf( sourceInfo.getSourceAndConverter() );
+			sourceInfo.setSourceAndConverter( newSac );
+			sources.set( sourceIdx, newSac );
+		}
+	}
+
+	public List<SourceAndConverter<T>> wrapSourcesAsTransformed()
+	{
+		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
+
+		int i = 0;
+		for ( final SourceInfo sourceInfo : sourceInfos.values() )
+		{
+			if ( sourceInfo.isMoving() )
+			{
+				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), null );
+				wrappedSource.add( newSac );
+			}
+			else
+			{
+				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
 			}
 			i++;
 		}
+		return wrappedSource;
+	}
+
+	private static <T> SourceAndConverter<T> wrapSourceAsTransformed(final SourceAndConverter<T> src, final String name) {
+
+		if (src.asVolatile() == null)
+			return new SourceAndConverter<T>(new WarpedSource<T>(src.getSpimSource(), name), src.getConverter(), null);
+		else
+			return new SourceAndConverter<T>(new WarpedSource<T>(src.getSpimSource(), name), src.getConverter(),
+					wrapSourceAsTransformed(src.asVolatile(), name));
+	}
+
+	public void setSourceTransformation(final int id, final RealTransform transform, final Supplier<String> uriSupplier) {
+
+		setTransformation(sourceInfos.get(id), transform, uriSupplier);
+	}
+
+	public void setTransformation(SourceInfo srcInfo, final RealTransform transform, final Supplier<String> uriSupplier) {
+
+		final Source<T> unWrappedSource = (Source<T>)unwrap(srcInfo);
+		srcInfo.setTransform(transform, uriSupplier);
+		applyTransformation(srcInfo, unWrappedSource);
+
+		if (srcInfo.isMoving())
+			wrapMovingSources(srcInfo);
+	}
+
+	public void applyTransformations() {
+
+		int i = 0;
+		for (final SourceAndConverter<T> sac : sources) {
+			final SourceInfo info = getSourceInfo(sac);
+			final RealTransform transform = info.getTransform();
+			if (transform != null) {
+				final SourceAndConverter<T> newSac = inheritConverter(
+						applyFixedTransform(sac.getSpimSource(), transform),
+						sac);
+
+				info.setSourceAndConverter(newSac);
+				sources.set(i, newSac);
+			}
+			i++;
+		}
+	}
+
+	public void applyTransformation(final SourceInfo info, Source<T> unWrappedSource) {
+
+		final RealTransform transform = info.getTransform();
+		@SuppressWarnings("unchecked")
+		final SourceAndConverter<T> sac = (SourceAndConverter<T>)info.getSourceAndConverter();
+		final SourceAndConverter<T> newSac = inheritConverter(
+				transform != null ? applyFixedTransform(unWrappedSource, transform) : unWrappedSource,
+				sac);
+		info.setSourceAndConverter(newSac);
+		sources.set(sources.indexOf(sac), newSac);
 	}
 
 	public static < T > SourceAndConverter< T > inheritConverter( final Source<T> src, final SourceAndConverter< T > sac )
@@ -310,10 +404,36 @@ public class BigWarpData< T >
 		else
 		{
 			System.err.println( "Inherit Converter can't handle volatile");
-//			inheritConverter( src, sac );
 			return null;
+//			inheritConverter( src, sac );
 //			return new SourceAndConverter< T >( src, sac.getConverter(), wrapSourceAsTransformed( src, name + "_vol", ndims ) );
 		}
+	}
+
+	/**
+	 * Updates the fixed transform for the given {@link Source}.
+	 *
+	 * Only call this if the Source already has a transformation.
+	 *
+	 * @param src the original source
+	 * @param transform the transformation
+	 */
+	public void updateFixedTransform( final Source<T> src, final RealTransform transform )
+	{
+		RealTransform tform = transform;
+		if( transform.numSourceDimensions() < 3 )
+		{
+			if( transform instanceof InvertibleRealTransform )
+				tform = new InvertibleWrapped2DTransformAs3D( ( InvertibleRealTransform ) transform );
+			else
+				tform = new Wrapped2DTransformAs3D( transform );
+		}
+
+		if( !(src instanceof WarpedSource ))
+			return;
+
+		WarpedSource<?> wsrc = (WarpedSource<?>)src;
+		wsrc.updateTransform(tform);
 	}
 
 	/**
@@ -398,7 +518,7 @@ public class BigWarpData< T >
 		}
 
 		// need to use WarpedSource
-		final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
+		final WarpedSource<?> wsrc = new WarpedSource( src, null );
 		wsrc.updateTransform( tform );
 		wsrc.setIsTransformed( true );
 		return ( Source< T > ) wsrc;

@@ -285,6 +285,9 @@ public class ImprovedFormattedTextField extends JFormattedTextField
 		public Object parseObject( String source, ParsePosition pos )
 		{
 			final int initialIndex = pos.getIndex();
+			if( fDelegate == null )
+				return source;
+
 			final Object result = fDelegate.parseObject( source, pos );
 			if ( result != null && pos.getIndex() < source.length() )
 			{

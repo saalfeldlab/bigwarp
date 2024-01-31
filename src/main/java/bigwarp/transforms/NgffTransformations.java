@@ -24,11 +24,13 @@ import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.IdentityCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertibleCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ParametrizedTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ScaleCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.SequenceCoordinateTransform;
@@ -39,19 +41,28 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.array.ArrayImg;
+import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ScaleGet;
 import net.imglib2.realtransform.TranslationGet;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 
 
 public class NgffTransformations
 {
+	
+	public enum TransformField {
+		DISPLACEMENT, COORDINATE
+	};
 
 	@SuppressWarnings("unchecked")
 	public static < T extends RealTransform> T open( final N5Reader n5, final String dataset, final String input, final String output )
@@ -203,6 +214,7 @@ public class NgffTransformations
 
 				try {
 					final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
+					resolveAbsolutePath(ct, dataset);
 					return new ValuePair<>( ct, n5 );
 				} catch( N5Exception | ClassCastException e ) {}
 
@@ -214,6 +226,13 @@ public class NgffTransformations
 		catch ( final URISyntaxException e ) { }
 
 		return null;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static void resolveAbsolutePath( CoordinateTransform<?> ct, final String groupPath )
+	{
+		if( ct instanceof ParametrizedTransform )
+			((ParametrizedTransform)ct).resolveAbsoluePath(groupPath);
 	}
 
 	public static Pair<CoordinateTransform<?>,N5Reader> openReference( final String url, final N5Reader n5, final String dataset, final String attribute) {
@@ -323,12 +342,113 @@ public class NgffTransformations
 		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
 	}
 
+	public static final <T extends NativeType<T> & RealType<T>> AffineCoordinateTransform saveAffine(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final AffineGet affine,
+			final boolean flat,
+			final Compression compression ) {
+
+		if( flat )
+			return saveAffine( n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates, affine.getRowPackedCopy(), compression );
+
+		final int rows = affine.numTargetDimensions();
+		final int columns = affine.numSourceDimensions() + 1;
+
+		// the matrix is stored row major (columns are contiguous in memory)
+		final int[] blockSize = new int[]{columns, rows};
+		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affine.getRowPackedCopy(), columns, rows);
+		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
+
+		// TODO make this more robust
+		final String metapath;
+		if (metadataDataset.equals(dataset))
+			metapath = ".";
+		else
+			metapath = metadataDataset;
+
+		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
+				inputCoordinates != null ? inputCoordinates.getName() : null,
+				outputCoordinates != null ? outputCoordinates.getName() : null);
+
+		addCoordinateTransformations(n5Writer, metadataDataset, ct);
+
+		return ct;
+	}
+
+	public static final <T extends NativeType<T> & RealType<T>> AffineCoordinateTransform saveAffine(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final double[] affineParameters,
+			final Compression compression ) {
+
+		final int[] blockSize = new int[] { affineParameters.length };
+		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affineParameters, affineParameters.length);
+		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
+
+		// TODO make this more robust
+		final String metapath;
+		if (metadataDataset.equals(dataset))
+			metapath = ".";
+		else
+			metapath = metadataDataset;
+
+		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
+				inputCoordinates != null ? inputCoordinates.getName() : null,
+				outputCoordinates != null ? outputCoordinates.getName() : null);
+
+		addCoordinateTransformations(n5Writer, metadataDataset, ct);
+
+		return ct;
+	}
+
 	public static final <T extends NativeType<T> & RealType<T>> DisplacementFieldCoordinateTransform<?> saveDisplacementFieldNgff(
 			final N5Writer n5Writer,
 			final String dataset,
 			final String metadataDataset,
 			final CoordinateSystem inputCoordinates,
 			final CoordinateSystem outputCoordinates,
+			final RandomAccessibleInterval<T> field,
+			final double[] spacing,
+			final double[] offset,
+			final int[] blockSize,
+			final Compression compression,
+			ExecutorService exec ) {
+
+		return (DisplacementFieldCoordinateTransform<?>)saveFieldNgff( n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates,
+				TransformField.DISPLACEMENT, field, spacing, offset, blockSize, compression, exec );
+	}
+
+	public static final <T extends NativeType<T> & RealType<T>> CoordinateFieldCoordinateTransform<?> savePositionFieldNgff(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final RandomAccessibleInterval<T> field,
+			final double[] spacing,
+			final double[] offset,
+			final int[] blockSize,
+			final Compression compression,
+			ExecutorService exec ) {
+
+		return (CoordinateFieldCoordinateTransform<?>)saveFieldNgff( n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates,
+				TransformField.COORDINATE, field, spacing, offset, blockSize, compression, exec );
+	}
+
+	public static final <T extends NativeType<T> & RealType<T>> CoordinateTransform<?> saveFieldNgff(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final TransformField type,
 			final RandomAccessibleInterval<T> dfield,
 			final double[] spacing,
 			final double[] offset,
@@ -359,15 +479,19 @@ public class NgffTransformations
 
 		final String vecFieldCsName =  inputCoordinates.getName();
 		final CoordinateSystem[] cs = new CoordinateSystem[] {
-				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates ) };
+				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates, type ) };
 		n5Writer.setAttribute(dataset, CoordinateSystem.KEY, cs);
 
 		final CoordinateTransform[] ct = new CoordinateTransform[] {
 				createTransformation( "", spacing, offset, dataset, cs[0] ) };
 		n5Writer.setAttribute(dataset, CoordinateTransform.KEY, ct );
 
-		return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
-				inputCoordinates.getName(), outputCoordinates.getName() );
+		if( type.equals( TransformField.DISPLACEMENT ))
+			return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
+					inputCoordinates.getName(), outputCoordinates.getName() );
+		else
+			return new CoordinateFieldCoordinateTransform<T>( "", dataset, "linear",
+					inputCoordinates.getName(), outputCoordinates.getName() );
 	}
 
 
@@ -419,10 +543,14 @@ public class NgffTransformations
 		return out;
 	}
 
-	public static CoordinateSystem createVectorFieldCoordinateSystem(final String name, final CoordinateSystem input) {
+	public static CoordinateSystem createVectorFieldCoordinateSystem(final String name, final CoordinateSystem input, TransformField type ) {
 
 		final Axis[] vecAxes = new Axis[input.getAxes().length + 1];
-		vecAxes[0] = new Axis("displacement", "d", null, true);
+		if( type.equals(TransformField.DISPLACEMENT))
+			vecAxes[0] = new Axis("displacement", "d", null, true);
+		else
+			vecAxes[0] = new Axis("coordinate", "c", null, true);
+
 		for (int i = 1; i < vecAxes.length; i++)
 			vecAxes[i] = input.getAxes()[i - 1];
 

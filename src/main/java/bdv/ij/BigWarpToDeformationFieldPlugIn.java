@@ -45,7 +45,7 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
 import org.janelia.saalfeldlab.n5.XzCompression;
 import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
@@ -53,6 +53,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.SequenceCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ThinPlateSplineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.TranslationCoordinateTransform;
 
 import bdv.gui.ExportDisplacementFieldFrame;
@@ -134,12 +135,12 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 {
 	public static enum INVERSE_OPTIONS { FORWARD, INVERSE, BOTH };
 
-	public static final String[] compressionOptions = new String[] {
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION };
+	public static final String[] compressionOptions = new String[]{
+			N5ScalePyramidExporter.RAW_COMPRESSION,
+			N5ScalePyramidExporter.GZIP_COMPRESSION,
+			N5ScalePyramidExporter.LZ4_COMPRESSION,
+			N5ScalePyramidExporter.XZ_COMPRESSION,
+			N5ScalePyramidExporter.BLOSC_COMPRESSION};
 
 	public static final String flattenOption = "Flat";
 	public static final String sequenceOption = "Sequence";
@@ -168,79 +169,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 //
 		ExportDisplacementFieldFrame.createAndShow( bw );
 	}
-
-//	/**
-//	 * @deprecated not necessary access thedesired source this way anymore, use {@link #runFromBigWarpInstance(LandmarkTableModel, SourceAndConverter)}
-//	 * 	on the result of {@link bigwarp.BigWarpData#getTargetSource(int)}
-//	 */
-//	@Deprecated
-//	public <T> void runFromBigWarpInstanceOld(
-//			final BigWarpData<?> data,
-//			final LandmarkTableModel landmarkModel,
-//			final List<SourceAndConverter<T>> sources,
-//			final List<Integer> targetSourceIndexList )
-//	{
-//		runFromBigWarpInstanceOld( data, landmarkModel, data.getTargetSource( 0 ) );
-//	}
-
-//	public <T> void runFromBigWarpInstanceOld(
-//			final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final SourceAndConverter< T > sourceAndConverter )
-//	{
-//		ImageJ ij = IJ.getInstance();
-//		if ( ij == null )
-//			return;
-//
-//		final DeformationFieldExportParameters params = DeformationFieldExportParameters.fromDialog( false, false );
-//		if( params == null )
-//			return;
-//
-//		final RandomAccessibleInterval< ? > tgtInterval = sourceAndConverter.getSpimSource().getSource( 0, 0 );
-//
-//		int ndims = landmarkModel.getNumdims();
-//		long[] dims = tgtInterval.dimensionsAsLongArray();
-//
-//		double[] spacing = new double[ 3 ];
-//		double[] offset = new double[ 3 ];
-//		String unit = "pix";
-//		VoxelDimensions voxelDim = sourceAndConverter.getSpimSource().getVoxelDimensions();
-//		voxelDim.dimensions( spacing );
-//
-//		if( params.spacing != null )
-//			spacing = params.spacing;
-//
-//		if( params.offset != null )
-//			offset = params.offset;
-//
-//		if( params.size != null )
-//			dims = params.size;
-//
-//		if( params.n5Base.isEmpty() )
-//		{
-////			toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), params.virtual, dims, spacing, params.nThreads );
-//			if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
-//			{
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), false, params.virtual, params.size, params.spacing, params.nThreads );
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), true, params.virtual, params.size, params.spacing, params.nThreads );
-//			}
-//			else
-//			{
-//				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-//				toImagePlus( data, landmarkModel, null, params.ignoreAffine, params.flatten(), inverse, params.virtual, params.size, params.spacing, params.nThreads );
-//			}
-//		}
-//		else
-//		{
-//			try
-//			{
-//				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
-//				writeN5( params.n5Base, params.n5Dataset, landmarkModel, null, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.ignoreAffine, params.flatten(), inverse );
-//			}
-//			catch ( IOException e )
-//			{
-//				e.printStackTrace();
-//			}
-//		}
-//	}
 
 	public static void runFromParameters( final DeformationFieldExportParameters params, final BigWarpData<?> data, final LandmarkTableModel landmarkModel, final BigWarpTransform bwTransform )
 	{
@@ -308,6 +236,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if( !bwTransform.isNonlinear() ) // is linear
 			{
 				writeAffineN5(params.n5Base, params.n5Dataset, data, bwTransform );
+			}
+			else if ( params.format.equals(ExportDisplacementFieldFrame.FMT_BIGWARP_TPS))
+			{
+				writeTpsN5(params.n5Base, params.n5Dataset, data, bwTransform );
 			}
 			else if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 			{
@@ -539,7 +471,34 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		return startingTransform;
 	}
 
+	public static void writeTpsN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final BigWarpData<?> data,
+			final BigWarpTransform bwTransform) {
 
+		if (!bwTransform.getTransformType().equals(BigWarpTransform.TPS)) {
+			System.err.println(String.format("Can not write tranform type (%s) as Bigwarp Thin-plate-spline",
+					bwTransform.getTransformType()));
+			return;
+		}
+
+		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
+		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
+		final String input= mvgSpaceName;
+		final String output= tgtSpaceName;
+		final String name = input + " to " + output;
+
+		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
+		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
+		final N5Writer n5 = factory.openWriter( n5BasePath );
+
+		final ThinPlateSplineCoordinateTransform ct = new ThinPlateSplineCoordinateTransform(name, input, output, bwTransform.getTpsBase());
+		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+
+		// also add reference to root
+		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+	}
 
 	public static void writeAffineN5(
 			final String n5BasePath,
@@ -554,25 +513,28 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final String name = input + " to " + output;
 
 		CoordinateTransform<?> ct = null;
+
 		final InvertibleCoordinateTransform tform = bwTransform.getCoordinateTransform();
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel2D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel2D)tform).getTranslation());
 			else if (tform instanceof TranslationModel3D)
-				ct = new TranslationCoordinateTransform(name, input, output, ((TranslationModel3D)tform).getTranslation());
+				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel3D)tform).getTranslation());
 			break;
 		case BigWarpTransform.SIMILARITY:
 			double[] simparams;
 			if (tform instanceof SimilarityModel2D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				ct = new AffineCoordinateTransform(name, output, input, simparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof SimilarityModel3D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, simparams);
+				ct = new AffineCoordinateTransform(name, output, input, simparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.ROTATION:
@@ -580,12 +542,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (tform instanceof RigidModel2D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				ct = new AffineCoordinateTransform(name, output, input, rotparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof RigidModel3D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, rotparams);
+				ct = new AffineCoordinateTransform(name, output, input, rotparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.AFFINE:
@@ -593,12 +557,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (tform instanceof AffineModel2D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				ct = new AffineCoordinateTransform(name, output, input, affparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof AffineModel3D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, input, output, affparams);
+				ct = new AffineCoordinateTransform(name, output, input, affparams);
+				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		}
@@ -606,15 +572,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		if( ct == null )
 			return;
 
-
-
 		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
 		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+		n5.close();
 
 		// also add to root
-		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+//		NgffTransformations.addCoordinateTransformations(n5, "", ct);
 	}
 
 	public static void writeN5(
@@ -1163,15 +1128,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 	public static Compression getCompression( final String compressionArg )
 	{
 		switch (compressionArg) {
-		case N5Exporter.GZIP_COMPRESSION:
+		case N5ScalePyramidExporter.GZIP_COMPRESSION:
 			return new GzipCompression();
-		case N5Exporter.LZ4_COMPRESSION:
+		case N5ScalePyramidExporter.LZ4_COMPRESSION:
 			return new Lz4Compression();
-		case N5Exporter.XZ_COMPRESSION:
+		case N5ScalePyramidExporter.XZ_COMPRESSION:
 			return new XzCompression();
-		case N5Exporter.RAW_COMPRESSION:
+		case N5ScalePyramidExporter.RAW_COMPRESSION:
 			return new RawCompression();
-		case N5Exporter.BLOSC_COMPRESSION:
+		case N5ScalePyramidExporter.BLOSC_COMPRESSION:
 			return new BloscCompression();
 		default:
 			return new RawCompression();
@@ -1300,7 +1265,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			gd.addDirectoryOrFileField( "n5 root path", "" );
 			gd.addStringField( "n5 dataset", N5DisplacementField.FORWARD_ATTR );
 			gd.addStringField( "n5 block size", "32,32,32");
-			gd.addChoice( "n5 compression", compressionOptions, N5Exporter.GZIP_COMPRESSION );
+			gd.addChoice( "n5 compression", compressionOptions, N5ScalePyramidExporter.GZIP_COMPRESSION );
 			gd.showDialog();
 
 			if ( gd.wasCanceled() )

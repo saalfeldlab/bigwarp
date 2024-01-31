@@ -48,10 +48,12 @@ import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Supplier;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -72,7 +74,9 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellEditor;
 
 import org.janelia.saalfeldlab.n5.Compression;
-import org.janelia.saalfeldlab.n5.ij.N5Exporter;
+import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformPath;
 import org.janelia.utility.geom.BoundingSphereRitter;
 import org.janelia.utility.geom.Sphere;
 import org.janelia.utility.ui.RepeatingReleasedEventsFixer;
@@ -102,6 +106,7 @@ import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.MaskOptionsPanel;
 import bdv.gui.MaskedSourceEditorMouseListener;
+import bdv.gui.TransformGraphPanel;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
@@ -140,6 +145,8 @@ import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
+import bdv.viewer.ViewerStateChange;
+import bdv.viewer.ViewerStateChangeListener;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
@@ -257,6 +264,8 @@ public class BigWarp< T >
 
 	protected final BigWarpViewerPanel viewerQ;
 
+	protected final BigWarpActions tableActions;
+
 	protected AffineTransform3D initialViewP;
 
 	protected AffineTransform3D initialViewQ;
@@ -267,7 +276,7 @@ public class BigWarp< T >
 
 	protected BigWarpLandmarkPanel landmarkPanel;
 
-	protected final LandmarkPointMenu landmarkPopupMenu;
+	protected LandmarkPointMenu landmarkPopupMenu;
 
 	protected BigWarpLandmarkFrame landmarkFrame;
 
@@ -551,7 +560,6 @@ public class BigWarp< T >
 
 		// dialogs have to be constructed before action maps are made
 		warpVisDialog = new WarpVisFrame( viewerFrameQ, this );
-//		warpVisDialog.maskOptionsPanel.setMask( transformMask );
 
 		preferencesDialog = new PreferencesDialog( landmarkFrame, keymap, new String[] { "bigwarp", "navigation", "bw-table" } );
 		preferencesDialog.addPage( new AppearanceSettingsPage( "Appearance", appearanceManager ) );
@@ -605,7 +613,7 @@ public class BigWarp< T >
 		final BigWarpActions bwActionsQ = new BigWarpActions( inputTriggerConfig, "bigwarpFix" );
 		BigWarpActions.installViewerActions( bwActionsQ, getViewerFrameQ(), this );
 
-		final BigWarpActions tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
+		tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
 //		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
@@ -672,7 +680,8 @@ public class BigWarp< T >
 
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerP.state().setCurrentGroup( tgtGrp );
+		viewerQ.state().setCurrentGroup( tgtGrp );
+//		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
 		SwingUtilities.invokeLater( () -> {
 			viewerFrameP.setVisible( true );
@@ -697,24 +706,30 @@ public class BigWarp< T >
 			ndims = 3;
 
 		/* update landmark model with new dimensionality */
-		landmarkModel = new LandmarkTableModel( ndims );
-		landmarkModel.addTableModelListener( landmarkModellistener );
-		addTransformListener( landmarkModel );
-		landmarkModel.setMessage( message );
+		landmarkModel = new LandmarkTableModel(ndims);
+		landmarkModel.addTableModelListener(landmarkModellistener);
+		addTransformListener(landmarkModel);
+		landmarkModel.setMessage(message);
 
 		landmarkPanel.setTableModel(landmarkModel);
 		setupLandmarkFrame();
+
+		landmarkPopupMenu = new LandmarkPointMenu(this);
+		landmarkPopupMenu.setupListeners();
+		BigWarpActions.installTableActions(tableActions, getLandmarkFrame().getKeybindings(), this);
 
 		setupWarpMagBaselineOptions( baseXfmList, ndims );
 
 		final Class< ViewerPanel > c_vp = ViewerPanel.class;
 		try
 		{
-			final Field transformEventHandlerField = c_vp.getDeclaredField( "transformEventHandler" );
-			transformEventHandlerField.setAccessible( true );
-			transformEventHandlerField.set( viewerP, options.values.getTransformEventHandlerFactory().create( TransformState.from( viewerP.state()::getViewerTransform, viewerP.state()::setViewerTransform ) ) );
-			transformEventHandlerField.set( viewerQ, options.values.getTransformEventHandlerFactory().create( TransformState.from( viewerQ.state()::getViewerTransform, viewerQ.state()::setViewerTransform ) ) );
-			transformEventHandlerField.setAccessible( false );
+			final Field transformEventHandlerField = c_vp.getDeclaredField("transformEventHandler");
+			transformEventHandlerField.setAccessible(true);
+			transformEventHandlerField.set(viewerP, options.values.getTransformEventHandlerFactory()
+					.create(TransformState.from(viewerP.state()::getViewerTransform, viewerP.state()::setViewerTransform)));
+			transformEventHandlerField.set(viewerQ, options.values.getTransformEventHandlerFactory()
+					.create(TransformState.from(viewerQ.state()::getViewerTransform, viewerQ.state()::setViewerTransform)));
+			transformEventHandlerField.setAccessible(false);
 		}
 		catch ( final Exception e )
 		{
@@ -892,6 +907,9 @@ public class BigWarp< T >
 		landmarkTable.setDefaultRenderer( Object.class, new WarningTableCellRenderer() );
 		addDefaultTableMouseListener();
 		landmarkFrame = new BigWarpLandmarkFrame( "Landmarks", landmarkPanel, this, keymapManager );
+
+		landmarkPopupMenu = new LandmarkPointMenu( this );
+		landmarkPopupMenu.setupListeners();
 
 		if( overlayP != null )
 			overlayP.setLandmarkPanel(landmarkPanel);
@@ -1451,12 +1469,12 @@ public class BigWarp< T >
 		gd.addStringField( "n5 dataset", "" );
 		gd.addStringField( "n5 block size", "32" );
 		gd.addChoice( "n5 compression", new String[] {
-				N5Exporter.GZIP_COMPRESSION,
-				N5Exporter.RAW_COMPRESSION,
-				N5Exporter.LZ4_COMPRESSION,
-				N5Exporter.XZ_COMPRESSION,
-				N5Exporter.BLOSC_COMPRESSION },
-			N5Exporter.GZIP_COMPRESSION );
+				N5ScalePyramidExporter.GZIP_COMPRESSION,
+				N5ScalePyramidExporter.RAW_COMPRESSION,
+				N5ScalePyramidExporter.LZ4_COMPRESSION,
+				N5ScalePyramidExporter.XZ_COMPRESSION,
+				N5ScalePyramidExporter.BLOSC_COMPRESSION },
+			N5ScalePyramidExporter.GZIP_COMPRESSION );
 
 		gd.showDialog();
 
@@ -2326,62 +2344,66 @@ public class BigWarp< T >
 	{
 		gridSource.setMethod( method );
 	}
+	
+	/**
+	 * 
+	 */
+	public void transformationsFromCoordinateSystem() {
 
-	@SuppressWarnings( "unchecked" )
+		System.out.println( "transformationsFromCoordinateSystem" );
+		final TransformGraph graph = warpVisDialog.transformGraphPanel.getGraph();
+		if( graph == null )
+			return;
+
+		final String destCsName = warpVisDialog.transformGraphPanel.getCoordinateSystem();
+		final boolean isDefault = destCsName.equals(TransformGraphPanel.DEFAULT_COORDINATE_SYSTEM);
+
+		System.out.println( "  : " + destCsName );
+
+		boolean anyUpdated = false;
+		for( SourceInfo srcInfo : data.sourceInfos.values() )
+		{
+			final String csName = srcInfo.getSourceAndConverter().getSpimSource().getName();
+			Optional<TransformPath> p = graph.path(destCsName, csName);	
+			if( isDefault || csName.equals(destCsName)) 
+			{
+				data.setTransformation(srcInfo, null, null);
+				anyUpdated = true;
+			}
+			else if( !p.isPresent())
+			{
+				// presenting coordinate systems in "forward" direction even though we need an "inverse"
+				System.err.println( String.format( "WARNING: no suitable transformation found from %s to %s", csName, destCsName ));
+			}
+			else if( !csName.equals(destCsName)) 
+			{
+				final RealTransform tform = p.get().totalTransform(warpVisDialog.transformGraphPanel.getN5());
+				// TODO make appropriate uri
+				// but this is not trivil when the transform is a sequence that is not explicitly stored 
+				data.setTransformation(srcInfo, tform, null);
+				anyUpdated = true;
+			}
+			// do nothing 
+		}
+
+		if( anyUpdated )
+			synchronizeSources();
+	}
+
 	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data )
 	{
-		int i = 0;
-		for ( final SourceInfo sourceInfo : data.sourceInfos.values() )
-		{
-			if ( sourceInfo.isMoving() )
-			{
-				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
-				final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
-				sourceInfo.setSourceAndConverter( newSac );
-				data.sources.set( sourceIdx, newSac );
-			}
-			i++;
-		}
+		data.wrapMovingSources();
 	}
 
 	public static < T > void wrapMovingSources( final int ndims, final BigWarpData< T > data, int id )
 	{
-		final SourceInfo sourceInfo = data.getSourceInfo( id );
-		if( sourceInfo == null )
-			return;
-
-		if ( sourceInfo.isMoving() )
-		{
-			final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm", ndims );
-			final int sourceIdx = data.sources.indexOf( sourceInfo.getSourceAndConverter() );
-			sourceInfo.setSourceAndConverter( newSac );
-			data.sources.set( sourceIdx, newSac );
-		}
+		data.wrapMovingSources(data.getSourceInfo( id ));
 	}
 
-	@SuppressWarnings( "unchecked" )
 	public static < T > List< SourceAndConverter< T > > wrapSourcesAsTransformed( final LinkedHashMap< Integer, SourceInfo > sources,
-			final int ndims,
-			final BigWarpData< T > data )
+			final int ndims, final BigWarpData< T > data )
 	{
-		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
-
-		int i = 0;
-		for ( final SourceInfo sourceInfo : sources.values() )
-		{
-			if ( sourceInfo.isMoving() )
-			{
-				final SourceAndConverter< T > newSac = ( SourceAndConverter< T > ) wrapSourceAsTransformed( sourceInfo.getSourceAndConverter(), "xfm_" + i, ndims );
-				wrappedSource.add( newSac );
-			}
-			else
-			{
-				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
-			}
-
-			i++;
-		}
-		return wrappedSource;
+		return data.wrapSourcesAsTransformed();
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
@@ -2648,18 +2670,6 @@ public class BigWarp< T >
 	public PlateauSphericalMaskSource getTransformPlateauMaskSource()
 	{
 		return plateauTransformMask;
-	}
-
-	private static < T > SourceAndConverter< T > wrapSourceAsTransformed( final SourceAndConverter< T > src, final String name, final int ndims )
-	{
-		if ( src.asVolatile() == null )
-		{
-			return new SourceAndConverter< T >( new WarpedSource< T >( src.getSpimSource(), name ), src.getConverter(), null );
-		}
-		else
-		{
-			return new SourceAndConverter< T >( new WarpedSource< T >( src.getSpimSource(), name ), src.getConverter(), wrapSourceAsTransformed( src.asVolatile(), name + "_vol", ndims ) );
-		}
 	}
 
 	public void setupKeyListener()
@@ -3137,12 +3147,13 @@ public class BigWarp< T >
 		// this implementation is okay, so long as all the moving images have the same state of 'isTransformed'
 //		return ( ( WarpedSource< ? > ) ( data.sources.get( data.movingSourceIndexList.get( 0 ) ).getSpimSource() ) ).isTransformed();
 
-		// TODO better to explicitly keep track of this
-
-		if( data.sources.size() < 1 )
+		// TODO better to explicitly keep track of this?
+		if( data.sources.size() <= 0 )
 			return true;
-		else
+		else if( data.numMovingSources() > 0 )
 			return ( ( WarpedSource< ? > ) ( data.getMovingSource( 0 ).getSpimSource() ) ).isTransformed();
+		else
+			return false;
 	}
 
 	/**
@@ -4370,6 +4381,9 @@ public class BigWarp< T >
 //					}
 //				}
 //			});
+
+			// TODO when source transformation panel is ready
+//			warpVisDialog.transformGraphPanel.initializeSourceCoordinateSystems();
 
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
