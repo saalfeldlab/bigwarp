@@ -15,10 +15,10 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.janelia.saalfeldlab.n5.N5Exception;
-import org.janelia.saalfeldlab.n5.N5FSReader;
+import org.janelia.saalfeldlab.n5.N5KeyValueReader;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
-import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
+import org.janelia.saalfeldlab.n5.zarr.ZarrKeyValueReader;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,9 +37,9 @@ public class UrlParseTest
 
 	public static final String TIFF_STACK_DIR = "src/test/resources/testdata/imgDir";
 
-	private Class< N5FSReader > n5Clazz;
+	private Class< N5KeyValueReader > n5Clazz;
 
-	private Class< N5ZarrReader > zarrClazz;
+	private Class< ZarrKeyValueReader > zarrClazz;
 
 	private Class< N5HDF5Reader > h5Clazz;
 
@@ -50,8 +50,8 @@ public class UrlParseTest
 	@Before
 	public void before() throws IOException
 	{
-		n5Clazz = N5FSReader.class;
-		zarrClazz = N5ZarrReader.class;
+		n5Clazz = N5KeyValueReader.class;
+		zarrClazz = ZarrKeyValueReader.class;
 		h5Clazz = N5HDF5Reader.class;
 
 		n5Root = new File( "src/test/resources/bigwarp/url/transformTest.n5" ).getAbsolutePath();

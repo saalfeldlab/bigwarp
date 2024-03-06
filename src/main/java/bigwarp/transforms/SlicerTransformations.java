@@ -134,19 +134,4 @@ public class SlicerTransformations
 		catch ( final N5Exception e ) {}
 	}
 
-	public static void main( final String[] args ) throws IOException
-	{
-		final double[][] mtx = new double[4][4];
-		mtx[0][0] = 2;
-		mtx[1][1] = 3;
-		mtx[2][2] = 4;
-		mtx[3][3] = 1;
-
-		final N5HDF5Writer h5 = new N5Factory().openHDF5Writer( "/home/john/tmp/mri-stack-landmarks-df-slicer.h5" );
-		h5.setAttribute( "dfield", AFFINE_ATTR, mtx );
-		h5.close();
-
-		System.out.println( "done" );
-	}
-
 }
