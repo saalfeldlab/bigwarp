@@ -47,7 +47,8 @@ import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.generic.sequence.BasicViewSetup;
 
 /**
- *
+ * A {@link Loader} from an XML.
+ * 
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
  * @author Stephan Saalfeld &lt;saalfelds@janelia.hhmi.org&gt;
  */

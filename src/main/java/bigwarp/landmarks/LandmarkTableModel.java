@@ -31,12 +31,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.OpenOption;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
@@ -46,6 +44,7 @@ import java.util.List;
 
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import javax.swing.table.TableModel;
 import javax.swing.table.AbstractTableModel;
 
 import org.apache.commons.io.FileUtils;
@@ -78,8 +77,9 @@ import com.opencsv.exceptions.CsvException;
 import bdv.gui.BigWarpMessageAnimator;
 
 /**
+ * A {@link TableModel} for landmark points.
+ * 
  * @author John Bogovic &lt;bogovicj@janelia.hhmi.org&gt;
- *
  */
 public class LandmarkTableModel extends AbstractTableModel implements TransformListener< InvertibleRealTransform >{
 
