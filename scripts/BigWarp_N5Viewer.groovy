@@ -11,106 +11,76 @@
  * 2020-Jan-06 : Initial script
  * 2020-Jan-07 : Add pyramid support
  * 2020-Feb-13 : Switch to N5Viewer style loading
+ * 2024-Mar-07 : Use new BigWarp API
  * 
  * @author John Bogovic
  */
 
 import java.lang.Exception;
-import java.util.regex.Pattern;
+import java.io.*;
+import java.util.*;
 
-import bigwarp.BigWarp;
-import bigwarp.BigWarpInit;
-import bigwarp.landmarks.LandmarkTableModel;
-
-import bdv.util.*;
-import bdv.util.volatiles.*;
+import bigwarp.*;
+import bdv.cache.SharedQueue;
 import bdv.export.*;
+import bdv.gui.*;
 import bdv.viewer.*;
-
-
-import net.imglib2.util.*;
-
-import mpicbg.spim.data.sequence.*;
+import net.imglib2.*;
+import net.imglib2.type.*;
+import net.imglib2.type.numeric.*;
 
 import org.janelia.saalfeldlab.n5.*;
-import org.janelia.saalfeldlab.n5.imglib2.*;
-import org.janelia.saalfeldlab.n5.bdv.*;
-import org.janelia.saalfeldlab.n5.bdv.dataaccess.*;
+import org.janelia.saalfeldlab.n5.ij.*;
 
-def isPyramid( N5FSReader n5, String group )
-{
-	/*
-	 * return true if there exists at least one dataset under the group
-	 * of the form "s#" where # is a number
-	 */
-	def pattern = Pattern.compile( /s\d/ );
 
-	numMatching = 0;
-	subDatasets = n5.list( group );
-	for( d in subDatasets )
-	{
-		numMatching += (d =~ pattern).size()
-	}
-	return (numMatching >= 1);
+def makeSources(
+		BigWarpData bwData,
+		File baseDir,
+		int baseId,
+		boolean isMoving,
+		SharedQueue sharedQueue ) 
+	throws Exception {
+	String n5Path = baseDir.getAbsolutePath();
+	N5Importer.N5ViewerReaderFun n5fun = new N5Importer.N5ViewerReaderFun();
+	N5Reader n5 = n5fun.apply(n5Path);
+	String dataset = new N5Importer.N5BasePathFun().apply(n5Path);
+	
+	Source src = BigWarpInit.loadN5Source(n5, dataset, sharedQueue);
+	BigWarpInit.add( bwData, BigWarpInit.createSources(bwData, src, baseId, isMoving));
+	return Collections.singletonList(src);
 }
 
+int procs = ij.Prefs.getThreads();
+procs = ( procs < 1 ) ? 1 : procs;
 
-def makeSourcesN5Viewer( File n5Base, SharedQueue sharedQueue )
-{
-	try
-	{
-		dataAccessFactory = new DataAccessFactory( DataAccessType.FILESYSTEM );
-	}
-	catch ( final DataAccessException e )
-	{
-		return null;
-	}
 
-	n5Path = n5Base.getAbsolutePath();
-	final N5Reader n5 = dataAccessFactory.createN5Reader( n5Path );
-	final N5ExportMetadataReader metadata = N5ExportMetadata.openForReading( n5 );
-	
-	final int numChannels = metadata.getNumChannels();
-	
-	final String displayName = metadata.getName() != null ? metadata.getName() : "";
-	final int numTimepoints = 1;
-	Prefs.showScaleBar( true );
+BigWarpData bwData = BigWarpInit.initData();
+SharedQueue sharedQueue = new SharedQueue( procs );
 
-	
-	sources = [];
-	for ( int c = 0; c < numChannels; ++c )
-	{
-		final Source<?> volatileSource = N5MultiscaleSource.getVolatileSource( n5, c, displayName, sharedQueue );
-		sources.add( volatileSource );
-	}
-	return sources as Source[];
+
+// build moving sourcesSwitch to N5Viewer style loading
+try {
+	makeSources(bwData, movingN5Base, 0, true, sharedQueue);
+} catch (Exception e) {
+	System.err.println("error making moving sources");
+	e.printStackTrace();
 }
 
-procs = Runtime.getRuntime().availableProcessors() / 2;
-if( procs < 1 )
-	procs = 1;
-
-sharedQueue = new SharedQueue( (int) procs );
-
-// build moving and target sources
-movingSources = makeSourcesN5Viewer( movingN5Base, sharedQueue );
-targetSources = makeSourcesN5Viewer( targetN5Base, sharedQueue );
-
-srcNames = []
-movingSources.each{ x -> srcNames.add( x.getName() )};
-targetSources.each{ x -> srcNames.add( x.getName() )};
-
-bwData = BigWarpInit.createBigWarpData( movingSources, targetSources, srcNames as String[] );
-
-try
-{
-    bw = new BigWarp( bwData, "bigwarp", new ProgressWriterConsole() );
-
-    // load the landmark points if they exist
-    if ( landmarksFile != null )
-        bw.getLandmarkPanel().getTableModel().load( landmarksFile );
+// build target sources
+try {
+	makeSources(bwData, targetN5Base, bwData.numMovingSources(), false, sharedQueue);
+} catch (Exception e) {
+	System.err.println("error making target sources");
+	e.printStackTrace();
 }
-catch(Exception e)
-{
-    e.printStackTrace();
+
+try {
+	BigWarpViewerOptions opts = (BigWarpViewerOptions)BigWarpViewerOptions.options().numRenderingThreads(procs);
+	BigWarp bw = new BigWarp(bwData, opts, new ProgressWriterConsole());
+
+	// load the landmark points if they exist
+	if (landmarksFile != null)
+		bw.getLandmarkPanel().getTableModel().load(landmarksFile);
+} catch (Exception e) {
+	e.printStackTrace();
 }
