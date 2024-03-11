@@ -118,12 +118,12 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
-		<imglib2.version>6.2.0</imglib2.version>
+		<imglib2.version>6.3.0</imglib2.version>
 		<imglib2-realtransform.version>4.0.1</imglib2-realtransform.version>
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
-		<jitk-tps.version>3.0.3</jitk-tps.version>
+		<jitk-tps.version>3.0.4</jitk-tps.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
@@ -137,6 +137,9 @@
 		<n5-universe.version>1.4.1</n5-universe.version>
 		<n5-ij.version>4.1.0</n5-ij.version>
 		<n5-viewer_fiji.version>6.1.0</n5-viewer_fiji.version>
+
+		<bigdataviewer-core.version>10.4.14</bigdataviewer-core.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-34</bigdataviewer-vistools.version>
 
 	</properties>
 

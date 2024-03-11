@@ -21,8 +21,8 @@
  */
 package bigwarp.source;
 
-import org.ejml.data.DenseMatrix64F;
-import org.ejml.ops.CommonOps;
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.dense.row.CommonOps_DDRM;
 
 import net.imglib2.AbstractRealInterval;
 import net.imglib2.AbstractRealLocalizable;
@@ -33,7 +33,6 @@ import net.imglib2.RealLocalizable;
 import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessibleRealInterval;
 import net.imglib2.realtransform.AffineTransform;
-import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.inverse.DifferentiableRealTransform;
 import net.imglib2.type.numeric.RealType;
 
@@ -80,9 +79,9 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		double[] x = new double[ numDimensions() ];
 		localize( x );
 		AffineTransform jacobian = transform.jacobian( x );
-		DenseMatrix64F jacMtx = new DenseMatrix64F();
+		DMatrixRMaj jacMtx = new DMatrixRMaj();
 		jacMtx.data = jacobian.getRowPackedCopy(); 
-		out.setReal( CommonOps.det( jacMtx ) );
+		out.setReal( CommonOps_DDRM.det( jacMtx ) );
 
 		return out;
 	}
