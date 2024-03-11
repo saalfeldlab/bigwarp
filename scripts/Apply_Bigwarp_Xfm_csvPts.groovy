@@ -94,7 +94,12 @@ for( l in lines )
 	scaledpt = [pt, scale].transpose().collect{ it[0] * it[1]};
 
 	// transform point
-	transform.apply( scaledpt as double[], result );
+	try {
+		transform.apply( scaledpt as double[], result );
+	} catch( Exception e ) {
+		System.err.println("Warning: failed to transform " + Arrays.toString( scaledpt ));
+		Arrays.fill(result, Double.NaN);
+	}
 
 	outputLines.add( result.collect{ x -> Double.toString(x)}.join(","));
 }
