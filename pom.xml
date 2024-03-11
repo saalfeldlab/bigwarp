@@ -141,6 +141,8 @@
 		<bigdataviewer-core.version>10.4.14</bigdataviewer-core.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-34</bigdataviewer-vistools.version>
 
+		<ejml-core.version>0.41</ejml-core.version>
+		<ejml-ddense.version>0.41</ejml-ddense.version>
 	</properties>
 
 	<repositories>
@@ -311,6 +313,16 @@
 		<dependency>
 			<groupId>gov.nist.math</groupId>
 			<artifactId>jama</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.ejml</groupId>
+			<artifactId>ejml-core</artifactId>
+			<version>${ejml-core.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.ejml</groupId>
+			<artifactId>ejml-ddense</artifactId>
+			<version>${ejml-ddense.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.jdom</groupId>
