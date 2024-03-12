@@ -12,6 +12,7 @@
  * 2020-Jan-07 : Add pyramid support
  * 2020-Feb-13 : Switch to N5Viewer style loading
  * 2024-Mar-07 : Use new BigWarp API
+ * 2024-Mar-12 : Correctly open multichannel metadata
  * 
  * @author John Bogovic
  */
@@ -19,35 +20,76 @@
 import java.lang.Exception;
 import java.io.*;
 import java.util.*;
+import java.util.stream.*;
 
 import bigwarp.*;
 import bdv.cache.SharedQueue;
+import bdv.util.BdvOptions;
 import bdv.export.*;
 import bdv.gui.*;
 import bdv.viewer.*;
+import bdv.tools.brightness.ConverterSetup;
+
 import net.imglib2.*;
 import net.imglib2.type.*;
 import net.imglib2.type.numeric.*;
 
 import org.janelia.saalfeldlab.n5.*;
 import org.janelia.saalfeldlab.n5.ij.*;
-
+import org.janelia.saalfeldlab.n5.ui.*;
+import org.janelia.saalfeldlab.n5.bdv.*;
+import org.janelia.saalfeldlab.n5.universe.*;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 
 def makeSources(
 		BigWarpData bwData,
 		File baseDir,
 		int baseId,
 		boolean isMoving,
-		SharedQueue sharedQueue ) 
-	throws Exception {
+		SharedQueue sharedQueue ) throws Exception {
+
 	String n5Path = baseDir.getAbsolutePath();
 	N5Importer.N5ViewerReaderFun n5fun = new N5Importer.N5ViewerReaderFun();
 	N5Reader n5 = n5fun.apply(n5Path);
 	String dataset = new N5Importer.N5BasePathFun().apply(n5Path);
 	
-	Source src = BigWarpInit.loadN5Source(n5, dataset, sharedQueue);
-	BigWarpInit.add( bwData, BigWarpInit.createSources(bwData, src, baseId, isMoving));
-	return Collections.singletonList(src);
+	N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, 
+		N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vParsers ), 
+		N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vGroupParsers ) );
+
+	try {
+
+		N5TreeNode node = discoverer.discoverAndParseRecursive( "" );
+		Optional<N5TreeNode> opt = node.getDescendant(dataset);
+		if( opt.isPresent() )
+		{
+			List metadataList = Collections.singletonList(opt.get().getMetadata());
+
+			BdvOptions dummyOpts = BdvOptions.options(); // options not important in this context
+			DataSelection selection = new DataSelection(n5, metadataList);
+			List<ConverterSetup> converterSetups = new ArrayList<>();
+			List<SourceAndConverter> sourcesAndConverters = new ArrayList<>();
+			try {
+				N5Viewer.buildN5Sources(n5, selection, sharedQueue, converterSetups, sourcesAndConverters, dummyOpts);
+				int i = 0;
+				for( SourceAndConverter sac : sourcesAndConverters ) {
+					BigWarpInit.add( bwData, BigWarpInit.createSources(bwData, sac.getSpimSource(), baseId + i, isMoving));
+					i++;
+				}
+			} catch (IOException e) {
+				System.err.println("Error loading image(s) from: " + baseDir);
+				return Collections.emptyList();
+			}
+		}
+		else
+		{
+			System.err.println("Could not find metadata at: " + dataset);
+			return Collections.emptyList();
+		}
+	} catch (IOException e) {
+		System.err.println("Could not find metadata at: " + dataset);
+		return Collections.emptyList();
+	}
 }
 
 int procs = ij.Prefs.getThreads();
