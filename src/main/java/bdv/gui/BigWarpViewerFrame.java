@@ -96,7 +96,7 @@ public class BigWarpViewerFrame extends JFrame
 	}
 
 	public BigWarpViewerFrame(
-			BigWarp<?> bw,
+			final BigWarp<?> bw,
 			final int width, final int height,
 			final List< SourceAndConverter< ? > > sources,
 			final List< ConverterSetup > converterSetups,
@@ -254,6 +254,18 @@ public class BigWarpViewerFrame extends JFrame
 	public Behaviours getTransformBehaviours()
 	{
 		return transformBehaviours;
+	}
+
+	@Override
+	public void dispose()
+	{
+		super.dispose();
+		keybindings.removeActionMap("bw");
+		keybindings.removeInputMap("bw");
+		keybindings.removeActionMap("bwv");
+		keybindings.removeInputMap("bwv");
+		keybindings.removeActionMap("navigation");
+		keybindings.removeInputMap("navigation");
 	}
 
 }

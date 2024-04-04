@@ -39,7 +39,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
@@ -231,10 +230,11 @@ public class BigWarp< T >
 
 	protected BigWarpData< T > data;
 
-	protected final SetupAssignments setupAssignments;
-	protected final WarpVisFrame warpVisDialog;
+	protected SetupAssignments setupAssignments;
 
-	protected final HelpDialog helpDialog;
+	protected WarpVisFrame warpVisDialog;
+
+	protected HelpDialog helpDialog;
 
 	private final KeymapManager keymapManager;
 
@@ -310,6 +310,8 @@ public class BigWarp< T >
 
 	protected MaskedSourceEditorMouseListener maskSourceMouseListenerQ;
 
+	private LandmarkKeyboardProcessor keyboardProc;
+
 	protected BigWarpMessageAnimator message;
 
 	protected final Set< KeyEventPostProcessor > keyEventPostProcessorSet = new HashSet< KeyEventPostProcessor >();
@@ -359,7 +361,7 @@ public class BigWarp< T >
 
 	protected FileDialog fileDialog;
 
-	final JFileChooser fileChooser;
+	protected final JFileChooser fileChooser;
 
 	protected File autoSaveDirectory;
 
@@ -615,7 +617,6 @@ public class BigWarp< T >
 
 		tableActions = new BigWarpActions( inputTriggerConfig, "bw-table" );
 		BigWarpActions.installTableActions( tableActions, getLandmarkFrame().getKeybindings(), this );
-//		UnmappedNavigationActions.install( tableActions, options.values.is2D() );
 
 		keymap.updateListeners().add( () -> {
 
@@ -681,7 +682,6 @@ public class BigWarp< T >
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
 		viewerQ.state().setCurrentGroup( tgtGrp );
-//		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
 		SwingUtilities.invokeLater( () -> {
 			viewerFrameP.setVisible( true );
@@ -1087,8 +1087,10 @@ public class BigWarp< T >
 
 	public void closeAll()
 	{
-		final ArrayList< KeyEventPostProcessor > ks = new ArrayList< KeyEventPostProcessor >( keyEventPostProcessorSet );
-		for ( final KeyEventPostProcessor ke : ks )
+		// This method is probably total overkill, but helps avoid an actual
+		// memory leak
+
+		for ( final KeyEventPostProcessor ke : keyEventPostProcessorSet )
 			removeKeyEventPostProcessor( ke );
 
 		repeatedKeyEventsFixer.remove();
@@ -1103,6 +1105,21 @@ public class BigWarp< T >
 		viewerFrameP.dispose();
 		viewerFrameQ.dispose();
 		landmarkFrame.dispose();
+
+		warpVisDialog.dispose();
+		warpVisDialog = null;
+
+		helpDialog.dispose();
+		helpDialog = null;
+
+		keyboardProc.dispose();
+		keyboardProc = null;
+
+		solverThread.interrupt();
+		solverThread = null;
+
+		data.cleanUp();
+		data = null;
 	}
 
 	public void setUpdateWarpOnChange( final boolean updateWarpOnPtChange )
@@ -2674,7 +2691,8 @@ public class BigWarp< T >
 
 	public void setupKeyListener()
 	{
-		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor( new LandmarkKeyboardProcessor( this ) );
+		keyboardProc = new LandmarkKeyboardProcessor( this ) ;
+		KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventPostProcessor( keyboardProc );
 	}
 
 	public void setWarpVisGridType( final GridSource.GRID_TYPE type )

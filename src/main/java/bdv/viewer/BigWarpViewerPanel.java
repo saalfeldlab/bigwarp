@@ -23,7 +23,6 @@ package bdv.viewer;
 
 import bdv.cache.CacheControl;
 import bdv.gui.BigWarpViewerOptions;
-import bdv.img.WarpedSource;
 import bdv.util.Affine3DHelpers;
 import bdv.util.Prefs;
 import bdv.viewer.animate.RotationAnimator;
@@ -31,13 +30,11 @@ import bdv.viewer.animate.SimilarityTransformAnimator3D;
 import bdv.viewer.overlay.BigWarpMaskSphereOverlay;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
-import bigwarp.source.SourceInfo;
 import bigwarp.util.Rotation2DHelpers;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.Translation3D;
 
@@ -48,8 +45,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	public static final int MOVING_GROUP_INDEX = 0;
 
 	public static final int TARGET_GROUP_INDEX = 1;
-
-	protected final BigWarpData<?> bwData;
 
 	protected BigWarpViewerSettings viewerSettings;
 
@@ -89,7 +84,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 	{
 		// TODO compiler complains if the first argument is 'final BigWarpData<?> bwData'
 		super( bwData.sources, 1, cache, optional.getViewerOptions( isMoving ) );
-		this.bwData = bwData;
 		this.viewerSettings = viewerSettings;
 		this.isMoving = isMoving;
 		this.updateOnDrag = !isMoving; // update on drag only for the fixed
@@ -103,8 +97,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 				dragOverlay.paint( ( Graphics2D ) g );
 			}
 		} );
-
-		//updateGrouping();
 	}
 
 	@Override
@@ -130,16 +122,6 @@ public class BigWarpViewerPanel extends ViewerPanel
 		}
 	}
 
-//	public void toggleTextOverlayVisible()
-//	{
-//		textOverlayVisible = !textOverlayVisible;
-//	}
-//
-//	public void toggleBoxOverlayVisible()
-//	{
-//		boxOverlayVisible = !boxOverlayVisible;
-//	}
-
 	public void setHoveredIndex( int index )
 	{
 		if( index != overlay.getHoveredIndex() )
@@ -164,59 +146,13 @@ public class BigWarpViewerPanel extends ViewerPanel
 	@Deprecated
 	public int updateGrouping()
 	{
-		final SynchronizedViewerState state = state();
-		synchronized ( state )
-		{
-			final List< SourceAndConverter< ? > > moving = new ArrayList<>();
-			final List< SourceAndConverter< ? > > target = new ArrayList<>();
-
-			int idx = 0;
-			for ( final SourceInfo sourceInfo : bwData.sourceInfos.values() )
-			{
-				if (sourceInfo.isMoving()) {
-					moving.add( state.getSources().get( idx ) );
-				} else {
-					target.add( state.getSources().get( idx ) );
-				}
-				idx++;
-			}
-
-			state.clearGroups();
-
-			final SourceGroup movingGroup = new SourceGroup();
-			state.addGroup( movingGroup );
-			state.setGroupName( movingGroup, "moving images" );
-			state.addSourcesToGroup( moving, movingGroup );
-
-			final SourceGroup targetGroup = new SourceGroup();
-			state.addGroup( targetGroup );
-			state.setGroupName( targetGroup, "fixed images" );
-			state.addSourcesToGroup( target, targetGroup );
-
-			// make only moving and target image groups active in fused mode
-			state.setGroupActive( movingGroup, true );
-			state.setGroupActive( targetGroup, true );
-
-			// only turn grouping enabled by default if there are multiple moving or
-			// target images
-			if ( moving.size() > 1 || target.size() > 1 )
-				state.setDisplayMode( state.getDisplayMode().withGrouping( true ) );
-
-			state.setCurrentGroup( isMoving ? movingGroup : targetGroup );
-
-			// TODO: This does not what the javadoc says. Change javadoc? Return void.
-			return state.getGroups().size();
-		}
+		return -1;
 	}
 
+	@Deprecated
 	public boolean isInFixedImageSpace()
 	{
-		if( bwData.numMovingSources() < 1 )
-			return true;
-		else
-		{
-			return !isMoving || ( ( WarpedSource< ? > ) ( ( bwData.getMovingSource( 0 )).getSpimSource() ) ).isTransformed();
-		}
+		return !isMoving;
 	}
 
 	public boolean doUpdateOnDrag()

@@ -140,7 +140,6 @@ public class BigWarpOverlay {
 				textBoxColor = Color.BLACK;
 				textBoxColorHl = new Color( color.getRed(), color.getGreen(), color.getBlue(), 255 );
 				textBoxColor = new Color( color.getRed(), color.getGreen(), color.getBlue(), 128 );
-
 			}
 
 			final int nRows = landmarkModel.getRowCount();
@@ -161,7 +160,7 @@ public class BigWarpOverlay {
 				// otherwise, take the fixed point
 				boolean copySuccess = false;
 				if( isMoving ) {
-					if( viewer.isInFixedImageSpace() ) {
+					if( !isMoving ) {
 						if( landmarkModel.isWarped(index))
 							copySuccess = landmarkModel.copyWarpedPointSafe(spot, index);
 						else

@@ -30,7 +30,6 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
-import net.imglib2.util.Intervals;
 
 public class BigWarpData< T >
 {
@@ -232,6 +231,14 @@ public class BigWarpData< T >
 	@Deprecated
 	public void wrapUp()
 	{
+	}
+
+	public void cleanUp()
+	{
+		System.out.println("data clean up");
+		sources.clear();
+		sourceInfos.clear();
+		converterSetups.clear();
 	}
 
 	void addSource( Source<T> src, boolean isMoving )
