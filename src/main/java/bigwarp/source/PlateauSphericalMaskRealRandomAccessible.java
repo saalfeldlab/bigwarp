@@ -294,6 +294,12 @@ public class PlateauSphericalMaskRealRandomAccessible implements RealRandomAcces
 		return rra.realRandomAccess( interval );
 	}
 
+	@Override
+	public DoubleType getType()
+	{
+		return new DoubleType();
+	}
+
 	public Element toXml()
 	{
 		final Element maskSettings = new Element( "transform-mask" );
