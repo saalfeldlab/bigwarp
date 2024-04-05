@@ -281,7 +281,13 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		public RealRandomAccess<T> realRandomAccess(RealInterval interval) {
 			return realRandomAccess();
 		}
-		
+
+		@Override
+		public T getType()
+		{
+			return ra.getType();
+		}
+
 		public void setTransform( final DifferentiableRealTransform transform )
 		{
 			ra.setTransform( transform );

@@ -50,6 +50,12 @@ public class GridRandomAccessibleInterval<T extends RealType<T>> extends Abstrac
 		return randomAccess();
 	}
 
+	@Override
+	public T getType()
+	{
+		return ra.getType();
+	}
+
 //	public RandomAccessibleInterval<T> copy()
 //	{
 //		return new GridRandomAccessibleInterval<T>(
