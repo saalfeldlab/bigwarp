@@ -2350,7 +2350,7 @@ public class BigWarp< T >
 		// only render mask overlay on target window
 		viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
 
-		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( getLandmarkPanel().getTableModel().getNumdims(), this, viewerQ );
+		maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( numDimensions(), this, viewerQ );
 		maskSourceMouseListenerQ.setActive( false );
 		maskSourceMouseListenerQ.setMask( plateauTransformMask.getRandomAccessible() );
 
@@ -2361,10 +2361,7 @@ public class BigWarp< T >
 	{
 		gridSource.setMethod( method );
 	}
-	
-	/**
-	 * 
-	 */
+
 	public void transformationsFromCoordinateSystem() {
 
 		System.out.println( "transformationsFromCoordinateSystem" );
@@ -2587,6 +2584,16 @@ public class BigWarp< T >
 		bwTransform.setLambda( transformMask.getInterpolatedSource(0, 0, Interpolation.NLINEAR));
 		updateTransformMask();
 
+		if(maskSourceMouseListenerQ == null)
+		{
+			final Color[] maskColors = new Color[]{ Color.ORANGE, Color.YELLOW };
+			// only render mask overlay on target window
+			viewerQ.setMaskOverlay( new BigWarpMaskSphereOverlay( viewerQ, maskColors, numDimensions() == 3 ));
+
+			maskSourceMouseListenerQ = new MaskedSourceEditorMouseListener( numDimensions(), this, viewerQ );
+			maskSourceMouseListenerQ.setActive( false );
+		}
+
 		final RealType<?> type = transformMask.getType();
 		if( !(type instanceof DoubleType ) && !(type instanceof FloatType ))
 		{
@@ -2648,15 +2655,14 @@ public class BigWarp< T >
 		plateauTransformMask = PlateauSphericalMaskSource.build( new RealPoint( 3 ), itvl );
 		transformMask = plateauTransformMask;
 
-
 		final RealARGBColorConverter< T > converter = (RealARGBColorConverter<T>)RealARGBColorConverter.create( plateauTransformMask.getType(), 0, 1 );
 		converter.setColor( new ARGBType( 0xffffffff ) );
 		final SourceAndConverter< T > soc = new SourceAndConverter<T>( (Source<T>)transformMask, converter, null );
 		data.converterSetups.add( BigDataViewer.createConverterSetup( soc, TRANSFORM_MASK_SOURCE_ID ) );
 		data.sources.add( ( SourceAndConverter ) soc );
 
-		final SourceInfo sourceInfo = new SourceInfo( TRANSFORM_MASK_SOURCE_ID, false, transformMask.getName(), null, null );
-		sourceInfo.setSourceAndConverter( soc );
+		final SourceInfo sourceInfo = new SourceInfo(TRANSFORM_MASK_SOURCE_ID, false, transformMask.getName(), null, null);
+		sourceInfo.setSourceAndConverter(soc);
 		data.sourceInfos.put( TRANSFORM_MASK_SOURCE_ID, sourceInfo);
 
 		// connect to UI

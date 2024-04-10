@@ -36,6 +36,13 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	private static final double fastSpeed = 10.0;
 	private static final double slowSpeed = 0.1;
 
+	/**
+	 * Updates {@link PlateauSphericalMaskRealRandomAccessible} parameters and {@link MaskedSimRotTransformSolver} center.
+	 *
+	 * @param nd number of dimensions
+	 * @param bw BigWarp instance
+	 * @param viewer the viewer panel
+	 */
 	public MaskedSourceEditorMouseListener( int nd, BigWarp<?> bw, BigWarpViewerPanel viewer )
 	{
 		this.bw = bw;
@@ -111,8 +118,9 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		// store starting center at start of drag
 		if( !dragged )
 		{
-//			c.setPosition( mask.getCenter() );
-			mask.getCenter().localize( c );
+			if( mask != null )
+				mask.getCenter().localize( c );
+
 			viewer.getGlobalMouseCoordinates( pressPt );
 			dragged = true;
 		}
@@ -120,7 +128,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		viewer.getGlobalMouseCoordinates( p );
 		bw.setAutoEstimateMask( false );
 		
-		if( e.isControlDown() )
+		if( e.isControlDown() && mask != null )
 		{
 			mask.getCenter().localize( c );
 			final double d = PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, c );
@@ -129,7 +137,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 				mask.setSquaredRadius( d );
 			}
 		}
-		else if( e.isShiftDown() )
+		else if( e.isShiftDown() && mask != null )
 		{
 			mask.getCenter().localize( c );
 			final double d = Math.sqrt( PlateauSphericalMaskRealRandomAccessible.squaredDistance( p, c ));
@@ -146,9 +154,12 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 			for( int i = 0; i < p.numDimensions(); i++ )
 				p.setPosition( c.getDoublePosition(i) + p.getDoublePosition(i) - pressPt.getDoublePosition(i), i);
 
-			synchronized ( mask )
+			if( mask != null )
 			{
-				mask.setCenter(p);
+				synchronized ( mask )
+				{
+					mask.setCenter(p);
+				}
 			}
 
 			AbstractTransformSolver< ? > solver = bw.getBwTransform().getSolver();
@@ -165,7 +176,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	@Override
 	public void mouseReleased( MouseEvent e ) {
 
-		if( !active )
+		if( !active || mask == null )
 			return;
 
 		if( e.isControlDown() || e.isShiftDown() )
@@ -174,9 +185,12 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 		if( !dragged )
 		{
 			viewer.getGlobalMouseCoordinates( pressPt );
-			synchronized ( mask )
+			if( mask != null )
 			{
-				mask.setCenter( pressPt );
+				synchronized ( mask )
+				{
+					mask.setCenter( pressPt );
+				}
 			}
 
 			bw.setAutoEstimateMask( false );
@@ -190,7 +204,7 @@ public class MaskedSourceEditorMouseListener implements MouseListener, MouseMoti
 	@Override
 	public void mouseWheelMoved( MouseWheelEvent e )
 	{
-		if( !active )
+		if( !active || mask == null )
 			return;
 
 		bw.setAutoEstimateMask( false );
