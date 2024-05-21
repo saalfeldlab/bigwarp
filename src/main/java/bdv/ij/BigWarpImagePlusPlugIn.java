@@ -195,17 +195,17 @@ public class BigWarpImagePlusPlugIn implements PlugIn
 
 	}
 
-	private static boolean openWithImageJ( final String rootPath )
-	{
-		if( rootPath.endsWith( ".n5" ) ||
-			rootPath.endsWith( ".zarr" ) ||
-			rootPath.endsWith( ".h5" ) ||
-			rootPath.endsWith( ".xml" ) ||
-			rootPath.endsWith( ".hdf5" ))
-		{
+	private static boolean openWithImageJ(final String rootPath) {
+
+		// remove trailing slash
+		final String rootPathNorm = rootPath.replaceFirst("/*$", "");
+		if (rootPathNorm.endsWith(".n5") ||
+				rootPathNorm.endsWith(".zarr") ||
+				rootPathNorm.endsWith(".h5") ||
+				rootPathNorm.endsWith(".xml") ||
+				rootPathNorm.endsWith(".hdf5")) {
 			return false;
-		}
-		else
+		} else
 			return true;
 	}
 
