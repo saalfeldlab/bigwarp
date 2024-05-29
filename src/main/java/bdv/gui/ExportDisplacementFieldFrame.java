@@ -30,17 +30,23 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import com.formdev.flatlaf.util.UIScale;
 
+import bdv.export.ProgressWriterConsole;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.BigWarpToDeformationFieldPlugIn.DeformationFieldExportParameters;
 import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
+import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.IJ;
+import ij.ImagePlus;
 import ij.Macro;
 import ij.plugin.frame.Recorder;
+import mpicbg.spim.data.SpimDataException;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
 
 public class ExportDisplacementFieldFrame extends JFrame
 {
@@ -49,13 +55,20 @@ public class ExportDisplacementFieldFrame extends JFrame
 	// formats
 	public static final String FMT_NGFF = "NGFF";
 	public static final String FMT_BIGWARP_TPS = "TPS";
+	public static final String FMT_N5 = "N5";
 	public static final String FMT_SLICER = "Slicer";
+
+	public static enum DTYPE {
+		BYTE, SHORT, FLOAT, DOUBLE
+	};
 
 	// macro recording
 	public static final String commandName = "Big Warp to Displacement field";
 	protected static final String landmarksKey = "landmarks";
 	protected static final String splitAffineKey = "split_affine";
 	protected static final String typeKey = "type";
+	protected static final String dtypeKey = "dataType";
+	protected static final String quantizationErrorKey = "quantizationError";
 	protected static final String directionKey = "direction";
 	protected static final String inverseToleranceKey = "inverseTolerance";
 	protected static final String inverseMaxIterationsKey = "inverseMaxIterations";
@@ -101,6 +114,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private JComboBox< String > n5CompressionDropdown;
 	private JCheckBox splitAffineCheckBox;
 	private JCheckBox virtualCheckBox;
+
+	private JComboBox<DTYPE> dataTypeComboBox;
+	private JSpinner quantizationErrorSpinner;
+
 	private JComboBox< String > typeComboBox;
 	private JComboBox< String > directionComboBox;
 	private JSpinner nThreadsField;
@@ -305,17 +322,19 @@ public class ExportDisplacementFieldFrame extends JFrame
 		addDefaultN5DatasetAction();
 	}
 
-	public JPanel basicPanel()
-	{
+	public JPanel basicPanel() {
+
 		final int OUTER_PAD = BigWarpInitDialog.DEFAULT_OUTER_PAD;
 		final int BUTTON_PAD = BigWarpInitDialog.DEFAULT_BUTTON_PAD;
 		final int MID_PAD = BigWarpInitDialog.DEFAULT_MID_PAD;
-		final Insets defaultInsets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		final Insets defaultInsets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
-		final int szX = UIScale.scale( 600 );
+		final Insets leftInsets = new Insets(OUTER_PAD, 10 * BUTTON_PAD, MID_PAD, BUTTON_PAD);
+		final Insets rightInsets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, 10 * BUTTON_PAD);
 
-		final JPanel panel = new JPanel( false );
-		panel.setLayout( new GridBagLayout() );
+		final int szX = UIScale.scale(600);
+		final JPanel panel = new JPanel(false);
+		panel.setLayout(new GridBagLayout());
 
 		final GridBagConstraints ctxt = new GridBagConstraints();
 		ctxt.gridx = 0;
@@ -347,85 +366,122 @@ public class ExportDisplacementFieldFrame extends JFrame
 		cProjBrowse.insets = defaultInsets;
 
 		// Don't ask for landmarks if running from a bigwarp instance
-		if( bwTransform == null )
-		{
-			panel.add( new JLabel( "Landmarks:" ), ctxt );
+		if (bwTransform == null) {
+			panel.add(new JLabel("Landmarks:"), ctxt);
 
 			landmarkPathTxt = new JTextField();
-			landmarkPathTxt.setPreferredSize( new Dimension( szX / 3, landmarkPathTxt.getPreferredSize().height ) );
-			panel.add( landmarkPathTxt, gbcBar );
+			landmarkPathTxt.setPreferredSize(new Dimension(szX / 3, landmarkPathTxt.getPreferredSize().height));
+			panel.add(landmarkPathTxt, gbcBar);
 
-			browseLandmarksButton = new JButton( "Browse" );
-			browseLandmarksButton.addActionListener( e -> {
+			browseLandmarksButton = new JButton("Browse");
+			browseLandmarksButton.addActionListener(e -> {
 				browseLandmarksDialog();
-			} );
-			panel.add( browseLandmarksButton, cProjBrowse );
+			});
+			panel.add(browseLandmarksButton, cProjBrowse);
 		}
 
 		ctxt.gridx = 0;
 		ctxt.gridy = 1;
 		ctxt.anchor = GridBagConstraints.LINE_END;
-		panel.add( new JLabel( "Type:" ), ctxt );
+		final JLabel typeLabel = new JLabel("Type:");
+		typeLabel.setToolTipText(TYPE_HELP_TEXT);
+		panel.add(typeLabel, ctxt);
 
 		final GridBagConstraints gbcCheck = new GridBagConstraints();
 		gbcCheck.gridx = 1;
 		gbcCheck.gridy = 1;
 		gbcCheck.insets = defaultInsets;
 		gbcCheck.anchor = GridBagConstraints.LINE_START;
-		typeComboBox = new JComboBox< String >( new String[] {
+		typeComboBox = new JComboBox<String>(new String[]{
 				BigWarpToDeformationFieldPlugIn.flattenOption,
-				BigWarpToDeformationFieldPlugIn.sequenceOption } );
-		panel.add( typeComboBox, gbcCheck );
+				BigWarpToDeformationFieldPlugIn.sequenceOption});
+		panel.add(typeComboBox, gbcCheck);
 
 		// want some more padding for direction
 		ctxt.gridx = 3;
-		ctxt.insets = new Insets( OUTER_PAD, 10*BUTTON_PAD, MID_PAD, BUTTON_PAD );
-		panel.add( new JLabel( "Direction:" ), ctxt );
+		ctxt.insets = new Insets(OUTER_PAD, 10 * BUTTON_PAD, MID_PAD, BUTTON_PAD);
+		panel.add(new JLabel("Direction:"), ctxt);
 		ctxt.insets = defaultInsets;
 
 		gbcCheck.gridx = 4;
-		directionComboBox = new JComboBox< String >( new String[] {
+		directionComboBox = new JComboBox<String>(new String[]{
 				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.FORWARD.toString(),
 				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.INVERSE.toString(),
-				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.BOTH.toString() } );
-		panel.add( directionComboBox, gbcCheck );
+				BigWarpToDeformationFieldPlugIn.INVERSE_OPTIONS.BOTH.toString()
+		});
+		panel.add(directionComboBox, gbcCheck);
 
-		ctxt.gridx = 5;
+		final GridBagConstraints gbcQuantization = new GridBagConstraints();
+		gbcQuantization.gridx = 5;
+		gbcQuantization.gridy = 1;
+		gbcQuantization.insets = leftInsets;
+		gbcQuantization.anchor = GridBagConstraints.LINE_END;
+		panel.add(new JLabel("Data type:"), gbcQuantization);
+
+		dataTypeComboBox = new JComboBox<DTYPE>(new DTYPE[]{
+				DTYPE.BYTE,
+				DTYPE.SHORT,
+				DTYPE.FLOAT,
+				DTYPE.DOUBLE
+		});
+		dataTypeComboBox.setSelectedItem(DTYPE.FLOAT);
+
+		gbcQuantization.gridx = 6;
+		gbcQuantization.insets = rightInsets;
+		gbcQuantization.anchor = GridBagConstraints.LINE_START;
+		panel.add(dataTypeComboBox, gbcQuantization);
+
+		ctxt.gridx = 7;
 		ctxt.anchor = GridBagConstraints.LINE_END;
-		panel.add( new JLabel( "Split affine:" ), ctxt );
+		panel.add(new JLabel("Split affine:"), ctxt);
 
-		gbcCheck.gridx = 6;
+		gbcCheck.gridx = 8;
 		splitAffineCheckBox = new JCheckBox();
-		panel.add( splitAffineCheckBox, gbcCheck );
+		panel.add(splitAffineCheckBox, gbcCheck);
 
 		// second row
 		ctxt.gridx = 0;
 		ctxt.gridy = 2;
 		ctxt.anchor = GridBagConstraints.LINE_END;
-		panel.add( new JLabel( "Threads:" ), ctxt );
+		panel.add(new JLabel("Threads:"), ctxt);
 
 		gbcCheck.gridx = 1;
 		gbcCheck.gridy = 2;
 		gbcCheck.fill = GridBagConstraints.HORIZONTAL;
-		nThreadsField = new JSpinner( new SpinnerNumberModel( 1, 1, 9999, 1 ) );
-		panel.add( nThreadsField, gbcCheck );
+		nThreadsField = new JSpinner(new SpinnerNumberModel(1, 1, 9999, 1));
+		panel.add(nThreadsField, gbcCheck);
 
 		ctxt.gridx = 3;
-		panel.add( new JLabel( "Format:" ), ctxt );
+		panel.add(new JLabel("Format:"), ctxt);
 		gbcCheck.gridx = 4;
-		formatComboBox = new JComboBox< String >( new String[] { FMT_NGFF, FMT_BIGWARP_TPS } );
-		panel.add( formatComboBox, gbcCheck );
+		formatComboBox = new JComboBox<String>(new String[]{FMT_NGFF, FMT_BIGWARP_TPS});
+		panel.add(formatComboBox, gbcCheck);
 
-		ctxt.gridx = 5;
+		gbcQuantization.gridx = 5;
+		gbcQuantization.gridy = 2;
+		gbcQuantization.insets = leftInsets;
+		gbcQuantization.anchor = GridBagConstraints.LINE_END;
+		panel.add(new JLabel("Error:"), gbcQuantization);
+
+		gbcQuantization.gridx = 6;
+		gbcQuantization.insets = rightInsets;
+		quantizationErrorSpinner = new JSpinner(new SpinnerNumberModel(0.01, 1e-9, 999, 0.001));
+		final JSpinner.NumberEditor editor = new JSpinner.NumberEditor(quantizationErrorSpinner, "#.######");
+		final JFormattedTextField textField = editor.getTextField();
+		textField.setColumns(6);
+		quantizationErrorSpinner.setEditor(editor);
+		panel.add(quantizationErrorSpinner, gbcQuantization);
+
+		ctxt.gridx = 7;
 		ctxt.anchor = GridBagConstraints.LINE_END;
-		ctxt.insets = new Insets( OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD );
+		ctxt.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 		ctxt.weightx = 0.1;
-		panel.add( new JLabel( "Virtual:" ), ctxt );
+		panel.add(new JLabel("Virtual:"), ctxt);
 
-		gbcCheck.gridx = 6;
+		gbcCheck.gridx = 8;
 		gbcCheck.weightx = 0.1;
 		virtualCheckBox = new JCheckBox();
-		panel.add( virtualCheckBox, gbcCheck );
+		panel.add(virtualCheckBox, gbcCheck);
 
 		return panel;
 	}
@@ -686,6 +742,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 				landmarkPathTxt == null ? "" : landmarkPathTxt.getText(),
 				splitAffineCheckBox.isSelected(),
 				(String)typeComboBox.getSelectedItem(),
+				(DTYPE)dataTypeComboBox.getSelectedItem(),
+				(Double)quantizationErrorSpinner.getValue(),
 				(String)directionComboBox.getSelectedItem(),
 				(Double)invToleranceSpinner.getValue(),
 				(Integer)invMaxIterationsSpinner.getValue(),
@@ -744,6 +802,10 @@ public class ExportDisplacementFieldFrame extends JFrame
 	{
 		final String landmarks = Macro.getValue( args, landmarksKey, "" );
 		final String type = Macro.getValue( args, typeKey, "" );
+
+		final DTYPE dtype = DTYPE.valueOf(Macro.getValue(args, dtypeKey, ""));
+		final double maxQuantizationError = Double.valueOf(Macro.getValue(args, quantizationErrorKey, ""));
+
 		final String direction = Macro.getValue( args, directionKey, "" );
 		final double tolerance = Double.valueOf( Macro.getValue( args, inverseToleranceKey, "" ));
 		final int maxIters = Integer.valueOf( Macro.getValue( args, inverseMaxIterationsKey, "" ));
@@ -768,15 +830,23 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 		final DeformationFieldExportParameters params = new DeformationFieldExportParameters(
 				landmarks, splitAffine, type,
+				dtype, maxQuantizationError,
 				direction, tolerance, maxIters,
 				openAsVirtual, threads, format,
 				pixSize, spacing, min, unit,
 				n5Root,
 				n5Dataset,
 				blockSize,
-				BigWarpToDeformationFieldPlugIn.getCompression( n5Compression ) );
+				BigWarpToDeformationFieldPlugIn.getCompression(n5Compression));
 
 		BigWarpToDeformationFieldPlugIn.runFromParameters( params, null, null, null );
 	}
+
+	private static final String TYPE_HELP_TEXT = "\"Flat\" combines all transformations into a single displacement field. \"Sequence\" keeps "
+			+ "the components separate (e.g. affine, nonlinear).";
+
+	private static final String DTYPE_HELP_TEXT = "The data type used to store the displacement field.";
+
+	private static final String DIRECTION_HELP_TEXT = "";
 
 }
