@@ -583,9 +583,7 @@ public class BigWarpInitDialog extends JFrame
 
 		sourceTableModel = new BigWarpSourceTableModel( t -> {
 			final String val = NgffTransformations.detectTransforms(t);
-			if( val == null )
-				showMessage(1000, "No transformation found");
-			else
+			if (val != null)
 				showMessage(1000, "Found transformation");
 
 			return val;

@@ -225,13 +225,26 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 				return null;
 		}
 
-		public RealTransform getTransform()
-		{
-			RealTransform transform = null;
-			if( transformUrl!= null && !transformUrl.isEmpty() )
-				transform = NgffTransformations.open( transformUrl.trim() );
+		public RealTransform getTransform() {
 
-			return transform;
+
+			if (transformUrl != null && !transformUrl.isEmpty()) {
+				final String trimUrl = transformUrl.trim();
+				try {
+					final N5URI n5Uri = new N5URI(trimUrl);
+					final URI uri = n5Uri.getURI();
+					if (uri.getFragment() == null) {
+						return N5DisplacementField.open(
+								new N5Factory().openReader(n5Uri.getContainerPath()),
+								uri.getQuery() == null ? N5DisplacementField.FORWARD_ATTR : n5Uri.getGroupPath(),
+								false);
+					}
+				} catch (final URISyntaxException e) {}
+
+				return NgffTransformations.open(trimUrl);
+			}
+
+			return null;
 		}
 
 		public Supplier<String> getTransformUri()

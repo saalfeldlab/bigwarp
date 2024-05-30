@@ -6,6 +6,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -27,6 +28,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.janelia.saalfeldlab.n5.N5URI;
 
 import com.formdev.flatlaf.util.UIScale;
 
@@ -454,7 +457,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		ctxt.gridx = 3;
 		panel.add(new JLabel("Format:"), ctxt);
 		gbcCheck.gridx = 4;
-		formatComboBox = new JComboBox<String>(new String[]{FMT_NGFF, FMT_BIGWARP_TPS});
+		formatComboBox = new JComboBox<String>(new String[]{FMT_NGFF, FMT_N5, FMT_BIGWARP_TPS});
 		panel.add(formatComboBox, gbcCheck);
 
 		gbcQuantization.gridx = 5;
