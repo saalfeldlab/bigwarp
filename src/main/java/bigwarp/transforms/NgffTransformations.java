@@ -45,7 +45,6 @@ import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
-import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ScaleGet;
@@ -59,7 +58,7 @@ import net.imglib2.util.ValuePair;
 
 public class NgffTransformations
 {
-	
+
 	public enum TransformField {
 		DISPLACEMENT, COORDINATE
 	};
@@ -210,13 +209,14 @@ public class NgffTransformations
 			{
 				final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
-				final String attribute = n5url.getAttributePath();
 
+
+				final String attribute = n5url.getAttributePath();
 				try {
 					final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
 					resolveAbsolutePath(ct, dataset);
 					return new ValuePair<>( ct, n5 );
-				} catch( N5Exception | ClassCastException e ) {}
+				} catch (N5Exception | ClassCastException e) {}
 
 				try {
 					return openReference( url, n5, dataset, attribute ); // try to open a reference
@@ -360,7 +360,7 @@ public class NgffTransformations
 
 		// the matrix is stored row major (columns are contiguous in memory)
 		final int[] blockSize = new int[]{columns, rows};
-		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affine.getRowPackedCopy(), columns, rows);
+		final ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affine.getRowPackedCopy(), columns, rows);
 		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
 
 		// TODO make this more robust
@@ -389,7 +389,7 @@ public class NgffTransformations
 			final Compression compression ) {
 
 		final int[] blockSize = new int[] { affineParameters.length };
-		ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affineParameters, affineParameters.length);
+		final ArrayImg<DoubleType, DoubleArray> data = ArrayImgs.doubles(affineParameters, affineParameters.length);
 		N5Utils.save(data, n5Writer, dataset, blockSize, compression);
 
 		// TODO make this more robust
