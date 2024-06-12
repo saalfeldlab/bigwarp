@@ -35,7 +35,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import javax.swing.JFrame;
 
@@ -122,7 +121,6 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 import net.imglib2.view.composite.CompositeIntervalView;
 import net.imglib2.view.composite.GenericComposite;
-import net.imglib2.view.composite.RealComposite;
 
 /**
  * ImageJ plugin to convert the thin plate spline to a displacement field.
@@ -726,11 +724,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final AffineGet affine = bwXfm.affinePartOfTps();
 			final AffineCoordinateTransform ngffAffine = new AffineCoordinateTransform( affine.getRowPackedCopy() );
 
-			// the variable transform has the affine part removed here
-			final Supplier<RealComposite<T>> supplier = getDfieldTypeSupplier(dtype, transform.numTargetDimensions());
-			dfield = (RandomAccessibleInterval<T>)DisplacementFieldTransform.createDisplacementField(transform, new FinalInterval(dims), spacing, offset,
-					supplier);
-
+			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
@@ -764,9 +758,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 		else {
 
-			final Supplier<RealComposite<T>> supplier = getDfieldTypeSupplier(dtype, transform.numTargetDimensions());
-			dfield = (RandomAccessibleInterval<T>)DisplacementFieldTransform.createDisplacementField(transform, new FinalInterval(dims), spacing, offset,
-					supplier);
+			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
 
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
@@ -802,15 +794,28 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		n5.close();
 	}
 
-	@SuppressWarnings("unchecked")
-	private static <T extends RealType<T> & NativeType<T>> Supplier<RealComposite<T>> getDfieldTypeSupplier(DTYPE dtype, int nd) {
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	private static <T extends NativeType<T> & RealType<T>> RandomAccessibleInterval<T> buildDisplacementField(DTYPE dtype,
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
 
-		switch (dtype) {
-		case FLOAT:
-			return () -> (RealComposite<T>)FloatType.createVector(nd);
-		default:
-			return () -> (RealComposite<T>)DoubleType.createVector(nd);
-		}
+		if (DTYPE.FLOAT.equals(dtype))
+			return (RandomAccessibleInterval)buildDisplacementFieldFloat(transform, interval, spacing, offset);
+		else
+			return (RandomAccessibleInterval)buildDisplacementFieldDouble(transform, interval, spacing, offset);
+	}
+
+	private static RandomAccessibleInterval<DoubleType> buildDisplacementFieldDouble(
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
+
+		return DisplacementFieldTransform.createDisplacementField(transform, interval, spacing, offset,
+				() -> DoubleType.createVector(transform.numTargetDimensions()));
+	}
+
+	private static RandomAccessibleInterval<FloatType> buildDisplacementFieldFloat(
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
+
+		return DisplacementFieldTransform.createDisplacementField(transform, interval, spacing, offset,
+				() -> FloatType.createVector(transform.numTargetDimensions()));
 	}
 
 	@SuppressWarnings("unchecked")
