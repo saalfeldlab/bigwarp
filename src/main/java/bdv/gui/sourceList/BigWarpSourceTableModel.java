@@ -235,17 +235,18 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 		public RealTransform getTransform() {
 
-
 			if (transformUrl != null && !transformUrl.isEmpty()) {
 				final String trimUrl = transformUrl.trim();
 				try {
 					final N5URI n5Uri = new N5URI(trimUrl);
 					final URI uri = n5Uri.getURI();
 					if (uri.getFragment() == null) {
+						final String groupPath = uri.getQuery() == null ? N5DisplacementField.FORWARD_ATTR : n5Uri.getGroupPath();
+						final boolean isInverse = groupPath.equals(N5DisplacementField.INVERSE_ATTR);
 						return N5DisplacementField.open(
 								new N5Factory().openReader(n5Uri.getContainerPath()),
-								uri.getQuery() == null ? N5DisplacementField.FORWARD_ATTR : n5Uri.getGroupPath(),
-								false);
+								groupPath,
+								isInverse);
 					}
 				} catch (final URISyntaxException e) {}
 
