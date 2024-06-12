@@ -50,6 +50,12 @@ public class WarpMagnitudeRandomAccessibleInterval<T extends RealType<T>> extend
 		return realRandomAccess();
 	}
 
+	@Override
+	public T getType()
+	{
+		return ra.getType();
+	}
+
 //	public RealRandomAccessibleRealInterval<T> copy()
 //	{
 //		long[] min = new long[ this.numDimensions() ];
