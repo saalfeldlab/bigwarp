@@ -688,9 +688,8 @@ public class BigWarpInit
 		try
 		{
 			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
-
-			final N5TreeNode node = discoverer.discoverAndParseRecursive( n5Dataset );
-			meta = node.getMetadata();
+			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
+			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
 		}
 		catch ( final IOException e )
 		{}

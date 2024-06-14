@@ -57,6 +57,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.TranslationCoordinateTransform;
 
 import bdv.gui.ExportDisplacementFieldFrame;
+import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
 import bdv.img.WarpedSource;
 import bdv.viewer.Source;
 import bigwarp.BigWarp;
@@ -106,11 +107,14 @@ import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleRealTransformSequence;
 import net.imglib2.realtransform.InvertibleWrapped2DIntermediate3D;
 import net.imglib2.realtransform.RealTransform;
-import net.imglib2.realtransform.RealTransformSequence;
 import net.imglib2.realtransform.ScaleAndTranslation;
 import net.imglib2.realtransform.ThinplateSplineTransform;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.integer.ByteType;
+import net.imglib2.type.numeric.integer.ShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.IntervalView;
@@ -244,15 +248,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			else if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 			{
 				writeN5( params.n5Base, params.n5Dataset + "/dfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						false, params.inverseTolerance, params.inverseMaxIterations );
+						params.dataType, params.maxQuantizationError, false, params.inverseTolerance, params.inverseMaxIterations);
 				writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						true, params.inverseTolerance, params.inverseMaxIterations );
+						params.dataType, params.maxQuantizationError, true, params.inverseTolerance, params.inverseMaxIterations);
 			}
 			else
 			{
 				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
 				writeN5( params.n5Base, params.n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						inverse, params.inverseTolerance, params.inverseMaxIterations );
+						params.dataType, params.maxQuantizationError, inverse, params.inverseTolerance, params.inverseMaxIterations);
 			}
 		}
 	}
@@ -598,12 +602,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final boolean flatten,
 			final boolean inverse,
 			final double invTolerance,
-			final int invMaxIters ) throws IOException
-	{
-		writeN5( n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, format, flatten, inverse, invTolerance, invMaxIters );
+			final int invMaxIters) throws IOException {
+
+		writeN5(n5BasePath, N5DisplacementField.FORWARD_ATTR, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, format,
+				flatten, DTYPE.FLOAT, 0.01, inverse, invTolerance, invMaxIters);
 	}
 
-	public static void writeN5(
+	public static <T extends NativeType<T> & RealType<T>, Q extends NativeType<Q> & IntegerType<Q>> void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
 			final LandmarkTableModel ltm,
@@ -618,15 +623,18 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final int nThreads,
 			final String format,
 			final boolean flatten,
+			final DTYPE dtype,
+			final double maxError,
 			final boolean inverse,
 			final double invTolerance,
-			final int invMaxIters ) throws IOException
-	{
-		writeN5( n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, format, false, flatten, inverse, invTolerance, invMaxIters  );
+			final int invMaxIters) throws IOException {
+
+		writeN5(n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSize, compression, nThreads, format, false,
+				flatten, dtype, maxError, inverse, invTolerance, invMaxIters);
 	}
 
 	@SuppressWarnings("rawtypes")
-	public static void writeN5(
+	public static <T extends NativeType<T> & RealType<T>, Q extends NativeType<Q> & IntegerType<Q>> void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
 			final LandmarkTableModel ltm,
@@ -642,11 +650,13 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final String format,
 			final boolean splitAffine,
 			final boolean flatten,
+			final DTYPE dtype,
+			final double maxError,
 			final boolean inverse,
 			final double invTolerance,
-			final int invMaxIters )
-	{
-		final String dataset = ( n5Dataset == null || n5Dataset.isEmpty() ) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
+			final int invMaxIters) {
+
+		final String dataset = (n5Dataset == null || n5Dataset.isEmpty()) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
 		final String mvgSpaceName = getMovingName(data);
 		final String tgtSpaceName = getTargetName(data);
@@ -707,63 +717,118 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 
-		final RandomAccessibleInterval< DoubleType > dfield;
-		if( splitAffine )
-		{
+		final RandomAccessibleInterval<T> dfield;
+		if (splitAffine) {
+
 			// the affine part
 			final AffineGet affine = bwXfm.affinePartOfTps();
 			final AffineCoordinateTransform ngffAffine = new AffineCoordinateTransform( affine.getRowPackedCopy() );
 
-			// the variable transform has the affine part removed here
-			dfield = DisplacementFieldTransform.createDisplacementField( transform, new FinalInterval( dims ), spacing, offset );
+			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
+			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
+				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
+				SlicerTransformations.saveAffine(n5, dataset, affine);
+			} else if (format.equals(ExportDisplacementFieldFrame.FMT_N5)) {
+				// TODO Implement me
 
-			if( format.equals( ExportDisplacementFieldFrame.FMT_SLICER ))
-			{
-				final ThreadPoolExecutor exec = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
-				SlicerTransformations.saveDisplacementField( n5, dataset, dfield, blockSize, compression, exec );
-				SlicerTransformations.saveAffine( n5, dataset, affine );
-			}
-			else
-			{
-				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				// affine parameter may be null
+				final Q q = getQuantizedDataType(dtype);
+				if (q == null) // no quantization
+					N5DisplacementField.save(n5, dataset, affine, dfield,
+							spacing, offset, blockSize, compression);
+				else
+					N5DisplacementField.save(n5, dataset, affine, dfield,
+							spacing, offset, blockSize, compression,
+							q, maxError);
+
+			} else {
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(n5, dataset, dfield, inputSpace, outputSpace, spacing, offset,
+						unit, blockSize, compression, nThreads);
 
 				// the transform sequence needs to have a reference to whatever transform was imported, if requested
-				final CoordinateTransform[] ctList = refCt == null ? new CoordinateTransform[]{ dfieldTform, ngffAffine  } : new CoordinateTransform[]{ dfieldTform, ngffAffine, refCt };
+				final CoordinateTransform[] ctList = refCt == null ? new CoordinateTransform[]{dfieldTform, ngffAffine}
+						: new CoordinateTransform[]{dfieldTform, ngffAffine, refCt};
 
 				// the total transform
-				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform( inputSpace, outputSpace, ctList );
+				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform(inputSpace, outputSpace, ctList);
 
-				NgffTransformations.addCoordinateTransformations( n5, "/", totalTform );
+				NgffTransformations.addCoordinateTransformations(n5, "/", totalTform);
 			}
 		}
-		else
-		{
-			dfield = DisplacementFieldTransform.createDisplacementField( transform, new FinalInterval( dims ), spacing, offset );
+		else {
 
-			if( format.equals( ExportDisplacementFieldFrame.FMT_SLICER ))
-			{
-				final ThreadPoolExecutor exec = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
-				SlicerTransformations.saveDisplacementField( n5, dataset, dfield, blockSize, compression, exec );
+			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
+
+			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
+				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
+				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
 
 				// for slicer, this affine represents the pixel to physical transformation
-				SlicerTransformations.saveAffine( n5, dataset, new ScaleAndTranslation( spacing, offset ) );
-			}
-			else
-			{
-				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save( n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, nThreads );
+				SlicerTransformations.saveAffine(n5, dataset, new ScaleAndTranslation(spacing, offset));
+			} else if (format.equals(ExportDisplacementFieldFrame.FMT_N5)) {
+				// affine parameter may be null
+				final Q q = getQuantizedDataType(dtype);
+				if (q == null) // no quantization
+					N5DisplacementField.save(n5, dataset, null, dfield,
+							spacing, offset, blockSize, compression);
+				else
+					N5DisplacementField.save(n5, dataset, null, dfield,
+							spacing, offset, blockSize, compression,
+							q, maxError);
+
+			} else {
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(n5, dataset, dfield, inputSpace, outputSpace, spacing, offset,
+						unit, blockSize, compression, nThreads);
 
 				final CoordinateTransform<?> ngffTform;
-				if( refCt == null )
+				if (refCt == null)
 					ngffTform = dfieldTform;
 				else
-					ngffTform = new SequenceCoordinateTransform( refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{ dfieldTform, refCt });
+					ngffTform = new SequenceCoordinateTransform(refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{dfieldTform, refCt});
 
-
-				NgffTransformations.addCoordinateTransformations( n5, "/", ngffTform );
+				NgffTransformations.addCoordinateTransformations(n5, "/", ngffTform);
 			}
 		}
 
 		n5.close();
+	}
+
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	private static <T extends NativeType<T> & RealType<T>> RandomAccessibleInterval<T> buildDisplacementField(DTYPE dtype,
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
+
+		if (DTYPE.FLOAT.equals(dtype))
+			return (RandomAccessibleInterval)buildDisplacementFieldFloat(transform, interval, spacing, offset);
+		else
+			return (RandomAccessibleInterval)buildDisplacementFieldDouble(transform, interval, spacing, offset);
+	}
+
+	private static RandomAccessibleInterval<DoubleType> buildDisplacementFieldDouble(
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
+
+		return DisplacementFieldTransform.createDisplacementField(transform, interval, spacing, offset,
+				() -> DoubleType.createVector(transform.numTargetDimensions()));
+	}
+
+	private static RandomAccessibleInterval<FloatType> buildDisplacementFieldFloat(
+			RealTransform transform, Interval interval, double[] spacing, double[] offset) {
+
+		return DisplacementFieldTransform.createDisplacementField(transform, interval, spacing, offset,
+				() -> FloatType.createVector(transform.numTargetDimensions()));
+	}
+
+	@SuppressWarnings("unchecked")
+	private static <Q extends NativeType<Q>> Q getQuantizedDataType(DTYPE dtype) {
+
+		switch (dtype) {
+		case BYTE:
+			return (Q)new ByteType();
+		case SHORT:
+			return (Q)new ShortType();
+		default:
+			return null;
+		}
 	}
 
 	private static String getMovingName( final BigWarpData data ) {
@@ -1158,7 +1223,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final int nThreads;
 		public final String format;
 
-
 		public final long[] size;
 		public final double[] spacing;
 		public final double[] offset;
@@ -1169,6 +1233,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final Compression compression;
 		public final int[] blockSize;
 
+		public final DTYPE dataType;
+		public final double maxQuantizationError;
+
 		public final double inverseTolerance;
 		public final int inverseMaxIterations;
 
@@ -1176,6 +1243,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final String landmarkPath,
 				final boolean ignoreAffine,
 				final String option,
+				final DTYPE dataType,
+				final double maxQuantizationError,
 				final String inverseOption,
 				final double inverseTolerance,
 				final int inverseMaxIterations,
@@ -1194,6 +1263,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			this.landmarkPath = landmarkPath;
 			this.ignoreAffine = ignoreAffine;
 			this.option = option;
+
+			this.dataType = dataType;
+			this.maxQuantizationError = maxQuantizationError;
 
 			this.inverseOption = inverseOption;
 			this.inverseTolerance = inverseTolerance;
@@ -1234,6 +1306,15 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			final String[] choices = new String[] { flattenOption, sequenceOption };
 			gd.addChoice( "type", choices, flattenOption );
+
+			final String[] dataTypeChoices = new String[]{
+					DTYPE.BYTE.toString(),
+					DTYPE.SHORT.toString(),
+					DTYPE.FLOAT.toString(),
+					DTYPE.DOUBLE.toString()
+			};
+			gd.addChoice("dataType", dataTypeChoices, DTYPE.FLOAT.toString());
+			gd.addNumericField("quantizationError", 0.01);
 
 			final String[] invChoices = new String[] { INVERSE_OPTIONS.FORWARD.toString(), INVERSE_OPTIONS.INVERSE.toString(), INVERSE_OPTIONS.BOTH.toString() };
 			gd.addChoice( "direction", invChoices, INVERSE_OPTIONS.FORWARD.toString() );
@@ -1277,6 +1358,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			final boolean ignoreAffine = gd.getNextBoolean();
 			final String option = gd.getNextChoice();
+
+			final DTYPE dataType = DTYPE.valueOf(gd.getNextChoice());
+			final double maxQuantizationError = gd.getNextNumber();
+
 			final String direction = gd.getNextChoice();
 			final boolean virtual = gd.getNextBoolean();
 			final int nThreads = ( int ) gd.getNextNumber();
@@ -1356,6 +1441,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					landmarkPath,
 					ignoreAffine,
 					option,
+					dataType, maxQuantizationError,
 					direction, 0.5, 200,
 					virtual,
 					nThreads,

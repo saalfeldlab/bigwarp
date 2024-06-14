@@ -1,15 +1,26 @@
 package bigwarp.dfield;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.LinkedHashMap;
 
+import org.janelia.saalfeldlab.n5.DataType;
+import org.janelia.saalfeldlab.n5.DatasetAttributes;
+import org.janelia.saalfeldlab.n5.N5Exception;
+import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.RawCompression;
+import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.junit.Before;
 import org.junit.Test;
 
+import bdv.gui.ExportDisplacementFieldFrame;
+import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.viewer.Source;
 import bigwarp.BigWarpData;
@@ -190,6 +201,71 @@ public class DfieldExportTest
 
 		it.reset();
 		assertTrue( "un-flattened forward", compare( tform, dfieldUnflat, it, 1e-3 ));
+	}
+
+	@Test
+	public void dfieldQuantizationTest() throws IOException {
+
+		final BigWarpTransform bwTransform = new BigWarpTransform(ltm);
+
+		// constant parameters
+		final boolean ignoreAffine = false;
+		final boolean virtual = false;
+		final boolean inverse = false;
+		final double inverseTolerance = 0.01;
+		final int inverseMaxIters = 1;
+
+		final long[] dims = new long[]{47, 56, 7};
+		final double[] spacing = new double[]{0.8, 0.8, 1.6};
+		final double[] offset = new double[]{0, 0, 0};
+
+		final DTYPE quantizedType = DTYPE.SHORT;
+		final double maxQuantizationError = 0.01;
+
+		final int[] blkSsize = new int[]{32, 32, 32};
+		final RawCompression compression = new RawCompression();
+
+		final String format = ExportDisplacementFieldFrame.FMT_N5;
+		final int nThreads = 1;
+
+		final FinalRealInterval testItvl = new FinalRealInterval(
+				new double[]{3.6, 3.6, 1.6},
+				new double[]{32.0, 40.0, 9.6});
+
+		// final String n5BasePath = "/tmp/blah.n5";
+
+		final File tmpFile = Files.createTempDirectory("bw-dfield-test-").toFile();
+		tmpFile.deleteOnExit();
+		final String n5BasePath = tmpFile.getCanonicalPath() + ".n5";
+
+		final String fDset = "dfieldFloat";
+		BigWarpToDeformationFieldPlugIn.writeN5(n5BasePath, fDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSsize, compression, nThreads, format, false, DTYPE.FLOAT, Double.MAX_VALUE, inverse, inverseTolerance, inverseMaxIters);
+
+		final String sDset = "dfieldShort";
+		BigWarpToDeformationFieldPlugIn.writeN5(n5BasePath, sDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSsize, compression, nThreads, format, false, DTYPE.SHORT, maxQuantizationError, inverse, inverseTolerance, inverseMaxIters);
+
+		final N5Writer n5 = new N5Factory().openWriter(n5BasePath);
+		assertTrue(n5.exists(fDset));
+		final DatasetAttributes fAttrs = n5.getDatasetAttributes(fDset);
+		assertTrue(fAttrs.getDataType().equals(DataType.FLOAT32));
+
+		assertTrue(n5.exists(sDset));
+		final DatasetAttributes sAttrs = n5.getDatasetAttributes(sDset);
+		assertTrue(sAttrs.getDataType().equals(DataType.INT16));
+
+		try {
+			assertNotNull(n5.getAttribute(sDset, N5DisplacementField.MULTIPLIER_ATTR, double.class));
+		} catch (final N5Exception ignore) {}
+
+		final RealTransform dfieldF = N5DisplacementField.open(n5, fDset, false);
+		final RealTransform dfieldS = N5DisplacementField.open(n5, sDset, false);
+
+		final RealIntervalIterator it = new RealIntervalIterator(testItvl, spacing);
+		assertTrue("quantization error", compare(dfieldF, dfieldS, it, 2 * maxQuantizationError));
+
+		n5.remove();
 	}
 
 	public static DisplacementFieldTransform toDfield( final ImagePlus dfieldImp )
