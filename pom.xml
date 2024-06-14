@@ -133,10 +133,10 @@
 		<n5-blosc.version>1.1.1</n5-blosc.version>
 		<n5-hdf5.version>2.2.0</n5-hdf5.version>
 		<n5-google-cloud.version>4.1.0</n5-google-cloud.version>
-		<n5-zarr.version>1.3.1</n5-zarr.version>
-		<n5-universe.version>1.4.1</n5-universe.version>
-		<n5-ij.version>4.1.0</n5-ij.version>
-		<n5-viewer_fiji.version>6.1.0</n5-viewer_fiji.version>
+		<n5-zarr.version>1.3.4</n5-zarr.version>
+		<n5-universe.version>1.6.0</n5-universe.version>
+		<n5-ij.version>4.2.1</n5-ij.version>
+		<n5-viewer_fiji.version>6.1.1</n5-viewer_fiji.version>
 
 		<bigdataviewer-core.version>10.4.14</bigdataviewer-core.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-34</bigdataviewer-vistools.version>
