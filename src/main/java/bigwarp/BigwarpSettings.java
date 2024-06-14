@@ -1,5 +1,33 @@
 package bigwarp;
 
+import static bdv.viewer.Interpolation.NEARESTNEIGHBOR;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.janelia.saalfeldlab.n5.N5URI;
+import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.scijava.listeners.Listeners;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.TypeAdapter;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
+
 import bdv.tools.bookmarks.Bookmarks;
 import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.MinMaxGroup;
@@ -20,33 +48,11 @@ import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
 import bigwarp.transforms.NgffTransformations;
 import bigwarp.transforms.io.TransformWriterJson;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import mpicbg.spim.data.SpimDataException;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
-import org.scijava.listeners.Listeners;
-
-import static bdv.viewer.Interpolation.NEARESTNEIGHBOR;
 
 public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 {
@@ -284,7 +290,25 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 					RealTransform transform = null;
 					final String tformUri = transformUri;
 					if( transformUri != null )
-						transform = NgffTransformations.open(transformUri);
+					{
+						final String trimUrl = transformUri.trim();
+						try
+						{
+							final N5URI n5Uri = new N5URI( trimUrl );
+							final URI tformUriClean = n5Uri.getURI();
+							if ( tformUriClean.getFragment() == null )
+							{
+								final String groupPath = tformUriClean.getQuery() == null ? N5DisplacementField.FORWARD_ATTR : n5Uri.getGroupPath();
+								final boolean isInverse = groupPath.endsWith( N5DisplacementField.INVERSE_ATTR );
+								transform = N5DisplacementField.open( new N5Factory().openReader( n5Uri.getContainerPath() ), groupPath, isInverse );
+							}
+						}
+						catch ( final URISyntaxException e )
+						{}
+
+						if ( transform == null )
+							transform = NgffTransformations.open( trimUrl );
+					}
 
 					BigWarpInit.add( bigwarp.data, sources, transform, () -> tformUri );
 
