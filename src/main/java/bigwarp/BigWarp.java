@@ -1554,11 +1554,11 @@ public class BigWarp< T >
 					public void run()
 					{
 						progressWriter.setProgress( 0.01 );
-						ApplyBigwarpPlugin.runN5Export( data, data.sources, fieldOfViewOption,
-								outputIntervalList.get( 0 ), interp,
+						ApplyBigwarpPlugin.runN5Export( data, fieldOfViewOption,
+								outputIntervalList.get(0), interp,
 								offsetSpec, res, unit,
 								progressWriter, writeOpts,
-								Executors.newFixedThreadPool( nThreads )  );
+								Executors.newFixedThreadPool( nThreads ));
 
 						progressWriter.setProgress( 1.00 );
 					}

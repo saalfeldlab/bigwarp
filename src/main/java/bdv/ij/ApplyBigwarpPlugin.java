@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -825,18 +826,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
-//		int numChannels = bwData.movingSourceIndexList.size();
 		final int numChannels = bwData.numMovingSources();
-//		final List< SourceAndConverter< T >> sourcesxfm = BigWarp.wrapSourcesAsTransformed(
-//				bwData.sourceInfos,
-//				landmarks.getNumdims(),
-//				bwData );
 
 		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			final SourceAndConverter< T > movingSource = bwData.getMovingSource( i );
-//			final int originalIdx = bwData.sources.indexOf(movingSource);
 			((WarpedSource<?>)(movingSource.getSpimSource())).updateTransform(invXfm);
 			((WarpedSource<?>)(movingSource.getSpimSource())).setIsTransformed(true);
 		}
@@ -859,11 +854,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final String unit = ApplyBigwarpPlugin.getUnit( bwData, resolutionOption );
-			runN5Export( bwData, bwData.sources, fieldOfViewOption,
+			runN5Export( bwData, fieldOfViewOption,
 					outputIntervalList.get( 0 ), interp,
 					offset, res, unit,
 					progressWriter, writeOpts,
-					Executors.newFixedThreadPool( nThreads )  );
+					Executors.newFixedThreadPool(nThreads));
 			return null;
 		}
 		else
@@ -959,6 +954,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return out;
 	}
 
+	@Deprecated
 	public static <S, T extends NativeType<T> & NumericType<T>> void runN5Export(
 			final BigWarpData<S> data,
 			final List< SourceAndConverter< S >> sources,
@@ -975,8 +971,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final int nd = BigWarp.detectNumDims( data.sources );
 		final double[] resolution = limit(nd,resolutionArg);
 
-//		final double[] offset = limit(nd,offsetArg);
-		final double[] offset = physicalOffsetFromPixelInterval(outputInterval, resolution);
+		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution, 
+				outputInterval);
+		
+		System.out.println("resolution: " + Arrays.toString(resolution));
+		System.out.println("offset    : " + Arrays.toString(offset));
+		System.out.println("interval  : " + Intervals.toString(outputInterval));
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -1072,6 +1072,128 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 
 		progressWriter.setProgress( 1.0 );
+	}
+
+	public static <S,T extends NativeType<T> & NumericType<T>> void runN5Export(
+			final BigWarpData<S> data,
+			final String fieldOfViewOption,
+			final Interval outputInterval,
+			final Interpolation interp,
+			final double[] offsetArg,
+			final double[] resolutionArg,
+			final String unit,
+			final ProgressWriter progressWriter,
+			final WriteDestinationOptions writeOpts,
+			final ExecutorService exec )
+	{
+		System.out.println("run new n5 export");
+
+		final int nd = BigWarp.detectNumDims( data.sources );
+		final double[] resolution = limit(nd,resolutionArg);
+
+		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution, 
+				outputInterval);
+		
+		System.out.println("resolution: " + Arrays.toString(resolution));
+		System.out.println("offset    : " + Arrays.toString(offset));
+		System.out.println("interval  : " + Intervals.toString(outputInterval));
+
+		// setup n5 parameters
+		final String dataset = writeOpts.n5Dataset;
+		final int[] blockSize = writeOpts.blockSize;
+		final Compression compression = writeOpts.compression;
+		if( dataset == null || dataset.isEmpty() )
+		{
+			System.err.println("Problem with n5 dataset path: " + dataset);
+			return;
+		}
+		N5Writer n5;
+		try
+		{
+			n5 = new N5Factory().openWriter( writeOpts.pathOrN5Root );
+		}
+		catch ( final RuntimeException e1 )
+		{
+			System.err.println("Could not create n5 writer for: " + writeOpts.pathOrN5Root);
+			e1.printStackTrace();
+			return;
+		}
+
+		// build metadata
+		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
+		final Axis[] axes = new Axis[nd];
+		for (int i = 0; i < nd; i++)
+			axes[i] = new Axis(Axis.SPACE, axesLabels[i], unit);
+
+		// setup physical to pixel transform
+		final AffineTransform3D resolutionTransform = new AffineTransform3D();
+		resolutionTransform.set( resolution[ 0 ], 0, 0 );
+		resolutionTransform.set( resolution[ 1 ], 1, 1 );
+
+		if( resolution.length > 2 )
+			resolutionTransform.set( resolution[ 2 ], 2, 2 );
+
+		final AffineTransform3D offsetTransform = new AffineTransform3D();
+		offsetTransform.set( offset[ 0 ], 0, 3 );
+		offsetTransform.set( offset[ 1 ], 1, 3 );
+
+		if( resolution.length > 2 )
+			offsetTransform.set( offset[ 2 ], 2, 3 );
+
+		final AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
+		pixelRenderToPhysical.concatenate( resolutionTransform );
+		pixelRenderToPhysical.concatenate( offsetTransform );
+		
+		// render and write
+		final int N = data.numMovingSources();
+		for ( int i = 0; i < N; i++ )
+		{
+			final SourceAndConverter< T > originalMovingSource = (SourceAndConverter<T>)data.getMovingSource( i );
+			final String srcName = originalMovingSource.getSpimSource().getName();
+			final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data, 
+					Collections.singletonList(data.getMovingSource(i)),
+					interp, progressWriter );
+			exporter.setRenderResolution( resolution );
+			exporter.setOffset( offset );
+			exporter.setInterval(outputInterval);
+			exporter.setSingleChannelNoStack(true);
+			final RandomAccessibleInterval<T> imgExp = (RandomAccessibleInterval<T>)exporter.exportRai();
+			final IntervalView<T> img = Views.translateInverse( imgExp, Intervals.minAsLongArray( imgExp ));
+//			final RandomAccessibleInterval<T> img = Views.zeroMin(imgExp);
+
+			RandomAccessibleInterval<T> imgToWrite;
+			if( nd == 2 )
+				imgToWrite = Views.hyperSlice( img, 2, 0 );
+			else
+				imgToWrite = img;
+
+			String destDataset = dataset;
+			if( N >  1 )
+				destDataset = dataset + String.format( "/%s", srcName.replace( " " , "_" ));
+
+			final String name = originalMovingSource.getSpimSource().getName();
+			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, axes, new String[]{"s0"},
+					new double[][]{resolution}, new double[][]{offset});
+
+			try
+			{
+				N5Utils.save( imgToWrite, n5, destDataset + "/s0", blockSize, compression, exec );
+				if( parser != null && metadata != null )
+					parser.writeMetadata( metadata, n5, destDataset );
+
+				n5.close();
+			}
+			catch ( final Exception e )
+			{
+				e.printStackTrace();
+			}
+
+			progressWriter.setProgress( (i+1) / ((double)N) );
+		}
+
+		progressWriter.setProgress( 1.0 );
+		System.out.println("done");
 	}
 
 	@Override

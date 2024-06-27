@@ -138,7 +138,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		buildTotalRenderTransform();
 		final AffineTransform3D srcXfm = new AffineTransform3D();
 
-		final int numChannels = bwData.numMovingSources();
+		final int numChannels;
+		if( singleChannelNoStack )
+			numChannels = 1;
+		else
+			numChannels = bwData.numMovingSources();
+
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			final Source<T> src = bwData.getMovingSource( i ).getSpimSource();
@@ -157,9 +162,12 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 
 			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
 		}
-		final RandomAccessibleInterval< T > raiStack = Views.stack( raiList );
 
-		return raiStack;
+		if( singleChannelNoStack )
+			return raiList.get(0);
+		else {
+			return Views.stack( raiList );
+		}
 	}
 
 	@Override

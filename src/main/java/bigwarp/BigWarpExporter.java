@@ -84,6 +84,8 @@ public abstract class BigWarpExporter <T>
 
 	protected AffineTransform3D offsetTransform;
 
+	protected boolean singleChannelNoStack = false;
+
 	protected Interval outputInterval;
 
 	protected Interpolation interp;
@@ -114,57 +116,6 @@ public abstract class BigWarpExporter <T>
 
 	private String exportPath;
 
-//	public BigWarpExporter(
-//			final List< SourceAndConverter< T >> sourcesIn,
-//			final List< ConverterSetup > convSetups,
-//			final int[] movingSourceIndexList,
-//			final int[] targetSourceIndexList,
-//			final Interpolation interp,
-//			final ProgressWriter progress )
-//	{
-//		this.sources = new ArrayList<SourceAndConverter<T>>();
-//		this.convSetups = convSetups;
-//		for( SourceAndConverter<T> sac : sourcesIn )
-//		{
-//			Source<T> srcCopy = null;
-//			Source<T> src = sac.getSpimSource();
-//			if( src instanceof WarpedSource )
-//			{
-//				WarpedSource<T> ws = (WarpedSource<T>)( sac.getSpimSource() );
-//				WarpedSource<T> wsCopy = new WarpedSource<>( ws.getWrappedSource(), ws.getName() ) ;
-//
-//				if( ws.getTransform() != null )
-//				{
-//					wsCopy.updateTransform( ws.getTransform().copy() );
-//					wsCopy.setIsTransformed( true );
-//				}
-//				srcCopy = wsCopy;
-//			}
-//			else
-//				srcCopy = src;
-//
-//			SourceAndConverter<T> copy = new SourceAndConverter<>( srcCopy, sac.getConverter() );
-//			sources.add( copy );
-//		}
-//
-//		this.movingSourceIndexList = movingSourceIndexList;
-//		this.targetSourceIndexList = targetSourceIndexList;
-//
-//		if( progress == null )
-//			this.progress = new ProgressWriterConsole();
-//		else
-//			this.progress = progress;
-//
-//		this.setInterp( interp );
-//
-//		pixelRenderToPhysical = new AffineTransform3D();
-//		resolutionTransform = new AffineTransform3D();
-//		offsetTransform = new AffineTransform3D();
-//
-//		try {
-//			unit = sources.get( targetSourceIndexList[ 0 ] ).getSpimSource().getVoxelDimensions().unit();
-//		} catch( Exception e ) {}
-//	}
 
 	public BigWarpExporter(
 			BigWarpData<T> bwData,
@@ -210,7 +161,10 @@ public abstract class BigWarpExporter <T>
 
 		try {
 			unit = bwData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions().unit();
-		} catch( final Exception e ) {}
+		} catch( final Exception e ) {
+			// if something goes wrong use the units of this source
+			unit = bwData.getMovingSource(0).getSpimSource().getVoxelDimensions().unit();
+		}
 	}
 
 	public abstract RandomAccessibleInterval<?> exportRai();
@@ -268,6 +222,11 @@ public abstract class BigWarpExporter <T>
 	{
 		for( int i = 0; i < res.length; i++ )
 			resolutionTransform.set( res[ i ], i, i );
+	}
+
+	public void setSingleChannelNoStack( boolean singleChannelNoStack )
+	{
+		this.singleChannelNoStack = singleChannelNoStack;
 	}
 
 	/**
@@ -854,9 +813,9 @@ public abstract class BigWarpExporter <T>
 		public void run()
 		{
 			try {
-				//long startTime = System.currentTimeMillis();
+				// long startTime = System.currentTimeMillis();
 				exporter.result = exporter.export();
-				//long endTime = System.currentTimeMillis();
+				// long endTime = System.currentTimeMillis();
 				// System.out.println("export took " + (endTime - startTime) + "ms");
 
 				if( show )
