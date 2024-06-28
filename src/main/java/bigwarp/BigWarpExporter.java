@@ -167,6 +167,8 @@ public abstract class BigWarpExporter <T>
 		}
 	}
 
+	public abstract RandomAccessibleInterval<?> exportRai(Source<?> src);
+
 	public abstract RandomAccessibleInterval<?> exportRai();
 
 	public abstract ImagePlus export();
@@ -850,6 +852,27 @@ public abstract class BigWarpExporter <T>
 			}
 		}
 	}
+	
+	@SuppressWarnings("unchecked")
+	public static <T> BigWarpExporter<?> getExporter(
+			final BigWarpData<T> bwData,
+			final  SourceAndConverter< T > source,
+			final Interpolation interp,
+			final ProgressWriter progressWriter )
+	{
+		final Object baseType = source.getSpimSource().getType();
+		if( baseType instanceof RealType )
+			return new BigWarpRealExporter( bwData, bwData.converterSetups, interp, (RealType)baseType, progressWriter);
+		else if ( ARGBType.class.isInstance( baseType ) )
+		{
+			return new BigWarpARGBExporter( (BigWarpData<ARGBType>)bwData, bwData.converterSetups, interp, progressWriter );
+		}
+		else
+		{
+			System.err.println( "Can't export type " + baseType.getClass() );
+			return null;
+		}
+	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static <T> BigWarpExporter<?> getExporter(
@@ -877,5 +900,6 @@ public abstract class BigWarpExporter <T>
 		}
 		return null;
 	}
+
 
 }
