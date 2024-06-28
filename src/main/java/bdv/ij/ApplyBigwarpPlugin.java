@@ -971,9 +971,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final int nd = BigWarp.detectNumDims( data.sources );
 		final double[] resolution = limit(nd,resolutionArg);
 
-		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution, 
+		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution,
 				outputInterval);
-		
+
 		System.out.println("resolution: " + Arrays.toString(resolution));
 		System.out.println("offset    : " + Arrays.toString(offset));
 		System.out.println("interval  : " + Intervals.toString(outputInterval));
@@ -1086,17 +1086,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final WriteDestinationOptions writeOpts,
 			final ExecutorService exec )
 	{
-		System.out.println("run new n5 export");
 
 		final int nd = BigWarp.detectNumDims( data.sources );
 		final double[] resolution = limit(nd,resolutionArg);
 
-		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution, 
+		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution,
 				outputInterval);
-		
-		System.out.println("resolution: " + Arrays.toString(resolution));
-		System.out.println("offset    : " + Arrays.toString(offset));
-		System.out.println("interval  : " + Intervals.toString(outputInterval));
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -1144,23 +1139,22 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
 		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
-		
+
 		// render and write
 		final int N = data.numMovingSources();
 		for ( int i = 0; i < N; i++ )
 		{
 			final SourceAndConverter< T > originalMovingSource = (SourceAndConverter<T>)data.getMovingSource( i );
 			final String srcName = originalMovingSource.getSpimSource().getName();
-			final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data, 
+			final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data,
 					Collections.singletonList(data.getMovingSource(i)),
 					interp, progressWriter );
 			exporter.setRenderResolution( resolution );
 			exporter.setOffset( offset );
-			exporter.setInterval(outputInterval);
+			exporter.setInterval(Intervals.zeroMin(outputInterval));
 			exporter.setSingleChannelNoStack(true);
 			final RandomAccessibleInterval<T> imgExp = (RandomAccessibleInterval<T>)exporter.exportRai();
 			final IntervalView<T> img = Views.translateInverse( imgExp, Intervals.minAsLongArray( imgExp ));
-//			final RandomAccessibleInterval<T> img = Views.zeroMin(imgExp);
 
 			RandomAccessibleInterval<T> imgToWrite;
 			if( nd == 2 )
