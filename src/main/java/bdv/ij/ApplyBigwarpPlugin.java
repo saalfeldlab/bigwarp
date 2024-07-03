@@ -1137,7 +1137,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		offsetPhysical[1] = resolution[1] * offsetPixel[ 1 ];
 
 		if( resolution.length > 2 )
-			offsetPhysical[2] = resolution[1] * offsetPixel[ 1 ];
+			offsetPhysical[2] = resolution[2] * offsetPixel[2];
 
 		final AffineTransform3D offsetTransform = new AffineTransform3D();
 		offsetTransform.set( offsetPhysical[ 0 ], 0, 3 );
