@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -86,9 +85,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 /**
- *
  * Apply a bigwarp transform to a 2d or 3d ImagePlus
- *
  */
 public class ApplyBigwarpPlugin implements PlugIn
 {
@@ -853,7 +850,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
-			SourceAndConverter<T> src = bwData.getMovingSource(0);
+			final SourceAndConverter<T> src = bwData.getMovingSource(0);
 			final String unit = ApplyBigwarpPlugin.getUnit( bwData, resolutionOption );
 			runN5Export( bwData, src, fieldOfViewOption,
 					outputIntervalList.get( 0 ), interp,
@@ -1131,13 +1128,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		if( resolution.length > 2 )
 			resolutionTransform.set( resolution[ 2 ], 2, 2 );
-		
+
 		final double[] offsetPhysical = new double[resolution.length];
-		offsetPhysical[0] = resolution[0] * offsetPixel[ 0 ];
-		offsetPhysical[1] = resolution[1] * offsetPixel[ 1 ];
+		offsetPhysical[0] = resolution[0] * offsetPixel[0];
+		offsetPhysical[1] = resolution[1] * offsetPixel[1];
 
 		if( resolution.length > 2 )
-			offsetPhysical[2] = resolution[1] * offsetPixel[ 1 ];
+			offsetPhysical[2] = resolution[2] * offsetPixel[2];
 
 		final AffineTransform3D offsetTransform = new AffineTransform3D();
 		offsetTransform.set( offsetPhysical[ 0 ], 0, 3 );
@@ -1149,7 +1146,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
 		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
-		
+
 		// render and write
 		final String srcName = sourceAndConverter.getSpimSource().getName();
 		final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data,
@@ -1167,7 +1164,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		else
 			imgToWrite = img;
 
-		String destDataset = dataset;
+		final String destDataset = dataset;
 
 		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, axes, new String[]{"s0"},
 				new double[][]{resolution}, new double[][]{offsetPhysical});
