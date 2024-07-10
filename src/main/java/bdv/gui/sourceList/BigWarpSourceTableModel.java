@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -45,8 +46,8 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	private Component container;
 
-	public BigWarpSourceTableModel() {
-
+	public BigWarpSourceTableModel()
+	{
 		this(null);
 	}
 
@@ -242,7 +243,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 					final URI uri = n5Uri.getURI();
 					if (uri.getFragment() == null) {
 						final String groupPath = uri.getQuery() == null ? N5DisplacementField.FORWARD_ATTR : n5Uri.getGroupPath();
-						final boolean isInverse = groupPath.equals(N5DisplacementField.INVERSE_ATTR);
+						final boolean isInverse = groupPath.endsWith(N5DisplacementField.INVERSE_ATTR);
 						return N5DisplacementField.open(
 								new N5Factory().openReader(n5Uri.getContainerPath()),
 								groupPath,
