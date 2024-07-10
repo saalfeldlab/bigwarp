@@ -92,42 +92,43 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		return true;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public RandomAccessibleInterval< ARGBType > exportRai()
 	{
 		final ArrayList< RandomAccessibleInterval< ARGBType > > raiList = new ArrayList< RandomAccessibleInterval< ARGBType > >();
 
-		buildTotalRenderTransform();
-		final AffineTransform3D srcXfm = new AffineTransform3D();
-
-
 		final int numChannels = bwData.numMovingSources();
-		final VoxelDimensions voxdim = new FinalVoxelDimensions( unit,
-				resolutionTransform.get( 0, 0 ),
-				resolutionTransform.get( 1, 1 ),
-				resolutionTransform.get( 2, 2 ));
-
 		for ( int i = 0; i < numChannels; i++ )
 		{
 			final Source<ARGBType> src = bwData.getMovingSource( i ).getSpimSource();
-			src.getSourceTransform(0, 0, srcXfm);
-
-			// in pixel space
-			final RealRandomAccessible<ARGBType> raiRaw = ( RealRandomAccessible<ARGBType> ) src.getInterpolatedSource( 0, 0, interp );
-
-			// the transform from world to new pixel coordinates
-			final AffineTransform3D pixelToPhysical = pixelRenderToPhysical.copy().inverse();
-			// but first need to transform from original pixel to world coordinates
-			pixelToPhysical.concatenate(srcXfm);
-
-			// apply the transformations
-			final AffineRandomAccessible<ARGBType, AffineGet> rai = RealViews.affine(raiRaw, pixelToPhysical);
-
-			raiList.add( Views.interval( Views.raster( rai ), outputInterval ) );
+			raiList.add( (RandomAccessibleInterval<ARGBType>)exportRai(src));
 		}
 		final RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );
 
 		return raiStack;
+	}
+	
+	@Override
+	public RandomAccessibleInterval<?> exportRai(Source<?> src) {
+
+		buildTotalRenderTransform();
+		final AffineTransform3D srcXfm = new AffineTransform3D();
+		src.getSourceTransform(0, 0, srcXfm);
+
+		// in pixel space
+		final RealRandomAccessible<ARGBType> raiRaw = (RealRandomAccessible<ARGBType>)src.getInterpolatedSource(0, 0, interp);
+
+		// the transform from world to new pixel coordinates
+		final AffineTransform3D pixelToPhysical = pixelRenderToPhysical.copy().inverse();
+		// but first need to transform from original pixel to world coordinates
+		pixelToPhysical.concatenate(srcXfm);
+
+		// apply the transformations
+		final AffineRandomAccessible<ARGBType, AffineGet> rai = RealViews.affine(raiRaw, pixelToPhysical);
+
+		return Views.interval(Views.raster(rai), outputInterval);
+
 	}
 
 	@Override

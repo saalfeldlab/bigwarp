@@ -6,6 +6,7 @@ import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -45,8 +46,8 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	private Component container;
 
-	public BigWarpSourceTableModel() {
-
+	public BigWarpSourceTableModel()
+	{
 		this(null);
 	}
 

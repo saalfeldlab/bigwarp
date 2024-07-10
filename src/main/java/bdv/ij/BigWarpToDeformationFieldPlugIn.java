@@ -489,8 +489,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
 		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
-		final String input= mvgSpaceName;
-		final String output= tgtSpaceName;
+
+		// the TPS is an "inverse" transform from target space to moving space
+		final String input = tgtSpaceName;
+		final String output = mvgSpaceName;
 		final String name = input + " to " + output;
 
 		final String dataset = (n5Dataset == null) ? "" : n5Dataset;

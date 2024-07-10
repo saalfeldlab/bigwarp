@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +37,13 @@ import java.util.function.Supplier;
 
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
+import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
+import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
@@ -66,6 +69,7 @@ import bdv.tools.brightness.ConverterSetup;
 import bdv.tools.brightness.RealARGBColorConverterSetup;
 import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
+import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.RandomAccessibleIntervalSource;
 import bdv.util.volatiles.VolatileViews;
@@ -681,6 +685,7 @@ public class BigWarpInit
 		return loadN5Source( n5, n5Dataset, queue );
 	}
 
+	@SuppressWarnings("unchecked")
 	public static < T extends NativeType<T>> Source< T > loadN5Source( final N5Reader n5, final String n5Dataset, final SharedQueue queue )
 	{
 
@@ -696,7 +701,7 @@ public class BigWarpInit
 
 		if ( meta instanceof MultiscaleMetadata )
 		{
-			return openAsSourceMulti( n5, ( MultiscaleMetadata< ? > ) meta, queue, true );
+			return (Source<T>)openN5V( n5, ( MultiscaleMetadata< ? > ) meta, queue);
 		}
 		else
 		{
@@ -744,6 +749,19 @@ public class BigWarpInit
 		{
 			e.printStackTrace();
 		}
+
+		return null;
+	}
+
+	public static < T extends NativeType<T> & NumericType<T>> Source< T > openN5V( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue )
+	{
+		List<SourceAndConverter<T>> sources = new ArrayList<>();
+		List<ConverterSetup> converterSetups = new ArrayList<>();
+		try {
+			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources, BdvOptions.options());
+			if( sources.size() > 0 )
+				return (Source<T>)sources.get(0).getSpimSource();
+		} catch (IOException e) { }
 
 		return null;
 	}
