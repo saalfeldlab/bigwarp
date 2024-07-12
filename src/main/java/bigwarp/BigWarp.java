@@ -1546,24 +1546,28 @@ public class BigWarp< T >
 		{
 			if( writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 			{
+				@SuppressWarnings("rawtypes")
+				final SourceAndConverter activeSource = getCurrentSourceInActiveViewer();
+
 				final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
-				// export async
 				new Thread()
 				{
+					@SuppressWarnings("unchecked")
 					@Override
 					public void run()
 					{
 						progressWriter.setProgress( 0.01 );
-						ApplyBigwarpPlugin.runN5Export( data, data.sources, fieldOfViewOption,
-								outputIntervalList.get( 0 ), interp,
+						ApplyBigwarpPlugin.runN5Export( data, activeSource,
+								fieldOfViewOption,
+								outputIntervalList.get(0), interp,
 								offsetSpec, res, unit,
 								progressWriter, writeOpts,
-								Executors.newFixedThreadPool( nThreads )  );
+								Executors.newFixedThreadPool( nThreads ));
 
 						progressWriter.setProgress( 1.00 );
 					}
 				}.start();
-			}
+	}
 			else
 			{
 				// export
@@ -1574,6 +1578,12 @@ public class BigWarp< T >
 						progressWriter, show, false, writeOpts );
 			}
 		}
+	}
+	
+	private SourceAndConverter<?> getCurrentSourceInActiveViewer() {
+
+		BigWarpViewerFrame activeFrame = viewerFrameP.isActive() ? viewerFrameP : viewerFrameQ;
+		return activeFrame.getViewerPanel().state().getCurrentSource();
 	}
 
 	public void exportWarpField()
