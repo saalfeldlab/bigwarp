@@ -239,7 +239,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			if( !bwTransform.isNonlinear() ) // is linear
 			{
-				writeAffineN5(params.n5Base, params.n5Dataset, data, bwTransform );
+				writeAffineN5(params.n5Base, params.n5Dataset, params.inverseOption, data, bwTransform);
 			}
 			else if ( params.format.equals(ExportDisplacementFieldFrame.FMT_BIGWARP_TPS))
 			{
@@ -508,17 +508,48 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final String n5BasePath,
 			final String n5Dataset,
 			final BigWarpData<?> data,
+			final BigWarpTransform bwTransform) {
+
+		writeAffineN5(n5BasePath, n5Dataset, INVERSE_OPTIONS.FORWARD.toString(), data, bwTransform);
+	}
+
+	public static void writeAffineN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final String inverseOption,
+			final BigWarpData<?> data,
 			final BigWarpTransform bwTransform )
 	{
 		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
 		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
-		final String input= mvgSpaceName;
-		final String output= tgtSpaceName;
+
+		final boolean isInverse = inverseOption.equals(INVERSE_OPTIONS.INVERSE.toString());
+		final String input = isInverse ? tgtSpaceName : mvgSpaceName;
+		final String output = isInverse ? mvgSpaceName : tgtSpaceName;
 		final String name = input + " to " + output;
 
-		CoordinateTransform<?> ct = null;
+		final InvertibleCoordinateTransform tform = isInverse ? bwTransform.getCoordinateTransform().createInverse()
+				: bwTransform.getCoordinateTransform();
 
-		final InvertibleCoordinateTransform tform = bwTransform.getCoordinateTransform();
+		final CoordinateTransform<?> ct = buildLinearCoordinateTransformation(tform, name, input, output, bwTransform);
+		if (ct == null)
+			return;
+
+		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
+		final N5Factory factory = new N5Factory().gsonBuilder(NgffTransformations.gsonBuilder());
+		final N5Writer n5 = factory.openWriter(n5BasePath);
+		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+		n5.close();
+
+		// TODO: should the transform also be added to the root of the container?
+	}
+
+	protected static CoordinateTransform<?> buildLinearCoordinateTransformation(
+			final InvertibleCoordinateTransform tform,
+			final String name, final String input, final String output,
+			final BigWarpTransform bwTransform) {
+
+		CoordinateTransform<?> ct = null;
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
@@ -573,17 +604,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			break;
 		}
 
-		if( ct == null )
-			return;
-
-		final String dataset = (n5Dataset == null) ? "" : n5Dataset;
-		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
-		final N5Writer n5 = factory.openWriter( n5BasePath );
-		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
-		n5.close();
-
-		// also add to root
-//		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+		return ct;
 	}
 
 	public static void writeN5(
