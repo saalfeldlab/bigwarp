@@ -125,15 +125,13 @@
 		<imglib2-algorithm.version>0.15.3</imglib2-algorithm.version>
 		<bigdataviewer-core.version>10.6.0</bigdataviewer-core.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-36</bigdataviewer-vistools.version>
-<!--		<imagej-common.version>2.0.6-SNAPSHOT</imagej-common.version>-->
-<!--		<imagej-ops.version>2.0.1-SNAPSHOT</imagej-ops.version>-->
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 		<jitk-tps.version>3.0.4</jitk-tps.version>
 
 		<n5.version>3.3.0</n5.version>
-		<n5-imglib2.version>7.0.1-SNAPSHOT</n5-imglib2.version>
+		<n5-imglib2.version>7.0.1</n5-imglib2.version>
 		<n5-aws-s3.version>4.2.1</n5-aws-s3.version>
 		<n5-blosc.version>1.1.1</n5-blosc.version>
 		<n5-hdf5.version>2.2.0</n5-hdf5.version>
