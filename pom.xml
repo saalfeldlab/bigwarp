@@ -144,8 +144,6 @@
 		<ejml-core.version>0.41</ejml-core.version>
 		<ejml-ddense.version>0.41</ejml-ddense.version>
 
-		<enforcer.skip>true</enforcer.skip>
-
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 	</properties>
