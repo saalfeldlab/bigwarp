@@ -779,6 +779,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final WriteDestinationOptions writeOpts) {
 
 		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(movingIp, targetIp);
+		bwData.wrapMovingSources();
 		return apply(bwData, landmarks, tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter, bboxEst,
 				resolutionOption, resolutionSpec, fovSpec, offsetSpec,
 				interp, isVirtual, nThreads, wait, writeOpts);
