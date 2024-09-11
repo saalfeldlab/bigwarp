@@ -129,7 +129,6 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
-import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
@@ -523,7 +522,7 @@ public class BigWarpInit {
 
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
-		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
+		final SharedQueue sharedQueue = BigWarpData.getSharedQueue();
 		final URI encodedUri = N5URI.encodeAsUri( uri.trim() );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
@@ -842,12 +841,9 @@ public class BigWarpInit {
 		}, new ARGBType() );
 	}
 
-	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static < T > BigWarpData< T > initData()
-	{
-//		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-//		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
-//		return new BigWarpData( sources, converterSetups, null );
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public static <T> BigWarpData<T> initData() {
+
 		return new BigWarpData();
 	}
 
