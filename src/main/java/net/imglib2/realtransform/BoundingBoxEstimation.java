@@ -94,6 +94,21 @@ public class BoundingBoxEstimation {
 		return steps;
 	}
 
+	public RealInterval estimateInterval( RealTransform xfm, RealInterval interval )
+	{
+		steps = samplesPerDim( interval, samplesPerDim );
+
+		switch( method )
+		{
+		case CORNERS:
+			return cornersReal(xfm, interval);
+		case VOLUME:
+			return volumeReal(xfm, interval, steps );
+		default:
+			return facesReal( xfm, interval, steps );
+		}
+	}
+
 	public Interval estimatePixelInterval( RealTransform xfm, Interval interval )
 	{
 		steps = samplesPerDim( interval, samplesPerDim );
@@ -139,7 +154,7 @@ public class BoundingBoxEstimation {
 		return containingInterval(facesReal( xfm, interval, steps ));
 	}
 
-	public static FinalRealInterval facesReal( RealTransform xfm, Interval interval, double[] stepsIn )
+	public static FinalRealInterval facesReal( RealTransform xfm, RealInterval interval, double[] stepsIn )
 	{
 		if( xfm == null )
 			return new FinalRealInterval( interval );
@@ -209,7 +224,7 @@ public class BoundingBoxEstimation {
 		max[dim] = pos;
 	}
 
-	public static FinalRealInterval volumeReal( RealTransform xfm, Interval interval, double[] steps )
+	public static FinalRealInterval volumeReal( RealTransform xfm, RealInterval interval, double[] steps )
 	{
 		if( xfm == null )
 			return new FinalRealInterval( interval );
@@ -228,11 +243,12 @@ public class BoundingBoxEstimation {
 	{
 		return containingInterval( volumeReal( xfm, interval, steps ));
 	}
+	
 
-	public static FinalInterval corners( RealTransform xfm, Interval interval )
+	public static RealInterval cornersReal( RealTransform xfm, RealInterval interval )
 	{
 		if( xfm == null )
-			return new FinalInterval( interval );
+			return new FinalRealInterval( interval );
 
 		int nd = interval.numDimensions();
 		double[] pt = new double[ nd ];
@@ -253,9 +269,9 @@ public class BoundingBoxEstimation {
 			for( int d = 0; d < nd; d++ )
 			{
 				if( it.getLongPosition( d ) == 0 )
-					pt[ d ] = interval.min( d );
+					pt[ d ] = interval.realMin( d );
 				else
-					pt[ d ] = interval.max( d );
+					pt[ d ] = interval.realMax( d );
 			}
 
 			xfm.apply( pt, ptxfm );
@@ -273,6 +289,12 @@ public class BoundingBoxEstimation {
 			}
 		}
 		return new FinalInterval( min, max );
+	}
+
+	public static FinalInterval corners( RealTransform xfm, Interval interval )
+	{
+
+		return containingInterval(cornersReal(xfm, interval));
 	}
 
 }
