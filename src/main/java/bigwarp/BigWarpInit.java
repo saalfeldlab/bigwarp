@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,6 +73,8 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.RandomAccessibleIntervalSource;
+import bdv.util.VolatileSource;
+import bdv.util.volatiles.VolatileTypeMatcher;
 import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
@@ -95,29 +98,44 @@ import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.CalibratedAxis;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealInterval;
+import net.imglib2.Volatile;
 import net.imglib2.cache.img.CachedCellImg;
+import net.imglib2.cache.img.CellLoader;
+import net.imglib2.cache.img.ReadOnlyCachedCellImgFactory;
+import net.imglib2.cache.img.ReadOnlyCachedCellImgOptions;
+import net.imglib2.cache.img.SingleCellArrayImg;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
+import net.imglib2.img.cell.AbstractCellImg;
+import net.imglib2.interpolation.randomaccess.ClampingNLinearInterpolatorFactory;
+import net.imglib2.outofbounds.OutOfBoundsConstantValueFactory;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransformSequence;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.RealTransformRandomAccessible;
+import net.imglib2.realtransform.Translation;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
+import net.imglib2.util.Intervals;
 import net.imglib2.util.Util;
+import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-public class BigWarpInit
-{
-
+public class BigWarpInit {
 
 	public static final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
 			new N5CosemMetadataParser(),
@@ -262,8 +280,8 @@ public class BigWarpInit
 
 	/**
 	 * Add images from an {@link ImagePlus} as sources for BigWarp. Each channel will be added as its own source.
-	 * 
-	 * @param <T> the type 
+	 *
+	 * @param <T> the type
 	 * @param bwdata the bigwarp data
 	 * @param ip an ImagePlus
 	 * @param setupId id
@@ -755,13 +773,13 @@ public class BigWarpInit
 
 	public static < T extends NativeType<T> & NumericType<T>> Source< T > openN5V( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue )
 	{
-		List<SourceAndConverter<T>> sources = new ArrayList<>();
-		List<ConverterSetup> converterSetups = new ArrayList<>();
+		final List<SourceAndConverter<T>> sources = new ArrayList<>();
+		final List<ConverterSetup> converterSetups = new ArrayList<>();
 		try {
 			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources, BdvOptions.options());
 			if( sources.size() > 0 )
 				return (Source<T>)sources.get(0).getSpimSource();
-		} catch (IOException e) { }
+		} catch (final IOException e) { }
 
 		return null;
 	}
@@ -929,34 +947,164 @@ public class BigWarpInit
 		}
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final List< SourceAndConverter< ? > > sources, final String[] names )
-	{
-		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
+	public static ArrayList<SourceAndConverter<?>> wrapSourcesAsRenamable(final List<SourceAndConverter<?>> sources,
+			final String[] names) {
+
+		final ArrayList<SourceAndConverter<?>> wrappedSource = new ArrayList<SourceAndConverter<?>>();
 
 		int i = 0;
-		for ( final SourceAndConverter< ? > sac : sources )
-		{
-			final SourceAndConverter< ? > renamableSource = wrapSourceAsRenamable( sac );
-			if ( names != null )
-			{
-				( ( RenamableSource< ? > ) renamableSource.getSpimSource() ).setName( names[ i ] );
+		for (final SourceAndConverter<?> sac : sources) {
+			final SourceAndConverter<?> renamableSource = wrapSourceAsRenamable(sac);
+			if (names != null) {
+				((RenamableSource<?>)renamableSource.getSpimSource()).setName(names[i]);
 			}
-			wrappedSource.add( renamableSource );
+			wrappedSource.add(renamableSource);
 			i++;
 		}
 		return wrappedSource;
 	}
 
-	private static < T > SourceAndConverter< T > wrapSourceAsRenamable( final SourceAndConverter< T > src )
-	{
-		if ( src.asVolatile() == null )
-		{
-			return new SourceAndConverter< T >( new RenamableSource< T >( src.getSpimSource() ), src.getConverter(), null );
+	private static <T> SourceAndConverter<T> wrapSourceAsRenamable(final SourceAndConverter<T> src) {
+
+		if (src.asVolatile() == null) {
+			return new SourceAndConverter<T>(new RenamableSource<T>(src.getSpimSource()), src.getConverter(), null);
+		} else {
+			return new SourceAndConverter<T>(new RenamableSource<T>(src.getSpimSource()), src.getConverter(),
+					src.asVolatile());
 		}
-		else
-		{
-			return new SourceAndConverter< T >( new RenamableSource< T >( src.getSpimSource() ), src.getConverter(), src.asVolatile() );
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends NumericType<T> & NativeType<T>, V extends Volatile<T> & NumericType<V>> SourceAndConverter<T> cacheTransformedSource(
+			final SourceAndConverter<T> sac,
+			final InvertibleRealTransform transform,
+			SharedQueue sharedQueue) {
+
+		final Source<T> src = sac.getSpimSource();
+		final int nd = src.getSource(0, 0).numDimensions();
+		final int N = src.getNumMipmapLevels();
+
+		final T type = src.getType();
+		final V vtype = (V)VolatileTypeMatcher.getVolatileTypeForType(type);
+
+		final int[] defaultCellDimensions = new int[nd];
+		Arrays.fill(defaultCellDimensions, 64);
+
+		// TODO handle time?
+		final RandomAccessibleInterval<T>[] mipmaps = new RandomAccessibleInterval[N];
+		final RandomAccessibleInterval<Volatile<T>>[] vmipmaps = new RandomAccessibleInterval[N];
+		final AffineTransform3D[] sourceTransforms = new AffineTransform3D[N];
+		for (int i = 0; i < src.getNumMipmapLevels(); i++) {
+
+			final AffineTransform3D origScaleTform = new AffineTransform3D();
+			src.getSourceTransform(0, i, origScaleTform);
+
+			// build the inverse transform: from transformed pixel coordinates
+			// to original pixel coordinates "through" physical coordinates
+			InvertibleRealTransformSequence tformToPhysicalSpace = new InvertibleRealTransformSequence();
+			tformToPhysicalSpace.add(origScaleTform);
+			tformToPhysicalSpace.add(transform.copy());
+			tformToPhysicalSpace.add(origScaleTform.inverse());
+
+			System.out.println("srcTform: " + origScaleTform);
+			final RandomAccessibleInterval<T> img = src.getSource(0, i);
+
+			// compute the bounding box in physical coordinates
+			final BoundingBoxEstimation bbox = new BoundingBoxEstimation();
+			final RealInterval targetInterval = bbox.estimateInterval(tformToPhysicalSpace.inverse(), img);
+			final Interval pixelInterval = BoundingBoxEstimation.containingInterval(targetInterval);
+//					Intervals.zeroMin(BoundingBoxEstimation.containingInterval(targetInterval));
+
+			System.out.println("src interval: " + Intervals.toString(img));
+			System.out.println("tgt interval: " + Intervals.toString(pixelInterval));
+			System.out.println("");
+
+			// update the source transform to take into account any change in bounding box 
+			final AffineTransform3D newSourceTform = origScaleTform.copy();
+			final Translation tlation = new Translation(targetInterval.minAsDoubleArray());
+			newSourceTform.concatenate(tlation);
+			sourceTransforms[i] = newSourceTform;
+
+			InvertibleRealTransformSequence tformToPixelSpace = new InvertibleRealTransformSequence();
+			tformToPixelSpace.add(origScaleTform);
+			tformToPixelSpace.add(transform.copy());
+			tformToPixelSpace.add(newSourceTform.inverse());
+
+			final RandomAccessibleInterval<T> raiTform = transform(
+					img, 
+					pixelInterval,
+					tformToPixelSpace);
+
+			final IntervalView<T> raiTformZero = Views.zeroMin(raiTform);
+			final ReadOnlyCachedCellImgFactory cacheFactory = new ReadOnlyCachedCellImgFactory(
+					new ReadOnlyCachedCellImgOptions()
+							.volatileAccesses(true)
+							.cellDimensions(getCellDimensionsOrDefault(img, defaultCellDimensions)));
+
+			final CellLoader<T> copier = new CellLoader<T>() {
+				@Override
+				public void load(SingleCellArrayImg<T, ?> cell) throws Exception {
+
+					Views.flatIterable(Views.interval(Views.pair(raiTformZero, cell), cell)).forEach(
+							pair -> pair.getB().set(pair.getA()));
+				}
+			};
+
+			final RandomAccessibleInterval<T> cachedTransformedMipmap = cacheFactory.create(
+					raiTform.dimensionsAsLongArray(),
+					type.copy(),
+					copier);
+
+			mipmaps[i] = cachedTransformedMipmap;
+
+			final int priority = N - 1 - i;
+			final CacheHints cacheHints = new CacheHints(LoadingStrategy.BUDGETED, priority, false);
+			vmipmaps[i] = VolatileViews.wrapAsVolatile(cachedTransformedMipmap, sharedQueue, cacheHints);
 		}
+
+		final RandomAccessibleIntervalMipmapSource<T> cachedTransformedSource =
+				new RandomAccessibleIntervalMipmapSource<T>(
+						mipmaps,
+						type,
+						sourceTransforms,
+						src.getVoxelDimensions(),
+						src.getName(),
+						src.doBoundingBoxCulling());
+//						false);
+
+		final Source<V> vsrc = new VolatileSource<T, V>(cachedTransformedSource, vtype, sharedQueue);
+		final SourceAndConverter<V> vsac = new SourceAndConverter<V>(vsrc, BigDataViewer.createConverterToARGB(vtype));
+		return new SourceAndConverter<T>(cachedTransformedSource, BigDataViewer.createConverterToARGB(type), vsac);
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static int[] getCellDimensionsOrDefault(final RandomAccessibleInterval<?> img,
+			final int[] defaultDimensions) {
+
+		// TODO need to unwrap views
+		if (img instanceof AbstractCellImg) {
+			return ((AbstractCellImg)img).getCellGrid().getCellDimensions();
+		} else {
+			return defaultDimensions;
+		}
+	}
+
+	private static <T extends NumericType<T> & NativeType<T>> RandomAccessibleInterval<T> transform(
+			final RandomAccessibleInterval<T> img,
+			final Interval targetInterval,
+			final RealTransform transform) {
+
+		final T background = img.getType().copy();
+		background.setZero();
+
+		return Views.interval(
+				new RealTransformRandomAccessible<>(
+						Views.interpolate(
+								new ExtendedRandomAccessibleInterval<>(img,
+										new OutOfBoundsConstantValueFactory<>(background)),
+								new ClampingNLinearInterpolatorFactory<>()),
+						transform),
+				targetInterval);
 	}
 
 	/**
