@@ -996,6 +996,8 @@ public class BigWarpInit {
 		final AffineTransform3D[] sourceTransforms = new AffineTransform3D[N];
 		for (int i = 0; i < src.getNumMipmapLevels(); i++) {
 
+			final RandomAccessibleInterval<T> img = src.getSource(0, i);
+
 			final AffineTransform3D origScaleTform = new AffineTransform3D();
 			src.getSourceTransform(0, i, origScaleTform);
 
@@ -1006,23 +1008,15 @@ public class BigWarpInit {
 			tformToPhysicalSpace.add(transform.copy());
 			tformToPhysicalSpace.add(origScaleTform.inverse());
 
-			System.out.println("srcTform: " + origScaleTform);
-			final RandomAccessibleInterval<T> img = src.getSource(0, i);
-
 			// compute the bounding box in physical coordinates
 			final BoundingBoxEstimation bbox = new BoundingBoxEstimation();
 			final RealInterval targetInterval = bbox.estimateInterval(tformToPhysicalSpace.inverse(), img);
 			final Interval pixelInterval = BoundingBoxEstimation.containingInterval(targetInterval);
-//					Intervals.zeroMin(BoundingBoxEstimation.containingInterval(targetInterval));
-
-			System.out.println("src interval: " + Intervals.toString(img));
-			System.out.println("tgt interval: " + Intervals.toString(pixelInterval));
-			System.out.println("");
 
 			// update the source transform to take into account any change in bounding box 
 			final AffineTransform3D newSourceTform = origScaleTform.copy();
 			final Translation tlation = new Translation(targetInterval.minAsDoubleArray());
-			newSourceTform.concatenate(tlation);
+			newSourceTform.concatenate(tlation.inverse());
 			sourceTransforms[i] = newSourceTform;
 
 			InvertibleRealTransformSequence tformToPixelSpace = new InvertibleRealTransformSequence();
@@ -1030,12 +1024,7 @@ public class BigWarpInit {
 			tformToPixelSpace.add(transform.copy());
 			tformToPixelSpace.add(newSourceTform.inverse());
 
-			final RandomAccessibleInterval<T> raiTform = transform(
-					img, 
-					pixelInterval,
-					tformToPixelSpace);
-
-			final IntervalView<T> raiTformZero = Views.zeroMin(raiTform);
+			final RandomAccessibleInterval<T> raiTform = transform( img, pixelInterval, tformToPixelSpace);
 			final ReadOnlyCachedCellImgFactory cacheFactory = new ReadOnlyCachedCellImgFactory(
 					new ReadOnlyCachedCellImgOptions()
 							.volatileAccesses(true)
@@ -1045,7 +1034,7 @@ public class BigWarpInit {
 				@Override
 				public void load(SingleCellArrayImg<T, ?> cell) throws Exception {
 
-					Views.flatIterable(Views.interval(Views.pair(raiTformZero, cell), cell)).forEach(
+					Views.flatIterable(Views.interval(Views.pair(raiTform, cell), cell)).forEach(
 							pair -> pair.getB().set(pair.getA()));
 				}
 			};
@@ -1054,7 +1043,6 @@ public class BigWarpInit {
 					raiTform.dimensionsAsLongArray(),
 					type.copy(),
 					copier);
-
 			mipmaps[i] = cachedTransformedMipmap;
 
 			final int priority = N - 1 - i;
@@ -1070,7 +1058,6 @@ public class BigWarpInit {
 						src.getVoxelDimensions(),
 						src.getName(),
 						src.doBoundingBoxCulling());
-//						false);
 
 		final Source<V> vsrc = new VolatileSource<T, V>(cachedTransformedSource, vtype, sharedQueue);
 		final SourceAndConverter<V> vsac = new SourceAndConverter<V>(vsrc, BigDataViewer.createConverterToARGB(vtype));
