@@ -101,7 +101,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final Source<ARGBType> src = bwData.getMovingSource( i ).getSpimSource();
+			final Source<ARGBType> src = bwData.getMovingSourceForExport( i ).getSpimSource();
 			raiList.add( (RandomAccessibleInterval<ARGBType>)exportRai(src));
 		}
 		final RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );

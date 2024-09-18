@@ -22,6 +22,14 @@ public class SourceInfo
 
 	private Supplier<String> transformUriSupplier;
 
+	/*
+	 * When using an imported fixed transform, we'll want to apply all the
+	 * transforms in sequence, interpolating only once. This source should be
+	 * used for export, in contrast to the source stored in BigWarpData, which
+	 * should be used for visualization.
+	 */
+	private SourceAndConverter<?> sourceForExport;
+
 	boolean serializable = false;
 
 	public SourceInfo( final int id, final boolean moving )
@@ -73,6 +81,16 @@ public class SourceInfo
 	public void setUriSupplier( final Supplier< String > getUri )
 	{
 		this.uriSupplier = getUri;
+	}
+
+	public void setSourceForExport(SourceAndConverter<?> sourceForExport) {
+
+		this.sourceForExport = sourceForExport;
+	}
+
+	public SourceAndConverter<?> sourceForExport() {
+
+		return sourceForExport;
 	}
 
 	public int getId()

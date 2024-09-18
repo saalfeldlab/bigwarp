@@ -29,8 +29,6 @@ import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
 import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.NumericType;
 
 public class BigWarpData< T >
 {
@@ -41,6 +39,8 @@ public class BigWarpData< T >
 
 	public final CacheControl cache;
 	
+	public boolean cacheFixedTransform = true;
+
 	private static SharedQueue sharedQueue;
 
 	public BigWarpData()
@@ -142,6 +142,26 @@ public class BigWarpData< T >
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
+	public SourceAndConverter<T> getMovingSourceForExport(int i) {
+
+		int curIdx = 0;
+		for (final Map.Entry<Integer, SourceInfo> idToInfo : sourceInfos.entrySet()) {
+			final SourceInfo info = idToInfo.getValue();
+			if (info.isMoving()) {
+				if (curIdx == i) {
+
+					if (info.sourceForExport() != null)
+
+					return info.sourceForExport() != null ? (SourceAndConverter<T>)info.sourceForExport() : (SourceAndConverter<T>)info.getSourceAndConverter();
+				}
+
+				curIdx++;
+			}
+		}
+		return null;
+	}
+
 	public int numTargetSources()
 	{
 		return sourceInfos.size() - numMovingSources();
@@ -160,6 +180,7 @@ public class BigWarpData< T >
 		return indices;
 	}
 
+	@SuppressWarnings("unchecked")
 	public SourceAndConverter< T > getTargetSource( int i )
 	{
 		int curIdx = 0;
@@ -376,23 +397,30 @@ public class BigWarpData< T >
 			wrapMovingSources(srcInfo);
 	}
 
-	public <S extends NumericType<S> & NativeType<S>> void applyTransformations() {
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	public void applyTransformations() {
 
 		int i = 0;
 		for (final SourceAndConverter sac : sources) {
 			final SourceInfo info = getSourceInfo(sac);
 			final RealTransform transform = info.getTransform();
 			if (transform != null) {
-				
-				final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ?
-						(InvertibleRealTransform)transform
-						: new WrappedIterativeInvertibleRealTransform(transform);
 
-//				final SourceAndConverter<T> newSac = inheritConverter(
-//						applyFixedTransform(sac.getSpimSource(), transform),
-//						sac);
+				SourceAndConverter sourceForExport = null;
+				SourceAndConverter newSac = inheritConverter(
+						applyFixedTransform(sac.getSpimSource(), transform),
+						sac);
 
-				final SourceAndConverter newSac = BigWarpInit.cacheTransformedSource( sac, invTransform, getSharedQueue());
+				if (cacheFixedTransform) {
+
+					sourceForExport = newSac;
+					final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
+							: new WrappedIterativeInvertibleRealTransform(transform);
+					newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+				}
+
+				// will need to reload transformation on export if the transform is cached
+				info.setSourceForExport(sourceForExport);
 				info.setSourceAndConverter(newSac);
 				sources.set(i, newSac);
 			}
@@ -400,14 +428,30 @@ public class BigWarpData< T >
 		}
 	}
 
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public void applyTransformation(final SourceInfo info, Source<T> unWrappedSource) {
 
 		final RealTransform transform = info.getTransform();
-		@SuppressWarnings("unchecked")
-		final SourceAndConverter<T> sac = (SourceAndConverter<T>)info.getSourceAndConverter();
-		final SourceAndConverter<T> newSac = inheritConverter(
-				transform != null ? applyFixedTransform(unWrappedSource, transform) : unWrappedSource,
+		if (transform == null)
+			return;
+
+		final SourceAndConverter sac = info.getSourceAndConverter();
+		SourceAndConverter<?> sourceForExport = null;
+		SourceAndConverter newSac = inheritConverter(
+				applyFixedTransform(sac.getSpimSource(), transform),
 				sac);
+
+		if (cacheFixedTransform) {
+
+			sourceForExport = newSac;
+			final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
+					: new WrappedIterativeInvertibleRealTransform(transform);
+			newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+		}
+
+		// will need to reload transformation on export if the transform is
+		// cached
+		info.setSourceForExport(sourceForExport);
 		info.setSourceAndConverter(newSac);
 		sources.set(sources.indexOf(sac), newSac);
 	}
