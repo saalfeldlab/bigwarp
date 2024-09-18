@@ -63,23 +63,23 @@ public class SourceInfo
 	 *
 	 * @param serializable whether to setSerialize this source or not.
 	 */
-	public void setSerializable( final boolean serializable )
-	{
+	public void setSerializable(final boolean serializable) {
+
 		this.serializable = serializable;
 	}
 
-	public boolean isSerializable()
-	{
+	public boolean isSerializable() {
+
 		return serializable;
 	}
 
-	public String getUri()
-	{
+	public String getUri() {
+
 		return uriSupplier.get();
 	}
 
-	public void setUriSupplier( final Supplier< String > getUri )
-	{
+	public void setUriSupplier(final Supplier<String> getUri) {
+
 		this.uriSupplier = getUri;
 	}
 

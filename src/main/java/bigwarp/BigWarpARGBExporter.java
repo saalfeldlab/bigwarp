@@ -117,6 +117,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		src.getSourceTransform(0, 0, srcXfm);
 
 		// in pixel space
+		@SuppressWarnings("unchecked")
 		final RealRandomAccessible<ARGBType> raiRaw = (RealRandomAccessible<ARGBType>)src.getInterpolatedSource(0, 0, interp);
 
 		// the transform from world to new pixel coordinates

@@ -1087,11 +1087,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final ExecutorService exec )
 	{
 
-		final int nd = BigWarp.detectNumDims( data.sources );
-		final double[] resolution = limit(nd,resolutionArg);
+		final int nd = BigWarp.detectNumDims(data.sources);
+		final double[] resolution = limit(nd, resolutionArg);
 
 		// pixel offset
-		final double[] offsetPixel = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution,
+		final double[] offsetPixel = ApplyBigwarpPlugin.getPixelOffset(fieldOfViewOption, offsetArg, resolution,
 				outputInterval);
 
 		// setup n5 parameters
@@ -1166,7 +1166,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			imgToWrite = img;
 
 		final String destDataset = dataset;
-
 		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, axes, new String[]{"s0"},
 				new double[][]{resolution}, new double[][]{offsetPhysical});
 
