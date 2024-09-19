@@ -202,8 +202,8 @@ public class BoundingBoxEstimation {
 
 			for( int d = 0; d < nd; d++ )
 			{
-				long lo = (long)Math.floor( ptxfm.getDoublePosition(d) );
-				long hi = (long)Math.ceil( ptxfm.getDoublePosition(d) );
+				double lo = ptxfm.getDoublePosition(d);
+				double hi = ptxfm.getDoublePosition(d);
 
 				if( lo < min[ d ])
 					min[ d ] = lo;
