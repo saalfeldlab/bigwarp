@@ -783,6 +783,7 @@ public class BigWarpInit {
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
 	public static < T extends NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
@@ -815,10 +816,7 @@ public class BigWarpInit {
 			mipmapScales[ s ][ 2 ] = transforms[ s ].get( 2, 2 );
 		}
 
-		@SuppressWarnings( { "unchecked", "rawtypes" } )
-		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( images, ( NumericType ) Util.getTypeFromInterval( images[ 0 ] ), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
-
-		return source;
+		return new RandomAccessibleIntervalMipmapSource<>( images, Util.getTypeFromInterval( images[ 0 ] ), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
 	}
 
 	private static RandomAccessibleInterval< ? > to3d( RandomAccessibleInterval< ? > img )
@@ -1226,7 +1224,6 @@ public class BigWarpInit {
 	 */
 	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
-//		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
 		{
