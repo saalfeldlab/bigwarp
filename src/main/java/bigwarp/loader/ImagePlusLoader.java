@@ -156,7 +156,6 @@ public class ImagePlusLoader implements Loader {
 	public void update(final BigWarpData<?> data) {
 
 		for (Integer key : settingsMap.keySet()) {
-			SourceAndConverter<?> sac = data.sources.get(key.intValue());
 			data.getSourceInfo(key).setColorSettings(settingsMap.get(key));
 		}
 	}
@@ -196,13 +195,13 @@ public class ImagePlusLoader implements Loader {
 	public SpimDataMinimal load(final int setupIdOffset, ImagePlus imp) {
 
 		// get calibration and image size
-		final double pw;
-		final double ph;
-		final double pd;
+		final double pw = sanitizeCalibration(imp.getCalibration().pixelWidth, "x");
+		final double ph = sanitizeCalibration(imp.getCalibration().pixelHeight, "y");
+		final double pd = sanitizeCalibration(imp.getCalibration().pixelDepth, "z");
 
-		pw = sanitizeCalibration(imp.getCalibration().pixelWidth, "x");
-		ph = sanitizeCalibration(imp.getCalibration().pixelHeight, "y");
-		pd = sanitizeCalibration(imp.getCalibration().pixelDepth, "z");
+		final double ox = imp.getCalibration().xOrigin;
+		final double oy = imp.getCalibration().yOrigin;
+		final double oz = imp.getCalibration().zOrigin;
 
 		String punit = imp.getCalibration().getUnit();
 		if (punit == null || punit.isEmpty())
@@ -274,7 +273,7 @@ public class ImagePlusLoader implements Loader {
 
 		// create ViewRegistrations from the images calibration
 		final AffineTransform3D sourceTransform = new AffineTransform3D();
-		sourceTransform.set(pw, 0, 0, 0, 0, ph, 0, 0, 0, 0, pd, 0);
+		sourceTransform.set(pw, 0, 0, ox, 0, ph, 0, oy, 0, 0, pd, oz);
 		final ArrayList<ViewRegistration> registrations = new ArrayList<ViewRegistration>();
 		for (int t = 0; t < numTimepoints; ++t)
 			for (int s = 0; s < numSetups; ++s)
