@@ -150,12 +150,8 @@ public class BigWarpData< T >
 			final SourceInfo info = idToInfo.getValue();
 			if (info.isMoving()) {
 				if (curIdx == i) {
-
-					if (info.sourceForExport() != null)
-
 					return info.sourceForExport() != null ? (SourceAndConverter<T>)info.sourceForExport() : (SourceAndConverter<T>)info.getSourceAndConverter();
 				}
-
 				curIdx++;
 			}
 		}
