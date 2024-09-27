@@ -231,12 +231,13 @@ public abstract class BigWarpExporter <T>
 	}
 
 	/**
-	 * Set the offset of the output field of view in pixels.
+	 * Set the offset of the output field of view in physical units.
 	 *
 	 * @param offset the offset in pixel units.
 	 */
 	public void setOffset( double... offset )
 	{
+		System.out.println("setOffset: " + Arrays.toString(offset));
 		for( int i = 0; i < offset.length; i++ )
 			offsetTransform.set( offset[ i ], i, 3 );
 	}
@@ -249,8 +250,8 @@ public abstract class BigWarpExporter <T>
 	public void buildTotalRenderTransform()
 	{
 		pixelRenderToPhysical.identity();
-		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
+		pixelRenderToPhysical.concatenate( resolutionTransform );
 	}
 
 	public void setInterval( final Interval outputInterval )

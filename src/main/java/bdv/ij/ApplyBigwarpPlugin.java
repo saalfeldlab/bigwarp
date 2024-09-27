@@ -69,6 +69,7 @@ import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealInterval;
+import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
@@ -135,32 +136,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return true;
 	}
 
-	public static double[] getResolution(
-			final Source< ? > source,
-			final String resolutionOption,
-			final double[] resolutionSpec )
-	{
-		if( ( source == null ) )
-		{
-			System.err.println("Requested target resolution but target image is missing.");
-			return null;
-		}
-
-		final double[] res = resolutionFromSource( source );
-
-		/*
-		 * Maybe the below will work in the future, but it does not right now
-		 * ( April 2021) in part because theres no way to set the VoxelDimensions for a
-		 * bdv.util.RandomAccessibleIntervalSource
-		 */
-//		VoxelDimensions voxdims = source.getVoxelDimensions();
-//		if( voxdims == null )
-//			Arrays.fill( res, 1.0 );
-//		else
-//			voxdims.dimensions( res );
-
-		return res;
-	}
 
 	public static String getUnit( final BigWarpData<?> bwData,
 			final String resolutionOption )
@@ -390,6 +365,19 @@ public class ApplyBigwarpPlugin implements PlugIn
 		return null;
 	}
 
+	public static double[] getResolution(
+			final Source< ? > source,
+			final String resolutionOption,
+			final double[] resolutionSpec )
+	{
+		if( ( source == null ) )
+		{
+			System.err.println("Requested target resolution but target image is missing.");
+			return null;
+		}
+		return resolutionFromSource( source );
+	}
+
 	public static double[] resolutionFromSource( final Source< ? > src )
 	{
 		final double[] res = new double[ 3 ];
@@ -503,7 +491,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				out.add(new FinalInterval(min, max));
 				return out;
 			} else {
-				System.out.println("Invalid fov spec, length : " + fovSpec.length);
+				System.err.println("Invalid fov spec, length : " + fovSpec.length);
 				return null;
 			}
 		} else if (fieldOfViewOption.equals(SPECIFIED_PHYSICAL)) {
@@ -534,7 +522,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				out.add(new FinalInterval(min, max));
 				return out;
 			} else {
-				System.out.println("Invalid fov spec, length : " + fovSpec.length);
+				System.err.println("Invalid fov spec, length : " + fovSpec.length);
 				return null;
 			}
 		} else if (fieldOfViewOption.equals(LANDMARK_POINTS)) {
@@ -564,7 +552,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 
 			System.out.println("Estimated field of view using " + numPoints + " landmarks.");
-
 			// Make sure something naughty didn't happen
 			for (int d = 0; d < min.length; d++) {
 				if (min[d] == Long.MAX_VALUE) {
@@ -673,6 +660,49 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 
 		return ptList;
+	}
+
+	/**
+	 * Get the offset in pixels given the output resolution and interval
+	 *
+	 * @param fieldOfViewOption the field of view option
+	 * @param offsetSpec the offset specification
+	 * @param outputResolution the resolution of the output image
+	 * @param outputInterval the output interval
+	 * @return the offset
+	 */
+	public static double[] getPhysicalOffset(
+			final String fieldOfViewOption,
+			final double[] offsetSpec,
+			final double[] outputResolution,
+			final Source<?> targetSource )
+	{
+		final double[] offset = new double[ 3 ];
+		if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
+		{
+			System.arraycopy( offsetSpec, 0, offset, 0, offset.length );
+			return offset;
+		}
+		else if( fieldOfViewOption.equals( SPECIFIED_PHYSICAL ) )
+		{
+			final Interval outputInterval = targetSource.getSource(0, 0);
+			for( int d = 0; d < outputInterval.numDimensions(); d++ )
+			{
+				offset[ d ] = offsetSpec[ d ] / outputResolution[ d ];
+			}
+			return offset;
+		}
+		else
+		{
+			final Interval outputInterval = targetSource.getSource(0, 0);
+			final AffineTransform3D tform = new AffineTransform3D();
+			targetSource.getSourceTransform(0, 0, tform);
+
+			// is using interval min overkill?
+			// or can I count on it always be at the origin?
+			tform.apply(outputInterval.minAsDoubleArray(), offset);
+			return offset;
+		}
 	}
 
 	/**
@@ -824,6 +854,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
+		Source<?> tgtSrc;
+		if(fieldOfViewOption.equals(TARGET) && bwData.numTargetSources() == 0 )
+			throw new RuntimeException("Requested target field of view, but no target source exists.");
+		else
+			tgtSrc = bwData.getTargetSource(0).getSpimSource();
+
 		final int numChannels = bwData.numMovingSources();
 
 		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
@@ -839,7 +875,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		// Generate the properties needed to generate the transform from output pixel space
 		// to physical space
 		final double[] res = getResolution( bwData, resolutionOption, resolutionSpec );
-
 		final List<Interval> outputIntervalList = getPixelInterval(bwData, landmarks, invXfm, fieldOfViewOption,
 				fieldOfViewPointFilter, bboxEst, fovSpec, offsetSpec, res);
 
@@ -847,8 +882,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( outputIntervalList.size() > 1 )
 			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, landmarks, fieldOfViewPointFilter );
 
-		final double[] offset = getPixelOffset( fieldOfViewOption, offsetSpec, res, outputIntervalList.get( 0 ) );
-
+		final double[] offset = getPhysicalOffset( fieldOfViewOption, offsetSpec, res, tgtSrc );
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final SourceAndConverter<T> src = bwData.getMovingSource(0);
@@ -896,14 +930,12 @@ public class ApplyBigwarpPlugin implements PlugIn
 		int i = 0;
 		for( final Interval outputInterval : outputIntervalList )
 		{
-			final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetIn, resolution, outputIntervalList.get( i ) );
-
 			// need to declare the exporter in the loop since the actual work
 			// is done asynchronously, and changing variables in the loop would mess it up
 			final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data, sources, interp, progressWriter );
 			exporter.setOutputList( ipList );
 			exporter.setRenderResolution( resolution );
-			exporter.setOffset( offset );
+			exporter.setOffset( offsetIn );
 			exporter.setVirtual( isVirtual );
 			exporter.setNumThreads( nThreads );
 
@@ -972,10 +1004,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( fieldOfViewOption, offsetArg, resolution,
 				outputInterval);
-
-		System.out.println("resolution: " + Arrays.toString(resolution));
-		System.out.println("offset    : " + Arrays.toString(offset));
-		System.out.println("interval  : " + Intervals.toString(outputInterval));
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -1090,8 +1118,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final int nd = BigWarp.detectNumDims(data.sources);
 		final double[] resolution = limit(nd, resolutionArg);
 
-		// pixel offset
-		final double[] offsetPixel = ApplyBigwarpPlugin.getPixelOffset(fieldOfViewOption, offsetArg, resolution,
+		// physical offset
+		final double[] offsetPhysical = ApplyBigwarpPlugin.getPixelOffset(fieldOfViewOption, offsetArg, resolution,
 				outputInterval);
 
 		// setup n5 parameters
@@ -1130,13 +1158,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( resolution.length > 2 )
 			resolutionTransform.set( resolution[ 2 ], 2, 2 );
 
-		final double[] offsetPhysical = new double[resolution.length];
-		offsetPhysical[0] = resolution[0] * offsetPixel[0];
-		offsetPhysical[1] = resolution[1] * offsetPixel[1];
-
-		if( resolution.length > 2 )
-			offsetPhysical[2] = resolution[2] * offsetPixel[2];
-
 		final AffineTransform3D offsetTransform = new AffineTransform3D();
 		offsetTransform.set( offsetPhysical[ 0 ], 0, 3 );
 		offsetTransform.set( offsetPhysical[ 1 ], 1, 3 );
@@ -1153,7 +1174,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data,
 				sourceAndConverter, interp, progressWriter );
 		exporter.setRenderResolution( resolution );
-		exporter.setOffset( offsetPixel );
+		exporter.setOffset( offsetPhysical );
 		exporter.setInterval(Intervals.zeroMin(outputInterval));
 		exporter.setSingleChannelNoStack(true);
 		final RandomAccessibleInterval<T> imgExp = (RandomAccessibleInterval<T>)exporter.exportRai((Source<T>)sourceAndConverter.getSpimSource());
@@ -1184,7 +1205,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 
 		progressWriter.setProgress( 1.0 );
-		System.out.println("done");
 	}
 
 	@Override
