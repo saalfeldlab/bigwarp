@@ -677,7 +677,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final double[] outputResolution,
 			final Source<?> targetSource )
 	{
-		final double[] offset = new double[ 3 ];
+		final int nd = 3; // this okay even for 2D
+		final double[] offset = new double[ nd ];
 		if( fieldOfViewOption.equals( SPECIFIED_PIXEL ) )
 		{
 			System.arraycopy( offsetSpec, 0, offset, 0, offset.length );
@@ -685,9 +686,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( SPECIFIED_PHYSICAL ) )
 		{
-			final Interval outputInterval = targetSource.getSource(0, 0);
-			for( int d = 0; d < outputInterval.numDimensions(); d++ )
-			{
+			for( int d = 0; d < nd; d++ ) {
 				offset[ d ] = offsetSpec[ d ] / outputResolution[ d ];
 			}
 			return offset;
@@ -854,11 +853,13 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
-		Source<?> tgtSrc;
-		if(fieldOfViewOption.equals(TARGET) && bwData.numTargetSources() == 0 )
-			throw new RuntimeException("Requested target field of view, but no target source exists.");
-		else
-			tgtSrc = bwData.getTargetSource(0).getSpimSource();
+		Source<?> tgtSrc = null;
+		if (fieldOfViewOption.equals(TARGET) || resolutionOption.equals(TARGET)) {
+			if (bwData.numTargetSources() == 0)
+				throw new RuntimeException("Requested target field of view, but no target source exists.");
+			else
+				tgtSrc = bwData.getTargetSource(0).getSpimSource();
+		}
 
 		final int numChannels = bwData.numMovingSources();
 
