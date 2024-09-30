@@ -515,7 +515,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 				final long[] max = new long[]{
 						(long)Math.floor((offsetSpec[0] + fovSpec[0]) / outputResolution[0]),
-						(long)Math.floor((offsetSpec[0] + fovSpec[1]) / outputResolution[1]),
+						(long)Math.floor((offsetSpec[1] + fovSpec[1]) / outputResolution[1]),
 						(long)Math.floor((offsetSpec[2] + fovSpec[2]) / outputResolution[2])};
 
 				final ArrayList<Interval> out = new ArrayList<>();
