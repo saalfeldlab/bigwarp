@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.DoubleStream;
+import java.util.stream.Stream;
 
 import org.bouncycastle.util.Arrays;
 import org.junit.Assert;
@@ -25,6 +26,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import bdv.gui.BigWarpViewerOptions;
+import bdv.util.RandomAccessibleIntervalMipmapSource;
+import bdv.util.RandomAccessibleIntervalSource;
 import bdv.viewer.Source;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.SourceInfo;
@@ -33,22 +36,34 @@ import ij.ImagePlus;
 import ij.gui.NewImage;
 import ij.plugin.StackWriter;
 import mpicbg.spim.data.SpimDataException;
+import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imglib2.FinalInterval;
+import net.imglib2.Localizable;
+import net.imglib2.Point;
+import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealPoint;
+import net.imglib2.algorithm.blocks.BlockAlgoUtils;
+import net.imglib2.algorithm.blocks.BlockSupplier;
+import net.imglib2.algorithm.blocks.downsample.Downsample;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.ByteArray;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.position.FunctionRandomAccessible;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Scale;
+import net.imglib2.realtransform.ScaleAndTranslation;
 import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.NumericType;
+import net.imglib2.type.numeric.integer.AbstractIntegerType;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.view.Views;
+import net.imglib2.view.fluent.RandomAccessibleIntervalView.Extension;
 
-public class BigWarpTestUtils
-{
+public class BigWarpTestUtils{
 
 	/**
 	 * Create a 3D image file which is deleted on exit.
@@ -64,7 +79,6 @@ public class BigWarpTestUtils
 		try
 		{
 			tmpImgPath = Files.createTempFile( title, "." + format );
-			//noinspection ResultOfMethodCallIgnored
 			tmpImgPath.toFile().delete();
 		}
 		catch ( final IOException e )
@@ -78,7 +92,6 @@ public class BigWarpTestUtils
 	private static String create3DImage( final String format, final Path tmpImgPath ) throws IOException
 	{
 		final ImagePlus img3d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 4, NewImage.FILL_RAMP );
-		System.out.println( tmpImgPath.toString());
 		IJ.saveAs(img3d, format, tmpImgPath.toString());
 
 		tmpImgPath.toFile().deleteOnExit();
@@ -108,7 +121,6 @@ public class BigWarpTestUtils
 	private static String create2DImage( final String format, final Path tmpImgPath ) throws IOException
 	{
 		final ImagePlus img2d = NewImage.createByteImage( tmpImgPath.getFileName().toString(), 8, 8, 1, NewImage.FILL_RAMP );
-		System.out.println( tmpImgPath.toString());
 		IJ.saveAs(img2d, format, tmpImgPath.toString());
 		tmpImgPath.toFile().deleteOnExit();
 		return tmpImgPath.toString();
@@ -128,14 +140,12 @@ public class BigWarpTestUtils
 		try
 		{
 			tmpImg = Files.createTempFile( title, "." + format );
-			//noinspection ResultOfMethodCallIgnored
 			tmpImg.toFile().delete();
 			return create2DImage( format, tmpImg );
 		}
 		catch ( final Exception e )
 		{
 			if (tmpImg != null) {
-				//noinspection ResultOfMethodCallIgnored
 				tmpImg.toFile().delete();
 			}
 			throw new RuntimeException( e );
@@ -303,6 +313,135 @@ public class BigWarpTestUtils
 		imp.getCalibration().zOrigin = offset[2];
 
 		return imp;
+	}
+
+	public static Source<UnsignedByteType> generateSource(
+			final String name,
+			final long[] size,
+			final long[] pos,
+			final double[] resolution,
+			final double[] offset) {
+
+		return generateSource(name, size, Stream.of(new Point(pos)), resolution, offset);
+	}
+
+	public static Source<UnsignedByteType> generateSource(
+			final String name,
+			final long[] size,
+			final Stream<Localizable> positions,
+			final double[] resolution,
+			final double[] offset) {
+
+		final ArrayImg<UnsignedByteType, ByteArray> img = ArrayImgs.unsignedBytes(size);
+		setAll(img, positions, 255);
+
+		AffineTransform3D tform = new AffineTransform3D();
+		tform.set(
+				resolution[0], 0, 0, offset[0],
+				0, resolution[1], 0, offset[1],
+				0, 0, resolution[2], offset[2]);
+
+		return new RandomAccessibleIntervalSource<UnsignedByteType>(img, img.getType(), tform, name);
+	}
+
+	public static Source<UnsignedByteType> generateMultiscaleSource(
+			final int numScales,
+			final String name,
+			final long[] size,
+			final long[] pos,
+			final double[] resolution,
+			final double[] offset) {
+
+		return generateMultiscaleSource(numScales, name, size, Stream.of(new Point(pos)), resolution, offset);
+	}
+
+	public static <T extends AbstractIntegerType<?>> void setAll(final RandomAccessibleInterval<T> img, final Stream<Localizable> positions, final int value) {
+
+		final RandomAccess<T> ra = img.randomAccess();
+		positions.forEach(x -> {
+			ra.setPosition(x);
+			ra.get().setInteger(value);
+		});
+	}
+
+	public static Source<UnsignedByteType> generateMultiscaleSource(
+			final int numScales,
+			final String name,
+			final long[] size,
+			Stream<Localizable> positions,
+			final double[] resolution,
+			final double[] offset) {
+
+		final ArrayImg<UnsignedByteType, ByteArray> img = ArrayImgs.unsignedBytes(size);
+		setAll(img, positions, 255);
+
+		final int nd = 3;
+		final double[] scale = new double[nd];
+		final double[] translation = new double[nd];
+		for (int i = 0; i < nd; i++) {
+			scale[i] = 0.5;
+			translation[i] = -0.25;
+		}
+
+		final ScaleAndTranslation downsampleTform = new ScaleAndTranslation(scale, translation);
+		final int[] downsampleFactors = new int[]{2, 2, 2};
+
+		AffineTransform3D tform = new AffineTransform3D();
+		tform.set(
+				resolution[0], 0, 0, offset[0],
+				0, resolution[1], 0, offset[1],
+				0, 0, resolution[2], offset[2]);
+
+		final RandomAccessibleInterval<UnsignedByteType>[] imgs = new RandomAccessibleInterval[numScales];
+		final AffineTransform3D[] tforms = new AffineTransform3D[numScales];
+
+		imgs[0] = img;
+		tforms[0] = tform.copy();
+		for (int s = 1; s < numScales; s++) {
+
+			imgs[s] = downsampleAvgBy2NativeType(imgs[s - 1], downsampleFactors,
+					downsampledSize( imgs[s-1].dimensionsAsLongArray(), downsampleFactors));
+			tform.preConcatenate(downsampleTform);
+			tforms[s] = tform.copy();
+		}
+
+		return new RandomAccessibleIntervalMipmapSource<UnsignedByteType>(
+				imgs,
+				new UnsignedByteType(),
+				tforms,
+				new FinalVoxelDimensions("arb", resolution),
+				name,
+				true);
+	}
+
+	public static <T extends NumericType<T>> Source<T> levelToSource( Source<T> src, int level ) {
+
+		final AffineTransform3D tf = new AffineTransform3D();
+		src.getSourceTransform(0, level, tf);
+		return new RandomAccessibleIntervalSource<T>(
+				src.getSource(0, level),
+				src.getType(),
+				tf,
+				src.getName() + " " + level);
+	}
+
+	private static long[] downsampledSize(long[] dimensions, int[] factors) {
+
+		long[] dsSize = new long[dimensions.length];
+		for (int i = 0; i < dimensions.length; i++)
+			dsSize[i] = (long)Math.ceil((double)dimensions[i] / factors[i]);
+
+		return dsSize;
+	}
+
+	private static <T extends NativeType<T>> RandomAccessibleInterval<T> downsampleAvgBy2NativeType(
+			final RandomAccessibleInterval<T> img, final int[] downsampleFactors, final long[] dimensions) {
+
+		final int[] cellDimensions = new int[]{32};
+		final BlockSupplier<T> blocks = BlockSupplier
+				.of(img.view().extend(Extension.border()))
+				.andThen(Downsample.downsample(downsampleFactors));
+		return BlockAlgoUtils.cellImg(blocks, dimensions, cellDimensions);
 	}
 
 	public static class TestImagePlusBuilder {
