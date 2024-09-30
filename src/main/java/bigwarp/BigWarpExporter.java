@@ -237,7 +237,6 @@ public abstract class BigWarpExporter <T>
 	 */
 	public void setOffset( double... offset )
 	{
-		System.out.println("setOffset: " + Arrays.toString(offset));
 		for( int i = 0; i < offset.length; i++ )
 			offsetTransform.set( offset[ i ], i, 3 );
 	}
