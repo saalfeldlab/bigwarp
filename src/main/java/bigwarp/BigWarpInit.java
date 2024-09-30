@@ -1266,7 +1266,9 @@ public class BigWarpInit {
 		final LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 		id += mvgSrcs.size();
 		BigWarpInit.add( bwdata, mvgSrcs );
-		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
+
+		if (impQ != null)
+			BigWarpInit.add(bwdata, BigWarpInit.createSources(bwdata, impQ, id, 0, false));
 
 		return bwdata;
 	}
