@@ -784,7 +784,7 @@ public class BigWarpInit {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static < T extends NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
+	public static < T extends NumericType<T> & NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
 		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
