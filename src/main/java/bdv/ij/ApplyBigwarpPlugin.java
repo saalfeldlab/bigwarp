@@ -69,7 +69,6 @@ import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealInterval;
-import net.imglib2.RealPoint;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineRandomAccessible;
@@ -907,6 +906,32 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
+		final boolean show = ( writeOpts == null || writeOpts.pathOrN5Root == null || writeOpts.pathOrN5Root.isEmpty());
+		return apply(bwData, landmarks, invXfm,
+				tranformTypeOption, fieldOfViewOption, fieldOfViewPointFilter, bboxEst,
+				resolutionOption, resolutionSpec, fovSpec, offsetSpec, 
+				interp, isVirtual, nThreads, wait, writeOpts, show);
+	}
+
+	public static <T> List<ImagePlus> apply(
+			final BigWarpData<T> bwData,
+			final LandmarkTableModel landmarks,
+			final InvertibleRealTransform invXfm,
+			final String tranformTypeOption,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final String resolutionOption,
+			final double[] resolutionSpec,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final Interpolation interp,
+			final boolean isVirtual,
+			final int nThreads,
+			final boolean wait,
+			final WriteDestinationOptions writeOpts,
+			final boolean show) {
+
 		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
@@ -955,11 +980,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else
 		{
-			final boolean show;
-			if( writeOpts == null || writeOpts.pathOrN5Root == null || writeOpts.pathOrN5Root.isEmpty())
-				show = true;
-			else
-				show = false;
+
 
 			return runExport( bwData, bwData.sources, fieldOfViewOption,
 					outputIntervalList, matchedPtNames, interp,
