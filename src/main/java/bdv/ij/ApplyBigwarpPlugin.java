@@ -86,7 +86,7 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 /**
- * Apply a bigwarp transform to a 2d or 3d ImagePlus
+ * Apply a Bigwarp transform to a 2d or 3d ImagePlus
  */
 public class ApplyBigwarpPlugin implements PlugIn
 {
@@ -98,7 +98,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static final String SPECIFIED_PHYSICAL = "Specified (physical units)";
 	public static final String SPECIFIED_PIXEL = "Specified (pixel units)";
 	public static final String LANDMARK_POINTS = "Landmark points";
+
+	@Deprecated
 	public static final String LANDMARK_POINT_CUBE_PHYSICAL = "Landmark point cube (physical units)";
+
+	@Deprecated
 	public static final String LANDMARK_POINT_CUBE_PIXEL = "Landmark point cube (pixel units)";
 
 	public static void main( final String[] args )
@@ -667,6 +671,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 *
 	 * @param fieldOfViewOption the field of view option
 	 * @param offsetSpec the offset specification
+	 * @param ltm the {@link LandmarkTableModel}
 	 * @param outputResolution the resolution of the output image
 	 * @param outputInterval the output interval
 	 * @return the offset
@@ -674,6 +679,8 @@ public class ApplyBigwarpPlugin implements PlugIn
 	public static double[] getPhysicalOffset(
 			final String fieldOfViewOption,
 			final double[] offsetSpec,
+			final LandmarkTableModel ltm,
+			final String fieldOfViewPointFilter,
 			final double[] outputResolution,
 			final Source<?> targetSource )
 	{
@@ -688,6 +695,18 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			for( int d = 0; d < nd; d++ ) {
 				offset[ d ] = offsetSpec[ d ] / outputResolution[ d ];
+			}
+			return offset;
+		}
+		else if( fieldOfViewOption.equals( LANDMARK_POINTS ) )
+		{
+			Arrays.fill(offset, Double.MAX_VALUE);
+			List<Double[]> pts = getMatchedPoints(ltm, fieldOfViewPointFilter);
+			for( int i = 0; i < pts.size(); i++ ) {
+				for( int d = 0; d < nd; d++ ) {
+					final double v = pts.get(i)[d];
+					offset[d] = v < offset[d] ? v : offset[d];
+				}
 			}
 			return offset;
 		}
@@ -853,22 +872,61 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final boolean wait,
 			final WriteDestinationOptions writeOpts) {
 
+		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
+		return apply(
+				bwData,
+				landmarks,
+				invXfm,
+				tranformTypeOption,
+				fieldOfViewOption,
+				fieldOfViewPointFilter,
+				bboxEst,
+				resolutionOption,
+				resolutionSpec,
+				fovSpec,
+				offsetSpec,
+				interp,
+				isVirtual,
+				nThreads,
+				wait,
+				writeOpts);
+	}
+
+	public static <T> List<ImagePlus> apply(
+			final BigWarpData<T> bwData,
+			final LandmarkTableModel landmarks,
+			final InvertibleRealTransform invXfm,
+			final String tranformTypeOption,
+			final String fieldOfViewOption,
+			final String fieldOfViewPointFilter,
+			final BoundingBoxEstimation bboxEst,
+			final String resolutionOption,
+			final double[] resolutionSpec,
+			final double[] fovSpec,
+			final double[] offsetSpec,
+			final Interpolation interp,
+			final boolean isVirtual,
+			final int nThreads,
+			final boolean wait,
+			final WriteDestinationOptions writeOpts) {
+
+		final int numChannels = bwData.numMovingSources();
+		for ( int i = 0; i < numChannels; i++ )
+		{
+			final SourceAndConverter< T > movingSource = bwData.getMovingSource( i );
+			final WarpedSource<?> ws = ((WarpedSource<?>)(movingSource.getSpimSource()));
+			if (ws.getTransform() == null) {
+				ws.updateTransform(invXfm);
+				ws.setIsTransformed(true);
+			}
+		}
+
 		Source<?> tgtSrc = null;
 		if (fieldOfViewOption.equals(TARGET) || resolutionOption.equals(TARGET)) {
 			if (bwData.numTargetSources() == 0)
 				throw new RuntimeException("Requested target field of view, but no target source exists.");
 			else
 				tgtSrc = bwData.getTargetSource(0).getSpimSource();
-		}
-
-		final int numChannels = bwData.numMovingSources();
-
-		final InvertibleRealTransform invXfm = new BigWarpTransform( landmarks, tranformTypeOption ).getTransformation();
-		for ( int i = 0; i < numChannels; i++ )
-		{
-			final SourceAndConverter< T > movingSource = bwData.getMovingSource( i );
-			((WarpedSource<?>)(movingSource.getSpimSource())).updateTransform(invXfm);
-			((WarpedSource<?>)(movingSource.getSpimSource())).setIsTransformed(true);
 		}
 
 		final ProgressWriter progressWriter = new ProgressWriterIJ();
@@ -883,7 +941,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 		if( outputIntervalList.size() > 1 )
 			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, landmarks, fieldOfViewPointFilter );
 
-		final double[] offset = getPhysicalOffset( fieldOfViewOption, offsetSpec, res, tgtSrc );
+		final double[] offset = getPhysicalOffset( fieldOfViewOption, offsetSpec, landmarks,
+				fieldOfViewPointFilter, res, tgtSrc );
+
 		if( writeOpts != null && writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
 		{
 			final SourceAndConverter<T> src = bwData.getMovingSource(0);
@@ -893,6 +953,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 					offset, res, unit,
 					progressWriter, writeOpts,
 					Executors.newFixedThreadPool(nThreads));
+
 			return null;
 		}
 		else
