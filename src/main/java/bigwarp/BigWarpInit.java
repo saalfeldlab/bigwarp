@@ -447,7 +447,7 @@ public class BigWarpInit {
 				final IntervalView<RealType<?>> channel = hasZ ? channelRaw : Views.addDimension( channelRaw, 0, 0 );
 
 				@SuppressWarnings( "unchecked" )
-				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, Util.getTypeFromInterval( data ), res, data.getName() );
+				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, data.getType(), res, data.getName() );
 
 				final SourceInfo info = new SourceInfo( baseId + c, isMoving, data.getName(), () -> data.getSource() );
 				info.setSerializable( first );
@@ -462,7 +462,7 @@ public class BigWarpInit {
 			final RandomAccessibleInterval<RealType<?>> img = hasZ ? data : Views.addDimension( data, 0, 0 );
 
 			@SuppressWarnings( "unchecked" )
-			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, Util.getTypeFromInterval( data ), res, data.getName() );
+			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, data.getType(), res, data.getName() );
 
 			final SourceInfo info = new SourceInfo( baseId, isMoving, data.getName(), () -> data.getSource() );
 			info.setSerializable( true );
@@ -744,7 +744,7 @@ public class BigWarpInit {
 			else
 				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ) );
 
-			if ( meta instanceof N5ImagePlusMetadata && ( ( N5ImagePlusMetadata ) meta ).getType() == ImagePlus.COLOR_RGB && Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
+			if ( meta instanceof N5ImagePlusMetadata && ( ( N5ImagePlusMetadata ) meta ).getType() == ImagePlus.COLOR_RGB && imageRaw.getType() instanceof UnsignedIntType )
 			{
 				image = toColor( imageRaw );
 			}
@@ -757,10 +757,10 @@ public class BigWarpInit {
 				final AffineTransform3D srcXfm = ( ( SpatialMetadata ) meta ).spatialTransform3d();
 				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, new double[] { srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) } );
 
-				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), srcXfm, meta.getPath(), voxelDims );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) image.getType(), srcXfm, meta.getPath(), voxelDims );
 			}
 			else
-				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), new AffineTransform3D(), meta.getPath() );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) image.getType(), new AffineTransform3D(), meta.getPath() );
 		}
 		catch ( final RuntimeException e )
 		{
@@ -816,7 +816,7 @@ public class BigWarpInit {
 			mipmapScales[ s ][ 2 ] = transforms[ s ].get( 2, 2 );
 		}
 
-		return new RandomAccessibleIntervalMipmapSource<>( images, Util.getTypeFromInterval( images[ 0 ] ), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
+		return new RandomAccessibleIntervalMipmapSource<T>( images, (T)images[ 0 ].getType(), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
 	}
 
 	private static RandomAccessibleInterval< ? > to3d( RandomAccessibleInterval< ? > img )
