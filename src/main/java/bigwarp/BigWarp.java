@@ -1431,8 +1431,6 @@ public class BigWarp< T >
 						ApplyBigwarpPlugin.MOVING_WARPED,
 						ApplyBigwarpPlugin.UNION_TARGET_MOVING,
 						ApplyBigwarpPlugin.LANDMARK_POINTS,
-						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PIXEL,
-						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PHYSICAL,
 						ApplyBigwarpPlugin.SPECIFIED_PIXEL,
 						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL
 						},
