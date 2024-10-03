@@ -352,7 +352,6 @@ public class BigWarpData< T >
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		int i = 0;
 		for ( final SourceInfo sourceInfo : sourceInfos.values() )
 		{
 			if ( sourceInfo.isMoving() )
@@ -364,7 +363,6 @@ public class BigWarpData< T >
 			{
 				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
 			}
-			i++;
 		}
 		return wrappedSource;
 	}

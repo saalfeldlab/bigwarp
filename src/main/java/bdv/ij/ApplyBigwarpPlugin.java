@@ -668,9 +668,10 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 * @param fieldOfViewOption the field of view option
 	 * @param offsetSpec the offset specification
 	 * @param ltm the {@link LandmarkTableModel}
+	 * @param fieldOfViewPointFilter the landmark name filter for FOV estimation
 	 * @param outputResolution the resolution of the output image
-	 * @param outputInterval the output interval
-	 * @return the offset
+	 * @param targetSource the target source
+	 * @return the offset in physical units
 	 */
 	public static double[] getPhysicalOffset(
 			final String fieldOfViewOption,

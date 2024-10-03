@@ -320,7 +320,10 @@ public class ImagePlusLoader implements Loader {
 		}
 
 		/**
-		 * @deprecated
+		 * 
+		 * @param setups the SetupAssignments
+		 * 
+		 * @deprecated use updateSetup( ConverterSetup) 
 		 */
 		public void updateSetup(final SetupAssignments setups) {
 

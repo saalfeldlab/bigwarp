@@ -343,7 +343,17 @@ public class BigWarpInit {
 
 	/**
 	 * Initialize BigWarp.
-	 *
+	 * 
+	 * @param bwdata
+	 *            a BigWarpData instance
+	 * @param src
+	 *            the Source to add
+	 * @param setupId
+	 *            the id to assign to the source
+	 * @param numTimepoints
+	 *            number of time points this source has
+	 * @param isMoving
+	 *            true if this is a moving source
 	 * @return a {@link BigWarpData} instance
 	 *
 	 * @deprecated Use the output from one of the
@@ -377,11 +387,23 @@ public class BigWarpInit {
 	/**
 	 * Initialize BigWarp.
 	 *
+	 * @param bwdata
+	 *            a BigWarpData instance
+	 * @param src
+	 *            the Source to add
+	 * @param setupId
+	 *            the id to assign to the source
+	 * @param numTimepoints
+	 *            number of time points this source has
+	 * @param isMoving
+	 *            true if this is a moving source
+	 * @param transform
+	 *            a fixed transform to apply to this source
 	 * @return a {@link BigWarpData} instance
 	 *
 	 * @deprecated Use the output from one of the
-	 *             {{@code createSources(BigWarpData, String, int, boolean)}}
-	 *             to call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
+	 *             {{@code createSources(BigWarpData, String, int, boolean)}} to
+	 *             call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
 	 *             instead
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
@@ -612,11 +634,17 @@ public class BigWarpInit {
 	}
 
 	/**
-	 * Initialize BigWarp.
+	 * Add a source to thet given {@link BigWarpData} instance using the N5 api
 	 *
+	 * @param <T> the type
+	 * @param bwdata the BigWarpData instance
+	 * @param isMoving true if this source is moving
+	 * @param setupId the id to assign to this source
+	 * @param rootPath the root path to the container
+	 * @param dataset the path to the dataset relative to the container root
 	 * @return a {@link SpimData} instance
-	 *
-	 * @deprecated Use output from
+	 * 
+	 * 	 * @deprecated Use output from
 	 *             {@code createSources(BigWarpData, boolean, int, String, String)} and add with
 	 *             {@code add(BigWarpData, LinkedHashMap, RealTransform)} instead.
 	 */
@@ -1215,12 +1243,13 @@ public class BigWarpInit {
 
 	/**
 	 * Create {@link BigWarpData} from two XML files.
-	 *
+	 * 
+	 * @param <T> the type
 	 * @param xmlFilenameP
 	 *            moving source XML
 	 * @param xmlFilenameQ
 	 *            fixed source XML
-	 * @return BigWarpData
+	 * @return a BigWarpData instance
 	 */
 	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
@@ -1253,6 +1282,7 @@ public class BigWarpInit {
 	/**
 	 * Create {@link BigWarpData} from two {@link ImagePlus ImagePluses}.
 	 *
+	 * @param <T> the type
 	 * @param impP
 	 *            moving source ImagePlus
 	 * @param impQ
@@ -1320,6 +1350,7 @@ public class BigWarpInit {
 	/**
 	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus}.
 	 *
+	 * @param <T> the type
 	 * @param xmlFilenameP
 	 *            movingSource XML
 	 * @param impQ
@@ -1372,6 +1403,7 @@ public class BigWarpInit {
 	/**
 	 * Create {@link BigWarpData} from an {@link ImagePlus} and an XML file.
 	 *
+	 * @param <T> the type
 	 * @param impP
 	 *            moving source ImagePlus
 	 * @param xmlFilenameQ
@@ -1380,7 +1412,6 @@ public class BigWarpInit {
 	 */
 	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
-//		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
 		{
