@@ -143,7 +143,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 			numChannels = bwData.numMovingSources();
 
 		for ( int i = 0; i < numChannels; i++ )
-			raiList.add( (RandomAccessibleInterval<T>)exportRai( bwData.getMovingSource( i ).getSpimSource()));
+			raiList.add( (RandomAccessibleInterval<T>)exportRai( bwData.getMovingSourceForExport( i ).getSpimSource()));
 
 		if( singleChannelNoStack )
 			return raiList.get(0);

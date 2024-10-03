@@ -66,9 +66,6 @@ public class BigWarpUtils
 
 	public static void ensurePositiveDeterminant( final AffineTransform3D xfm )
 	{
-//		if( det( xfm ) < 0 )
-//			permuteXY( xfm );
-
 		if( det( xfm ) < 0 )
 			flipX( xfm );
 	}
@@ -119,6 +116,8 @@ public class BigWarpUtils
 	 *            width of the viewer display
 	 * @param viewerHeight
 	 *            height of the viewer display
+	 * @param zoomedIn
+	 * 			true if tighter, more "zoomedIn" bounds are desired
 	 * @param state
 	 *            the {@link ViewerState} containing at least one source.
 	 * @return proposed initial viewer transform.
@@ -179,7 +178,6 @@ public class BigWarpUtils
 		else
 			scale = Math.min( scaleX, scaleY );
 		viewerTransform.scale( scale );
-//		viewerTransform.set( 1.0, 2, 2 );
 
 		// window center offset
 		viewerTransform.set( viewerTransform.get( 0, 3 ) + cX, 0, 3 );
@@ -203,20 +201,6 @@ public class BigWarpUtils
 
 		return Math.acos( 2 * dot * dot  - 1);
 	}
-
-//	public static double angleBetween( final AffineTransform3D xfm1, final AffineTransform3D xfm2 )
-//	{
-//		double[][] tmpMat = new double[ 3 ][ 4 ];
-//		double[] q1 = new double[ 4 ];
-//		double[] q2 = new double[ 4 ];
-//
-//		xfm1.toMatrix( tmpMat );
-//		LinAlgHelpers.qu
-//
-//		normalize( q1 );
-//		normalize( q2 );
-//
-//	}
 
 	public static void normalize( double[] x )
 	{

@@ -77,7 +77,7 @@ public class Sources2Dtests {
 		AffineTransform3D xfm = new AffineTransform3D();
 		xfm.translate(0, 0, zOffset);
 
-		return new RandomAccessibleIntervalSource<>(img, Util.getTypeFromInterval(img), xfm, imp.getTitle());
+		return new RandomAccessibleIntervalSource<>(img, img.getType(), xfm, imp.getTitle());
 	}
 
 }

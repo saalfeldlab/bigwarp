@@ -101,7 +101,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		final int numChannels = bwData.numMovingSources();
 		for ( int i = 0; i < numChannels; i++ )
 		{
-			final Source<ARGBType> src = bwData.getMovingSource( i ).getSpimSource();
+			final Source<ARGBType> src = bwData.getMovingSourceForExport( i ).getSpimSource();
 			raiList.add( (RandomAccessibleInterval<ARGBType>)exportRai(src));
 		}
 		final RandomAccessibleInterval< ARGBType > raiStack = Views.stack( raiList );
@@ -117,6 +117,7 @@ public class BigWarpARGBExporter extends BigWarpExporter<ARGBType>
 		src.getSourceTransform(0, 0, srcXfm);
 
 		// in pixel space
+		@SuppressWarnings("unchecked")
 		final RealRandomAccessible<ARGBType> raiRaw = (RealRandomAccessible<ARGBType>)src.getInterpolatedSource(0, 0, interp);
 
 		// the transform from world to new pixel coordinates

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -72,6 +73,8 @@ import bdv.tools.transformation.TransformedSource;
 import bdv.util.BdvOptions;
 import bdv.util.RandomAccessibleIntervalMipmapSource;
 import bdv.util.RandomAccessibleIntervalSource;
+import bdv.util.VolatileSource;
+import bdv.util.volatiles.VolatileTypeMatcher;
 import bdv.util.volatiles.VolatileViews;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
@@ -95,16 +98,31 @@ import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.CalibratedAxis;
+import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.RealInterval;
+import net.imglib2.Volatile;
 import net.imglib2.cache.img.CachedCellImg;
+import net.imglib2.cache.img.CellLoader;
+import net.imglib2.cache.img.ReadOnlyCachedCellImgFactory;
+import net.imglib2.cache.img.ReadOnlyCachedCellImgOptions;
+import net.imglib2.cache.img.SingleCellArrayImg;
 import net.imglib2.cache.volatiles.CacheHints;
 import net.imglib2.cache.volatiles.LoadingStrategy;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
+import net.imglib2.img.cell.AbstractCellImg;
+import net.imglib2.interpolation.randomaccess.ClampingNLinearInterpolatorFactory;
+import net.imglib2.outofbounds.OutOfBoundsConstantValueFactory;
 import net.imglib2.realtransform.AffineTransform3D;
+import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.InvertibleRealTransformSequence;
 import net.imglib2.realtransform.RealTransform;
+import net.imglib2.realtransform.RealTransformRandomAccessible;
+import net.imglib2.realtransform.Translation;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.NumericType;
@@ -112,12 +130,11 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
 import net.imglib2.util.Util;
+import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-public class BigWarpInit
-{
-
+public class BigWarpInit {
 
 	public static final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
 			new N5CosemMetadataParser(),
@@ -262,8 +279,8 @@ public class BigWarpInit
 
 	/**
 	 * Add images from an {@link ImagePlus} as sources for BigWarp. Each channel will be added as its own source.
-	 * 
-	 * @param <T> the type 
+	 *
+	 * @param <T> the type
 	 * @param bwdata the bigwarp data
 	 * @param ip an ImagePlus
 	 * @param setupId id
@@ -326,7 +343,17 @@ public class BigWarpInit
 
 	/**
 	 * Initialize BigWarp.
-	 *
+	 * 
+	 * @param bwdata
+	 *            a BigWarpData instance
+	 * @param src
+	 *            the Source to add
+	 * @param setupId
+	 *            the id to assign to the source
+	 * @param numTimepoints
+	 *            number of time points this source has
+	 * @param isMoving
+	 *            true if this is a moving source
 	 * @return a {@link BigWarpData} instance
 	 *
 	 * @deprecated Use the output from one of the
@@ -360,11 +387,23 @@ public class BigWarpInit
 	/**
 	 * Initialize BigWarp.
 	 *
+	 * @param bwdata
+	 *            a BigWarpData instance
+	 * @param src
+	 *            the Source to add
+	 * @param setupId
+	 *            the id to assign to the source
+	 * @param numTimepoints
+	 *            number of time points this source has
+	 * @param isMoving
+	 *            true if this is a moving source
+	 * @param transform
+	 *            a fixed transform to apply to this source
 	 * @return a {@link BigWarpData} instance
 	 *
 	 * @deprecated Use the output from one of the
-	 *             {{@code createSources(BigWarpData, String, int, boolean)}}
-	 *             to call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
+	 *             {{@code createSources(BigWarpData, String, int, boolean)}} to
+	 *             call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
 	 *             instead
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
@@ -430,7 +469,7 @@ public class BigWarpInit
 				final IntervalView<RealType<?>> channel = hasZ ? channelRaw : Views.addDimension( channelRaw, 0, 0 );
 
 				@SuppressWarnings( "unchecked" )
-				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, Util.getTypeFromInterval( data ), res, data.getName() );
+				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, data.getType(), res, data.getName() );
 
 				final SourceInfo info = new SourceInfo( baseId + c, isMoving, data.getName(), () -> data.getSource() );
 				info.setSerializable( first );
@@ -445,7 +484,7 @@ public class BigWarpInit
 			final RandomAccessibleInterval<RealType<?>> img = hasZ ? data : Views.addDimension( data, 0, 0 );
 
 			@SuppressWarnings( "unchecked" )
-			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, Util.getTypeFromInterval( data ), res, data.getName() );
+			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, data.getType(), res, data.getName() );
 
 			final SourceInfo info = new SourceInfo( baseId, isMoving, data.getName(), () -> data.getSource() );
 			info.setSerializable( true );
@@ -505,7 +544,7 @@ public class BigWarpInit
 
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
-		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
+		final SharedQueue sharedQueue = BigWarpData.getSharedQueue();
 		final URI encodedUri = N5URI.encodeAsUri( uri.trim() );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
@@ -595,11 +634,17 @@ public class BigWarpInit
 	}
 
 	/**
-	 * Initialize BigWarp.
+	 * Add a source to thet given {@link BigWarpData} instance using the N5 api
 	 *
+	 * @param <T> the type
+	 * @param bwdata the BigWarpData instance
+	 * @param isMoving true if this source is moving
+	 * @param setupId the id to assign to this source
+	 * @param rootPath the root path to the container
+	 * @param dataset the path to the dataset relative to the container root
 	 * @return a {@link SpimData} instance
-	 *
-	 * @deprecated Use output from
+	 * 
+	 * 	 * @deprecated Use output from
 	 *             {@code createSources(BigWarpData, boolean, int, String, String)} and add with
 	 *             {@code add(BigWarpData, LinkedHashMap, RealTransform)} instead.
 	 */
@@ -727,7 +772,7 @@ public class BigWarpInit
 			else
 				imageRaw = to3d( N5Utils.open( n5, meta.getPath() ) );
 
-			if ( meta instanceof N5ImagePlusMetadata && ( ( N5ImagePlusMetadata ) meta ).getType() == ImagePlus.COLOR_RGB && Util.getTypeFromInterval( imageRaw ) instanceof UnsignedIntType )
+			if ( meta instanceof N5ImagePlusMetadata && ( ( N5ImagePlusMetadata ) meta ).getType() == ImagePlus.COLOR_RGB && imageRaw.getType() instanceof UnsignedIntType )
 			{
 				image = toColor( imageRaw );
 			}
@@ -740,10 +785,10 @@ public class BigWarpInit
 				final AffineTransform3D srcXfm = ( ( SpatialMetadata ) meta ).spatialTransform3d();
 				final FinalVoxelDimensions voxelDims = new FinalVoxelDimensions( unit, new double[] { srcXfm.get( 0, 0 ), srcXfm.get( 1, 1 ), srcXfm.get( 2, 2 ) } );
 
-				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), srcXfm, meta.getPath(), voxelDims );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) image.getType(), srcXfm, meta.getPath(), voxelDims );
 			}
 			else
-				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) Util.getTypeFromInterval( image ), new AffineTransform3D(), meta.getPath() );
+				return new BwRandomAccessibleIntervalSource( image, ( NumericType ) image.getType(), new AffineTransform3D(), meta.getPath() );
 		}
 		catch ( final RuntimeException e )
 		{
@@ -755,18 +800,19 @@ public class BigWarpInit
 
 	public static < T extends NativeType<T> & NumericType<T>> Source< T > openN5V( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue )
 	{
-		List<SourceAndConverter<T>> sources = new ArrayList<>();
-		List<ConverterSetup> converterSetups = new ArrayList<>();
+		final List<SourceAndConverter<T>> sources = new ArrayList<>();
+		final List<ConverterSetup> converterSetups = new ArrayList<>();
 		try {
 			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources, BdvOptions.options());
 			if( sources.size() > 0 )
 				return (Source<T>)sources.get(0).getSpimSource();
-		} catch (IOException e) { }
+		} catch (final IOException e) { }
 
 		return null;
 	}
 
-	public static < T extends NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
+	@SuppressWarnings("unchecked")
+	public static < T extends NumericType<T> & NativeType<T> > Source< T > openAsSourceMulti( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue, final boolean isVolatile )
 	{
 		final String[] paths = multiMeta.getPaths();
 		final AffineTransform3D[] transforms = multiMeta.spatialTransforms3d();
@@ -798,10 +844,7 @@ public class BigWarpInit
 			mipmapScales[ s ][ 2 ] = transforms[ s ].get( 2, 2 );
 		}
 
-		@SuppressWarnings( { "unchecked", "rawtypes" } )
-		final RandomAccessibleIntervalMipmapSource source = new RandomAccessibleIntervalMipmapSource( images, ( NumericType ) Util.getTypeFromInterval( images[ 0 ] ), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
-
-		return source;
+		return new RandomAccessibleIntervalMipmapSource<T>( images, (T)images[ 0 ].getType(), mipmapScales, new mpicbg.spim.data.sequence.FinalVoxelDimensions( unit, mipmapScales[ 0 ] ), new AffineTransform3D(), multiMeta.getPaths()[ 0 ] + "_group" );
 	}
 
 	private static RandomAccessibleInterval< ? > to3d( RandomAccessibleInterval< ? > img )
@@ -824,12 +867,9 @@ public class BigWarpInit
 		}, new ARGBType() );
 	}
 
-	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static < T > BigWarpData< T > initData()
-	{
-//		final ArrayList< ConverterSetup > converterSetups = new ArrayList< ConverterSetup >();
-//		final ArrayList< SourceAndConverter< T > > sources = new ArrayList< SourceAndConverter< T > >();
-//		return new BigWarpData( sources, converterSetups, null );
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public static <T> BigWarpData<T> initData() {
+
 		return new BigWarpData();
 	}
 
@@ -929,34 +969,151 @@ public class BigWarpInit
 		}
 	}
 
-	public static ArrayList< SourceAndConverter< ? > > wrapSourcesAsRenamable( final List< SourceAndConverter< ? > > sources, final String[] names )
-	{
-		final ArrayList< SourceAndConverter< ? > > wrappedSource = new ArrayList< SourceAndConverter< ? > >();
+	public static ArrayList<SourceAndConverter<?>> wrapSourcesAsRenamable(final List<SourceAndConverter<?>> sources,
+			final String[] names) {
+
+		final ArrayList<SourceAndConverter<?>> wrappedSource = new ArrayList<SourceAndConverter<?>>();
 
 		int i = 0;
-		for ( final SourceAndConverter< ? > sac : sources )
-		{
-			final SourceAndConverter< ? > renamableSource = wrapSourceAsRenamable( sac );
-			if ( names != null )
-			{
-				( ( RenamableSource< ? > ) renamableSource.getSpimSource() ).setName( names[ i ] );
+		for (final SourceAndConverter<?> sac : sources) {
+			final SourceAndConverter<?> renamableSource = wrapSourceAsRenamable(sac);
+			if (names != null) {
+				((RenamableSource<?>)renamableSource.getSpimSource()).setName(names[i]);
 			}
-			wrappedSource.add( renamableSource );
+			wrappedSource.add(renamableSource);
 			i++;
 		}
 		return wrappedSource;
 	}
 
-	private static < T > SourceAndConverter< T > wrapSourceAsRenamable( final SourceAndConverter< T > src )
-	{
-		if ( src.asVolatile() == null )
-		{
-			return new SourceAndConverter< T >( new RenamableSource< T >( src.getSpimSource() ), src.getConverter(), null );
+	private static <T> SourceAndConverter<T> wrapSourceAsRenamable(final SourceAndConverter<T> src) {
+
+		if (src.asVolatile() == null) {
+			return new SourceAndConverter<T>(new RenamableSource<T>(src.getSpimSource()), src.getConverter(), null);
+		} else {
+			return new SourceAndConverter<T>(new RenamableSource<T>(src.getSpimSource()), src.getConverter(),
+					src.asVolatile());
 		}
-		else
-		{
-			return new SourceAndConverter< T >( new RenamableSource< T >( src.getSpimSource() ), src.getConverter(), src.asVolatile() );
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends NumericType<T> & NativeType<T>, V extends Volatile<T> & NumericType<V>> SourceAndConverter<T> cacheTransformedSource(
+			final SourceAndConverter<T> sac,
+			final InvertibleRealTransform transform,
+			SharedQueue sharedQueue) {
+
+		final Source<T> src = sac.getSpimSource();
+		final int nd = src.getSource(0, 0).numDimensions();
+		final int N = src.getNumMipmapLevels();
+
+		final T type = src.getType();
+		final V vtype = (V)VolatileTypeMatcher.getVolatileTypeForType(type);
+
+		final int[] defaultCellDimensions = new int[nd];
+		Arrays.fill(defaultCellDimensions, 64);
+
+		// TODO handle time?
+		final RandomAccessibleInterval<T>[] mipmaps = new RandomAccessibleInterval[N];
+		final RandomAccessibleInterval<Volatile<T>>[] vmipmaps = new RandomAccessibleInterval[N];
+		final AffineTransform3D[] sourceTransforms = new AffineTransform3D[N];
+		for (int i = 0; i < src.getNumMipmapLevels(); i++) {
+
+			final RandomAccessibleInterval<T> img = src.getSource(0, i);
+
+			final AffineTransform3D origScaleTform = new AffineTransform3D();
+			src.getSourceTransform(0, i, origScaleTform);
+
+			// build the inverse transform: from transformed pixel coordinates
+			// to original pixel coordinates "through" physical coordinates
+			InvertibleRealTransformSequence tformToPhysicalSpace = new InvertibleRealTransformSequence();
+			tformToPhysicalSpace.add(origScaleTform);
+			tformToPhysicalSpace.add(transform.copy());
+			tformToPhysicalSpace.add(origScaleTform.inverse());
+
+			// compute the bounding box in physical coordinates
+			final BoundingBoxEstimation bbox = new BoundingBoxEstimation();
+			final RealInterval targetInterval = bbox.estimateInterval(tformToPhysicalSpace.inverse(), img);
+			final Interval pixelInterval = BoundingBoxEstimation.containingInterval(targetInterval);
+
+			// update the source transform to take into account any change in bounding box 
+			final AffineTransform3D newSourceTform = origScaleTform.copy();
+			final Translation tlation = new Translation(targetInterval.minAsDoubleArray());
+			newSourceTform.concatenate(tlation.inverse());
+			sourceTransforms[i] = newSourceTform;
+
+			InvertibleRealTransformSequence tformToPixelSpace = new InvertibleRealTransformSequence();
+			tformToPixelSpace.add(origScaleTform);
+			tformToPixelSpace.add(transform.copy());
+			tformToPixelSpace.add(newSourceTform.inverse());
+
+			final RandomAccessibleInterval<T> raiTform = transform( img, pixelInterval, tformToPixelSpace);
+			final ReadOnlyCachedCellImgFactory cacheFactory = new ReadOnlyCachedCellImgFactory(
+					new ReadOnlyCachedCellImgOptions()
+							.volatileAccesses(true)
+							.cellDimensions(getCellDimensionsOrDefault(img, defaultCellDimensions)));
+
+			final CellLoader<T> copier = new CellLoader<T>() {
+				@Override
+				public void load(SingleCellArrayImg<T, ?> cell) throws Exception {
+
+					Views.flatIterable(Views.interval(Views.pair(raiTform, cell), cell)).forEach(
+							pair -> pair.getB().set(pair.getA()));
+				}
+			};
+
+			final RandomAccessibleInterval<T> cachedTransformedMipmap = cacheFactory.create(
+					raiTform.dimensionsAsLongArray(),
+					type.copy(),
+					copier);
+			mipmaps[i] = cachedTransformedMipmap;
+
+			final int priority = N - 1 - i;
+			final CacheHints cacheHints = new CacheHints(LoadingStrategy.BUDGETED, priority, false);
+			vmipmaps[i] = VolatileViews.wrapAsVolatile(cachedTransformedMipmap, sharedQueue, cacheHints);
 		}
+
+		final RandomAccessibleIntervalMipmapSource<T> cachedTransformedSource =
+				new RandomAccessibleIntervalMipmapSource<T>(
+						mipmaps,
+						type,
+						sourceTransforms,
+						src.getVoxelDimensions(),
+						src.getName(),
+						src.doBoundingBoxCulling());
+
+		final Source<V> vsrc = new VolatileSource<T, V>(cachedTransformedSource, vtype, sharedQueue);
+		final SourceAndConverter<V> vsac = new SourceAndConverter<V>(vsrc, BigDataViewer.createConverterToARGB(vtype));
+		return new SourceAndConverter<T>(cachedTransformedSource, BigDataViewer.createConverterToARGB(type), vsac);
+	}
+
+	@SuppressWarnings("rawtypes")
+	private static int[] getCellDimensionsOrDefault(final RandomAccessibleInterval<?> img,
+			final int[] defaultDimensions) {
+
+		// TODO need to unwrap views
+		if (img instanceof AbstractCellImg) {
+			return ((AbstractCellImg)img).getCellGrid().getCellDimensions();
+		} else {
+			return defaultDimensions;
+		}
+	}
+
+	private static <T extends NumericType<T> & NativeType<T>> RandomAccessibleInterval<T> transform(
+			final RandomAccessibleInterval<T> img,
+			final Interval targetInterval,
+			final RealTransform transform) {
+
+		final T background = img.getType().copy();
+		background.setZero();
+
+		return Views.interval(
+				new RealTransformRandomAccessible<>(
+						Views.interpolate(
+								new ExtendedRandomAccessibleInterval<>(img,
+										new OutOfBoundsConstantValueFactory<>(background)),
+								new ClampingNLinearInterpolatorFactory<>()),
+						transform),
+				targetInterval);
 	}
 
 	/**
@@ -1086,16 +1243,16 @@ public class BigWarpInit
 
 	/**
 	 * Create {@link BigWarpData} from two XML files.
-	 *
+	 * 
+	 * @param <T> the type
 	 * @param xmlFilenameP
 	 *            moving source XML
 	 * @param xmlFilenameQ
 	 *            fixed source XML
-	 * @return BigWarpData
+	 * @return a BigWarpData instance
 	 */
 	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXML( final String xmlFilenameP, final String xmlFilenameQ )
 	{
-//		return createBigWarpData( new XMLLoader( xmlFilenameP ), new XMLLoader( xmlFilenameQ ), null );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
 		{
@@ -1125,6 +1282,7 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from two {@link ImagePlus ImagePluses}.
 	 *
+	 * @param <T> the type
 	 * @param impP
 	 *            moving source ImagePlus
 	 * @param impQ
@@ -1138,7 +1296,9 @@ public class BigWarpInit
 		final LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 		id += mvgSrcs.size();
 		BigWarpInit.add( bwdata, mvgSrcs );
-		BigWarpInit.add( bwdata, BigWarpInit.createSources( bwdata, impQ, id, 0, false ) );
+
+		if (impQ != null)
+			BigWarpInit.add(bwdata, BigWarpInit.createSources(bwdata, impQ, id, 0, false));
 
 		return bwdata;
 	}
@@ -1190,6 +1350,7 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an xml file and an {@link ImagePlus}.
 	 *
+	 * @param <T> the type
 	 * @param xmlFilenameP
 	 *            movingSource XML
 	 * @param impQ
@@ -1242,6 +1403,7 @@ public class BigWarpInit
 	/**
 	 * Create {@link BigWarpData} from an {@link ImagePlus} and an XML file.
 	 *
+	 * @param <T> the type
 	 * @param impP
 	 *            moving source ImagePlus
 	 * @param xmlFilenameQ
@@ -1250,7 +1412,6 @@ public class BigWarpInit
 	 */
 	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
-//		return createBigWarpData( new ImagePlusLoader( impP ), new XMLLoader( xmlFilenameQ ) );
 		final BigWarpData< T > bwdata = BigWarpInit.initData();
 		try
 		{

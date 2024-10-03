@@ -118,11 +118,11 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
-		<imglib2.version>7.1.0</imglib2.version>
+		<imglib2.version>7.1.1</imglib2.version>
 		<imglib2-realtransform.version>4.0.3</imglib2-realtransform.version>
 		<imglib2-roi.version>0.15.0</imglib2-roi.version>
 		<imglib2-cache.version>1.0.0-beta-18</imglib2-cache.version>
-		<imglib2-algorithm.version>0.15.3</imglib2-algorithm.version>
+		<imglib2-algorithm.version>0.16.0</imglib2-algorithm.version>
 		<bigdataviewer-core.version>10.6.0</bigdataviewer-core.version>
 		<bigdataviewer-vistools.version>1.0.0-beta-36</bigdataviewer-vistools.version>
 
@@ -131,15 +131,11 @@
 		<jitk-tps.version>3.0.4</jitk-tps.version>
 
 		<n5.version>3.3.0</n5.version>
-		<n5-imglib2.version>7.0.1</n5-imglib2.version>
+		<n5-imglib2.version>7.0.2</n5-imglib2.version>
 		<n5-aws-s3.version>4.2.1</n5-aws-s3.version>
-		<n5-blosc.version>1.1.1</n5-blosc.version>
-		<n5-hdf5.version>2.2.0</n5-hdf5.version>
 		<n5-google-cloud.version>4.1.1</n5-google-cloud.version>
-		<n5-zarr.version>1.3.5</n5-zarr.version>
 		<n5-universe.version>1.6.0</n5-universe.version>
-		<n5-ij.version>4.2.1</n5-ij.version>
-		<n5-viewer_fiji.version>6.1.1</n5-viewer_fiji.version>
+		<n5-ij.version>4.2.3</n5-ij.version>
 
 		<ejml-core.version>0.41</ejml-core.version>
 		<ejml-ddense.version>0.41</ejml-ddense.version>

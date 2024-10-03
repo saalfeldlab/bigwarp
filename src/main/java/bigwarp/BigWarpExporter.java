@@ -116,7 +116,6 @@ public abstract class BigWarpExporter <T>
 
 	private String exportPath;
 
-
 	public BigWarpExporter(
 			BigWarpData<T> bwData,
 			final List< ConverterSetup > convSetups,
@@ -232,7 +231,7 @@ public abstract class BigWarpExporter <T>
 	}
 
 	/**
-	 * Set the offset of the output field of view in pixels.
+	 * Set the offset of the output field of view in physical units.
 	 *
 	 * @param offset the offset in pixel units.
 	 */
@@ -250,8 +249,8 @@ public abstract class BigWarpExporter <T>
 	public void buildTotalRenderTransform()
 	{
 		pixelRenderToPhysical.identity();
-		pixelRenderToPhysical.concatenate( resolutionTransform );
 		pixelRenderToPhysical.concatenate( offsetTransform );
+		pixelRenderToPhysical.concatenate( resolutionTransform );
 	}
 
 	public void setInterval( final Interval outputInterval )
@@ -259,6 +258,7 @@ public abstract class BigWarpExporter <T>
 		this.outputInterval = outputInterval;
 	}
 
+	@SuppressWarnings("hiding")
 	public <T> RandomAccessibleInterval<T> exportSource( SourceAndConverter<T> src )
 	{
 		final RealRandomAccessible< T > raiRaw = src.getSpimSource().getInterpolatedSource( 0, 0, interp );
@@ -582,13 +582,9 @@ public abstract class BigWarpExporter <T>
 		xfm.apply( pt, ptxfm );
 		copyToLongFloor( ptxfm, min );
 
-
 		// transform max
-
 		for( int d = 0; d < nd; d++ )
-		{
 			pt[ d ] = interval.realMax( d );
-		}
 
 		xfm.apply( pt, ptxfm );
 		copyToLongCeil( ptxfm, max );
