@@ -523,7 +523,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 						(long)Math.floor((offsetSpec[2] + fovSpec[2]) / outputResolution[2])};
 
 				final ArrayList<Interval> out = new ArrayList<>();
-				out.add(new FinalInterval(min, max));
+				out.add(Intervals.zeroMin(new FinalInterval(min, max)));
 				return out;
 			} else {
 				System.err.println("Invalid fov spec, length : " + fovSpec.length);
@@ -570,7 +570,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 
 			final ArrayList<Interval> out = new ArrayList<>();
-			out.add(new FinalInterval(min, max));
+			out.add(Intervals.zeroMin(new FinalInterval(min, max)));
 			return out;
 		} else if (fieldOfViewOption.equals(LANDMARK_POINT_CUBE_PHYSICAL)
 				|| fieldOfViewOption.equals(LANDMARK_POINT_CUBE_PIXEL)) {
@@ -658,9 +658,6 @@ public class ApplyBigwarpPlugin implements PlugIn
 			}
 
 			ptList.add( pt );
-
-			System.out.println( "Using point with name : "
-					+ landmarks.getNames().get( i ) );
 		}
 
 		return ptList;

@@ -523,4 +523,18 @@ public class BigWarpTestUtils{
 		return ltm;
 	}
 
+	public static LandmarkTableModel addBboxLandmarks(LandmarkTableModel ltm,
+			RealIntervalIterator it, String nameFormat) {
+
+		int i = 0;
+		while (it.hasNext()) {
+			it.fwd();
+			ltm.add(it.positionAsDoubleArray(), false);
+			int row = ltm.getRowCount() - 1;
+			ltm.setValueAt(String.format(nameFormat, i), row, LandmarkTableModel.NAMECOLUMN);
+			i++;
+		}
+		return ltm;
+	}
+
 }
