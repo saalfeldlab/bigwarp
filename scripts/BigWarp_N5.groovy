@@ -154,7 +154,7 @@ def makeSources( String n5Base, String[] datasets )
 
 		source = new RandomAccessibleIntervalMipmapSource(
 				images,
-				Util.getTypeFromInterval(images[0]),
+				images[0].getType(),
 				scales,
 				new mpicbg.spim.data.sequence.FinalVoxelDimensions( "pix", 1, 1, 1),
 				"source");

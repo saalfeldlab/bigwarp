@@ -1431,8 +1431,6 @@ public class BigWarp< T >
 						ApplyBigwarpPlugin.MOVING_WARPED,
 						ApplyBigwarpPlugin.UNION_TARGET_MOVING,
 						ApplyBigwarpPlugin.LANDMARK_POINTS,
-						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PIXEL,
-						ApplyBigwarpPlugin.LANDMARK_POINT_CUBE_PHYSICAL,
 						ApplyBigwarpPlugin.SPECIFIED_PIXEL,
 						ApplyBigwarpPlugin.SPECIFIED_PHYSICAL
 						},
@@ -1521,69 +1519,23 @@ public class BigWarp< T >
 		else
 			interp = Interpolation.NLINEAR;
 
-		final double[] res = ApplyBigwarpPlugin.getResolution( this.data, resolutionOption, resolutionSpec );
-
-		final List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( this.data,
-				this.landmarkModel, this.currentTransform,
-				fieldOfViewOption, fieldOfViewPointFilter, bboxOptions, fovSpec, offsetSpec, res );
-
-		final List<String> matchedPtNames = new ArrayList<>();
-		if( outputIntervalList.size() > 1 )
-			ApplyBigwarpPlugin.fillMatchedPointNames( matchedPtNames, getLandmarkPanel().getTableModel(), fieldOfViewPointFilter );
-
-
-		// export has to be treated differently if we're doing fov's around
-		// landmark centers (because multiple images can be exported this way )
-		if( matchedPtNames.size() > 0 )
-		{
-			final BigwarpLandmarkSelectionPanel<T> selection = new BigwarpLandmarkSelectionPanel<>(
-					data, data.sources, fieldOfViewOption,
-					outputIntervalList, matchedPtNames, interp,
-					offsetSpec, res, isVirtual, nThreads,
-					progressWriter );
-		}
-		else
-		{
-			if( writeOpts.n5Dataset != null && !writeOpts.n5Dataset.isEmpty())
-			{
-				@SuppressWarnings("rawtypes")
-				final SourceAndConverter activeSource = getCurrentSourceInActiveViewer();
-
-				final String unit = ApplyBigwarpPlugin.getUnit( data, resolutionOption );
-				new Thread()
-				{
-					@SuppressWarnings("unchecked")
-					@Override
-					public void run()
-					{
-						progressWriter.setProgress( 0.01 );
-						ApplyBigwarpPlugin.runN5Export( data, activeSource,
-								fieldOfViewOption,
-								outputIntervalList.get(0), interp,
-								offsetSpec, res, unit,
-								progressWriter, writeOpts,
-								Executors.newFixedThreadPool( nThreads ));
-
-						progressWriter.setProgress( 1.00 );
-					}
-				}.start();
-	}
-			else
-			{
-				// export
-				final boolean show = ( writeOpts.pathOrN5Root == null  || writeOpts.pathOrN5Root.isEmpty() );
-				ApplyBigwarpPlugin.runExport( data, data.sources, fieldOfViewOption,
-						outputIntervalList, matchedPtNames, interp,
-						offsetSpec, res, isVirtual, nThreads,
-						progressWriter, show, false, writeOpts );
-			}
-		}
-	}
-	
-	private SourceAndConverter<?> getCurrentSourceInActiveViewer() {
-
-		BigWarpViewerFrame activeFrame = viewerFrameP.isActive() ? viewerFrameP : viewerFrameQ;
-		return activeFrame.getViewerPanel().state().getCurrentSource();
+		// TODO run n5 export in a separate thread?
+		ApplyBigwarpPlugin.apply(data,
+				landmarkModel,
+				this.currentTransform,
+				compressionString,
+				fieldOfViewOption,
+				fieldOfViewPointFilter,
+				bboxOptions,
+				resolutionOption,
+				resolutionSpec,
+				fovSpec,
+				offsetSpec,
+				interp,
+				isVirtual,
+				nThreads,
+				isVirtual,
+				writeOpts);
 	}
 
 	public void exportWarpField()

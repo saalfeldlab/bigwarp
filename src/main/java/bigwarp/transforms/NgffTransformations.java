@@ -562,11 +562,10 @@ public class NgffTransformations
 	/**
 	 * returns null if no permutation needed
 	 *
-	 * @param cs
+	 * @param cs a coordinate system
 	 * @return a permutation if needed
-	 * @throws Exception
 	 */
-	public static final int[] vectorAxisLastNgff( final CoordinateSystem cs ) throws Exception {
+	public static final int[] vectorAxisLastNgff( final CoordinateSystem cs ) {
 
 		final Axis[] axes = cs.getAxes();
 		final int n = axes.length;
@@ -576,15 +575,6 @@ public class NgffTransformations
 		else
 		{
 			int vecDim = -1;
-//			for( int i = 0; i < n; i++ )
-//				{
-//					vecDim = i;
-//					break;
-//				}
-//
-//			if( vecDim < 0 )
-//				return null;
-
 			final int[] permutation = new int[ n ];
 
 			int k = 0;
@@ -605,9 +595,6 @@ public class NgffTransformations
 		}
 	}
 
-	/**
-	 * @throws Exception the exception
-	 */
 	public static final int[] vectorAxisLastNgff(
 			final N5Reader n5, final String dataset ) throws Exception {
 

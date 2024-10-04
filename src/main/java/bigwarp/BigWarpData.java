@@ -1,8 +1,5 @@
 package bigwarp;
 
-import bigwarp.source.SourceInfo;
-import bigwarp.util.BigWarpUtils;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,25 +9,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import bdv.cache.CacheControl;
+import bdv.cache.SharedQueue;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
 import bdv.tools.brightness.ConverterSetup;
-import bdv.tools.brightness.SetupAssignments;
 import bdv.tools.transformation.TransformedSource;
 import bdv.util.Bounds;
 import bdv.viewer.ConverterSetups;
 import bdv.viewer.Source;
 import bdv.viewer.SourceAndConverter;
 import bdv.viewer.SynchronizedViewerState;
-import bdv.viewer.VisibilityAndGrouping;
+import bigwarp.source.SourceInfo;
+import bigwarp.util.BigWarpUtils;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.InvertibleWrapped2DTransformAs3D;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.Wrapped2DTransformAs3D;
-import net.imglib2.util.Intervals;
+import net.imglib2.realtransform.inverse.WrappedIterativeInvertibleRealTransform;
 
 public class BigWarpData< T >
 {
@@ -40,6 +38,10 @@ public class BigWarpData< T >
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
+	
+	public boolean cacheFixedTransform = true;
+
+	private static SharedQueue sharedQueue;
 
 	public BigWarpData()
 	{
@@ -98,6 +100,14 @@ public class BigWarpData< T >
 		else
 			this.cache = cache;
 	}
+	
+	public static SharedQueue getSharedQueue() {
+
+		if (sharedQueue == null)
+			sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
+
+		return sharedQueue;
+	}
 
 	private static ArrayList<Integer> listOf( int[] x )
 	{
@@ -132,6 +142,22 @@ public class BigWarpData< T >
 		return null;
 	}
 
+	@SuppressWarnings("unchecked")
+	public SourceAndConverter<T> getMovingSourceForExport(int i) {
+
+		int curIdx = 0;
+		for (final Map.Entry<Integer, SourceInfo> idToInfo : sourceInfos.entrySet()) {
+			final SourceInfo info = idToInfo.getValue();
+			if (info.isMoving()) {
+				if (curIdx == i) {
+					return info.sourceForExport() != null ? (SourceAndConverter<T>)info.sourceForExport() : (SourceAndConverter<T>)info.getSourceAndConverter();
+				}
+				curIdx++;
+			}
+		}
+		return null;
+	}
+
 	public int numTargetSources()
 	{
 		return sourceInfos.size() - numMovingSources();
@@ -150,6 +176,7 @@ public class BigWarpData< T >
 		return indices;
 	}
 
+	@SuppressWarnings("unchecked")
 	public SourceAndConverter< T > getTargetSource( int i )
 	{
 		int curIdx = 0;
@@ -325,7 +352,6 @@ public class BigWarpData< T >
 	{
 		final List< SourceAndConverter<T>> wrappedSource = new ArrayList<>();
 
-		int i = 0;
 		for ( final SourceInfo sourceInfo : sourceInfos.values() )
 		{
 			if ( sourceInfo.isMoving() )
@@ -337,7 +363,6 @@ public class BigWarpData< T >
 			{
 				wrappedSource.add( ( SourceAndConverter< T > ) sourceInfo.getSourceAndConverter() );
 			}
-			i++;
 		}
 		return wrappedSource;
 	}
@@ -366,17 +391,30 @@ public class BigWarpData< T >
 			wrapMovingSources(srcInfo);
 	}
 
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public void applyTransformations() {
 
 		int i = 0;
-		for (final SourceAndConverter<T> sac : sources) {
+		for (final SourceAndConverter sac : sources) {
 			final SourceInfo info = getSourceInfo(sac);
 			final RealTransform transform = info.getTransform();
 			if (transform != null) {
-				final SourceAndConverter<T> newSac = inheritConverter(
+
+				SourceAndConverter sourceForExport = null;
+				SourceAndConverter newSac = inheritConverter(
 						applyFixedTransform(sac.getSpimSource(), transform),
 						sac);
 
+				if (cacheFixedTransform) {
+
+					sourceForExport = newSac;
+					final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
+							: new WrappedIterativeInvertibleRealTransform(transform);
+					newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+				}
+
+				// will need to reload transformation on export if the transform is cached
+				info.setSourceForExport(sourceForExport);
 				info.setSourceAndConverter(newSac);
 				sources.set(i, newSac);
 			}
@@ -384,14 +422,30 @@ public class BigWarpData< T >
 		}
 	}
 
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public void applyTransformation(final SourceInfo info, Source<T> unWrappedSource) {
 
 		final RealTransform transform = info.getTransform();
-		@SuppressWarnings("unchecked")
-		final SourceAndConverter<T> sac = (SourceAndConverter<T>)info.getSourceAndConverter();
-		final SourceAndConverter<T> newSac = inheritConverter(
-				transform != null ? applyFixedTransform(unWrappedSource, transform) : unWrappedSource,
+		if (transform == null)
+			return;
+
+		final SourceAndConverter sac = info.getSourceAndConverter();
+		SourceAndConverter<?> sourceForExport = null;
+		SourceAndConverter newSac = inheritConverter(
+				applyFixedTransform(sac.getSpimSource(), transform),
 				sac);
+
+		if (cacheFixedTransform) {
+
+			sourceForExport = newSac;
+			final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
+					: new WrappedIterativeInvertibleRealTransform(transform);
+			newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+		}
+
+		// will need to reload transformation on export if the transform is
+		// cached
+		info.setSourceForExport(sourceForExport);
 		info.setSourceAndConverter(newSac);
 		sources.set(sources.indexOf(sac), newSac);
 	}
@@ -432,7 +486,7 @@ public class BigWarpData< T >
 		if( !(src instanceof WarpedSource ))
 			return;
 
-		WarpedSource<?> wsrc = (WarpedSource<?>)src;
+		final WarpedSource<?> wsrc = (WarpedSource<?>)src;
 		wsrc.updateTransform(tform);
 	}
 
@@ -461,43 +515,36 @@ public class BigWarpData< T >
 		// TODO using a TransformedSource like the below wasn't working correctly
 		// investigate later
 
-//		if( transform instanceof AffineGet )
-//		{
+		// if (transform instanceof AffineGet) {
 //			// if transform is a 2D affine, turn it into a 3D transform
 //
 //			// can use TransformedSource
 //			final AffineTransform3D affine3d;
-//			if( transform instanceof AffineTransform3D )
-//				affine3d = ( AffineTransform3D ) transform;
-//			else
-//			{
+		// if (transform instanceof AffineTransform3D)
+		// affine3d = (AffineTransform3D)transform;
+		// else {
 //				affine3d = new AffineTransform3D();
 //				final AffineGet transformTo3D = BigWarpUtils.toAffine3D((AffineGet)transform);
-//				System.out.println( transformTo3D );
-//				affine3d.preConcatenate( transformTo3D );
-//				System.out.println( affine3d );
+		// System.out.println(transformTo3D);
+		// affine3d.preConcatenate(transformTo3D);
+		// System.out.println(affine3d);
 //			}
 //
 //			// could perhaps try to be clever if its a warped source (?), maybe later
 //			TransformedSource<?> tsrc;
-//			if ( src instanceof TransformedSource )
-//			{
-//				tsrc = ( TransformedSource ) ( src );
+		// if (src instanceof TransformedSource) {
+		// tsrc = (TransformedSource)(src);
+		// } else {
+		// tsrc = new TransformedSource(src);
 //			}
-//			else
-//			{
-//				tsrc = new TransformedSource( src );
-//			}
-//			tsrc.setFixedTransform( affine3d );
-//			return ( Source< T > ) tsrc;
-//		}
-//		else
-//		{
+		// tsrc.setFixedTransform(affine3d);
+		// return (Source<T>)tsrc;
+		// } else {
 //			// need to use WarpedSource
-//			final WarpedSource<?> wsrc = new WarpedSource( src, src.getName() );
-//			wsrc.updateTransform( tform );
-//			wsrc.setIsTransformed( true );
-//			return ( Source< T > ) wsrc;
+		// final WarpedSource<?> wsrc = new WarpedSource(src, src.getName());
+		// wsrc.updateTransform(tform);
+		// wsrc.setIsTransformed(true);
+		// return (Source<T>)wsrc;
 //		}
 
 
@@ -521,6 +568,7 @@ public class BigWarpData< T >
 		final WarpedSource<?> wsrc = new WarpedSource( src, null );
 		wsrc.updateTransform( tform );
 		wsrc.setIsTransformed( true );
+
 		return ( Source< T > ) wsrc;
 	}
 
