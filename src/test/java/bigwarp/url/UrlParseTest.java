@@ -161,7 +161,7 @@ public class UrlParseTest
 		{
 			final int setupId = id.getAndIncrement();
 			BigWarpInit.add( data, BigWarpInit.createSources( data, uri, setupId, new Random().nextBoolean() ) );
-			assertEquals( uri, data.sourceInfos.get( setupId ).getUri() );
+			assertEquals( "failed for : " + uri, uri, data.sourceInfos.get( setupId ).getUri() );
 		}
 	}
 
