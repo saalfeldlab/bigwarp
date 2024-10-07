@@ -1010,15 +1010,15 @@ public class BigWarpInit {
 			// update the source transform to take into account any change in bounding box 
 			final AffineTransform3D newSourceTform = origScaleTform.copy();
 			final Translation tlation = new Translation(targetInterval.minAsDoubleArray());
-			newSourceTform.concatenate(tlation.inverse());
+			newSourceTform.concatenate(tlation);
 			sourceTransforms[i] = newSourceTform;
 
 			InvertibleRealTransformSequence tformToPixelSpace = new InvertibleRealTransformSequence();
-			tformToPixelSpace.add(origScaleTform);
+			tformToPixelSpace.add(newSourceTform);
 			tformToPixelSpace.add(transform.copy());
-			tformToPixelSpace.add(newSourceTform.inverse());
+			tformToPixelSpace.add(origScaleTform.inverse());
 
-			final RandomAccessibleInterval<T> raiTform = transform( img, pixelInterval, tformToPixelSpace);
+			final RandomAccessibleInterval<T> raiTform = transform(img, pixelInterval, tformToPixelSpace);
 			final ReadOnlyCachedCellImgFactory cacheFactory = new ReadOnlyCachedCellImgFactory(
 					new ReadOnlyCachedCellImgOptions()
 							.volatileAccesses(true)
@@ -1043,15 +1043,15 @@ public class BigWarpInit {
 			final CacheHints cacheHints = new CacheHints(LoadingStrategy.BUDGETED, priority, false);
 			vmipmaps[i] = VolatileViews.wrapAsVolatile(cachedTransformedMipmap, sharedQueue, cacheHints);
 		}
-
 		final RandomAccessibleIntervalMipmapSource<T> cachedTransformedSource =
 				new RandomAccessibleIntervalMipmapSource<T>(
 						mipmaps,
 						type,
 						sourceTransforms,
 						src.getVoxelDimensions(),
-						src.getName(),
+						src.getName() + "cached tform", 
 						src.doBoundingBoxCulling());
+
 
 		final Source<V> vsrc = new VolatileSource<T, V>(cachedTransformedSource, vtype, sharedQueue);
 		final SourceAndConverter<V> vsac = new SourceAndConverter<V>(vsrc, BigDataViewer.createConverterToARGB(vtype));
