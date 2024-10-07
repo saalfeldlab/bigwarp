@@ -17,10 +17,11 @@ import bigwarp.BigWarpTestUtils;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.ImagePlus;
-import net.imglib2.Cursor;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.iterator.RealIntervalIterator;
+import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
 
@@ -201,38 +202,59 @@ public class BigWarpApplyTests {
 
 	private static List<ImagePlus> transformToTarget(ImagePlus mvg, ImagePlus tgt, LandmarkTableModel ltm) {
 
-		return ApplyBigwarpPlugin.apply(mvg, tgt,
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+
+		 return ApplyBigwarpPlugin.apply(
+				bwData,
 				ltm,
-				BigWarpTransform.AFFINE,
+				invXfm,
+				BigWarpTransform.AFFINE, // tform type
+				ApplyBigwarpPlugin.TARGET, // fov option 
+				null,
+				bboxEst,
 				ApplyBigwarpPlugin.TARGET,
-				null, // fov pt filter
-				ApplyBigwarpPlugin.TARGET,
-				null, // res option
-				null, // fov spac
-				null, // offset spac
+				null,
+				null,
+				null,
 				Interpolation.NEARESTNEIGHBOR,
-				false, // virtual
-				true, // wait
-				1); // nThreads
+				false, // virtual 
+				1, // nThreads
+				true,
+				null, // writeOpts
+				false);
 	}
 
 	private static List<ImagePlus> transformToSpec(final ImagePlus mvg,
 			final double[] offset, final double[] fov, final double[] res,
 			final LandmarkTableModel ltm) {
 
-		return ApplyBigwarpPlugin.apply(mvg, null,
-				ltm,
-				BigWarpTransform.AFFINE,
-				ApplyBigwarpPlugin.SPECIFIED_PHYSICAL,
-				null, // fov pt filter
-				ApplyBigwarpPlugin.SPECIFIED,
-				res, // res option
-				fov, // fov spac
-				offset, // offset spac
-				Interpolation.NEARESTNEIGHBOR,
-				false, // virtual
-				true, // wait
-				1); // nThreads
+		ImagePlus tgt = null;
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+		
+		 return ApplyBigwarpPlugin.apply(
+					bwData,
+					ltm,
+					invXfm,
+					BigWarpTransform.AFFINE, // tform type
+					ApplyBigwarpPlugin.SPECIFIED_PHYSICAL, // fov option 
+					null,
+					bboxEst,
+					ApplyBigwarpPlugin.SPECIFIED,
+					res,
+					fov,
+					offset,
+					Interpolation.NEARESTNEIGHBOR,
+					false, // virtual 
+					1, // nThreads
+					true,
+					null, // writeOpts
+					false);
 	}
 
 	private static List<ImagePlus> transformToPtsSpec(final ImagePlus mvg,
@@ -240,19 +262,30 @@ public class BigWarpApplyTests {
 			final LandmarkTableModel ltm,
 			final String fieldOfViewPointFilter) {
 
-		return ApplyBigwarpPlugin.apply(mvg, null,
-				ltm,
-				BigWarpTransform.AFFINE,
-				ApplyBigwarpPlugin.LANDMARK_POINTS,
-				fieldOfViewPointFilter, // fov pt filter
-				ApplyBigwarpPlugin.SPECIFIED,
-				res, // res option
-				null, // fov spec
-				null, // offset spac
-				Interpolation.NEARESTNEIGHBOR,
-				false, // virtual
-				true, // wait
-				1); // nThreads
+		ImagePlus tgt = null;
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+		
+		 return ApplyBigwarpPlugin.apply(
+					bwData,
+					ltm,
+					invXfm,
+					BigWarpTransform.AFFINE, // tform type
+					ApplyBigwarpPlugin.LANDMARK_POINTS, // fov option 
+					fieldOfViewPointFilter,
+					bboxEst,
+					ApplyBigwarpPlugin.SPECIFIED,
+					res,
+					null, // fov
+					null, // offset
+					Interpolation.NEARESTNEIGHBOR,
+					false, // virtual 
+					1, // nThreads
+					true,
+					null, // writeOpts
+					false);
 	}
 
 }
