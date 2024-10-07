@@ -47,6 +47,13 @@ public class BigWarpTransformCacheTests {
 		Source<UnsignedByteType> tgtSrc = bwData.getTargetSource(0).getSpimSource();
 		assertEquals("moving source is not cached", CachedCellImg.class, mvgSrc.getSource(0, 0).getClass());
 
+		assertArrayEquals("scale level 0 pixel raster wrong size",
+				tgtSrc.getSource(0, 0).dimensionsAsLongArray(),
+				mvgSrc.getSource(0, 0).dimensionsAsLongArray());
+		assertArrayEquals("scale level 1 pixel raster wrong size",
+				tgtSrc.getSource(0, 1).dimensionsAsLongArray(),
+				mvgSrc.getSource(0, 1).dimensionsAsLongArray());
+
 		assertTrue("scale level 0 not equal", equal(tgtSrc.getSource(0, 0), mvgSrc.getSource(0, 0)));
 		assertTrue("scale level 1 not equal", equal(tgtSrc.getSource(0, 1), mvgSrc.getSource(0, 1)));
 	}
@@ -111,7 +118,7 @@ public class BigWarpTransformCacheTests {
 
 		final AffineTransform3D tgtTform0 = new AffineTransform3D();
 		tgtSrc.getSourceTransform(0, 0, tgtTform0);
-		tgtTform0.preConcatenate(translation);
+		tgtTform0.preConcatenate(translation.inverse());
 
 		assertArrayEquals("mvg transform is not the translated tgt transform", tgtTform0.getRowPackedCopy(), mvgTform0.getRowPackedCopy(), 1e-9);
 	}
