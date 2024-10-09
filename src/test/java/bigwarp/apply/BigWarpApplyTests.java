@@ -326,19 +326,30 @@ public class BigWarpApplyTests {
 	private static List<ImagePlus> transformMvgWarped(final ImagePlus mvg,
 			final LandmarkTableModel ltm) {
 
-		return ApplyBigwarpPlugin.apply(mvg, null,
+		ImagePlus tgt = null;
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+
+		return ApplyBigwarpPlugin.apply(
+				bwData,
 				ltm,
+				invXfm,
 				BigWarpTransform.AFFINE,
 				ApplyBigwarpPlugin.MOVING_WARPED,
 				"", // fov pt filter
+				bboxEst,
 				ApplyBigwarpPlugin.MOVING,
 				null, // res option
 				null, // fov spec
 				null, // offset spac
 				Interpolation.NEARESTNEIGHBOR,
 				false, // virtual
-				true, // wait
-				1); // nThreads
+				1, // nThreads
+				true,
+				null, // writeOpts
+				false);
 	}
 
 }
