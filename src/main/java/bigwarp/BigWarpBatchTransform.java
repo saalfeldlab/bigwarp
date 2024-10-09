@@ -91,8 +91,7 @@ public class BigWarpBatchTransform
 	public static final SpimDataMinimal createSpimData( IFormatReader reader )
 	{
 		Hashtable< String, Object > gmeta = reader.getGlobalMetadata();
-		System.out.println( gmeta ); // header stuff here TODO
-		
+
 		// get relevant metadata
 		double pw = 1.0;
 		double ph = 1.0;

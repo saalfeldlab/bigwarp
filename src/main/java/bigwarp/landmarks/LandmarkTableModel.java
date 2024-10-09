@@ -1660,14 +1660,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				return;
 			}
 
-			if (DEBUG)
-			{
-				System.out.println("Setting value at " + row + "," + col
-								   + " to " + value
-								   + " (an instance of "
-								   + value.getClass() + ")");
-			}
-
 			if( col == NAMECOLUMN )
 			{
 				names.set(row, (String)value );
