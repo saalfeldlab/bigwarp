@@ -24,10 +24,17 @@ package bigwarp;
 import static org.junit.Assert.*;
 import org.junit.Test;
 
+import bdv.ij.ApplyBigwarpPlugin;
+import bdv.util.RandomAccessibleIntervalSource;
 import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
+import net.imglib2.RealInterval;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
+import net.imglib2.realtransform.Scale3D;
+import net.imglib2.type.numeric.integer.UnsignedByteType;
+import net.imglib2.util.ConstantUtils;
+import net.imglib2.util.Intervals;
 
 public class BBoxTests {
 
@@ -60,6 +67,44 @@ public class BBoxTests {
 		assertEquals( "max x ", itvl.max(0) * 2, bbox.max(0) );
 		assertEquals( "max y ", itvl.max(1) * 3, bbox.max(1) );
 		assertEquals( "max z ", itvl.max(2) * 4, bbox.max(2) );
+	}
+
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	@Test
+	public void testPhysicalBoundingBoxEstimation() {
+
+		final double EPS = 1e-9;
+
+		final FinalInterval pixelInterval = Intervals.createMinMax(0, 0, 0, 32, 16, 8);
+		System.out.println(pixelInterval);
+
+		final AffineTransform3D identity = new AffineTransform3D();
+		final UnsignedByteType type = new UnsignedByteType();
+		final RandomAccessibleIntervalSource src = new RandomAccessibleIntervalSource(
+				ConstantUtils.constantRandomAccessibleInterval(type, pixelInterval), type, identity, "test1");
+
+		RealInterval physicalInterval = ApplyBigwarpPlugin.getPhysicalInterval(src, new Scale3D(5, 7, 11));
+		assertEquals("scale x min", 0, physicalInterval.realMin(0), EPS);
+		assertEquals("scale y min", 0, physicalInterval.realMin(1), EPS);
+		assertEquals("scale z min", 0, physicalInterval.realMin(2), EPS);
+
+		assertEquals("scale x max", 32 * 5, physicalInterval.realMax(0), EPS);
+		assertEquals("scale y max", 16 * 7, physicalInterval.realMax(1), EPS);
+		assertEquals("scale z max", 8 * 11, physicalInterval.realMax(2), EPS);
+
+		final AffineTransform3D scale = new AffineTransform3D();
+		scale.scale(2, 3, 4);
+		final RandomAccessibleIntervalSource srcScaled = new RandomAccessibleIntervalSource(
+				ConstantUtils.constantRandomAccessibleInterval(type, pixelInterval), type, scale, "test2");
+
+		physicalInterval = ApplyBigwarpPlugin.getPhysicalInterval(srcScaled, new Scale3D(5, 7, 11));
+		assertEquals("scale x min", 0, physicalInterval.realMin(0), EPS);
+		assertEquals("scale y min", 0, physicalInterval.realMin(1), EPS);
+		assertEquals("scale z min", 0, physicalInterval.realMin(2), EPS);
+
+		assertEquals("scale x max", 32 * 5 * 2, physicalInterval.realMax(0), EPS);
+		assertEquals("scale y max", 16 * 7 * 3, physicalInterval.realMax(1), EPS);
+		assertEquals("scale z max", 8 * 11 * 4, physicalInterval.realMax(2), EPS);
 	}
 
 }

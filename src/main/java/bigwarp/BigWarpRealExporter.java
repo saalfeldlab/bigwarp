@@ -160,6 +160,7 @@ public class BigWarpRealExporter< T extends RealType< T > & NativeType< T >  > e
 		src.getSourceTransform(0, 0, srcXfm);
 
 		// in pixel space
+		@SuppressWarnings("unchecked")
 		final RealRandomAccessible<T> raiRaw = (RealRandomAccessible<T>)src.getInterpolatedSource(0, 0, interp);
 
 		// the transform from world to new pixel coordinates

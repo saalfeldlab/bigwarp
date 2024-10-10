@@ -19,9 +19,11 @@ import bigwarp.transforms.BigWarpTransform;
 import ij.ImagePlus;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
+import net.imglib2.iterator.IntervalIterator;
 import net.imglib2.iterator.RealIntervalIterator;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
+import net.imglib2.realtransform.Scale3D;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
 
@@ -172,6 +174,39 @@ public class BigWarpApplyTests {
 		assertEquals(0, img.getAt(0, 0, 0).get());
 	}
 
+	@Test
+	public void testExportMvgWarped() {
+
+		final long[] pt = new long[]{16, 8, 4};
+		final long[] size = new long[]{32, 16, 8};
+
+		final ImagePlus mvg = new BigWarpTestUtils.TestImagePlusBuilder().title("mvg")
+				.size(size)
+				.position(pt).build();
+
+		final BigWarpData<UnsignedByteType> bwData = BigWarpInit.initData();
+		BigWarpInit.add(bwData, BigWarpInit.createSources(bwData, mvg, 0, 0, true));
+		bwData.wrapMovingSources();
+
+		final Scale3D tform = new Scale3D(4, 3, 2);
+		final LandmarkTableModel ltm = BigWarpTestUtils.landmarks(new IntervalIterator(new int[]{2, 2, 2}), tform);
+
+		final long[] expectedResultMax = new long[3];
+		Arrays.setAll(expectedResultMax, i -> (long)((size[i] - 1) * tform.get(i, i)));
+
+		final List<ImagePlus> resList = transformMvgWarped(mvg, ltm);
+
+		assertEquals(1, resList.size());
+		final ImagePlus result = resList.get(0);
+		assertResolutionsEqual(mvg, result);
+		assertOriginsEqual(mvg, result);
+
+		final Img<UnsignedByteType> img = ImageJFunctions.wrapByte(result);
+		assertArrayEquals("result image the wrong size", expectedResultMax, Intervals.maxAsLongArray(img));
+		assertEquals(1, img.getAt(16 * 4, 8 * 3, 4 * 2).get());
+		assertEquals(0, img.getAt(0, 0, 0).get());
+	}
+
 	private static void assertResolutionsEqual(ImagePlus expected, ImagePlus actual) {
 
 		assertEquals("width", expected.getCalibration().pixelWidth, actual.getCalibration().pixelWidth, EPS);
@@ -286,6 +321,35 @@ public class BigWarpApplyTests {
 					true,
 					null, // writeOpts
 					false);
+	}
+
+	private static List<ImagePlus> transformMvgWarped(final ImagePlus mvg,
+			final LandmarkTableModel ltm) {
+
+		ImagePlus tgt = null;
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+
+		return ApplyBigwarpPlugin.apply(
+				bwData,
+				ltm,
+				invXfm,
+				BigWarpTransform.AFFINE,
+				ApplyBigwarpPlugin.MOVING_WARPED,
+				"", // fov pt filter
+				bboxEst,
+				ApplyBigwarpPlugin.MOVING,
+				null, // res option
+				null, // fov spec
+				null, // offset spac
+				Interpolation.NEARESTNEIGHBOR,
+				false, // virtual
+				1, // nThreads
+				true,
+				null, // writeOpts
+				false);
 	}
 
 }

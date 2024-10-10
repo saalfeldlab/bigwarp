@@ -42,13 +42,6 @@ public class BigWarpCommand implements Command, PlugIn
 			BigWarpInitDialog.runMacro( macroOptions );
 		else
 		{
-//			if( datasetService != null )
-//			{
-//				System.out.println( "dset service exists");
-//				for( final Dataset d :  datasetService.getDatasets() )
-//					System.out.println( d.getName());
-//			}
-
 			final BigWarpInitDialog dialog = BigWarpInitDialog.createAndShow( datasetService );
 			// dialog sets recorder to its initial state on cancel or execution
 			dialog.setInitialRecorderState( initialRecorderState );

@@ -91,8 +91,6 @@ public class NgffTransformations
 	public static RealTransform findFieldTransformFirst(final N5Reader n5, final String group) {
 
 		final String normGrp = N5URI.normalizeGroupPath(group);
-		System.out.println( "nnrmGrp: " + normGrp );
-
 		final CoordinateTransform<?>[] transforms = n5.getAttribute(group, CoordinateTransform.KEY, CoordinateTransform[].class);
 		if (transforms == null)
 			return null;
@@ -106,10 +104,8 @@ public class NgffTransformations
 		for (final CoordinateTransform<?> ct : transforms) {
 			System.out.println(ct);
 			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
-			System.out.println( "nrmInput: " + nrmInput );
 			if (nrmInput.equals(normGrp)) {
 				found = true;
-				System.out.println( "found: " + ct );
 			}
 
 		}
@@ -120,7 +116,6 @@ public class NgffTransformations
 	public static RealTransform findFieldTransformStrict(final N5Reader n5, final String group, final String output ) {
 
 		final String normGrp = N5URI.normalizeGroupPath(group);
-		System.out.println( "nnrmGrp: " + normGrp );
 
 		final CoordinateTransform<?>[] transforms = n5.getAttribute(group, CoordinateTransform.KEY, CoordinateTransform[].class);
 		if (transforms == null)
@@ -130,9 +125,7 @@ public class NgffTransformations
 		for (final CoordinateTransform<?> ct : transforms) {
 			System.out.println(ct);
 			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
-			System.out.println( "nrmInput: " + nrmInput );
 			if (nrmInput.equals(normGrp) && ct.getOutput().equals(output) ) {
-				System.out.println( "found: " + ct );
 				return ct.getTransform(n5);
 			}
 		}
@@ -155,9 +148,6 @@ public class NgffTransformations
 		} catch (final URISyntaxException e) {
 			return null;
 		}
-
-//		final String grp = ( uri.getGroupPath() != null ) ? uri.getGroupPath() : "";
-//		final String attr = ( uri.getAttributePath() != null && !uri.getAttributePath().equals("/")) ? uri.getAttributePath() : "coordinateTransformations[0]";
 
 		if( isValidTransformUri( url ))
 			return url;
