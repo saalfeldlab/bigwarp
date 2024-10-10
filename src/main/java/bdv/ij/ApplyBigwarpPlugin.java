@@ -1205,7 +1205,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		{
 			final SourceAndConverter< T > movingSource = bwData.getMovingSource( i );
 			final WarpedSource<?> ws = ((WarpedSource<?>)(movingSource.getSpimSource()));
-			if (ws.getTransform() == null) {
+			if (ws.getTransform() == null && invXfm != null ) {
 				ws.updateTransform(invXfm);
 				ws.setIsTransformed(true);
 			}
