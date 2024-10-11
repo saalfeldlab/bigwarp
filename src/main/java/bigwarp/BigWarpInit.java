@@ -129,7 +129,6 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
-import net.imglib2.util.Util;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -257,8 +256,6 @@ public class BigWarpInit {
 			info.setSourceAndConverter( addedSource );
 			data.sourceInfos.put( setupId++, info );
 		}
-
-		data.wrapUp();
 
 		if ( names != null )
 		{
@@ -418,9 +415,13 @@ public class BigWarpInit {
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
 		sources.forEach( ( source, info ) -> {
-			addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
-			final SourceAndConverter< T > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
-			info.setSourceAndConverter( addedSource );
+
+			// some initializers set the SourceAndConverter, some do not
+			if( info.getSourceAndConverter() == null ) {
+				addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
+				final SourceAndConverter< T > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
+				info.setSourceAndConverter( addedSource );
+			}
 
 			if ( transform != null )
 			{
@@ -431,7 +432,7 @@ public class BigWarpInit {
 		return bwdata;
 	}
 
-	@SuppressWarnings( { "rawtypes" } )
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, Dataset data, int baseId, final boolean isMoving )
 	{
 		boolean first = true;
@@ -468,9 +469,7 @@ public class BigWarpInit {
 				final IntervalView<RealType<?>> channelRaw = Views.hyperSlice( data, channelIdx, c );
 				final IntervalView<RealType<?>> channel = hasZ ? channelRaw : Views.addDimension( channelRaw, 0, 0 );
 
-				@SuppressWarnings( "unchecked" )
 				final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( channel, data.getType(), res, data.getName() );
-
 				final SourceInfo info = new SourceInfo( baseId + c, isMoving, data.getName(), () -> data.getSource() );
 				info.setSerializable( first );
 				if ( first )
@@ -483,9 +482,7 @@ public class BigWarpInit {
 		{
 			final RandomAccessibleInterval<RealType<?>> img = hasZ ? data : Views.addDimension( data, 0, 0 );
 
-			@SuppressWarnings( "unchecked" )
 			final RandomAccessibleIntervalSource source = new RandomAccessibleIntervalSource( img, data.getType(), res, data.getName() );
-
 			final SourceInfo info = new SourceInfo( baseId, isMoving, data.getName(), () -> data.getSource() );
 			info.setSerializable( true );
 			sourceInfoMap.put( source, info );
@@ -523,6 +520,7 @@ public class BigWarpInit {
 		int setupId = baseId;
 		for ( final SourceAndConverter sac : tmpSources )
 		{
+			@SuppressWarnings("unchecked")
 			final Source< T > source = sac.getSpimSource();
 			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
 		}
@@ -542,6 +540,7 @@ public class BigWarpInit {
 		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
 	}
 
+	@SuppressWarnings("unchecked")
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
 	{
 		final SharedQueue sharedQueue = BigWarpData.getSharedQueue();
@@ -569,8 +568,8 @@ public class BigWarpInit {
 				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
 			}
 
-			final Source< T > source = (Source<T>)loadN5Source( n5reader, n5URL.getGroupPath(), sharedQueue );
-			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
+			final SourceInfo info = loadN5SourceInfo(n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
+			sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
 		}
 		else
 		{
@@ -579,14 +578,12 @@ public class BigWarpInit {
 			{
 				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
 				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
-				final String group = n5URL.getGroupPath();
-				final Source< T > source = (Source<T>)loadN5Source( n5reader, group, sharedQueue );
-
-				if( source != null )
-					sourceStateMap.put( source, new SourceInfo( setupId, isMoving, group ) );
+				final SourceInfo info = loadN5SourceInfo(n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
+				sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
 			}
 			catch ( final Exception ignored )
 			{}
+
 			if ( sourceStateMap.isEmpty() )
 			{
 				final String containerPath = n5URL.getContainerPath();
@@ -662,7 +659,7 @@ public class BigWarpInit {
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
 
-	private static < T  > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
+	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
 	{
 		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 		if ( rootPath.endsWith( "xml" ) )
@@ -706,16 +703,57 @@ public class BigWarpInit {
 		}
 		else
 		{
-			final LinkedHashMap< Source< T >, SourceInfo > map = new LinkedHashMap<>();
-			final Source< T > source = (Source<T>)loadN5Source( rootPath, dataset, sharedQueue );
-			final SourceInfo info = new SourceInfo( setupId, isMoving, dataset, () -> rootPath + "$" + dataset );
-			info.setSerializable( true );
-			map.put( source, info );
-			return map;
+			return makeMap( loadN5SourceInfo(rootPath, dataset, sharedQueue, setupId, isMoving));
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private static <T> LinkedHashMap<Source<T>, SourceInfo> makeMap(final SourceInfo info) {
 
+		final LinkedHashMap<Source<T>, SourceInfo> map = new LinkedHashMap<>();
+		info.setSerializable(true);
+		map.put((Source<T>)info.getSourceAndConverter().getSpimSource(), info);
+		return map;
+	}
+
+	public static < T extends NativeType<T> > SourceInfo loadN5SourceInfo( final String n5Root, final String n5Dataset, final SharedQueue queue,
+			final int sourceId, final boolean moving )
+	{
+		final N5Reader n5;
+		try
+		{
+			n5 = new N5Factory().openReader( n5Root );
+		}
+		catch ( final RuntimeException e ) {
+			e.printStackTrace();
+			return null;
+		}
+		return loadN5SourceInfo( n5, n5Dataset, queue, sourceId, moving );
+	}
+
+	@SuppressWarnings("unchecked")
+	public static < T extends NativeType<T>> SourceInfo loadN5SourceInfo( final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
+			final int sourceId, final boolean moving )
+	{
+
+		N5Metadata meta = null;
+		try
+		{
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
+			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
+			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
+		}
+		catch ( final IOException e )
+		{}
+
+		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( n5, ( MultiscaleMetadata< ? > ) meta, queue);
+		final String uri = n5.getURI().toString() + "$" + n5Dataset;
+		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
+		info.setSourceAndConverter(sac);
+		return info;
+	}
+
+	@Deprecated
 	public static < T extends NativeType<T> > Source< T > loadN5Source( final String n5Root, final String n5Dataset, final SharedQueue queue )
 	{
 		final N5Reader n5;
@@ -731,6 +769,7 @@ public class BigWarpInit {
 	}
 
 	@SuppressWarnings("unchecked")
+	@Deprecated
 	public static < T extends NativeType<T>> Source< T > loadN5Source( final N5Reader n5, final String n5Dataset, final SharedQueue queue )
 	{
 
@@ -798,15 +837,35 @@ public class BigWarpInit {
 		return null;
 	}
 
-	public static < T extends NativeType<T> & NumericType<T>> Source< T > openN5V( final N5Reader n5, final MultiscaleMetadata< ? > multiMeta, final SharedQueue sharedQueue )
-	{
+	/**
+	 * Use openN5VSourceAndConverter instead
+	 * 
+	 * @param <T> source type
+	 * @param n5 the n5 reader
+	 * @param multiMeta the multiscale metadata
+	 * @param sharedQueue the shared queue
+	 * @return a source
+	 */
+	@SuppressWarnings("unchecked")
+	@Deprecated
+	public static <T extends NativeType<T> & NumericType<T>> Source<T> openN5V(final N5Reader n5, final MultiscaleMetadata<?> multiMeta,
+			final SharedQueue sharedQueue) {
+
+		return (Source<T>)openN5VSourceAndConverter(n5, multiMeta, sharedQueue).getSpimSource();
+	}
+
+	public static <T extends NativeType<T> & NumericType<T>> SourceAndConverter<T> openN5VSourceAndConverter(final N5Reader n5,
+			final MultiscaleMetadata<?> multiMeta, final SharedQueue sharedQueue) {
+
 		final List<SourceAndConverter<T>> sources = new ArrayList<>();
 		final List<ConverterSetup> converterSetups = new ArrayList<>();
 		try {
-			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources, BdvOptions.options());
-			if( sources.size() > 0 )
-				return (Source<T>)sources.get(0).getSpimSource();
-		} catch (final IOException e) { }
+			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources,
+					BdvOptions.options());
+
+			if (sources.size() > 0)
+				return sources.get(0);
+		} catch (final IOException e) {}
 
 		return null;
 	}
