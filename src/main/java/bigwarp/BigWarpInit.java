@@ -750,7 +750,7 @@ public class BigWarpInit {
 		catch ( final IOException e )
 		{}
 
-		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, ( MultiscaleMetadata< ? > ) meta, queue);
+		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, meta, queue);
 		final String uri = n5.getURI().toString() + "$" + n5Dataset;
 		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 		info.setSourceAndConverter(sac);
@@ -861,7 +861,7 @@ public class BigWarpInit {
 	public static <T extends NativeType<T> & NumericType<T>> SourceAndConverter<T> openN5VSourceAndConverter(
 			final BigWarpData<?> bwData,
 			final N5Reader n5,
-			final MultiscaleMetadata<?> multiMeta,
+			final N5Metadata multiMeta,
 			final SharedQueue sharedQueue) {
 
 		final List<SourceAndConverter<T>> sources = new ArrayList<>();
