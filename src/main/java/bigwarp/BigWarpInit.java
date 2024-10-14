@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -412,9 +413,13 @@ public class BigWarpInit {
 		return bwdata;
 	}
 
+	@SuppressWarnings("unchecked")
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
-		sources.forEach( ( source, info ) -> {
+		for( Entry<Source<T>, SourceInfo> entry : sources.entrySet() ) {
+
+			final Source<T> source = entry.getKey();
+			final SourceInfo info = entry.getValue();
 
 			// some initializers set the SourceAndConverter, some do not
 			if( info.getSourceAndConverter() == null ) {
@@ -424,11 +429,10 @@ public class BigWarpInit {
 			}
 
 			if ( transform != null )
-			{
 				info.setTransform( transform, transformUriSupplier );
-			}
+
 			bwdata.sourceInfos.put( info.getId(), info );
-		} );
+		}
 		return bwdata;
 	}
 
@@ -568,7 +572,7 @@ public class BigWarpInit {
 				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
 			}
 
-			final SourceInfo info = loadN5SourceInfo(n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
+			final SourceInfo info = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
 			sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
 		}
 		else
@@ -578,7 +582,7 @@ public class BigWarpInit {
 			{
 				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
 				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
-				final SourceInfo info = loadN5SourceInfo(n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
+				final SourceInfo info = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
 				sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
 			}
 			catch ( final Exception ignored )
@@ -703,7 +707,7 @@ public class BigWarpInit {
 		}
 		else
 		{
-			return makeMap( loadN5SourceInfo(rootPath, dataset, sharedQueue, setupId, isMoving));
+			return makeMap( loadN5SourceInfo(bwdata, rootPath, dataset, sharedQueue, setupId, isMoving));
 		}
 	}
 
@@ -716,7 +720,7 @@ public class BigWarpInit {
 		return map;
 	}
 
-	public static < T extends NativeType<T> > SourceInfo loadN5SourceInfo( final String n5Root, final String n5Dataset, final SharedQueue queue,
+	public static < T extends NativeType<T> > SourceInfo loadN5SourceInfo( final BigWarpData<?> bwData, final String n5Root, final String n5Dataset, final SharedQueue queue,
 			final int sourceId, final boolean moving )
 	{
 		final N5Reader n5;
@@ -728,11 +732,11 @@ public class BigWarpInit {
 			e.printStackTrace();
 			return null;
 		}
-		return loadN5SourceInfo( n5, n5Dataset, queue, sourceId, moving );
+		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving );
 	}
 
 	@SuppressWarnings("unchecked")
-	public static < T extends NativeType<T>> SourceInfo loadN5SourceInfo( final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
+	public static < T extends NativeType<T>> SourceInfo loadN5SourceInfo( final BigWarpData<?> bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
 			final int sourceId, final boolean moving )
 	{
 
@@ -746,7 +750,7 @@ public class BigWarpInit {
 		catch ( final IOException e )
 		{}
 
-		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( n5, ( MultiscaleMetadata< ? > ) meta, queue);
+		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, ( MultiscaleMetadata< ? > ) meta, queue);
 		final String uri = n5.getURI().toString() + "$" + n5Dataset;
 		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 		info.setSourceAndConverter(sac);
@@ -848,14 +852,17 @@ public class BigWarpInit {
 	 */
 	@SuppressWarnings("unchecked")
 	@Deprecated
-	public static <T extends NativeType<T> & NumericType<T>> Source<T> openN5V(final N5Reader n5, final MultiscaleMetadata<?> multiMeta,
+	public static <T extends NativeType<T> & NumericType<T>> Source<T> openN5V( final N5Reader n5, final MultiscaleMetadata<?> multiMeta,
 			final SharedQueue sharedQueue) {
 
-		return (Source<T>)openN5VSourceAndConverter(n5, multiMeta, sharedQueue).getSpimSource();
+		return (Source<T>)openN5VSourceAndConverter(null, n5, multiMeta, sharedQueue).getSpimSource();
 	}
 
-	public static <T extends NativeType<T> & NumericType<T>> SourceAndConverter<T> openN5VSourceAndConverter(final N5Reader n5,
-			final MultiscaleMetadata<?> multiMeta, final SharedQueue sharedQueue) {
+	public static <T extends NativeType<T> & NumericType<T>> SourceAndConverter<T> openN5VSourceAndConverter(
+			final BigWarpData<?> bwData,
+			final N5Reader n5,
+			final MultiscaleMetadata<?> multiMeta,
+			final SharedQueue sharedQueue) {
 
 		final List<SourceAndConverter<T>> sources = new ArrayList<>();
 		final List<ConverterSetup> converterSetups = new ArrayList<>();
@@ -863,8 +870,13 @@ public class BigWarpInit {
 			N5Viewer.buildN5Sources(n5, new DataSelection(n5, Collections.singletonList(multiMeta)), sharedQueue, converterSetups, sources,
 					BdvOptions.options());
 
-			if (sources.size() > 0)
+			if (sources.size() > 0) {
+				if( bwData != null ) {
+					bwData.sources.add((SourceAndConverter)sources.get(0));
+					bwData.converterSetups.add(converterSetups.get(0));
+				}
 				return sources.get(0);
+			}
 		} catch (final IOException e) {}
 
 		return null;
