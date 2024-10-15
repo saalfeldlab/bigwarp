@@ -28,14 +28,17 @@ public class UrlParseHelper
 		h5.setAttribute( "ant", "coordinateTransformations", data );
 		h5.createDataset( "img", new long[]{6, 8, 10}, new int[] {16, 16, 16}, DataType.UINT8, new GzipCompression() );
 		h5.createDataset( "img2", new long[]{12, 16, 20}, new int[] {20, 20, 20}, DataType.UINT8, new GzipCompression() );
+		h5.close();
 
 		final N5FSWriter n5 = new N5FSWriter("src/test/resources/bigwarp/url/transformTest.n5" );
 		n5.createDataset( "img", new long[]{5, 8, 9}, new int[] {16, 16, 16}, DataType.UINT8, new GzipCompression() );
 		n5.createDataset( "img2", new long[]{10, 16, 18}, new int[] {18, 18, 18}, DataType.UINT8, new GzipCompression() );
+		n5.close();
 
 		final N5ZarrWriter zarr = new N5ZarrWriter("src/test/resources/bigwarp/url/transformTest.zarr" );
 		zarr.createDataset( "/img", new long[]{4, 6, 8}, new int[] {16, 16, 16}, DataType.UINT8, new GzipCompression() );
 		zarr.createDataset( "/img2", new long[]{8, 12, 16}, new int[] {16, 16, 16}, DataType.UINT8, new GzipCompression() );
+		zarr.close();
 	}
 
 }

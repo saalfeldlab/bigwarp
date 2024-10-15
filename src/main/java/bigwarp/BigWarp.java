@@ -3336,7 +3336,6 @@ public class BigWarp< T >
 		}
 	}
 
-	// TODO,
 	// consider this
 	// https://github.com/kwhat/jnativehook
 	// for arbitrary modifiers

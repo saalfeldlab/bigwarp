@@ -9,12 +9,15 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
+import bdv.gui.ExportDisplacementFieldFrame;
+import bigwarp.transforms.NgffTransformations;
 import net.imagej.Dataset;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converter;
@@ -77,8 +80,18 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 	})
 	private String outputType;
 
+	@Parameter(label = "Output format", style = "listBox", choices = {
+			ExportDisplacementFieldFrame.FMT_NGFF,
+			ExportDisplacementFieldFrame.FMT_N5,
+			ExportDisplacementFieldFrame.FMT_BIGWARP_TPS
+	})
+	private String format = ExportDisplacementFieldFrame.FMT_NGFF;
+
 	@Parameter(label = "Thread count", required = true, min = "1", max = "999")
 	private int nThreads = 1;
+
+	@Parameter(label = "Quantization Error", required = true, min = "0")
+	private double quantizationError = 0.01;
 
 	private int nd = -1;
 	private int vectorDim = -1;
@@ -86,6 +99,7 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 
 	@SuppressWarnings({ "unchecked" })
 	public <T extends RealType<T> & NativeType<T>, S extends RealType<S> & NativeType<S>, Q extends NativeType<Q> & IntegerType<Q>> void process() {
+
 		final AffineGet affine = null;
 		final Compression compression = N5ScalePyramidExporter.getCompression(compressionArg);
 
@@ -94,6 +108,8 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 		final double[] offset = new double[nd];
 		final double[] spacing = new double[nd];
 		Arrays.fill(spacing, 1.0);
+
+		final String unit = dataset.axis(0).unit();
 
 		int j = 0;
 		for (int i = 0; i < dataset.numDimensions(); i++) {
@@ -107,9 +123,8 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 				vectorSize = (int) dataset.dimension(i);
 			}
 		}
-		
-		validateAndWarn();
 
+		validateAndWarn();
 		final int[] chunkSizeSpatial = N5ScalePyramidExporter.parseBlockSize(chunkSizeArg, spatialDims);
 		final int[] chunkSize = IntStream.concat(
 				IntStream.of(vectorSize),
@@ -118,20 +133,28 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 		final RandomAccessibleInterval<T> vectorAxisFirst = (RandomAccessibleInterval<T>) Views.moveAxis( (RandomAccessibleInterval<T>)dataset, vectorDim, 0);
 		try (N5Writer n5 = new N5Factory().openWriter(n5Root)) {
 
-			if (outputType.equals(FLOAT32) || outputType.equals(FLOAT64)) {
-				final RandomAccessibleInterval<S> converted = convertIfNecessary(vectorAxisFirst, (S)getTargetType());
-				N5DisplacementField.save(n5, n5Dataset, affine, converted, spacing, offset, chunkSize, compression);
-			}
-			else {
-				final Q quantizedType = (Q)getTargetType();
-				N5DisplacementField.save(n5, n5Dataset, affine, vectorAxisFirst, spacing, offset, chunkSize, compression, quantizedType, 1e-6);
+			if (format.equals(ExportDisplacementFieldFrame.FMT_N5)) {
+				if (outputType.equals(FLOAT32) || outputType.equals(FLOAT64)) {
+					final RandomAccessibleInterval<S> converted = convertIfNecessary(vectorAxisFirst, (S)getTargetType());
+					N5DisplacementField.save(n5, n5Dataset, affine, converted, spacing, offset, chunkSize, compression);
+				} else {
+					final Q quantizedType = (Q)getTargetType();
+					N5DisplacementField.save(n5, n5Dataset, affine, vectorAxisFirst, spacing, offset, chunkSize, compression, quantizedType, quantizationError);
+				}
+			} else if (format.equals(ExportDisplacementFieldFrame.FMT_NGFF)) {
+
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(
+						n5, n5Dataset, vectorAxisFirst,
+						"input", "output", spacing, offset,
+						unit, chunkSize, compression, nThreads);
+
+				NgffTransformations.addCoordinateTransformations(n5, "/", dfieldTform);
 			}
 
 		} catch (Exception e) {
 			System.err.println("Failed to write displacement field at " + n5Root);
 			e.printStackTrace();
 		}
-
 	}
 
 	@SuppressWarnings("unchecked")
