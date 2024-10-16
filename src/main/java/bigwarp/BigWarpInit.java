@@ -735,7 +735,7 @@ public class BigWarpInit {
 		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving );
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public static < T extends NativeType<T>> SourceInfo loadN5SourceInfo( final BigWarpData<?> bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
 			final int sourceId, final boolean moving )
 	{
@@ -751,6 +751,11 @@ public class BigWarpInit {
 		{}
 
 		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, meta, queue);
+		if( bwData != null ) {
+			bwData.sources.add((SourceAndConverter)sac);
+			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+		}
+
 		final String uri = n5.getURI().toString() + "$" + n5Dataset;
 		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 		info.setSourceAndConverter(sac);
@@ -871,10 +876,6 @@ public class BigWarpInit {
 					BdvOptions.options());
 
 			if (sources.size() > 0) {
-				if( bwData != null ) {
-					bwData.sources.add((SourceAndConverter)sources.get(0));
-					bwData.converterSetups.add(converterSetups.get(0));
-				}
 				return sources.get(0);
 			}
 		} catch (final IOException e) {}
