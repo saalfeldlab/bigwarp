@@ -180,10 +180,19 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			// the transform is thread safe here by copying
 
 			source.getSourceTransform(t, level, tmpSrcTransform);
+			InvertibleRealTransform xfmcopy = xfm.copy();
+			if( xfm instanceof WrappedIterativeInvertibleRealTransform) {
+				// TODO this should not be necessary - fix in WrappedIterativeInvertibleRealTransform
+				// workaround for now
+				@SuppressWarnings("rawtypes")
+				WrappedIterativeInvertibleRealTransform copy = (WrappedIterativeInvertibleRealTransform)xfmcopy;
+				copy.getOptimzer().setMaxStep(500);
+			}
+
 			RealTransformSequence seq = new RealTransformSequence();
 			// build the inverse transform
 			seq.add(tmpSrcTransform);
-			seq.add(xfm.copy().inverse());
+			seq.add(xfmcopy.inverse());
 			seq.add(tmpSrcTransform.inverse());
 
 			final Interval res = bboxEst.estimatePixelInterval( seq, source.getSource( t, level ) );

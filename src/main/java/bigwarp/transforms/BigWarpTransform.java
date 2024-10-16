@@ -273,6 +273,7 @@ public class BigWarpTransform
 			final WrappedIterativeInvertibleRealTransform<?> tpsXfm = (WrappedIterativeInvertibleRealTransform< ? >) solver.solve( tableModel, index );
 			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
+			tpsXfm.getOptimzer().setMaxStep(500);
 			invXfm = tpsXfm;
 		}
 		else
@@ -560,20 +561,18 @@ public class BigWarpTransform
 		final int N = bwData.numTargetSources();
 
 		double val;
-		double highestResDim = 0;
+		double highestResDim = 1;
 
 		for( int i = 0; i < N; i++ )
 		{
-//			SourceAndConverter< ? > src = bwData.sources.get( bwData.targetSourceIndices[ i ]);
 			final SourceAndConverter< ? > src = bwData.getTargetSource( i );
 
 			final String name =  src.getSpimSource().getName();
-			if( name.equals( "WarpMagnitudeSource" ) ||
-					name.equals( "JacobianDeterminantSource" ) ||
-					name.equals( "GridSource" ) )
+			if( name.equals( "WarpMagnitudeSource" ) || name.equals( "JacobianDeterminantSource" ) || name.equals( "GridSource" ) )
 			{
 					continue;
 			}
+
 			final AffineTransform3D xfm = new AffineTransform3D();
 			src.getSpimSource().getSourceTransform( 0, 0, xfm );
 
