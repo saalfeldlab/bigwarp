@@ -348,16 +348,16 @@ public class ApplyBigwarpPlugin implements PlugIn
 			if( ndims > 2 )
 				movingPixelToPhysical.set( movingRes[ 2 ], 2, 2 );
 
-			final AffineTransform outputResolution2Pixel = new AffineTransform( ndims );
-			outputResolution2Pixel.set( outputResolution[ 0 ], 0, 0 );
-			outputResolution2Pixel.set( outputResolution[ 1 ], 1, 1  );
+			final AffineTransform outputPixel2Physical = new AffineTransform( ndims );
+			outputPixel2Physical.set( outputResolution[ 0 ], 0, 0 );
+			outputPixel2Physical.set( outputResolution[ 1 ], 1, 1  );
 			if( ndims > 2 )
-				outputResolution2Pixel.set( outputResolution[ 2 ], 2, 2  );
+				outputPixel2Physical.set( outputResolution[ 2 ], 2, 2  );
 
 			final RealTransformSequence seq = new RealTransformSequence();
 			seq.add( movingPixelToPhysical );
 			seq.add( transform.inverse() );
-			seq.add( outputResolution2Pixel.inverse() );
+			seq.add( outputPixel2Physical.inverse() );
 
 			return bboxEst.estimatePixelInterval(seq, interval);
 		}
@@ -378,7 +378,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 	public static RealInterval getPhysicalInterval(final BoundingBoxEstimation bbox, final Source<?> src, final RealTransform transform) {
 
-		final Interval interval = src.getSource(0, 0);
+		final Interval interval = Intervals.zeroMin(src.getSource(0, 0));
 		final AffineTransform3D srcTform = new AffineTransform3D();
 		src.getSourceTransform(0, 0, srcTform);
 

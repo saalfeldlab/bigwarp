@@ -17,6 +17,8 @@ import bigwarp.BigWarpTestUtils;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.ImagePlus;
+import net.imglib2.Cursor;
+import net.imglib2.Localizable;
 import net.imglib2.img.Img;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.iterator.IntervalIterator;
@@ -24,6 +26,7 @@ import net.imglib2.iterator.RealIntervalIterator;
 import net.imglib2.realtransform.BoundingBoxEstimation;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.Scale3D;
+import net.imglib2.realtransform.Translation3D;
 import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
 
@@ -207,6 +210,46 @@ public class BigWarpApplyTests {
 		assertEquals(0, img.getAt(0, 0, 0).get());
 	}
 
+	@Test
+	public void testExportMvgWarpedResSpec() {
+
+		final long[] pt = new long[]{16, 8, 4};
+		final long[] size = new long[]{32, 16, 8};
+		final double[] inputResolution = new double[]{1, 1, 1};
+		final double[] outputRes = new double[]{2, 2, 2};
+
+		final ImagePlus mvg = new BigWarpTestUtils.TestImagePlusBuilder().title("mvg")
+				.resolution(inputResolution)
+				.size(size)
+				.position(pt).build();
+
+		final BigWarpData<UnsignedByteType> bwData = BigWarpInit.initData();
+		BigWarpInit.add(bwData, BigWarpInit.createSources(bwData, mvg, 0, 0, true));
+		bwData.wrapMovingSources();
+
+		final Translation3D tform = new Translation3D(Arrays.stream(pt).mapToDouble(x -> -x).toArray());
+		final LandmarkTableModel ltm = BigWarpTestUtils.landmarks(new IntervalIterator(new int[]{2, 2, 2}), tform);
+
+		final long[] expectedResultDims = new long[] { 17, 9, 5 };  // half the original size plus one
+		final List<ImagePlus> resList = transformMvgWarpedResSpec(mvg, ltm, outputRes);
+
+		assertEquals(1, resList.size());
+		final ImagePlus result = resList.get(0);
+		assertResolutionsEqual(outputRes, result);
+		double[] resultOrigin = new double[] {
+			result.getCalibration().xOrigin,
+			result.getCalibration().yOrigin,
+			result.getCalibration().zOrigin
+		};
+		assertOriginsEqual( resultOrigin, result);
+
+		final Img<UnsignedByteType> img = ImageJFunctions.wrapByte(result);
+		assertArrayEquals("result image size incorrect", expectedResultDims, img.dimensionsAsLongArray());
+
+		assertEquals(1, img.getAt(8, 4, 2).get());
+		assertEquals(0, img.getAt(4, 3, 2).get());
+	}
+
 	private static void assertResolutionsEqual(ImagePlus expected, ImagePlus actual) {
 
 		assertEquals("width", expected.getCalibration().pixelWidth, actual.getCalibration().pixelWidth, EPS);
@@ -224,7 +267,7 @@ public class BigWarpApplyTests {
 	private static void assertResolutionsEqual(double[] expected, ImagePlus actual) {
 
 		assertEquals("width", expected[0], actual.getCalibration().pixelWidth, EPS);
-		assertEquals("height", expected[0], actual.getCalibration().pixelHeight, EPS);
+		assertEquals("height", expected[1], actual.getCalibration().pixelHeight, EPS);
 		assertEquals("depth", expected[2], actual.getCalibration().pixelDepth, EPS);
 	}
 
@@ -342,6 +385,35 @@ public class BigWarpApplyTests {
 				bboxEst,
 				ApplyBigwarpPlugin.MOVING,
 				null, // res option
+				null, // fov spec
+				null, // offset spac
+				Interpolation.NEARESTNEIGHBOR,
+				false, // virtual
+				1, // nThreads
+				true,
+				null, // writeOpts
+				false);
+	}
+
+	private static List<ImagePlus> transformMvgWarpedResSpec(final ImagePlus mvg,
+			final LandmarkTableModel ltm, double[] res ) {
+
+		ImagePlus tgt = null;
+		final BigWarpData<?> bwData = BigWarpInit.createBigWarpDataFromImages(mvg, tgt);
+		bwData.wrapMovingSources();
+		final BoundingBoxEstimation bboxEst = new BoundingBoxEstimation(BoundingBoxEstimation.Method.CORNERS);
+		final InvertibleRealTransform invXfm = new BigWarpTransform( ltm, BigWarpTransform.AFFINE ).getTransformation();
+
+		return ApplyBigwarpPlugin.apply(
+				bwData,
+				ltm,
+				invXfm,
+				BigWarpTransform.AFFINE,
+				ApplyBigwarpPlugin.MOVING_WARPED,
+				"", // fov pt filter
+				bboxEst,
+				ApplyBigwarpPlugin.SPECIFIED,
+				res, // res option
 				null, // fov spec
 				null, // offset spac
 				Interpolation.NEARESTNEIGHBOR,
