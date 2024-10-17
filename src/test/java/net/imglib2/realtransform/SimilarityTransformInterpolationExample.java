@@ -46,7 +46,6 @@ import net.imglib2.type.numeric.integer.UnsignedByteType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
-
 public class SimilarityTransformInterpolationExample {
 
 	public static void main(String[] args) {
@@ -58,7 +57,6 @@ public class SimilarityTransformInterpolationExample {
 
 	public static void exp() {
 
-		double[] zero = new double[]{0, 0, 0};
 		double[] center = new double[]{252, 76, 70};
 		double[] centerOfRotation = new double[] { 252, 150, 70 };
 		AffineTransform3D offset = new AffineTransform3D();

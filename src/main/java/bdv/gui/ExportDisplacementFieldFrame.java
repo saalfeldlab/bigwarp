@@ -6,7 +6,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -29,27 +28,19 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import org.janelia.saalfeldlab.n5.N5URI;
-
 import com.formdev.flatlaf.util.UIScale;
 
-import bdv.export.ProgressWriterConsole;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.BigWarpToDeformationFieldPlugIn.DeformationFieldExportParameters;
 import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
-import bigwarp.BigWarpInit;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
 import ij.IJ;
-import ij.ImagePlus;
 import ij.Macro;
 import ij.plugin.frame.Recorder;
-import mpicbg.spim.data.SpimDataException;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
 
 public class ExportDisplacementFieldFrame extends JFrame
 {

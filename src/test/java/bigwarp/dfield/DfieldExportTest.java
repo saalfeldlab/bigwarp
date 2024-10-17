@@ -30,7 +30,6 @@ import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
 import ij.ImagePlus;
-import net.imglib2.Dimensions;
 import net.imglib2.FinalRealInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealInterval;

@@ -39,7 +39,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
@@ -51,9 +50,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.Supplier;
 
 import javax.swing.ActionMap;
 import javax.swing.InputMap;
@@ -101,7 +98,6 @@ import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
-import bdv.gui.BigwarpLandmarkSelectionPanel;
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.MaskOptionsPanel;
@@ -110,7 +106,6 @@ import bdv.gui.TransformGraphPanel;
 import bdv.gui.TransformTypeSelectDialog;
 import bdv.ij.ApplyBigwarpPlugin;
 import bdv.ij.ApplyBigwarpPlugin.WriteDestinationOptions;
-import bdv.ij.BigWarpToDeformationFieldPlugIn;
 import bdv.ij.util.ProgressWriterIJ;
 import bdv.img.WarpedSource;
 import bdv.tools.InitializeViewerState;
@@ -145,8 +140,6 @@ import bdv.viewer.SynchronizedViewerState;
 import bdv.viewer.TransformListener;
 import bdv.viewer.ViewerPanel;
 import bdv.viewer.ViewerState;
-import bdv.viewer.ViewerStateChange;
-import bdv.viewer.ViewerStateChangeListener;
 import bdv.viewer.WarpNavigationActions;
 import bdv.viewer.animate.SimilarityModel3D;
 import bdv.viewer.animate.TranslationAnimator;
@@ -177,7 +170,6 @@ import ij.ImagePlus;
 
 import java.util.LinkedHashMap;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import jitk.spline.XfmUtils;
 import mpicbg.models.AbstractModel;
 import mpicbg.models.AffineModel2D;
 import mpicbg.models.AffineModel3D;
@@ -232,6 +224,7 @@ public class BigWarp< T >
 	protected BigWarpData< T > data;
 
 	protected final SetupAssignments setupAssignments;
+
 	protected final WarpVisFrame warpVisDialog;
 
 	protected final HelpDialog helpDialog;
