@@ -114,6 +114,8 @@ import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
 import net.imglib2.display.RealARGBColorConverter;
 import net.imglib2.display.ScaledARGBConverter;
+import net.imglib2.display.ScaledARGBConverter.ARGB;
+import net.imglib2.display.ScaledARGBConverter.VolatileARGB;
 import net.imglib2.img.cell.AbstractCellImg;
 import net.imglib2.interpolation.randomaccess.ClampingNLinearInterpolatorFactory;
 import net.imglib2.outofbounds.OutOfBoundsConstantValueFactory;
@@ -130,6 +132,7 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
+import net.imglib2.util.ValuePair;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
@@ -195,8 +198,9 @@ public class BigWarpInit {
 	{
 		final SourceAndConverter< ARGBType > soc = new SourceAndConverter<>( src, null );
 
-		final ScaledARGBConverter.VolatileARGB vconverter = new ScaledARGBConverter.VolatileARGB( 0, 255 );
-		final ScaledARGBConverter.ARGB converter = new ScaledARGBConverter.ARGB( 0, 255 );
+		ValuePair<ARGB, VolatileARGB> converters = initColorConverterARGB();
+		final ScaledARGBConverter.ARGB converter = converters.getA();
+		final ScaledARGBConverter.VolatileARGB vconverter = converters.getB();
 
 		sources.add( soc );
 		converterSetups.add( new RealARGBColorConverterSetup( setupId, converter, vconverter ) );
@@ -205,15 +209,28 @@ public class BigWarpInit {
 	public static < T extends RealType< T > > void initSourceReal( final Source< T > src, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
 	{
 		final T type = src.getType();
-		final double typeMin = Math.max( 0, Math.min( type.getMinValue(), 65535 ) );
-		final double typeMax = Math.max( 0, Math.min( type.getMaxValue(), 65535 ) );
-		final RealARGBColorConverter< T > converter = RealARGBColorConverter.create( type, typeMin, typeMax );
-		converter.setColor( new ARGBType( 0xffffffff ) );
+		final RealARGBColorConverter< T > converter = initColorConverterReal( type );
 
 		final SourceAndConverter< T > soc = new SourceAndConverter<>( src, converter );
 
 		sources.add( soc );
 		converterSetups.add( new RealARGBColorConverterSetup( setupId, converter ) );
+	}
+
+	private static <T extends RealType<T>> RealARGBColorConverter<T> initColorConverterReal(T type) {
+
+		final double typeMin = Math.max(0, Math.min(type.getMinValue(), 65535));
+		final double typeMax = Math.max(0, Math.min(type.getMaxValue(), 65535));
+		final RealARGBColorConverter<T> converter = RealARGBColorConverter.create(type, typeMin, typeMax);
+		converter.setColor(new ARGBType(0xffffffff));
+		return converter;
+	}
+
+	private static ValuePair<ScaledARGBConverter.ARGB, ScaledARGBConverter.VolatileARGB> initColorConverterARGB() {
+
+		final ScaledARGBConverter.VolatileARGB vconverter = new ScaledARGBConverter.VolatileARGB(0, 255);
+		final ScaledARGBConverter.ARGB converter = new ScaledARGBConverter.ARGB(0, 255);;
+		return new ValuePair<>(converter, vconverter);
 	}
 
 	public static BigWarpData< ? > createBigWarpData( final AbstractSpimData< ? >[] spimDataPList, final AbstractSpimData< ? >[] spimDataQList )
@@ -1070,11 +1087,17 @@ public class BigWarpInit {
 
 	@SuppressWarnings("unchecked")
 	public static <T extends NumericType<T> & NativeType<T>, V extends Volatile<T> & NumericType<V>> SourceAndConverter<T> cacheTransformedSource(
+			final BigWarpData data,
+			final int index,
 			final SourceAndConverter<T> sac,
 			final InvertibleRealTransform transform,
 			SharedQueue sharedQueue) {
 
+
+		final SourceInfo info = data.getSourceInfo(sac);
 		final Source<T> src = sac.getSpimSource();
+		final int setupId = info.getId();
+
 		final int nd = src.getSource(0, 0).numDimensions();
 		final int N = src.getNumMipmapLevels();
 
@@ -1143,19 +1166,24 @@ public class BigWarpInit {
 			final CacheHints cacheHints = new CacheHints(LoadingStrategy.BUDGETED, priority, false);
 			vmipmaps[i] = VolatileViews.wrapAsVolatile(cachedTransformedMipmap, sharedQueue, cacheHints);
 		}
+
 		final RandomAccessibleIntervalMipmapSource<T> cachedTransformedSource =
 				new RandomAccessibleIntervalMipmapSource<T>(
 						mipmaps,
 						type,
 						sourceTransforms,
 						src.getVoxelDimensions(),
-						src.getName() + "cached tform", 
+						src.getName() + " (cached transform)",
 						src.doBoundingBoxCulling());
 
 
 		final Source<V> vsrc = new VolatileSource<T, V>(cachedTransformedSource, vtype, sharedQueue);
 		final SourceAndConverter<V> vsac = new SourceAndConverter<V>(vsrc, BigDataViewer.createConverterToARGB(vtype));
-		return new SourceAndConverter<T>(cachedTransformedSource, BigDataViewer.createConverterToARGB(type), vsac);
+
+		final SourceAndConverter<T> tsac = new SourceAndConverter<T>(cachedTransformedSource, BigDataViewer.createConverterToARGB(type), vsac);
+		ConverterSetup converterSetup = BigDataViewer.createConverterSetup(tsac, setupId);
+		data.converterSetups.set(index, converterSetup);
+		return tsac;
 	}
 
 	@SuppressWarnings("rawtypes")

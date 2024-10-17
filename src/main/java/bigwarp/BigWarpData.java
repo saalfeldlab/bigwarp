@@ -35,6 +35,7 @@ public class BigWarpData< T >
 	public List< SourceAndConverter< T > > sources;
 
 	public final LinkedHashMap< Integer, SourceInfo > sourceInfos = new LinkedHashMap<>();
+
 	public final List< ConverterSetup > converterSetups;
 
 	public final CacheControl cache;
@@ -410,7 +411,7 @@ public class BigWarpData< T >
 					sourceForExport = newSac;
 					final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
 							: new WrappedIterativeInvertibleRealTransform(transform);
-					newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+					newSac = BigWarpInit.cacheTransformedSource( this, i, sac, invTransform, getSharedQueue());
 				}
 
 				// will need to reload transformation on export if the transform is cached
@@ -430,6 +431,8 @@ public class BigWarpData< T >
 			return;
 
 		final SourceAndConverter sac = info.getSourceAndConverter();
+		final int index = sources.indexOf(sac);
+
 		SourceAndConverter<?> sourceForExport = null;
 		SourceAndConverter newSac = inheritConverter(
 				applyFixedTransform(sac.getSpimSource(), transform),
@@ -440,14 +443,14 @@ public class BigWarpData< T >
 			sourceForExport = newSac;
 			final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
 					: new WrappedIterativeInvertibleRealTransform(transform);
-			newSac = BigWarpInit.cacheTransformedSource(sac, invTransform, getSharedQueue());
+			newSac = BigWarpInit.cacheTransformedSource(this, index, sac, invTransform, getSharedQueue());
 		}
 
 		// will need to reload transformation on export if the transform is
 		// cached
 		info.setSourceForExport(sourceForExport);
 		info.setSourceAndConverter(newSac);
-		sources.set(sources.indexOf(sac), newSac);
+		sources.set(index, newSac);
 	}
 
 	public static < T > SourceAndConverter< T > inheritConverter( final Source<T> src, final SourceAndConverter< T > sac )
@@ -457,10 +460,7 @@ public class BigWarpData< T >
 		}
 		else
 		{
-			System.err.println( "Inherit Converter can't handle volatile");
 			return null;
-//			inheritConverter( src, sac );
-//			return new SourceAndConverter< T >( src, sac.getConverter(), wrapSourceAsTransformed( src, name + "_vol", ndims ) );
 		}
 	}
 
