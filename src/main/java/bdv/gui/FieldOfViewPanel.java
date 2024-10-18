@@ -364,14 +364,12 @@ public class FieldOfViewPanel extends JPanel
 			// what fields update others when modified
 			final int idx = i;
 			minFields[ i ].setCallback( () -> {
-//				System.out.println("min callback");
 				try {
 					min[ idx ] = Double.parseDouble( minFields[ idx ].getText() );
 				} catch (final NumberFormatException e) {}
 			});
 
 			sizeFields[ i ].setCallback( () -> {
-//				System.out.println("size callback");
 				try {
 					size[ idx ] = Double.parseDouble( sizeFields[ idx ].getText() );
 					updatePixelsFromSize( idx );
@@ -379,11 +377,10 @@ public class FieldOfViewPanel extends JPanel
 			});
 
 			spacingFields[ i ].setCallback( () -> {
-//				System.out.println("spacing callback");
 				try {
 					spacing[ idx ] = Double.parseDouble( spacingFields[ idx ].getText() );
-//					updatePixelsFromSpacing( idx );
-					updateSize( idx );
+					updatePixelsFromSpacing( idx );
+//					updateSize( idx );
 				} catch (final NumberFormatException e) {}
 			});
 
@@ -438,7 +435,16 @@ public class FieldOfViewPanel extends JPanel
 		final List< Interval > itvl = ApplyBigwarpPlugin.getPixelInterval( data, ltm, bwTransform.getTransformation( false ),
 				referenceOption, "", new BoundingBoxEstimation(), null, null, getSpacing() );
 
-		final double[] offset = ApplyBigwarpPlugin.getPixelOffset( referenceOption, null, res, itvl.get( 0 ) );
+		final double[] offset = ApplyBigwarpPlugin.getPhysicalOffset(
+				referenceOption,
+				null,
+				ltm,
+				bwTransform.getTransformation( true ),
+				"",
+				new BoundingBoxEstimation(),
+				res,
+				data.getMovingSource(0).getSpimSource(),
+				data.getTargetSource(0).getSpimSource());
 
 		setPixelSize( itvl.get( 0 ).dimensionsAsLongArray() );
 		setMin( offset );
