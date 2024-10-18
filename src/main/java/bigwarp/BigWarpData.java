@@ -411,7 +411,14 @@ public class BigWarpData< T >
 					sourceForExport = newSac;
 					final InvertibleRealTransform invTransform = transform instanceof InvertibleRealTransform ? (InvertibleRealTransform)transform
 							: new WrappedIterativeInvertibleRealTransform(transform);
-					newSac = BigWarpInit.cacheTransformedSource( this, i, sac, invTransform, getSharedQueue());
+
+					final InvertibleRealTransform invTransform3D;
+					if( invTransform.numTargetDimensions() == 2 )
+						invTransform3D = new InvertibleWrapped2DTransformAs3D(invTransform);
+					else
+						invTransform3D = invTransform;
+
+					newSac = BigWarpInit.cacheTransformedSource( this, i, sac, invTransform3D, getSharedQueue());
 				}
 
 				// will need to reload transformation on export if the transform is cached
