@@ -8,3 +8,5 @@ If you are using this tool in your work, please do not forget to cite [John Bogo
 JA Bogovic, P Hanslovsky, A Wong, S Saalfeld, "Robust registration of calcium images by learned contrast synthesis", In *Biomedical Imaging (ISBI)*, 2016 IEEE 13th International Symposium on, 1123-1126,  DOI: [10.1109/ISBI.2016.7493463](https://doi.org/10.1109/ISBI.2016.7493463).
 
 See the main [bigwarp page](http://fiji.sc/BigWarp) for details.
+
+* [I2K 2024 workshop instructions](doc/BigWarpI2K2024.md)
