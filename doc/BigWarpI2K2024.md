@@ -25,6 +25,9 @@ Oct 24, 2024 9:45 AM<br>
     * [CLEM samples](https://figshare.com/s/442b7686fe02a0839ef7)
     * [bigwarp supplementary files](https://figshare.com/s/4d95d3cf9ed9be123c1a)
 
+ 
+ * [Emergency backup](https://figshare.com/s/322d3d456b4a67b947e9)
+
 ### About this sample data
 
 >  Kidney tissue from a wild-type, postnatal day 7 mouse, strain: C57BL/6J from Jackson Lab
