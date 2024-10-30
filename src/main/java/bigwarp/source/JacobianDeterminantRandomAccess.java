@@ -40,8 +40,9 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 {
 	protected DifferentiableRealTransform transform;
 	
-	final private T value;
-	final double[] warpRes;
+	private final T value;
+	private final double[] x;
+	private final double[] x3;
 
 	protected JacobianDeterminantRandomAccess( double[] dimensions )
 	{
@@ -50,10 +51,11 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 	
 	protected JacobianDeterminantRandomAccess( final double[] dimensions, final T value, final DifferentiableRealTransform transform )
 	{
-		super( dimensions.length );
+		super( 3 );
 		setTransform( transform );
-		this.value = value;
-		warpRes = new double[ numDimensions() ]; 
+		this.value = value.copy();
+		x = new double[ dimensions.length ];
+		x3 = new double[3];
 	}
 	
 	public void setTransform( final DifferentiableRealTransform transform )
@@ -67,29 +69,29 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 	@Override
 	public T get() 
 	{
+		// TODO check the below
 		// copy value here so this is thread safe
-		T out = value.copy();
 		if( transform == null )
 		{
-			out.setZero();
-			return out;
+			value.setOne();
+			return value;
 		}
 
 		// compute the jacobian determinant at this point
-		double[] x = new double[ numDimensions() ];
-		localize( x );
-		AffineTransform jacobian = transform.jacobian( x );
-		DMatrixRMaj jacMtx = new DMatrixRMaj();
-		jacMtx.data = jacobian.getRowPackedCopy(); 
-		out.setReal( CommonOps_DDRM.det( jacMtx ) );
+		localize( x3 );
+		System.arraycopy(x3, 0, x, 0, x.length);
 
-		return out;
+		final AffineTransform jacobian = transform.jacobian( x );
+		final DMatrixRMaj jacMtx = new DMatrixRMaj();
+		jacMtx.data = jacobian.getRowPackedCopy(); 
+		value.setReal( CommonOps_DDRM.det( jacMtx ) );
+
+		return value;
 	}
 
 	public RealRandomAccess<T> copy() 
 	{
-		return new JacobianDeterminantRandomAccess< T >( new double[ position.length ], value.copy(), 
-				transform );
+		return new JacobianDeterminantRandomAccess<T>(new double[x.length], value.copy(), transform);
 	}
 
 	public RealRandomAccess<T> copyRandomAccess() 
@@ -266,10 +268,14 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 	{
 		protected final JacobianDeterminantRandomAccess< T > ra;
 
-		public JacobianDeterminantRandomAccessibleInterval( Interval interval, T t, DifferentiableRealTransform warp )
+		public JacobianDeterminantRandomAccessibleInterval( Interval interval, T t, DifferentiableRealTransform transform )
 		{
 			super( interval );
-			ra = new JacobianDeterminantRandomAccess< T >( new double[ interval.numDimensions() ], t, warp );
+			int nd = interval.dimension(2) < 2 ? 2 : 3;
+			if( nd == 2)
+				ra = new JacobianDeterminantRandomAccess< T >( new double[ nd ], t, transform );
+			else
+				ra = new JacobianDeterminantRandomAccess< T >( new double[ nd ], t, transform );
 		}
 
 		@Override

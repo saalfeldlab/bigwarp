@@ -21,8 +21,6 @@
  */
 package bigwarp.source;
 
-import java.util.Arrays;
-
 import bdv.viewer.Interpolation;
 import bdv.viewer.Source;
 import bigwarp.BigWarpData;
@@ -32,7 +30,6 @@ import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imglib2.Cursor;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealRandomAccess;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.BoundingBoxEstimation;
@@ -58,20 +55,13 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 	{
 		this.name = name;
 		this.type = t;
-
 		sourceData = data;
-
-		//RandomAccessibleInterval<?> fixedsrc = sourceData.sources.get( 1 ).getSpimSource().getSource( 0, 0 );
-//		interval = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getSource( 0, 0 );
-//		interval = sourceData.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 );
 
 		final BoundingBoxEstimation bbe = new BoundingBoxEstimation();
 		final AffineTransform3D affine = new AffineTransform3D();
 		data.getTargetSource( 0 ).getSpimSource().getSourceTransform( 0, 0, affine );
-		interval = bbe.estimatePixelInterval(  affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
+		interval = bbe.estimatePixelInterval( affine, data.getTargetSource( 0 ).getSpimSource().getSource( 0, 0 ) );
 
-
-//		VoxelDimensions srcVoxDims = sourceData.sources.get( sourceData.targetSourceIndices[ 0 ] ).getSpimSource().getVoxelDimensions();
 		VoxelDimensions srcVoxDims = sourceData.getTargetSource( 0 ).getSpimSource().getVoxelDimensions();
 		String unit = "pix";
 		if( srcVoxDims != null )
@@ -81,7 +71,7 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 
 		jacDetImg = new JacobianDeterminantRandomAccess.JacobianDeterminantRandomAccessibleInterval< T >( interval, t, null );
 	}
-	
+
 	public double getMax( LandmarkTableModel lm )
 	{
 		double maxVal = 0.0;
@@ -108,31 +98,30 @@ public class JacobianDeterminantSource< T extends RealType< T >> implements Sour
 		jacDetImg.setTransform( transform );
 	}
 	
+	@Deprecated
 	public void debug( double[] pt )
 	{
-		RealRandomAccess<T> rra = jacDetImg.realRandomAccess();
-		
-		rra.setPosition( pt );
-		
-		System.out.println("at : " + Arrays.toString( pt ) );
-		System.out.println( "get val: " + rra.get());
-
+//		RealRandomAccess<T> rra = jacDetImg.realRandomAccess();
+//		
+//		rra.setPosition( pt );
+//		
+//		System.out.println("at : " + Arrays.toString( pt ) );
+//		System.out.println( "get val: " + rra.get());
+//
 //		double[] warpRes = new double[ jacDetImg.ra.warp.numTargetDimensions() ]; 
 //		jacDetImg.ra.warp.apply( pt, warpRes );
 //
 //		System.out.println( "base res: " + baseRes[0] + " " + baseRes[1]);
 //		System.out.println( "warp res: " + warpRes[0] + " " + warpRes[1]);
-		
 	}
 
 	public double[] minMax()
 	{
-		double[] minmax = new double[ 2 ];
+		final double[] minmax = new double[ 2 ];
 		minmax[ 0 ] = Double.MAX_VALUE;
 		minmax[ 1 ] = Double.MIN_VALUE;
 		
-		Cursor<T> curs = Views.iterable( this.getSource( 0,0 ) ).cursor();
-		
+		final Cursor<T> curs = this.getSource( 0,0 ).cursor();
 		while( curs.hasNext() )
 		{
 			double val = curs.next().getRealDouble();
