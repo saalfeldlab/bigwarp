@@ -4012,10 +4012,17 @@ public class BigWarp< T >
 
 	protected void saveLandmarks( final String filename ) throws IOException
 	{
-		if( filename.endsWith("csv"))
-			landmarkModel.save(new File( filename ));
-		else if( filename.endsWith("json"))
-			TransformWriterJson.write(landmarkModel, bwTransform, new File( filename ));
+		final File f = new File( filename );
+		if( filename.endsWith("csv")) {
+			landmarkModel.save( f );
+			setLastDirectory(f.getParentFile());
+		}
+		else if( filename.endsWith("json")) {
+			TransformWriterJson.write(landmarkModel, bwTransform, f);
+			setLastDirectory(f.getParentFile());
+		}
+
+		// TODO message to users if neither case succeeds
 	}
 
 	protected void loadLandmarks()
@@ -4051,7 +4058,6 @@ public class BigWarp< T >
 		catch ( URISyntaxException e ) { }
 
 		final File file = new File( name );
-		setLastDirectory( file.getParentFile() );
 		if( name.endsWith( "csv" ))
 		{
 			try
@@ -4067,6 +4073,8 @@ public class BigWarp< T >
 		{
 			TransformWriterJson.read( file, this );
 		}
+
+		setLastDirectory( file.getParentFile() );
 
 		final boolean didCompute = restimateTransformation();
 
@@ -4109,13 +4117,11 @@ public class BigWarp< T >
 			{
 				final String canonicalPath = settingsFile.getCanonicalPath();
 				if ( canonicalPath.endsWith( ".xml" ) )
-				{
-					saveSettings( canonicalPath );
-				}
+					saveSettings(canonicalPath);
 				else
-				{
-					saveSettingsJson( canonicalPath );
-				}
+					saveSettingsJson(canonicalPath);
+
+				setLastDirectory(settingsFile.getParentFile());
 			}
 			catch ( final IOException e )
 			{
@@ -4342,6 +4348,8 @@ public class BigWarp< T >
 			activeSourcesDialogP.update();
 			activeSourcesDialogQ.update();
 		}
+
+		setLastDirectory(new File(jsonOrXmlFilename).getParentFile());
 
 		viewerFrameP.repaint();
 		viewerFrameQ.repaint();
