@@ -1543,15 +1543,15 @@ public class BigWarp< T >
 		final JMenuBar landmarkMenuBar = new JMenuBar();
 		fileMenu = new JMenu( "File" );
 		final JMenuItem openItem = new JMenuItem( actionMap.get( BigWarpActions.LOAD_LANDMARKS ) );
-		openItem.setText( "Import landmarks" );
+		openItem.setText( "Import landmarks..." );
 		fileMenu.add( openItem );
 
 		final JMenuItem saveItem = new JMenuItem( actionMap.get( BigWarpActions.SAVE_LANDMARKS ));
-		saveItem.setText( "Export landmarks" );
+		saveItem.setText( "Export landmarks..." );
 		fileMenu.add( saveItem );
 
 		fileMenu.addSeparator();
-		final JMenuItem exportImageItem = new JMenuItem( "Export Moving Image" );
+		final JMenuItem exportImageItem = new JMenuItem( "Export Moving Image..." );
 
 		landmarkMenuBar.add( fileMenu );
 		landmarkFrame.setJMenuBar( landmarkMenuBar );
@@ -1563,7 +1563,7 @@ public class BigWarp< T >
 
 		final JMenu landmarkMenu = new JMenu( "Landmarks" );
 		final JMenuItem landmarkGridItem = new JMenuItem( actionMap.get( BigWarpActions.LANDMARK_GRID_DIALOG ) );
-		landmarkGridItem.setText( "Build landmark grid" );
+		landmarkGridItem.setText( "Build landmark grid..." );
 		landmarkMenu.add( landmarkGridItem );
 
 		landmarkMenuBar.add( landmarkMenu );
