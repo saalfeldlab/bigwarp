@@ -23,24 +23,32 @@ package bigwarp.landmarks;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+
 import bdv.ij.ApplyBigwarpPlugin;
+import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import ij.gui.GenericDialog;
 import net.imglib2.FinalRealInterval;
-import net.imglib2.Interval;
 import net.imglib2.RealInterval;
 import net.imglib2.iterator.RealIntervalIterator;
-import net.imglib2.util.Intervals;
+import net.imglib2.realtransform.BoundingBoxEstimation;
 
 public class LandmarkGridGenerator
 {
-	
-	final protected double[] spacing;
 
-	final protected RealInterval interval;
+	public static int NUM_LANDMARKS_FOR_WARNING = 1200;
+
+	private static final double SPACING_MULTIPLIER = 0.9999999;
+
+	protected final double[] spacing;
+
+	protected final RealInterval interval;
+
+	private TableModelListener[] listeners;
 
 	public LandmarkGridGenerator( final RealInterval interval, final double[] spacing )
 	{
@@ -54,7 +62,7 @@ public class LandmarkGridGenerator
 		spacing = new double[ interval.numDimensions() ];
 		for( int i = 0; i < interval.numDimensions(); i++  )
 		{
-			spacing[ i ]  = ( interval.realMax( i ) - interval.realMin( i ) ) / ( number[ i ] - 1 ); 
+			spacing[ i ] =  SPACING_MULTIPLIER * ( interval.realMax( i ) - interval.realMin( i ) ) / ( number[ i ] - 1 ); 
 		}
 	}
 
@@ -73,12 +81,12 @@ public class LandmarkGridGenerator
 	 */
 	public int fill( LandmarkTableModel ltm )
 	{
-		System.out.println("interval: " + Arrays.toString( Intervals.maxAsDoubleArray( interval )));
-		System.out.println("spacing: " + Arrays.toString( spacing ));
+		pauseListeners(ltm);
 
 		int i = 0;
 		double[] p = new double[ interval.numDimensions() ];
 		RealIntervalIterator it = new RealIntervalIterator( interval, spacing );
+
 		while( it.hasNext() )
 		{
 			it.fwd();
@@ -90,12 +98,11 @@ public class LandmarkGridGenerator
 			i++;
 		}
 
-		System.out.println( "Added " + i + " pts" );
-
+		resumeAndTriggerListeners(ltm);
 		return i;
 	}
 	
-	public static boolean fillFromDialog( final BigWarp bw )
+	public static boolean fillFromDialog( final BigWarp<?> bw )
 	{
 		LandmarkTableModel ltm = bw.getLandmarkPanel().getTableModel();
 		int nd = ltm.ndims;
@@ -131,38 +138,34 @@ public class LandmarkGridGenerator
 
 		double sx = gd.getNextNumber();
 		double sy = gd.getNextNumber();
-		double sz = 1;
+		double sz = -1;
 		if( nd > 2 )
 			sz = gd.getNextNumber();
 
 
-		double[] res = ApplyBigwarpPlugin.getResolution( bw.getData(), ApplyBigwarpPlugin.TARGET, null );
-		List<Interval> outputIntervalList = ApplyBigwarpPlugin.getPixelInterval( 
-				bw.getData(), bw.getLandmarkPanel().getTableModel(), null,
-				ApplyBigwarpPlugin.TARGET, 
-				null, null, null, null, res );
-
-		Interval pixelInterval = outputIntervalList.get( 0 );
-		
-		double[] max = new double[ nd ];
-		for( int i = 0; i < nd; i++ )
-		{
-			max[ i ] = res[ i ] * pixelInterval.dimension(i);
-		}
-	
-		FinalRealInterval interval = new FinalRealInterval( new double[ nd ], max );
-		LandmarkGridGenerator gen;
-		if( sx > 0 || sy > 0 || sz > 0 )
-		{
-			gen = new LandmarkGridGenerator( interval, new double[]{ sx, sy, sz });
-		}
+		Source<?> tgtSrc = null;
+		if (bw.getData().numTargetSources() == 0)
+			throw new RuntimeException("Requested target field of view, but no target source exists.");
 		else
-		{
-			gen = new LandmarkGridGenerator( interval, new long[]{ (long)nx, (long)ny, (long)nz });
-		}
-		
-		double N = gen.approxNumberOfPoints();
-		if( N > 1 )
+			tgtSrc = bw.getData().getTargetSource(0).getSpimSource();
+
+		double[] res = ApplyBigwarpPlugin.getResolution( bw.getData(), ApplyBigwarpPlugin.TARGET, null );
+		List<RealInterval> outputIntervals = ApplyBigwarpPlugin.getPhysicalInterval(bw.getData(), ltm, null,
+				ApplyBigwarpPlugin.TARGET, null, null, null, null, res);
+
+		final double[] offset = ApplyBigwarpPlugin.getPhysicalOffset( ApplyBigwarpPlugin.TARGET, null, ltm, null,
+				"", new BoundingBoxEstimation(), res, null, tgtSrc );
+
+		final RealInterval interval = offsetAndSqueezeInterval( outputIntervals.get(0), offset, nd );
+
+		LandmarkGridGenerator gen;
+		if (sx > 0 || sy > 0 || sz > 0)
+			gen = new LandmarkGridGenerator(interval, new double[]{sx, sy, sz});
+		else
+			gen = new LandmarkGridGenerator(interval, new long[]{(long)nx, (long)ny, (long)nz});
+
+		final double N = gen.approxNumberOfPoints();
+		if( N > NUM_LANDMARKS_FOR_WARNING )
 		{
 			final GenericDialog warningDialog = new GenericDialog( "Warning" );
 			warningDialog.addMessage( "You are about to add approximately\n" + Math.round( N ) + "\npoints." );
@@ -177,20 +180,40 @@ public class LandmarkGridGenerator
 		}
 
 		gen.fill( ltm );
+
 		return true;
 	}
 
-	public static void main( String[] args ) throws IOException
-	{
-		File f = new File( "/home/john/landmarkGrid.csv" );
-		LandmarkGridGenerator grid = new LandmarkGridGenerator( new FinalRealInterval( 
-				new double[] {0,0,0}, new double[] {200,100,50} ), 
-				new long[] {10,10,10} );
+	private void pauseListeners( LandmarkTableModel ltm ) {
 
-		LandmarkTableModel ltm = new LandmarkTableModel( 3 );
+		listeners = ltm.getTableModelListeners();
+		for( TableModelListener l : listeners )
+			ltm.removeTableModelListener(l);
+	}
 
-		grid.fill( ltm );
-		ltm.save( f );
+	private void resumeAndTriggerListeners( LandmarkTableModel ltm ) {
+
+		final TableModelEvent e = new TableModelEvent(ltm);
+		for (TableModelListener l : listeners) {
+			ltm.addTableModelListener(l);
+			l.tableChanged(e);
+		}
+	}
+
+	private static RealInterval offsetAndSqueezeInterval( RealInterval interval, double[] offset, int nd ) {
+
+		if( interval.numDimensions() <= nd ) 
+			return interval;
+
+		double[] min = new double[nd];
+		double[] max = new double[nd];
+		for( int i = 0; i < nd; i++ )
+		{
+			min[i] = interval.realMin(i) + offset[i];
+			max[i] = interval.realMax(i) + offset[i];
+		}
+
+		return new FinalRealInterval(min, max);
 	}
 
 }

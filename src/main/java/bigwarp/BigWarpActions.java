@@ -219,6 +219,7 @@ public class BigWarpActions extends Actions
 	public static final String[] LANDMARK_ACTIVATE_SELECTED_KEYS = new String[]{ "ctrl BACK_SPACE" };
 	public static final String LANDMARK_ACTIVATE_SELECTED = "activate selected landmarks";
 
+	public static final String[] LANDMARK_GRID_DIALOG_KEYS = new String[]{ NOT_MAPPED };
 	public static final String LANDMARK_GRID_DIALOG = "landmark grid dialog";
 
 	// mask
@@ -370,6 +371,8 @@ public class BigWarpActions extends Actions
 
 			descriptions.add( LANDMARK_ACTIVATE_SELECTED, LANDMARK_ACTIVATE_SELECTED_KEYS, "Activate selected landmarks." );
 			descriptions.add( LANDMARK_DEACTIVATE_SELECTED, LANDMARK_DEACTIVATE_SELECTED_KEYS, "Deactivate selected landmarks." );
+
+			descriptions.add( LANDMARK_GRID_DIALOG, LANDMARK_GRID_DIALOG_KEYS, "Open a dialog for creating a landmark grid." );
 
 			// alignment
 			descriptions.add( XYPLANE, XYPLANE_KEYS, "xy plane" );
@@ -621,6 +624,7 @@ public class BigWarpActions extends Actions
 		actions.runnableAction( bw::loadLandmarks, LOAD_LANDMARKS, LOAD_LANDMARKS_KEYS );
 		actions.runnableAction( bw::saveLandmarks, SAVE_LANDMARKS, SAVE_LANDMARKS_KEYS );
 		actions.runnableAction( bw::quickSaveLandmarks, QUICK_SAVE_LANDMARKS, QUICK_SAVE_LANDMARKS_KEYS );
+		actions.namedAction( new LandmarkGridDialogAction( bw ), LANDMARK_GRID_DIALOG_KEYS );
 
 		actions.namedAction( new UndoRedoAction( UNDO, bw ), UNDO_KEYS );
 		actions.namedAction( new UndoRedoAction( REDO, bw ), REDO_KEYS );
