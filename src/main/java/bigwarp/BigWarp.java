@@ -2682,20 +2682,20 @@ public class BigWarp< T >
 
 	protected void fitBaselineWarpMagModel()
 	{
-		final int numActive = landmarkModel.numActive();
-		if( numActive < 4 )
-			return;
-
-		final int ndims = landmarkModel.getNumdims();
-		final double[][] p = new double[ ndims ][ numActive ];
-		final double[][] q = new double[ ndims ][ numActive ];
-		final double[] w = new double[ numActive ];
-
-		landmarkModel.copyLandmarks( p, q );
-		Arrays.fill( w, 1.0 );
-
 		if( warpMagSource != null )
 		{
+			final int numActive = landmarkModel.numActive();
+			if( numActive < 4 )
+				return;
+
+			final int ndims = landmarkModel.getNumdims();
+			final double[][] p = new double[ ndims ][ numActive ];
+			final double[][] q = new double[ ndims ][ numActive ];
+			final double[] w = new double[ numActive ];
+
+			landmarkModel.copyLandmarks( p, q );
+			Arrays.fill( w, 1.0 );
+
 			try
 			{
 				final AbstractModel< ? > baseline = this.baseXfmList[ baselineModelIndex ];
@@ -3032,10 +3032,9 @@ public class BigWarp< T >
 
 	public boolean restimateTransformation()
 	{
-		if ( landmarkModel.getActiveRowCount() < 4 )
-		{
+		if (landmarkModel.getActiveRowCount() < 4)
 			return false;
-		}
+
 		// TODO restimateTransformation
 		// This distinction is unnecessary right now, because
 		// transferUpdatesToModel just calls initTransformation.. but this may
