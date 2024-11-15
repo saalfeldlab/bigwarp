@@ -545,20 +545,33 @@ public class BigWarpInitDialog extends JFrame
 				IJ.showMessage("Please highlight the row you would like to transform.");
 			else
 			{
-
 				final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
 
-				transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-						lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
+				transformSelectionDialog = new TransformSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+						lastOpenedContainer, tformParsers );
 
 				transformSelectionDialog.setLoaderExecutor( exec );
 				transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
 				transformSelectionDialog.setContainerPathUpdateCallback( x -> {
 					if ( x != null )
 						lastOpenedContainer = x;
-				} );
+				});
 
-				transformSelectionDialog.run(this::n5DialogTransformCallback);
+				transformSelectionDialog.run( selection -> {
+					final String n5RootPath = transformSelectionDialog.getN5RootPath();
+					final int i = sourceTable.getSelectedRow();
+					if( selection.metadata.size() > 0 ) {
+
+						final String path = selection.metadata.get(0).getPath();
+						final int idx = path.lastIndexOf("/");
+
+						final String group = idx > 0 ? path.substring(0, idx) : "";
+						final String attributePath = idx > 0 ? path.substring(idx+1) : path;
+						sourceTableModel.setTransform(i, n5RootPath + "?" + group + "#" + attributePath);
+					}
+
+					repaint();
+				});
 
 				// remove any existing selection listeners
 				final JTree tree = transformSelectionDialog.getJTree();
