@@ -299,8 +299,6 @@ public class BigWarp< T >
 
 	protected MouseLandmarkTableListener landmarkTableListener;
 
-	protected MaskedSourceEditorMouseListener maskSourceMouseListenerP;
-
 	protected MaskedSourceEditorMouseListener maskSourceMouseListenerQ;
 
 	protected BigWarpMessageAnimator message;
@@ -2305,7 +2303,6 @@ public class BigWarp< T >
 	 */
 	public void transformationsFromCoordinateSystem() {
 
-		System.out.println( "transformationsFromCoordinateSystem" );
 		final TransformGraph graph = warpVisDialog.transformGraphPanel.getGraph();
 		if( graph == null )
 			return;

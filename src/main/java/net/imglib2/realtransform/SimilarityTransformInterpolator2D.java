@@ -30,9 +30,6 @@ public class SimilarityTransformInterpolator2D implements AffineInterpolator
 
 		double[] params = GeomUtils.scalesAngle( transformEnd );
 		thtDiff = params[ 2 ];
-//		double s = ( params[ 0 ] + params[ 1 ] ) / 2.0 ; 
-//		sDiff = s - 1.0;
-
 		sDiff = ( params[ 0 ] + params[ 1 ] ) / 2.0 - 1.0; 
 
 		// translation needed to from reconstructed to target transformation
@@ -95,8 +92,6 @@ public class SimilarityTransformInterpolator2D implements AffineInterpolator
 		
 
 		final SimilarityTransformInterpolator2D interp = new SimilarityTransformInterpolator2D( t, c );
-////		System.out.println( interp );
-//		System.out.println( interp.get( 0 ) );
 
 		System.out.println( t );
 		System.out.println( interp.get( 1 ) ); 

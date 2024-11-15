@@ -93,7 +93,8 @@ public class BigWarpInitDialog extends JFrame
 	private BigWarpSourceTableModel sourceTableModel;
 	private JComboBox<String> imagePlusDropdown;
 	private JButton addImageButton, addPathButton, addTransformButton;
-	private DatasetSelectorDialog selectionDialog, transformSelectionDialog;
+	private DatasetSelectorDialog selectionDialog;
+	private TransformSelectorDialog transformSelectionDialog;
 
 	private String lastOpenedContainer = "";
 	private String lastBrowsePath = null;

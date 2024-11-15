@@ -105,7 +105,6 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 	@SuppressWarnings("rawtypes")
 	public WrappedIterativeInvertibleRealTransform<?> solve( final double[][] mvgPts, final double[][] tgtPts )
 	{
-//		WrappedCoordinateTransform simXfm = interpSolver.solve( mvgPts, tgtPts );
 		final WrappedCoordinateTransform simXfm = interpSolver.solve( tgtPts, mvgPts );
 
 		RealTransform msim;
@@ -120,9 +119,6 @@ public class MaskedSimRotTransformSolver<T extends RealType<T>> extends Abstract
 			final AffineTransform3D sim = BigWarpTransform.toAffine3D( ( AbstractAffineModel3D ) interpSolver.getModel() );
 			msim = new MaskedSimilarityTransform( sim, lambda, center, interp );
 		}
-
-//		final double[][] xfmMvg = transformPoints( msim, mvgPts );
-//		final InvertibleRealTransform baseTransform = baseSolver.solve( xfmMvg, tgtPts );
 
 		final double[][] xfmTgt = transformPoints( msim, tgtPts );
 		final InvertibleRealTransform baseTransform = baseSolver.solve( mvgPts, xfmTgt );

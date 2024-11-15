@@ -1482,11 +1482,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	public void copyLandmarks( double[][] movingLandmarks, double[][] targetLandmarks )
 	{
+		logger.trace(
+				String.format("copyLandmarks. nActive=%d.  sizes = %d x %d ; %d x %d ", numActive,
+						movingLandmarks.length, movingLandmarks[0].length,
+						targetLandmarks.length, targetLandmarks[0].length));
+
 		synchronized(this) {
-			logger.trace(
-					String.format("copyLandmarks. nActive=%d.  sizes = %d x %d ; %d x %d ", numActive,
-							movingLandmarks.length, movingLandmarks[0].length,
-							targetLandmarks.length, targetLandmarks[0].length));
 			int k = 0;
 			for ( int i = 0; i < this.numRows; i++ )
 			{

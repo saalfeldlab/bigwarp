@@ -41,7 +41,7 @@ public class BigWarpLandmarkFrame extends JFrame {
 
 	private static final long serialVersionUID = -5160678226566479257L;
 
-	private final BigWarp bw;
+	private final BigWarp<?> bw;
 
 	private BigWarpLandmarkPanel lmPanel;
 
@@ -51,7 +51,7 @@ public class BigWarpLandmarkFrame extends JFrame {
 
 	private final TriggerBehaviourBindings triggerbindings;
 
-	public BigWarpLandmarkFrame( String name, BigWarpLandmarkPanel panel, BigWarp< ? > bw, KeymapManager keymapManager )
+	public BigWarpLandmarkFrame( String name, BigWarpLandmarkPanel panel, BigWarp<?> bw, KeymapManager keymapManager )
 	{
 		super( name, AWTUtils.getSuitableGraphicsConfiguration( AWTUtils.RGB_COLOR_MODEL )  );
 		this.bw = bw;
