@@ -1161,11 +1161,11 @@ public class BigWarp< T >
 		viewerMenuBar.add( fileMenu );
 
 		final JMenuItem loadProject = new JMenuItem( actionMap.get( BigWarpActions.LOAD_PROJECT ) );
-		loadProject.setText( "Load project" );
+		loadProject.setText( "Load project..." );
 		fileMenu.add( loadProject );
 
 		final JMenuItem saveProject = new JMenuItem( actionMap.get( BigWarpActions.SAVE_PROJECT ) );
-		saveProject.setText( "Save project" );
+		saveProject.setText( "Save project..." );
 		fileMenu.add( saveProject );
 
 		fileMenu.addSeparator();
@@ -1174,12 +1174,12 @@ public class BigWarp< T >
 		fileMenu.add( openItem );
 
 		final JMenuItem saveItem = new JMenuItem( actionMap.get( BigWarpActions.SAVE_LANDMARKS ));
-		saveItem.setText( "Export landmarks" );
+		saveItem.setText( "Export landmarks..." );
 		fileMenu.add( saveItem );
 
 		fileMenu.addSeparator();
 		final JMenuItem openMask = new JMenuItem( actionMap.get( BigWarpActions.MASK_IMPORT ));
-		openMask.setText( "Import mask" );
+		openMask.setText( "Import mask..." );
 		fileMenu.add( openMask );
 
 		final JMenuItem removeMask = new JMenuItem( actionMap.get( BigWarpActions.MASK_REMOVE ));
@@ -1198,11 +1198,11 @@ public class BigWarp< T >
 
 		fileMenu.addSeparator();
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ));
-		exportToImagePlus.setText( "Export moving image" );
+		exportToImagePlus.setText( "Export moving image..." );
 		fileMenu.add( exportToImagePlus );
 
 		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ));
-		exportWarpField.setText( "Export transformation" );
+		exportWarpField.setText( "Export transformation..." );
 		fileMenu.add( exportWarpField );
 
 		final JMenu settingsMenu = new JMenu( "Settings" );
