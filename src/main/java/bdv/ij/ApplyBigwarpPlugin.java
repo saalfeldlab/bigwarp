@@ -919,7 +919,9 @@ public class ApplyBigwarpPlugin implements PlugIn
 	 * @param ltm the {@link LandmarkTableModel}
 	 * @param transform the transform using to warp images (used for warped moving source option)
 	 * @param fieldOfViewPointFilter the landmark name filter for FOV estimation
+	 * @param bboxEst the bounding box estimation method
 	 * @param outputResolution the resolution of the output image
+	 * @param movingSource the moving source
 	 * @param targetSource the target source
 	 * @return the offset in physical units
 	 */

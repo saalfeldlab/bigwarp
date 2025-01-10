@@ -359,6 +359,7 @@ public class BigWarpInit {
 	/**
 	 * Initialize BigWarp.
 	 * 
+	 * @param <T> the type
 	 * @param bwdata
 	 *            a BigWarpData instance
 	 * @param src
@@ -402,6 +403,7 @@ public class BigWarpInit {
 	/**
 	 * Initialize BigWarp.
 	 *
+	 * @param <T> the type
 	 * @param bwdata
 	 *            a BigWarpData instance
 	 * @param src
@@ -430,7 +432,6 @@ public class BigWarpInit {
 		return bwdata;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
 		for( Entry<Source<T>, SourceInfo> entry : sources.entrySet() ) {

@@ -100,12 +100,11 @@ import bigwarp.transforms.metadata.N5TransformMetadata;
 import ij.IJ;
 import ij.ImageJ;
 import ij.gui.ProgressBar;
-import loci.poi.util.SystemOutLogger;
 import net.imglib2.util.Pair;
 import se.sawano.java.text.AlphanumericComparator;
 
 /**
- * Essentially a copy of {@link DatasetSelectorDialog} to work for 
+ * Essentially a copy of DatasetSelectorDialog to work for 
  * transformation selection.
  *
  * Aim to deprecate this class in the future once DatasetSelectorDialog can
