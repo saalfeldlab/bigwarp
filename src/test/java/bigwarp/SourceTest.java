@@ -45,7 +45,8 @@ public class SourceTest
 	{
 		new ImageJ();
 
-		ImagePlus imp = IJ.openImage( "http://imagej.nih.gov/ij/images/mri-stack.zip" );
+		ImagePlus imp = IJ.openImage( "https://imagej.net/ij/images/mri-stack.zip");
+		System.out.println(imp);
 
 		BdvStackSource< UnsignedByteType > bdv = BdvFunctions
 				.show( ImageJFunctions.wrapByte( imp ), "mri-stack" );
@@ -60,7 +61,10 @@ public class SourceTest
 		tsrc.setIncrementalTransform( affine );
 
 
-		BigWarpData< ? > datasrc = BigWarpInit.createBigWarpData( new Source[] { tsrc }, new Source[] { tsrc }, new String[] { "mvg", "tgt" } );
+		BigWarpData datasrc = BigWarpInit.initData();
+		BigWarpInit.add(datasrc, BigWarpInit.createSources(datasrc, tsrc, 0, true));
+		BigWarpInit.add(datasrc, BigWarpInit.createSources(datasrc, tsrc, 1, false));
+
 		BigWarp< ? > bw = new BigWarp<>( datasrc, BigWarpViewerOptions.options(), new ProgressWriterConsole() );
 		bw.getLandmarkPanel().getTableModel().load( new File( "src/test/resources/mr_landmarks_p2p2p4-111.csv" ));
 	}
