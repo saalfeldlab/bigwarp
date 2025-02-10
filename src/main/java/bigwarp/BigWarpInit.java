@@ -250,44 +250,28 @@ public class BigWarpInit {
 	 * @return BigWarpData the data
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
+	public static <T> BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
 	{
 		final BigWarpData data = initData();
-		int nameIdx = 0;
 		int setupId = 0;
+
 		// moving
-		for ( final Source< ? > mvgSource : movingSourceList )
-		{
-			add( data, mvgSource, setupId, 1, true );
-			final SourceAndConverter< ? > addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
-			final SourceInfo info = new SourceInfo( setupId, true, names[ nameIdx++ ] );
-			info.setSourceAndConverter( addedSource );
-			data.sourceInfos.put( setupId++, info );
-		}
+		for (final Source<?> mvgSource : movingSourceList)
+			add(data, createSources(data, (Source<T>) mvgSource, setupId++, true));
 
 		// target
-		for ( final Source< ? > fxdSource : fixedSourceList )
-		{
-			add( data, fxdSource, setupId, 1, false );
-			final SourceAndConverter< ? > addedSource = ( ( BigWarpData< ? > ) data ).sources.get( data.sources.size() - 1 );
-			final SourceInfo info = new SourceInfo( setupId, false, names[ nameIdx++ ] );
-			info.setSourceAndConverter( addedSource );
-			data.sourceInfos.put( setupId++, info );
-		}
+		for (final Source<?> fxdSource : fixedSourceList)
+			add(data, createSources(data, (Source<T>) fxdSource, setupId++, false));
 
-		if ( names != null )
-		{
-			final ArrayList wrappedSources = wrapSourcesAsRenamable( data.sources, names );
-			final AtomicInteger sourceInfoIdx = new AtomicInteger();
+		// set names
+		final ArrayList wrappedSources = wrapSourcesAsRenamable( data.sources, names );
+		final AtomicInteger sourceInfoIdx = new AtomicInteger();
+		data.sources = wrappedSources;
 
-			final BigWarpData< ? > typedData = data;
-			typedData.sourceInfos.forEach( ( id, info ) -> {
-				info.setSourceAndConverter( typedData.sources.get( sourceInfoIdx.getAndIncrement() ) );
-			} );
-
-			return new BigWarpData( wrappedSources, data.converterSetups, data.cache );
-
-		}
+		final BigWarpData< ? > typedData = data;
+		typedData.sourceInfos.forEach( ( id, info ) -> {
+			info.setSourceAndConverter( typedData.sources.get( sourceInfoIdx.getAndIncrement() ) );
+		} );
 
 		return data;
 	}
