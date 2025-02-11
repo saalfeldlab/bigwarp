@@ -669,9 +669,8 @@ public class BigWarp< T >
 		if( data.sources.size() > 0 )
 			initialize();
 
-		createMovingTargetGroups();
-		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerQ.state().setCurrentGroup( tgtGrp );
+
+
 //		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
 		SwingUtilities.invokeLater( () -> {
@@ -832,10 +831,10 @@ public class BigWarp< T >
 
 		updateSourceBoundingBoxEstimators();
 
-		setAllSourcesActiveInFused();
 		createMovingTargetGroups();
 		viewerP.state().setCurrentGroup( mvgGrp );
-		viewerP.state().setCurrentGroup( tgtGrp );
+		viewerQ.state().setCurrentGroup( tgtGrp );
+		setAllSourcesAndGroupsActiveInFused();
 
 		// set initial transforms so data are visible
 //		SwingUtilities.invokeLater( () -> {
@@ -958,10 +957,15 @@ public class BigWarp< T >
 	/**
 	 * Sets the viewer state so that every source is shown in vused mode
 	 */
-	protected void setAllSourcesActiveInFused() {
+	protected void setAllSourcesAndGroupsActiveInFused() {
 
 		viewerP.state().setSourcesActive(data.sources, true);
+		viewerP.state().setGroupActive(mvgGrp, true);
+		viewerP.state().setGroupActive(tgtGrp, true);
+
 		viewerQ.state().setSourcesActive(data.sources, true);
+		viewerQ.state().setGroupActive(mvgGrp, true);
+		viewerQ.state().setGroupActive(tgtGrp, true);
 	}
 
 	/**
