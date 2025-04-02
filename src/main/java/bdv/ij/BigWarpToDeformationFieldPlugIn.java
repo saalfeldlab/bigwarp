@@ -565,13 +565,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, simparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof SimilarityModel3D)
 			{
 				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, simparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.ROTATION:
@@ -580,13 +578,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, rotparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof RigidModel3D)
 			{
 				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, rotparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		case BigWarpTransform.AFFINE:
@@ -595,13 +591,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			{
 				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, affparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			else if (tform instanceof AffineModel3D)
 			{
 				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
 				ct = new AffineCoordinateTransform(name, output, input, affparams);
-				((AffineCoordinateTransform)ct).serializeAsFlatArray();
 			}
 			break;
 		}
