@@ -41,6 +41,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 
+import bigwarp.BigWarpInit;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
@@ -78,6 +79,12 @@ public class NgffTransformations
 		return pair.getA().getTransform( pair.getB() );
 	}
 
+	public static RealTransform open( final N5Reader n5, final String url )
+	{
+		final Pair< CoordinateTransform< ? >, N5Reader > pair = openTransformN5( n5, url );
+		return pair.getA().getTransform( pair.getB() );
+	}
+
 	public static InvertibleRealTransform openInvertible(final String url) {
 
 		final Pair<CoordinateTransform<?>, N5Reader> pair = openTransformN5(url);
@@ -97,7 +104,7 @@ public class NgffTransformations
 
 		if( transforms.length == 1 )
 		{
-
+			// TODO 
 		}
 
 		boolean found = false;
@@ -183,7 +190,19 @@ public class NgffTransformations
 		return false;
 	}
 
-	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url )
+	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final String url ) {
+
+		try {
+			final N5URI n5url = new N5URI(url);
+			final String loc = n5url.getContainerPath();
+			final N5Reader n5 = new N5Factory().gsonBuilder(BigWarpInit.gsonBuilder()).openReader(loc);
+			return openTransformN5(n5, url);
+		} catch (final URISyntaxException e) {}
+
+		return null;
+	}
+
+	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final N5Reader n5, final String url )
 	{
 		if( url == null )
 			return null;
@@ -198,9 +217,7 @@ public class NgffTransformations
 			}
 			else
 			{
-				final N5Reader n5 = new N5Factory().gsonBuilder( gsonBuilder() ).openReader( loc );
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
-
 
 				final String attribute = n5url.getAttributePath();
 				try {
@@ -250,10 +267,9 @@ public class NgffTransformations
 			return null;
 		}
 
-		final Gson gson = gsonBuilder().create();
+		final Gson gson = BigWarpInit.gsonBuilder().create();
 		final JsonElement elem = gson.fromJson( string, JsonElement.class );
 
-//		final CoordinateTransformation ct = gson.fromJson( elem.getAsJsonArray().get( 0 ), CoordinateTransformation.class );
 		final CoordinateTransform<?> ct = gson.fromJson( elem, CoordinateTransform.class );
 		if( ct != null )
 		{
@@ -308,10 +324,6 @@ public class NgffTransformations
 				dfield, spacing, offset, blockSize, compression, threadPool );
 
 		return ngffDfield;
-
-//		final DisplacementFieldCoordinateTransform ngffDfield = new DisplacementFieldCoordinateTransform( "", dataset, "linear" );
-//		return ngffDfield;
-//		N5DisplacementField.addCoordinateTransformations( n5, "/", ngffDfield );
 	}
 
 	public static void addCoordinateTransformations( final N5Writer n5, final String groupPath, final CoordinateTransform<?> transform ) {
@@ -596,6 +608,7 @@ public class NgffTransformations
 		return vectorAxisLastNgff( cs );
 	}
 
+	@Deprecated
 	public static GsonBuilder gsonBuilder() {
 
 		final GsonBuilder gb = new GsonBuilder();
