@@ -3,6 +3,9 @@ package bigwarp.source;
 import bdv.viewer.SourceAndConverter;
 import bigwarp.loader.ImagePlusLoader.ColorSettings;
 import java.util.function.Supplier;
+
+import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
+
 import net.imglib2.realtransform.RealTransform;
 
 public class SourceInfo
@@ -19,6 +22,8 @@ public class SourceInfo
 	private final boolean moving;
 
 	private RealTransform transform;
+
+	private CoordinateSystem coordinateSystem;
 
 	private Supplier<String> transformUriSupplier;
 
@@ -76,6 +81,14 @@ public class SourceInfo
 	public String getUri() {
 
 		return uriSupplier.get();
+	}
+
+	public void setCoordinateSystem( CoordinateSystem coordinateSystem ) {
+		this.coordinateSystem = coordinateSystem;
+	}
+
+	public CoordinateSystem getCoordinateSystem() {
+		return coordinateSystem;
 	}
 
 	public void setUriSupplier(final Supplier<String> getUri) {
