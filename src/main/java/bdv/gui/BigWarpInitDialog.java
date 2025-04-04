@@ -221,7 +221,7 @@ public class BigWarpInitDialog extends JFrame
 						final String transformUrl = transforms[ i ];
 						if( transformUrl!= null && !transformUrl.isEmpty() )
 						{
-							transform = NgffTransformations.open( transformUrl );
+							transform = NgffTransformations.open(transformUrl);
 							transformSupplier = () -> transformUrl;
 						}
 						else {
@@ -596,7 +596,11 @@ public class BigWarpInitDialog extends JFrame
 		clist.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
 		sourceTableModel = new BigWarpSourceTableModel( t -> {
-			final String val = NgffTransformations.detectTransforms(t);
+			String val = null;
+			try {
+				val = NgffTransformations.detectTransforms(t);
+			} catch (Exception ignored) {}
+
 			if (val != null)
 				showMessage(1000, "Found transformation");
 

@@ -810,8 +810,11 @@ public class BigWarpInit {
 		{}
 
 		final List<SourceAndConverter<?>> sources;
-		if( meta instanceof OmeNgffV06MultiScaleMetadata )
+		CoordinateSystem cs = null;
+		if( meta instanceof OmeNgffV06MultiScaleMetadata ) {
 			sources = openNgff06DevSourceAndConverter((BigWarpData)bwData, n5, (OmeNgffV06MultiScaleMetadata)meta, queue);
+			cs = ((OmeNgffV06MultiScaleMetadata)meta).getCoordinateSystems()[0]; // TODO eventually don't use first one
+		}
 		else
 			sources = openN5VSourceAndConverter(bwData, n5, meta, queue);
 
@@ -825,6 +828,8 @@ public class BigWarpInit {
 			final String uri = n5.getURI().toString() + "$" + n5Dataset;
 			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 			info.setSourceAndConverter(sac);
+			if (cs != null)
+				info.setCoordinateSystem(cs);
 
 			sourceStateMap.put((Source<T>)sac.getSpimSource(), info);
 		}

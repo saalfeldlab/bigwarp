@@ -22,6 +22,7 @@ import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.SpacesTransforms;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransformAdapter;
@@ -30,6 +31,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.IdentityCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertibleCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ParametrizedTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
@@ -57,21 +59,13 @@ import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 
-
 public class NgffTransformations
 {
+	public static final String inverseSuffix = "<inverse>";
 
 	public enum TransformField {
 		DISPLACEMENT, COORDINATE
 	};
-
-	@SuppressWarnings("unchecked")
-	public static < T extends RealTransform> T open( final N5Reader n5, final String dataset, final String input, final String output )
-	{
-		// TODO error handling
-		final TransformGraph g = Common.openGraph( n5, dataset );
-		return (T)g.path( input, output ).get().totalTransform( n5, g );
-	}
 
 	public static RealTransform open( final String url )
 	{
@@ -93,6 +87,14 @@ public class NgffTransformations
 			return ((InvertibleCoordinateTransform<?>)ct).getInvertibleTransform(pair.getB());
 		else
 			return null;
+	}
+
+	public static Pair<String,Boolean> isInverse(String uri){
+
+		if(uri.endsWith(inverseSuffix)) {
+			return new ValuePair<>(uri.substring(0, uri.length() - inverseSuffix.length()), true);
+		}
+		return new ValuePair<>(uri, false);
 	}
 
 	public static RealTransform findFieldTransformFirst(final N5Reader n5, final String group) {
@@ -202,13 +204,17 @@ public class NgffTransformations
 		return null;
 	}
 
-	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5( final N5Reader n5, final String url )
-	{
-		if( url == null )
+	public static Pair<CoordinateTransform<?>,N5Reader> openTransformN5(final N5Reader n5, final String fullUrl ) {
+
+		if( fullUrl == null )
 			return null;
 
 		try
 		{
+			final Pair<String, Boolean> urlInverse = NgffTransformations.isInverse(fullUrl);
+			final String url = urlInverse.getA();
+			final boolean isInverse = urlInverse.getB();
+
 			final N5URI n5url = new N5URI( url );
 			final String loc = n5url.getContainerPath();
 			if( loc.endsWith( ".json" ))
@@ -218,10 +224,20 @@ public class NgffTransformations
 			else
 			{
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
-
 				final String attribute = n5url.getAttributePath();
 				try {
-					final CoordinateTransform<?> ct = n5.getAttribute(dataset, attribute, CoordinateTransform.class);
+					final SpacesTransforms st = SpacesTransforms.deserializeSingle(n5, dataset, "ome", attribute);
+					CoordinateTransform<?> ct = st.transforms[0];
+					if( isInverse ) {
+
+						if(ct instanceof InvertibleCoordinateTransform) {
+							ct = new InvertedCoordinateTransform((InvertibleCoordinateTransform)ct);
+						}
+						else
+							System.err.println("Inverse of non-invertible transform requested: " + fullUrl +
+									"\nReturning transform directly.");
+					}
+
 					resolveAbsolutePath(ct, dataset);
 					return new ValuePair<>( ct, n5 );
 				} catch (N5Exception | ClassCastException e) {}
@@ -256,6 +272,8 @@ public class NgffTransformations
 
 	public static CoordinateTransform<?> openJson( final String url )
 	{
+		// TODO add source and dest coordinate systems
+
 		final Path path = Paths.get( url );
 		String string;
 		try
