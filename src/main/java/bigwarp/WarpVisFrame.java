@@ -125,7 +125,6 @@ public class WarpVisFrame extends JDialog
 	// autosave
 	private final AutosaveOptionsPanel autoSaveOptionsPanel;
 
-
 	public static final int minGridSpacing = 5;
 	public static final int maxGridSpacing = 400;
 	public static final int defaultGridSpacing = 100;
@@ -280,7 +279,7 @@ public class WarpVisFrame extends JDialog
 
 		final JPanel maxIterPanel = new JPanel();
 		maxIterSpinner = new JSpinner();
-		final SpinnerNumberModel itermodel = new SpinnerNumberModel( 200, 1, 5000, 1 );
+		final SpinnerNumberModel itermodel = new SpinnerNumberModel( 1000, 1, 5000, 1 );
 		maxIterSpinner.setModel( itermodel );
 		maxIterSpinner.addChangeListener( new ChangeListener()
 		{
@@ -589,10 +588,6 @@ public class WarpVisFrame extends JDialog
 			noOptionsLabel.setVisible( false );
 			setGridOptionsVisibility( false );
 			setMagOptionsVisibility( true );
-		}
-		else
-		{
-//			System.out.println(" UHOH ");
 		}
 		pack();
 	}

@@ -86,7 +86,7 @@ public class BigWarpTransform
 
 	private double inverseTolerance = 0.5;
 
-	private int maxIterations = 200;
+	private int maxIterations = 1000;
 
 	private RealRandomAccessible<? extends RealType<?>> lambdaRaw;
 
@@ -273,7 +273,8 @@ public class BigWarpTransform
 			final WrappedIterativeInvertibleRealTransform<?> tpsXfm = (WrappedIterativeInvertibleRealTransform< ? >) solver.solve( tableModel, index );
 			tpsXfm.getOptimzer().setMaxIters(maxIterations);
 			tpsXfm.getOptimzer().setTolerance(inverseTolerance);
-			tpsXfm.getOptimzer().setMaxStep(500);
+			tpsXfm.getOptimzer().setBeta(0.5);
+			tpsXfm.getOptimzer().setMaxStep(1000);
 			invXfm = tpsXfm;
 		}
 		else

@@ -120,6 +120,7 @@
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
+		<imglib2-realtransform.version>4.0.4</imglib2-realtransform.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
@@ -324,7 +325,6 @@
 			<artifactId>xmlunit</artifactId>
 			<version>1.5</version>
 		</dependency>
-
 	</dependencies>
 
 	<profiles>
