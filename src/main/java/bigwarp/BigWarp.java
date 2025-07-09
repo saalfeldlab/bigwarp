@@ -618,9 +618,17 @@ public class BigWarp< T >
 			viewerFrameQ.getTransformBehaviours().updateKeyConfig( keymap.getConfig() );
 		} );
 
+		// default inverse tolerance is 0.5 a pixell in the target space
+		if ( data.numTargetSources() > 0 )
+		{
+			final double res = data.getTargetSource( 0 ).getSpimSource().getVoxelDimensions().dimension( 0 );
+			bwTransform.setInverseTolerance( 0.5 * res );
+		}
+
 		// this call has to come after the actions are set
 		warpVisDialog.setActions();
 		warpVisDialog.toleranceSpinner.setValue( bwTransform.getInverseTolerance() );
+		warpVisDialog.maxIterSpinner.setValue( bwTransform.getInverseMaxIterations() );
 
 		setUpViewerMenu( viewerFrameP );
 		setUpViewerMenu( viewerFrameQ );
@@ -668,8 +676,6 @@ public class BigWarp< T >
 
 		if( data.sources.size() > 0 )
 			initialize();
-
-
 
 //		viewerQ.state().changeListeners().add(warpVisDialog.transformGraphPanel);
 
