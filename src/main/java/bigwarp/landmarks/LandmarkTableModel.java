@@ -371,14 +371,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	public int getActiveRowCount()
 	{
 		return numActive;
-
-//		//TODO consider keeping track of this actively instead of recomputing
-//		int N = 0;
-//		for( Boolean b : activeList )
-//			if( b )
-//				N++;
-//
-//		return N;
 	}
 
 	@Override
@@ -507,6 +499,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			movingPts.remove(i);
 			targetPts.remove(i);
 			activeList.remove(i);
+			idList.remove(i);
 
 			if (indicesOfChangedPoints.contains(i))
 				indicesOfChangedPoints.remove(indicesOfChangedPoints.indexOf(i));
@@ -1245,9 +1238,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 		catch ( final CsvException e ) {}
 
 		LandmarkTableModel ltm = null;
-		if ( rows.get( 0 ).length == 6 )
+		if ( rows.get( 0 ).length == 7 )
 			ltm = new LandmarkTableModel( 2 );
-		else if ( rows.get( 0 ).length == 8 )
+		else if ( rows.get( 0 ).length == 9 )
 			ltm = new LandmarkTableModel( 3 );
 
 		if( ltm != null )
@@ -1346,7 +1339,6 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			numRows = i;
 			updateNextRows( 0 );
 			buildTableToActiveIndex();
-	//		initTransformation();
 		}
 
 		for( int i = 0; i < numRows; i++ )
@@ -1549,8 +1541,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 				final String[] row = new String[ rowLength ];
 				row[ 0 ] = names.get( i );
 				row[ 1 ] = activeList.get( i ).toString();
+				row[ 2 ] = idList.get( i ).toString();
 
-				int k = 2;
+				int k = 3;
 				int j = 0;
 				while( j < ndims )
 					row[ k++ ] = movingPts.get( i )[ j++ ].toString();
@@ -1680,15 +1673,15 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			{
 				setIsActive( row, ( Boolean ) value );
 			}
-			else if( col < 2 + ndims )
+			else if( col < 3 + ndims )
 			{
 				final Double[] thesePts = movingPts.get(row);
-				thesePts[ col - 2 ] = ((Double)value).doubleValue();
+				thesePts[ col - 3 ] = ((Double)value).doubleValue();
 			}
 			else
 			{
 				final Double[] thesePts = targetPts.get(row);
-				thesePts[ col - ndims - 2 ] = ((Double)value).doubleValue();
+				thesePts[ col - ndims - 3 ] = ((Double)value).doubleValue();
 			}
 
 		}
@@ -1782,5 +1775,14 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 	{
 		// update warped point locations when the transform changes
 		updateAllWarpedPoints( transform );
+	}
+
+	public static void main(String[] args) throws IOException {
+		
+		LandmarkTableModel ltm = new LandmarkTableModel(3);
+		ltm.load(new File("/home/john/for/keller/fly_brain_3/distortion_correct_eR2/testMh/consensus-set_46-49-pts.csv"));
+		
+		ltm.printState();
+		
 	}
 }

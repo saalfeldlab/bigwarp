@@ -138,7 +138,7 @@ public class BigWarpOverlay {
 			Color textBoxColor = null;
 
 			final double strokeW = viewer.getSettings().strokeWeight;
-			final Color color  = viewer.getSettings().getSpotColor();
+			Color color  = viewer.getSettings().getSpotColor();
 			final Color inactiveColor  = viewer.getSettings().getSpotColor();
 
 			if ( viewer.getSettings().areNamesVisible() )
@@ -159,11 +159,12 @@ public class BigWarpOverlay {
 			{
 
 				final int id = landmarkModel.getId(index);
+				color  = colorsForId[id];
 				if ( landmarkModel.isActive( index ) ) {
 					g.setColor( colorsForId[id] );
 				}
-				else
-					g.setColor( inactiveColor );
+//				else
+//					g.setColor( inactiveColor );
 
 				g.setStroke( stroke );
 
