@@ -52,6 +52,17 @@ public class BigWarpOverlay {
 	protected final boolean isMoving;
 
 	protected final double[] spot;
+	
+	protected final Color[] colorsForId = new Color[] {
+			Color.MAGENTA,
+			Color.CYAN,
+			Color.YELLOW,
+			Color.RED,
+			Color.GREEN,
+			Color.BLUE,
+			Color.ORANGE,
+			Color.PINK
+	};
 
 	protected final double[] viewerCoords;
 	/** The transform for the viewer current viewpoint. */
@@ -147,8 +158,10 @@ public class BigWarpOverlay {
 			for( int index = 0; index < nRows; index++ )
 			{
 
-				if ( landmarkModel.isActive( index ) )
-					g.setColor( color );
+				final int id = landmarkModel.getId(index);
+				if ( landmarkModel.isActive( index ) ) {
+					g.setColor( colorsForId[id] );
+				}
 				else
 					g.setColor( inactiveColor );
 

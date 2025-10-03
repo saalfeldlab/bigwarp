@@ -89,6 +89,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	public static final int NAMECOLUMN = 0;
 	public static final int ACTIVECOLUMN = 1;
+	public static final int IDCOLUMN = 2;
 
 	public static Color WARNINGBGCOLOR = new Color( 255, 204, 0 );
 	public static Color DEFAULTBGCOLOR = new Color( 255, 255, 255 );
@@ -97,7 +98,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	protected int ndims = 3;
 
-	protected int numCols = 8;
+	protected int numCols = 9;
 	protected int numRows = 0;
 
 	protected int nextRowP = 0;
@@ -107,6 +108,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	protected ArrayList<String> 	names;
 	protected ArrayList<Boolean>	activeList;
+	protected ArrayList<Integer>	idList;
 	protected ArrayList<Double[]>	movingPts;
 	protected ArrayList<Double[]>	targetPts;
 
@@ -157,14 +159,14 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 	final static String[] columnNames3d = new String[]
 			{
-			"Name", "Active",
+			"Name", "Active", "Id",
 			"mvg-x","mvg-y","mvg-z",
 			"fix-x","fix-y","fix-z"
 			};
 
 	final static String[] columnNames2d = new String[]
 			{
-			"Name", "Active",
+			"Name", "Active", "Id",
 			"mvg-x","mvg-y",
 			"fix-x","fix-y"
 			};
@@ -183,6 +185,7 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 		names = new ArrayList<>();
 		activeList = new ArrayList<>();
+		idList = new ArrayList<>();
 		tableIndexToActiveIndex = new ArrayList<>();
 
 		movingPts = new ArrayList<Double[]>();
@@ -426,6 +429,11 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			fireTableCellUpdated( row, ACTIVECOLUMN );
 			modifiedSinceLastSave = true;
 		}
+	}
+	
+	public int getId( int row )
+	{
+		return idList.get( row );
 	}
 
 	private void buildTableToActiveIndex()
@@ -716,6 +724,8 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 
 			names.add( index, nextName( index ));
 			activeList.add( index, false );
+			idList.add( index, 0 );
+
 			warpedPoints.add( index, new Double[ ndims ] );
 			doesPointHaveAndNeedWarp.add( index, false );
 			movingDisplayPointUnreliable.add( index, false );
@@ -1285,29 +1295,30 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			}
 
 			int ndims = 3;
-			int expectedRowLength = 8;
+			int expectedRowLength = 9;
 
 			int i = 0;
 			for( final String[] row : rows )
 			{
 				// detect a file with 2d landmarks
 				if( i == 0 && // only check for the first row
-						row.length == 6 )
+						row.length == 7 )
 				{
 					ndims = 2;
-					expectedRowLength = 6;
+					expectedRowLength = 7;
 				}
 
 				if( row.length != expectedRowLength  )
 					throw new IOException( "Invalid file - not enough columns" );
 
-				names.add( row[ 0 ] );
-				activeList.add( Boolean.parseBoolean( row[ 1 ]) );
+				int k = 0;
+				names.add(row[k++]);
+				activeList.add(Boolean.parseBoolean(row[k++]));
+				idList.add(Integer.parseInt(row[k++]));
 
 				final Double[] movingPt = new Double[ ndims ];
 				final Double[] targetPt = new Double[ ndims ];
 
-				int k = 2;
 				for( int d = 0; d < ndims; d++ )
 					movingPt[ d ] = Double.parseDouble( row[ k++ ]);
 
@@ -1694,10 +1705,12 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 			return names.get( rowIndex );
 		else if ( columnIndex == ACTIVECOLUMN )
 			return activeList.get( rowIndex );
-		else if( columnIndex < 2 + ndims )
-			return movingPts.get( rowIndex )[ columnIndex - 2 ];
+		else if ( columnIndex == IDCOLUMN )
+			return idList.get( rowIndex );
+		else if( columnIndex < 3 + ndims )
+			return movingPts.get( rowIndex )[ columnIndex - 3 ];
 		else
-			return targetPts.get( rowIndex )[ columnIndex - ndims - 2 ];
+			return targetPts.get( rowIndex )[ columnIndex - ndims - 3 ];
 	}
 
 	/**
