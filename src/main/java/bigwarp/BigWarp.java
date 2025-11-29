@@ -202,6 +202,7 @@ import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.LinAlgHelpers;
 
 public class BigWarp< T >
 {
@@ -3348,6 +3349,10 @@ public class BigWarp< T >
 
 		double[] ptBackLoc = new double[ 3 ];
 
+		double[] perpVec = new double[ 3 ];
+
+		AffineTransform3D viewerTransform = new AffineTransform3D();
+
 		private BigWarpViewerPanel thisViewer;
 
 		private boolean isMoving;
@@ -3421,6 +3426,11 @@ public class BigWarp< T >
 			if ( e.isShiftDown() && e.isControlDown() )
 			{
 				isMovingLocal = !isMoving;
+			}
+			else if ( e.isAltDown() && e.isControlDown() )
+			{
+				addPointPair(BigWarp.this.currentLandmark, 1.0, isMovingLocal);
+				return;
 			}
 			else if( e.isShiftDown())
 			{
@@ -3521,6 +3531,18 @@ public class BigWarp< T >
 			thisViewer.setHoveredIndex( hoveredIndex );
 		}
 
+		private double[] perpendicularToViewerPlane() {
+
+			perpVec[0] = 0;
+			perpVec[1] = 0;
+			perpVec[2] = 1;
+			thisViewer.state().getViewerTransform(viewerTransform);
+			viewerTransform.setTranslation(0, 0, 0);
+			viewerTransform.applyInverse(perpVec, perpVec);
+
+			return perpVec;
+		}
+
 		/**
 		 * Adds a point in the moving and fixed images at the same point.
 		 * @param pt the point
@@ -3544,6 +3566,43 @@ public class BigWarp< T >
 			if ( updateWarpOnPtChange )
 				BigWarp.this.restimateTransformation();
 		}
+
+		/**
+		 * Adds two points separated by the given vector
+		 *
+		 * @param pt
+		 *            the point
+		 * @param magnitude
+		 *            the distance the points are separated by
+		 * @param isMovingImage
+		 *            is the point in moving image space
+		 */
+		public void addPointPair(final RealPoint pt, double mag, final boolean isMovingImage) {
+
+			final double[] v = perpendicularToViewerPlane();
+
+			currentLandmark.localize(ptarrayLoc);
+			ptarrayLoc[0] += mag * v[0];
+			ptarrayLoc[1] += mag * v[1];
+			ptarrayLoc[2] += mag * v[2];
+			addPoint(ptarrayLoc, isMovingImage);
+
+			ptarrayLoc[0] -= 2 * mag * v[0];
+			ptarrayLoc[1] -= 2 * mag * v[1];
+			ptarrayLoc[2] -= 2 * mag * v[2];
+			addPoint(ptarrayLoc, isMovingImage);
+
+			if (updateWarpOnPtChange)
+				BigWarp.this.restimateTransformation();
+		}
+	}
+
+	public static void normalizeToScale( final double[] a, final double mag )
+	{
+		final int rows = LinAlgHelpers.rows( a );
+		final double len = LinAlgHelpers.length( a );
+		for ( int i = 0; i < rows; ++i )
+			a[i] /= (mag * len);
 	}
 
 	public class WarningTableCellRenderer extends DefaultTableCellRenderer
