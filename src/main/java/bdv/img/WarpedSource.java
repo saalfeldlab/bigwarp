@@ -117,8 +117,8 @@ public class WarpedSource < T > implements Source< T >, MipmapOrdering
 			return ( !isTransformed ) && ( source.doBoundingBoxCulling() );
 	}
 
-	public void updateTransform( RealTransform xfm )
-	{
+	public void updateTransform( final RealTransform xfm ) {
+
 		if( xfm instanceof InvertibleRealTransform )
 			this.xfm = (InvertibleRealTransform)xfm;
 		else

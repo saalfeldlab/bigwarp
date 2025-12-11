@@ -56,6 +56,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import org.janelia.saalfeldlab.n5.N5Exception.N5IOException;
 import org.janelia.saalfeldlab.n5.bdv.N5ViewerTreeCellRenderer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
@@ -144,8 +145,6 @@ public class BigWarpInitDialog extends JFrame
 
 	private boolean initialRecorderState;
 
-
-
 	public BigWarpInitDialog( final String title )
 	{
 		this( title, null );
@@ -187,30 +186,14 @@ public class BigWarpInitDialog extends JFrame
 		};
 	}
 
-	public static void main( String[] args ) {
-
-		final ImageJ ij = new ImageJ();
-//		runBigWarp( "/home/john/tmp/boats_lm.csv",
-//				new String[]{ "/home/john/tmp/boats.tif", "/home/john/tmp/boats.tif" },
-//				new String[]{ "true", "false" },
-//				null);
-
-//		runBigWarp( "/home/john/tmp/boats_lm2.csv",
-//				new String[]{ "/home/john/tmp/boats.tif", "/home/john/tmp/boats-HR.tif" },
-//				new String[]{ "true", "false" },
-//				null);
-
-//		runBigWarp( "file:///home/john/Documents/presentations/20231130_BdvCommunity/demo/boats-hr-project.json ",
-//				null,
-//				null,
-//				null);
-
-		new BigWarpInitDialog("bigwarp test").createAndShow();
-	}
-
 	public void setInitialRecorderState( final boolean initialRecorderState )
 	{
 		this.initialRecorderState = initialRecorderState;
+	}
+
+	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath)
+	{
+		return runBigWarp( projectLandmarkPath, null, null, null );
 	}
 
 	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
@@ -617,11 +600,18 @@ public class BigWarpInitDialog extends JFrame
 		clist.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
 		sourceTableModel = new BigWarpSourceTableModel( t -> {
-			final String val = NgffTransformations.detectTransforms(t);
-			if (val != null)
-				showMessage(1000, "Found transformation");
+			try {
+				final String val = NgffTransformations.detectTransforms(t);
+				if( val == null )
+					showMessage(1000, "No transformation found");
+				else
+					showMessage(1000, "Found transformation");
 
-			return val;
+				return val;
+			} catch( N5IOException e ) {
+				System.err.println(e.getLocalizedMessage());
+			}
+			return null;
 		});
 
         final BigWarpSourceListPanel srcListPanel = new BigWarpSourceListPanel( sourceTableModel );
