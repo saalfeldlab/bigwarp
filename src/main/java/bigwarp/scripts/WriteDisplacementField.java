@@ -29,6 +29,8 @@ import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
+import org.janelia.saalfeldlab.n5.parse.BlockSizeParsers;
+import org.janelia.saalfeldlab.n5.parse.BlockSizeParsers.BlockSizeParser;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.scijava.command.Command;
@@ -146,7 +148,9 @@ public class WriteDisplacementField  implements Callable<Void>, Command {
 		}
 
 		validateAndWarn();
-		final int[] chunkSizeSpatial = N5ScalePyramidExporter.parseBlockSize(chunkSizeArg, spatialDims);
+
+		final BlockSizeParser blkParser = new BlockSizeParsers.BlockSizeParser(spatialDims);
+		final int[] chunkSizeSpatial = blkParser.parse(chunkSizeArg);
 		final int[] chunkSize = IntStream.concat(
 				IntStream.of(vectorSize),
 				Arrays.stream(chunkSizeSpatial)).toArray();
