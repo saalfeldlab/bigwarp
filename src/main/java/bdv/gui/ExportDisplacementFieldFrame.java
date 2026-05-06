@@ -777,7 +777,11 @@ public class ExportDisplacementFieldFrame extends JFrame
 
 	public void run()
 	{
-		BigWarpToDeformationFieldPlugIn.runFromParameters( getParams(), data, ltm, bwTransform );
+		new Thread() {
+			public void run() {
+				BigWarpToDeformationFieldPlugIn.runFromParameters(getParams(), data, ltm, bwTransform);
+			}
+		}.start();
 	}
 
 	public String macroRecord()
