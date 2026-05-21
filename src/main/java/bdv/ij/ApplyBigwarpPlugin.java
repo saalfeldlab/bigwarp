@@ -44,8 +44,8 @@ import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.util.ProgressWriterIJ;
@@ -1375,6 +1375,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// build metadata
 		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String omeZarrVersion = "0.5";
 		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
 		final Axis[] axes = new Axis[nd];
 		for (int i = 0; i < nd; i++)
@@ -1426,7 +1427,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				imgToWrite = img;
 
 			final String name = originalMovingSource.getSpimSource().getName();
-			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, axes, new String[]{"s0"},
+			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, omeZarrVersion, axes, new String[]{"s0"},
 					new double[][]{resolution}, new double[][]{offset});
 
 			try
@@ -1492,6 +1493,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// build metadata
 		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String omeZarrVersion = "0.5";
 		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
 		final Axis[] axes = new Axis[nd];
 		for (int i = 0; i < nd; i++)
@@ -1534,7 +1536,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			imgToWrite = img;
 
 		final String destDataset = dataset;
-		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, axes, new String[]{"s0"},
+		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, omeZarrVersion, axes, new String[]{"s0"},
 				new double[][]{resolution}, new double[][]{offsetPhysical});
 
 		try
