@@ -34,7 +34,7 @@ import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.AxisUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.TransformUtils;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
@@ -43,8 +43,6 @@ import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
 import bigwarp.transforms.NgffTransformations;
-import ij.IJ;
-import ij.ImagePlus;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.CalibratedAxis;
@@ -52,7 +50,6 @@ import net.imagej.axis.DefaultAxisType;
 import net.imagej.axis.DefaultLinearAxis;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.cache.img.CachedCellImg;
-import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
@@ -208,7 +205,6 @@ public class ReadDisplacementField  implements Callable<Void>, Command {
 		csAxes = css[0].getAxes();
 
 		final AffineGet affine = TransformUtils.toAffine(cts[0], csAxes.length);
-
 		final int nd = csAxes.length;
 		axes = new CalibratedAxis[nd];
 

@@ -67,6 +67,7 @@ import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ScaleGet;
@@ -80,7 +81,21 @@ import net.imglib2.util.ValuePair;
 
 public class NgffTransformations
 {
+	
+	public static void main( String[] args ) {
 
+		final AffineCoordinateTransform ct = new AffineCoordinateTransform(
+				"name", "inspace", "outspace", new AffineTransform3D().getRowPackedCopy());
+		ct.setSerializeAsFlatArray(true);
+//		ct.serializeAsFlatArray();
+
+		final N5Writer n5 = new N5Factory().gsonBuilder(gsonBuilder()).openWriter(
+				"/home/john/tests/bw-tform-graph/fly-templates.n5");
+		final String dset = "transforms/test";
+
+		addCoordinateTransformations(n5, dset, ct);
+	}
+	
 	public enum TransformField {
 		DISPLACEMENT, COORDINATE
 	};

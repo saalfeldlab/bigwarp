@@ -59,7 +59,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.N5SingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.SpatialMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 
 import bdv.BigDataViewer;
@@ -556,9 +556,22 @@ public class BigWarpInit {
 		{
 			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
 			final String firstScheme = encodedUri.getScheme().toLowerCase();
-			final N5Reader n5reader;
-			switch ( firstScheme.toLowerCase() )
-			{
+			N5Reader n5reader;
+
+			switch (firstScheme) {
+			case "n5":
+			case "zarr":
+			case "h5":
+			case "hdf5":
+			case "hdf":
+				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
+				break;
+			default:
+				break;
+			}
+			
+			// TODO the switch statements below won't for some cloud/zarr sources for example.
+			switch (firstScheme) {
 			case "n5":
 				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
 				break;
@@ -571,11 +584,15 @@ public class BigWarpInit {
 				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
 				break;
 			default:
-				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
+				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
+				break;
 			}
 
-			final SourceInfo info = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
-			sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
+			if (n5reader == null)
+				throw new URISyntaxException(firstScheme, "Unsupported Top Level Protocol");
+
+			final Source< T > source = (Source<T>)loadN5Source( n5reader, n5URL.getGroupPath(), sharedQueue );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
 		}
 		else
 		{
