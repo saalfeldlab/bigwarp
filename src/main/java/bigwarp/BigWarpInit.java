@@ -33,14 +33,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
-import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
+import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
@@ -48,7 +52,9 @@ import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.N5FactoryWithCache;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
+import org.janelia.saalfeldlab.n5.universe.StorageFormat;
 import org.janelia.saalfeldlab.n5.universe.metadata.MultiscaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMultiScaleMetadata;
@@ -60,7 +66,6 @@ import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataPa
 import org.janelia.saalfeldlab.n5.universe.metadata.SpatialMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
-import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 
 import bdv.BigDataViewer;
 import bdv.cache.SharedQueue;
@@ -92,9 +97,6 @@ import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
-import mpicbg.spim.data.generic.sequence.BasicViewSetup;
-import mpicbg.spim.data.sequence.Angle;
-import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
@@ -132,6 +134,7 @@ import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.volatiles.VolatileARGBType;
+import net.imglib2.util.Pair;
 import net.imglib2.util.ValuePair;
 import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
@@ -155,22 +158,25 @@ public class BigWarpInit {
 			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
 	};
 
-	private static String createSetupName( final BasicViewSetup setup )
-	{
-		if ( setup.hasName() )
-			return setup.getName();
+	private static N5FactoryWithCache factory = null;
 
-		String name = "";
+	/**
+	 * Provides a shared {@link N5FactoryWithCache} instance, with options set
+	 * to cache attributes.
+	 * <p>
+	 * This makes it possible to get the same {@link N5Reader} instance, and
+	 * therefore the same metadata cache when getting an N5Reader the same uri.
+	 *
+	 * @return the N5FactoryWithCache instance
+	 */
+	public static synchronized N5FactoryWithCache sharedN5Factory() {
 
-		final Angle angle = setup.getAttribute( Angle.class );
-		if ( angle != null )
-			name += ( name.isEmpty() ? "" : " " ) + "a " + angle.getName();
+		if (factory == null) {
+			factory = (N5FactoryWithCache)new N5FactoryWithCache()
+					.options(opts -> opts.cacheAttributes(true));
+		}
 
-		final Channel channel = setup.getAttribute( Channel.class );
-		if ( channel != null )
-			name += ( name.isEmpty() ? "" : " " ) + "c " + channel.getName();
-
-		return name;
+		return factory;
 	}
 
 	public static void initSetups( final AbstractSpimData< ? > spimData, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
@@ -250,18 +256,18 @@ public class BigWarpInit {
 	 * @return BigWarpData the data
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static <T> BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
+	public static BigWarpData<?> createBigWarpData(final Source<?>[] movingSourceList, final Source<?>[] fixedSourceList, final String[] names)
 	{
 		final BigWarpData data = initData();
 		int setupId = 0;
 
 		// moving
 		for (final Source<?> mvgSource : movingSourceList)
-			add(data, createSources(data, (Source<T>) mvgSource, setupId++, true));
+			add(data, createSources(data, (Source<?>) mvgSource, setupId++, true));
 
 		// target
 		for (final Source<?> fxdSource : fixedSourceList)
-			add(data, createSources(data, (Source<T>) fxdSource, setupId++, false));
+			add(data, createSources(data, (Source<?>) fxdSource, setupId++, false));
 
 		// set names
 		final ArrayList wrappedSources = wrapSourcesAsRenamable( data.sources, names );
@@ -297,7 +303,7 @@ public class BigWarpInit {
 		add( bwdata, sources );
 		return sources.size();
 	}
-
+	
 	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
 		final ImagePlusLoader loader = new ImagePlusLoader( ip );
@@ -541,14 +547,21 @@ public class BigWarpInit {
 		return sourceInfoMap;
 	}
 
-	private static String schemeSpecificPartWithoutQuery( URI uri )
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving, N5Metadata meta ) throws URISyntaxException, IOException, SpimDataException
 	{
-		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
+		return createSources(bwData, uri, setupId, isMoving, meta, Executors.newCachedThreadPool());
+	}
+
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	{
+		return createSources(bwData, uri, setupId, isMoving, null, Executors.newCachedThreadPool());
 	}
 
 	@SuppressWarnings("unchecked")
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving,
+			N5Metadata meta, ExecutorService exec ) throws URISyntaxException, IOException, SpimDataException
 	{
+
 		final SharedQueue sharedQueue = BigWarpData.getSharedQueue();
 		final URI encodedUri = N5URI.encodeAsUri( uri.trim() );
 		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
@@ -556,37 +569,37 @@ public class BigWarpInit {
 		{
 			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
 			final String firstScheme = encodedUri.getScheme().toLowerCase();
-			N5Reader n5reader;
+			final N5Reader n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
 
-			switch (firstScheme) {
-			case "n5":
-			case "zarr":
-			case "h5":
-			case "hdf5":
-			case "hdf":
-				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
-				break;
-			default:
-				break;
-			}
-			
-			// TODO the switch statements below won't for some cloud/zarr sources for example.
-			switch (firstScheme) {
-			case "n5":
-				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
-				break;
-			case "zarr":
-				n5reader = new N5ZarrReader( n5URL.getContainerPath() );
-				break;
-			case "h5":
-			case "hdf5":
-			case "hdf":
-				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
-				break;
-			default:
-				n5reader = new N5Factory().openReader( n5URL.getContainerPath() );
-				break;
-			}
+//			switch (firstScheme) {
+//			case "n5":
+//			case "zarr":
+//			case "h5":
+//			case "hdf5":
+//			case "hdf":
+//				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
+//				break;
+//			default:
+//				break;
+//			}
+//			
+//			// TODO the switch statements below won't for some cloud/zarr sources for example.
+//			switch (firstScheme) {
+//			case "n5":
+//				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
+//				break;
+//			case "zarr":
+//				n5reader = sharedN5Factory().openReader(n5URL.getContainerPath() );
+//				break;
+//			case "h5":
+//			case "hdf5":
+//			case "hdf":
+//				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
+//				break;
+//			default:
+//				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
+//				break;
+//			}
 
 			if (n5reader == null)
 				throw new URISyntaxException(firstScheme, "Unsupported Top Level Protocol");
@@ -600,8 +613,14 @@ public class BigWarpInit {
 			try
 			{
 				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
-				final N5Reader n5reader = new N5Factory().openReader( containerWithoutN5Scheme );
-				final SourceInfo info = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
+				final N5Reader n5reader = sharedN5Factory().openReader( containerWithoutN5Scheme );
+
+				final SourceInfo info;
+				if( meta == null)
+					info = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving, exec );
+				else
+					info = getInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving, meta );
+
 				sourceStateMap.put( (Source<T>)info.getSourceAndConverter().getSpimSource(), info );
 			}
 			catch ( final Exception ignored )
@@ -681,8 +700,15 @@ public class BigWarpInit {
 	{
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
+	
+	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, 
+			final AtomicReference< SpimData > returnMovingSpimData)
+	{
+		return createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData, Executors.newCachedThreadPool());
+	}
 
-	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
+	private static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, 
+			final AtomicReference< SpimData > returnMovingSpimData, ExecutorService exec )
 	{
 		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 		if ( rootPath.endsWith( "xml" ) )
@@ -726,7 +752,7 @@ public class BigWarpInit {
 		}
 		else
 		{
-			return makeMap( loadN5SourceInfo(bwdata, rootPath, dataset, sharedQueue, setupId, isMoving));
+			return makeMap( loadN5SourceInfo(bwdata, rootPath, dataset, sharedQueue, setupId, isMoving, exec));
 		}
 	}
 
@@ -740,41 +766,46 @@ public class BigWarpInit {
 	}
 
 	public static < T extends NativeType<T> > SourceInfo loadN5SourceInfo( final BigWarpData<?> bwData, final String n5Root, final String n5Dataset, final SharedQueue queue,
-			final int sourceId, final boolean moving )
+			final int sourceId, final boolean moving, ExecutorService exec )
 	{
 		final N5Reader n5;
 		try
 		{
-			n5 = new N5Factory().openReader( n5Root );
+			n5 = sharedN5Factory().openReader( n5Root );
 		}
 		catch ( final RuntimeException e ) {
 			e.printStackTrace();
 			return null;
 		}
-		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving );
+		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving, exec );
 	}
 
-	@SuppressWarnings({"unchecked", "rawtypes"})
 	public static < T extends NativeType<T>> SourceInfo loadN5SourceInfo( final BigWarpData<?> bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
-			final int sourceId, final boolean moving )
+			final int sourceId, final boolean moving, ExecutorService exec )
 	{
-
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, exec, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
 			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
 			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
 		}
 		catch ( final IOException e )
 		{}
 
+		return getInfo(bwData, n5, n5Dataset, queue, sourceId, moving, meta);
+	}
+
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	public static < T extends NativeType<T>>  SourceInfo getInfo( final BigWarpData<?> bwData, final N5Reader n5, final String n5Dataset,
+			final SharedQueue queue, final int sourceId, final boolean moving, N5Metadata meta) {
+		
 		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, meta, queue);
 		if( bwData != null ) {
 			bwData.sources.add((SourceAndConverter)sac);
 			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
 		}
-
+		
 		final String uri = n5.getURI().toString() + "$" + n5Dataset;
 		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 		info.setSourceAndConverter(sac);
@@ -787,7 +818,7 @@ public class BigWarpInit {
 		final N5Reader n5;
 		try
 		{
-			n5 = new N5Factory().openReader( n5Root );
+			n5 = sharedN5Factory().openReader( n5Root );
 		}
 		catch ( final RuntimeException e ) {
 			e.printStackTrace();
@@ -1599,6 +1630,48 @@ public class BigWarpInit {
 		for ( int i = 0; i < names.length; ++i )
 			names[ i ] = imp.getTitle() + "-" + i;
 		return names;
+	}
+	
+	/**
+	 * Creates an N5Reader from a String (uri), similar to
+	 * {@link N5ViewerReaderFun}, but using the {@link sharedN5Factory}.
+	 */
+	public static class BigWarpN5ReaderFun implements Function<String, N5Reader> {
+
+		public String message;
+
+		@Override
+		public N5Reader apply(final String n5UriOrPath) {
+
+			N5Reader n5;
+			if (n5UriOrPath == null || n5UriOrPath.isEmpty())
+				return null;
+
+			String rootPath = null;
+			if (n5UriOrPath.contains("?")) {
+
+				// need to strip off storage format for n5uri to correctly remove query;
+				final Pair<StorageFormat, URI> fmtUri = StorageFormat.parseUri(n5UriOrPath);
+				final StorageFormat format = fmtUri.getA();
+
+				final N5URI n5uri = new N5URI(URI.create(fmtUri.getB().toString()));
+				// add the format prefix back if it was present
+				rootPath = format == null ? n5uri.getContainerPath() : format.toString().toLowerCase() + ":" + n5uri.getContainerPath();
+			}
+
+			if (rootPath == null) {
+				rootPath = n5UriOrPath;
+			}
+
+			final N5Factory factory = sharedN5Factory(); // uses cache
+			try {
+				n5 = factory.openReader(rootPath);
+			} catch (final N5Exception e) {
+				IJ.error(e.getMessage());
+				return null;
+			}
+			return n5;
+		}
 	}
 
 }

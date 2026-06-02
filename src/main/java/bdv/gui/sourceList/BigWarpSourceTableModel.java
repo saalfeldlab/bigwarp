@@ -27,7 +27,6 @@ import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -42,6 +41,7 @@ import javax.swing.table.TableCellRenderer;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 
 import bigwarp.transforms.NgffTransformations;
 import net.imglib2.realtransform.RealTransform;
@@ -57,6 +57,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	protected final String[] columnNames;
 	protected final ArrayList<SourceRow> sources;
 	protected final ArrayList<RemoveRowButton> rmRowButtons;
+
+	// not displayed
+	protected final ArrayList<N5Metadata> metadataList;
 
 	protected static int imageColIdx = 0;
 	protected static int movingColIdx = 1;
@@ -78,6 +81,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		columnNames = colNames;
 		sources = new ArrayList<>();
 		rmRowButtons = new ArrayList<>();
+		metadataList = new ArrayList<>();
 		this.transformChangedCallback = transformChangedCallback;
 	}
 
@@ -152,6 +156,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			setTransform(row, (String)value);
 	}
 
+	public N5Metadata getMetadata(int row) {
+
+		return metadataList.get(row);
+	}
+
 	public void setTransform(final int row, final String value) {
 
 		if (transformChangedCallback != null) {
@@ -164,11 +173,17 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			sources.get(row).transformUrl = value;
 	}
 
-	public void add(String srcName, boolean moving, SourceType type) {
-
+	public void add(String srcName, boolean moving, SourceType type, N5Metadata metadata)
+	{
 		final RemoveRowButton rmButton = new RemoveRowButton(sources.size());
 		rmRowButtons.add(rmButton);
 		sources.add(new SourceRow(srcName, moving, "", type));
+		metadataList.add(metadata);
+	}
+
+	public void add(String srcName, boolean moving, SourceType type) {
+
+		add(srcName, moving, type, null);
 	}
 
 	public void add(String srcName, boolean moving) {
@@ -179,6 +194,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public void add(String srcName) {
 
 		add(srcName, false);
+	}
+
+	public void add(String srcName, N5Metadata meta) {
+
+		add(srcName, false, SourceType.URL, meta);
 	}
 
 	public void addImagePlus(String srcName) {

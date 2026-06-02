@@ -84,7 +84,6 @@ import bigwarp.transforms.metadata.N5TransformMetadata;
 import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Macro;
 import ij.Prefs;
@@ -157,7 +156,7 @@ public class BigWarpInitDialog extends JFrame
 		initialPath = "";
 		imageJOpen = IJ.getInstance() != null;
 
-		buildN5SelectionDialog();
+		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
         final Container content = getContentPane();
         content.add( createContent() );
         pack();
@@ -325,11 +324,12 @@ public class BigWarpInitDialog extends JFrame
 					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 					id += infos.size();
 				}
-				else
+				else // URI
 				{
 					// deal with exceptions differently?
 					try
 					{
+						final N5Metadata metadata = sourceTableModel.getMetadata(i);
 						final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
 						BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 						id += infos.size();
@@ -466,7 +466,6 @@ public class BigWarpInitDialog extends JFrame
 		containerPathText = new JTextField();
 		containerPathText.setText( initialPath );
 		containerPathText.setPreferredSize( new Dimension( frameSizeX / 3, containerPathText.getPreferredSize().height ) );
-//		containerPathText.addActionListener( e -> openContainer( n5Fun, () -> getN5RootPath(), pathFun ) );
 		panel.add(containerPathText, gbcBar);
 
 		cadd.gridy = 2;
@@ -497,7 +496,7 @@ public class BigWarpInitDialog extends JFrame
 
 		addN5Button.addActionListener( e -> {
 
-			selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+			selectionDialog = new DatasetSelectorDialog( new BigWarpInit.BigWarpN5ReaderFun(), new N5BasePathFun(),
 					lastOpenedContainer,
 					BigWarpInit.GROUP_PARSERS,
 					BigWarpInit.PARSERS);
@@ -660,59 +659,22 @@ public class BigWarpInitDialog extends JFrame
 		return panel;
 	}
 
+	/**
+	 * This method is a no-op.
+	 *
+	 * @deprecated
+	 */
+	@Deprecated
 	public void buildN5SelectionDialog()
 	{
-		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
-
-
-		/*
-		 * The Dialogs need to be created anew by the action listener
-		 */
-
-//		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-//				lastOpenedContainer,
-//				n5vGroupParsers,
-//				n5Parsers);
-//
-//		selectionDialog.setLoaderExecutor( exec );
-//		selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
-//
-//		selectionDialog.setContainerPathUpdateCallback( x -> {
-//			if ( x != null )
-//				lastOpenedContainer = x;
-//		} );
-//
-//		// figure this out
-////		selectionDialog.setCancelCallback( x -> {
-////			// set back recorder state if canceled
-////			Recorder.record = initialRecorderState;
-////		} );
-//
-//		selectionDialog.setVirtualOption( false );
-//		selectionDialog.setCropOption( false );
-
-
-//		// transform
-//
-//		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
-//
-//		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-//				lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
-//
-//		transformSelectionDialog.setLoaderExecutor( exec );
-//		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
-//		transformSelectionDialog.setContainerPathUpdateCallback( x -> {
-//			if ( x != null )
-//				lastOpenedContainer = x;
-//		} );
-
+		// NoOp 
 	}
 
 	public void n5DialogCallback( final DataSelection selection )
 	{
 		final String n5RootPath = selectionDialog.getN5RootPath();
-		for( final N5Metadata m : selection.metadata )
-			sourceTableModel.add( n5RootPath + "?" + m.getPath() );
+		for (final N5Metadata m : selection.metadata)
+			sourceTableModel.add(n5RootPath + "?" + m.getPath(), m);
 
 		repaint();
 	}
@@ -948,7 +910,7 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public void setParameters( final String projectLandmarkPath, final String images, final String moving, final String transforms ) {
+	public void setParameters( final String projectLaBigWarpInitDialogndmarkPath, final String images, final String moving, final String transforms ) {
 		this.projectLandmarkPath = projectLandmarkPath;
 		this.imageList = images;
 		this.movingList = moving;
