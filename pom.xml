@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>41.0.0</version>
+		<version>44.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -117,6 +117,9 @@
 		<license.copyrightOwners>Howard Hughes Medical Institute.</license.copyrightOwners>
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
+
+		<scijava.jvm.version>8</scijava.jvm.version>
+		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
