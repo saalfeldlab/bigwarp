@@ -48,9 +48,10 @@ import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertibleAffineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.SequenceCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ThinPlateSplineCoordinateTransform;
@@ -560,43 +561,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel3D)tform).getTranslation());
 			break;
 		case BigWarpTransform.SIMILARITY:
-			double[] simparams;
-			if (tform instanceof SimilarityModel2D)
-			{
-				simparams = bwTransform.toImglib2((SimilarityModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, simparams);
-			}
-			else if (tform instanceof SimilarityModel3D)
-			{
-				simparams = bwTransform.toImglib2((SimilarityModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, simparams);
-			}
-			break;
 		case BigWarpTransform.ROTATION:
-			double[] rotparams;
-			if (tform instanceof RigidModel2D)
-			{
-				rotparams = bwTransform.toImglib2((RigidModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, rotparams);
-			}
-			else if (tform instanceof RigidModel3D)
-			{
-				rotparams = bwTransform.toImglib2((RigidModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, rotparams);
-			}
-			break;
 		case BigWarpTransform.AFFINE:
-			double[] affparams;
-			if (tform instanceof AffineModel2D)
-			{
-				affparams = bwTransform.toImglib2((AffineModel2D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, affparams);
-			}
-			else if (tform instanceof AffineModel3D)
-			{
-				affparams = bwTransform.toImglib2((AffineModel3D)tform).getRowPackedCopy();
-				ct = new AffineCoordinateTransform(name, output, input, affparams);
-			}
+			final double[][] simparams = TransformUtils.affineToMatrix((AffineGet)tform);
+			ct = new InvertibleAffineCoordinateTransform(name, output, input, simparams);
 			break;
 		}
 
@@ -739,7 +707,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			// the affine part
 			final AffineGet affine = bwXfm.affinePartOfTps();
-			final AffineCoordinateTransform ngffAffine = new AffineCoordinateTransform( affine.getRowPackedCopy() );
+			final InvertibleAffineCoordinateTransform ngffAffine = new InvertibleAffineCoordinateTransform(TransformUtils.affineToMatrix(affine));
 
 			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
@@ -802,7 +770,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				if (refCt == null)
 					ngffTform = dfieldTform;
 				else
-					ngffTform = new SequenceCoordinateTransform(refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{dfieldTform, refCt});
+					ngffTform = new SequenceCoordinateTransform(null, refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{dfieldTform, refCt});
 
 				NgffTransformations.addCoordinateTransformations(n5, "/", ngffTform);
 			}

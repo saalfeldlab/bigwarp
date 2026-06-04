@@ -691,10 +691,7 @@ public class BigWarpInit {
 				for (SourceInfo info : infos)
 					sourceStateMap.put((Source<?>)info.getSourceAndConverter().getSpimSource(), info);
 			}
-			catch ( final Exception ignored )
-			{
-				ignored.printStackTrace();
-			}
+			catch ( final Exception ignored ) { }
 
 			if ( sourceStateMap.isEmpty() )
 			{

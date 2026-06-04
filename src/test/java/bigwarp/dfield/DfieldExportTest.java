@@ -95,7 +95,7 @@ public class DfieldExportTest {
 		final int id = 0;
 		final boolean isMoving = true;
 		final BigWarpData<T> data = BigWarpInit.initData();
-		final LinkedHashMap<Source<T>, SourceInfo> infos = BigWarpInit.createSources(data, imp, id, 0, isMoving);
+		final LinkedHashMap<Source<?>, SourceInfo> infos = BigWarpInit.createSources(data, imp, id, 0, isMoving);
 		BigWarpInit.add(data, infos, tform, null);
 		return data;
 	}

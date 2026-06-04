@@ -1043,7 +1043,7 @@ public class BigWarp< T >
 	/**
 	 * @param sources to add; typically the output of a {#{@link BigWarpInit#createSources(BigWarpData, String, int, boolean)}} call
 	 */
-	public void addSources( LinkedHashMap<Source< T >, SourceInfo> sources)
+	public void addSources( LinkedHashMap<Source< ? >, SourceInfo> sources)
 	{
 
 		BigWarpInit.add( data, sources);
@@ -2369,10 +2369,10 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > JacobianDeterminantSource addJacobianDeterminantSource( final int ndims, final BigWarpData< T > data, final String name )
+	private static JacobianDeterminantSource addJacobianDeterminantSource( final int ndims, final BigWarpData< ? > data, final String name )
 	{
 		final JacobianDeterminantSource jdSource = new JacobianDeterminantSource<>( name, data, new FloatType() );
-		final LinkedHashMap< Source<T>, SourceInfo > infos = BigWarpInit.createSources( data, jdSource, JACDET_SOURCE_ID, false );
+		final LinkedHashMap< Source<?>, SourceInfo > infos = BigWarpInit.createSources( data, jdSource, JACDET_SOURCE_ID, false );
 		final LinkedHashMap< Integer, SourceInfo >  id2Info = new LinkedHashMap<>( 1 );
 		id2Info.put( JACDET_SOURCE_ID, infos.get( jdSource ) );
 		BigWarpInit.add( data, infos );
@@ -2383,10 +2383,10 @@ public class BigWarp< T >
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > WarpMagnitudeSource addWarpMagnitudeSource( final BigWarpData< T > data, final boolean is2D, final String name )
+	private static WarpMagnitudeSource addWarpMagnitudeSource( final BigWarpData< ? > data, final boolean is2D, final String name )
 	{
 		final WarpMagnitudeSource magSource = new WarpMagnitudeSource<>( name, data, new FloatType() );
-		final LinkedHashMap< Source<T>, SourceInfo > infos = BigWarpInit.createSources( data, magSource, WARPMAG_SOURCE_ID, false );
+		final LinkedHashMap< Source<?>, SourceInfo > infos = BigWarpInit.createSources( data, magSource, WARPMAG_SOURCE_ID, false );
 		final LinkedHashMap< Integer, SourceInfo >  id2Info = new LinkedHashMap<>( 1 );
 		id2Info.put( WARPMAG_SOURCE_ID, infos.get( magSource ) );
 		BigWarpInit.add( data, infos );
@@ -2394,13 +2394,13 @@ public class BigWarp< T >
 		return magSource;
 	}
 
-	private static < T > GridSource addGridSource( final int ndims, final BigWarpData< T > data, final String name, boolean isTransformed )
+	private static GridSource addGridSource( final int ndims, final BigWarpData< ? > data, final String name, boolean isTransformed )
 	{
 		// this does not set the transformation
 		// TODO think about whether its worth it to pass a type parameter.
 		final GridSource gridSource = new GridSource<>( name, data, new FloatType(), null );
 		gridSource.setMethod( GridSource.GRID_TYPE.LINE );
-		final LinkedHashMap< Source<T>, SourceInfo > infos = BigWarpInit.createSources( data, gridSource, GRID_SOURCE_ID, true );
+		final LinkedHashMap< Source<?>, SourceInfo > infos = BigWarpInit.createSources( data, gridSource, GRID_SOURCE_ID, true );
 		final LinkedHashMap< Integer, SourceInfo >  id2Info = new LinkedHashMap<>( 1 );
 		id2Info.put( GRID_SOURCE_ID, infos.get( gridSource ) );
 		BigWarpInit.add( data, infos );
@@ -2511,7 +2511,7 @@ public class BigWarp< T >
 		if( srcInfo != null )
 			removeSource(srcInfo);
 
-		LinkedHashMap<Source<T>, SourceInfo> infos;
+		LinkedHashMap<Source<?>, SourceInfo> infos;
 		try {
 			infos = BigWarpInit.createSources(data, uri, TRANSFORM_MASK_SOURCE_ID, false);
 			BigWarpInit.add( data, infos, null, null );

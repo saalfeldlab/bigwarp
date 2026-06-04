@@ -297,7 +297,7 @@ public class BigWarpTestUtils{
 
 		for ( int i = 0; i < moving.length; i++ )
 		{
-			final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, tmpPath, i, moving[ i ] );
+			final LinkedHashMap< Source< ? >, SourceInfo > sources = BigWarpInit.createSources( data, tmpPath, i, moving[ i ] );
 			BigWarpInit.add( data, sources );
 		}
 		final BigWarpViewerOptions opts = BigWarpViewerOptions.options( false );

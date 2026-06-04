@@ -298,7 +298,7 @@ public class BigwarpSettings extends TypeAdapter< BigwarpSettings >
 				if ( existingInfo == null && uri != null )
 				{
 
-					final LinkedHashMap< Source< T >, SourceInfo > sources;
+					final LinkedHashMap< Source< ? >, SourceInfo > sources;
 					try
 					{
 						sources = BigWarpInit.createSources( bigwarp.data, uri, id, isMoving );

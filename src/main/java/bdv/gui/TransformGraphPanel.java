@@ -129,8 +129,8 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 				destCoordinateSystemsDropdown.removeAllItems();
 				HashSet<String> coordinateSystems = new HashSet<>();
 				graph.getTransforms().stream().forEach( t -> {
-					coordinateSystems.add( t.getInput() );
-					coordinateSystems.add( t.getOutput() );
+					coordinateSystems.add( t.getInput().getName() );
+					coordinateSystems.add( t.getOutput().getName() );
 				});
 
 				destCoordinateSystemsDropdown.addItem( DEFAULT_COORDINATE_SYSTEM );

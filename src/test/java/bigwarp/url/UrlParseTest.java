@@ -175,7 +175,7 @@ public class UrlParseTest
 	{
 
 		final BigWarpData< T > data = BigWarpInit.initData();
-		final LinkedHashMap< Source< T >, SourceInfo > sources = BigWarpInit.createSources( data, uri, 0, true );
+		final LinkedHashMap< Source< ? >, SourceInfo > sources = BigWarpInit.createSources( data, uri, 0, true );
 		BigWarpInit.add( data, sources );
 		data.wrapUp();
 		return (Source<?>) sources.keySet().toArray()[ 0 ];
