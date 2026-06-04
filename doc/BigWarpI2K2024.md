@@ -17,7 +17,7 @@ Oct 24, 2024 9:45 AM<br>
 
 ## Prerequisites
 
-* [Download Future Fiji for your platform](https://downloads.imagej.net/fiji/future/)
+* [Download Fiji-Latest for your platform](https://fiji.sc/#download)
 * If necessary download [bigwarp 9.3.0](https://maven.scijava.org/service/local/repositories/releases/content/sc/fiji/bigwarp_fiji/9.3.0/bigwarp_fiji-9.3.0.jar)
 * Download the sample data sets
     * [xray data (medium 1.4G)](https://figshare.com/s/408097a1651139088651)

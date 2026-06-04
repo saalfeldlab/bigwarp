@@ -2,18 +2,18 @@
  * #%L
  * BigWarp plugin for Fiji.
  * %%
- * Copyright (C) 2015 - 2022 Howard Hughes Medical Institute.
+ * Copyright (C) 2015 - 2025 Howard Hughes Medical Institute.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -36,15 +36,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
+import org.janelia.saalfeldlab.n5.NameConfigAdapter;
 import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
+import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
 import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
@@ -52,7 +57,9 @@ import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.N5FactoryWithCache;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
+import org.janelia.saalfeldlab.n5.universe.StorageFormat;
 import org.janelia.saalfeldlab.n5.universe.metadata.MultiscaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMultiScaleMetadata;
@@ -62,19 +69,21 @@ import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5SingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.SpatialMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.AxisUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
 import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InverseCoordinateTransform;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.OmeNgffV06MetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.OmeNgffV06MultiScaleMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.OmeNgffV06MultiScaleMetadataAdapter;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.OmeNgffV06MultiScaleMetadata.OmeNgffDataset;
-import org.janelia.saalfeldlab.n5.universe.serialization.NameConfigAdapter;
 import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.MultiscalesAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata.OmeNgffDataset;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.axes.AxisAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.CoordinateTransformation;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.CoordinateTransformationAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 
 import com.google.gson.GsonBuilder;
 
@@ -110,9 +119,6 @@ import mpicbg.spim.data.SpimDataException;
 import mpicbg.spim.data.XmlIoSpimData;
 import mpicbg.spim.data.generic.AbstractSpimData;
 import mpicbg.spim.data.generic.sequence.AbstractSequenceDescription;
-import mpicbg.spim.data.generic.sequence.BasicViewSetup;
-import mpicbg.spim.data.sequence.Angle;
-import mpicbg.spim.data.sequence.Channel;
 import mpicbg.spim.data.sequence.FinalVoxelDimensions;
 import mpicbg.spim.data.sequence.VoxelDimensions;
 import net.imagej.Dataset;
@@ -173,7 +179,6 @@ public class BigWarpInit {
 	};
 
 	public static final N5MetadataParser<?>[] GROUP_PARSERS = new N5MetadataParser[]{
-			new OmeNgffV06MetadataParser(),
 			new OmeNgffMetadataParser(),
 			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
 			new N5ViewerMultiscaleMetadataParser(),
@@ -181,22 +186,25 @@ public class BigWarpInit {
 			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
 	};
 
-	private static String createSetupName( final BasicViewSetup setup )
-	{
-		if ( setup.hasName() )
-			return setup.getName();
+	private static N5FactoryWithCache factory = null;
 
-		String name = "";
+	/**
+	 * Provides a shared {@link N5FactoryWithCache} instance, with options set
+	 * to cache attributes.
+	 * <p>
+	 * This makes it possible to get the same {@link N5Reader} instance, and
+	 * therefore the same metadata cache when getting an N5Reader the same uri.
+	 *
+	 * @return the N5FactoryWithCache instance
+	 */
+	public static synchronized N5FactoryWithCache sharedN5Factory() {
 
-		final Angle angle = setup.getAttribute( Angle.class );
-		if ( angle != null )
-			name += ( name.isEmpty() ? "" : " " ) + "a " + angle.getName();
+		if (factory == null) {
+			factory = (N5FactoryWithCache)new N5FactoryWithCache()
+					.options(opts -> opts.cacheAttributes(true));
+		}
 
-		final Channel channel = setup.getAttribute( Channel.class );
-		if ( channel != null )
-			name += ( name.isEmpty() ? "" : " " ) + "c " + channel.getName();
-
-		return name;
+		return factory;
 	}
 
 	public static void initSetups( final AbstractSpimData< ? > spimData, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
@@ -276,18 +284,18 @@ public class BigWarpInit {
 	 * @return BigWarpData the data
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static <T> BigWarpData< ? > createBigWarpData( final Source< ? >[] movingSourceList, final Source< ? >[] fixedSourceList, final String[] names )
+	public static BigWarpData<?> createBigWarpData(final Source<?>[] movingSourceList, final Source<?>[] fixedSourceList, final String[] names)
 	{
 		final BigWarpData data = initData();
 		int setupId = 0;
 
 		// moving
 		for (final Source<?> mvgSource : movingSourceList)
-			add(data, createSources(data, (Source<T>) mvgSource, setupId++, true));
+			add(data, createSources(data, mvgSource, setupId++, true));
 
 		// target
 		for (final Source<?> fxdSource : fixedSourceList)
-			add(data, createSources(data, (Source<T>) fxdSource, setupId++, false));
+			add(data, createSources(data, fxdSource, setupId++, false));
 
 		// set names
 		final ArrayList wrappedSources = wrapSourcesAsRenamable( data.sources, names );
@@ -317,22 +325,22 @@ public class BigWarpInit {
 	 *             {@code add(BigWarpData,LinkedHashMap)}
 	 */
 	@Deprecated
-	public static < T > int add( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	public static int add( BigWarpData< ? > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
-		final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, ip, setupId, numTimepoints, isMoving );
+		final LinkedHashMap< Source< ? >, SourceInfo > sources = createSources( bwdata, ip, setupId, numTimepoints, isMoving );
 		add( bwdata, sources );
 		return sources.size();
 	}
-
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData< T > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
+	
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( BigWarpData< ? > bwdata, ImagePlus ip, int setupId, int numTimepoints, boolean isMoving )
 	{
 		final ImagePlusLoader loader = new ImagePlusLoader( ip );
 		final SpimDataMinimal[] dataList = loader.loadAll( setupId );
 
-		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		for ( final SpimDataMinimal data : dataList )
 		{
-			final LinkedHashMap< Source< T >, SourceInfo > map = createSources( bwdata, data, setupId, isMoving );
+			final LinkedHashMap< Source< ? >, SourceInfo > map = createSources( bwdata, data, setupId, isMoving );
 			sourceInfoMap.putAll( map );
 			setupId += map.values().stream().map( SourceInfo::getId ).max( Integer::compare ).orElseGet( () -> 0 );
 		}
@@ -357,7 +365,7 @@ public class BigWarpInit {
 			} );
 		} );
 
-		for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sourceInfoMap.entrySet() )
+		for ( final Map.Entry< Source< ? >, SourceInfo > sourceSourceInfoEntry : sourceInfoMap.entrySet() )
 		{
 			sourceSourceInfoEntry.getValue().setSerializable( true );
 			/* Always break after the first */
@@ -387,24 +395,24 @@ public class BigWarpInit {
 	 *             to call {{@link #add(BigWarpData, LinkedHashMap)}} instead
 	 */
 	@Deprecated
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving )
+	public static BigWarpData< ? > add( BigWarpData< ? > bwdata, Source< ? > src, int setupId, int numTimepoints, boolean isMoving )
 	{
 		return add( bwdata, createSources( bwdata, src, setupId, isMoving));
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo )
+	public static BigWarpData< ? > add( BigWarpData< ? > bwdata, Source< ? > source, SourceInfo sourceInfo )
 	{
 		return add( bwdata, source, sourceInfo );
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, Source< T > source, SourceInfo sourceInfo, RealTransform transform, Supplier<String> transformUriSupplier )
+	public static BigWarpData< ? > add( BigWarpData< ? > bwdata, Source< ? > source, SourceInfo sourceInfo, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
-		final LinkedHashMap< Source< T >, SourceInfo > sourceToInfo = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceToInfo = new LinkedHashMap<>();
 		sourceToInfo.put( source, sourceInfo );
 		return add( bwdata, sourceToInfo, transform, transformUriSupplier );
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources )
+	public static BigWarpData< ? > add( BigWarpData< ? > bwdata, LinkedHashMap< Source< ? >, SourceInfo > sources )
 	{
 		add( bwdata, sources, null, null );
 		return bwdata;
@@ -435,24 +443,27 @@ public class BigWarpInit {
 	 */
 	@SuppressWarnings( { "unchecked", "rawtypes" } )
 	@Deprecated
-	public static < T > BigWarpData< T > add( BigWarpData bwdata, Source< T > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
+	public static BigWarpData< ? > add( BigWarpData bwdata, Source< ? > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
 	{
-		final LinkedHashMap<Source<T>, SourceInfo> info = createSources(bwdata, src, numTimepoints, isMoving);
+		final LinkedHashMap<Source<?>, SourceInfo> info = createSources(bwdata, src, numTimepoints, isMoving);
 		add( bwdata, info, transform, null );
 		return bwdata;
 	}
 
-	public static < T > BigWarpData< T > add( BigWarpData< T > bwdata, LinkedHashMap< Source< T >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
+	public static BigWarpData< ? > add( BigWarpData< ? > bwdata, LinkedHashMap< Source< ? >, SourceInfo > sources, RealTransform transform, Supplier<String> transformUriSupplier )
 	{
-		for( Entry<Source<T>, SourceInfo> entry : sources.entrySet() ) {
+		for( Entry<Source<?>, SourceInfo> entry : sources.entrySet() ) {
 
-			final Source<T> source = entry.getKey();
+			final Source<?> source = entry.getKey();
 			final SourceInfo info = entry.getValue();
 
 			// some initializers set the SourceAndConverter, some do not
 			if( info.getSourceAndConverter() == null ) {
 				addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
-				final SourceAndConverter< T > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
+
+//				private static void addSourceToListsGenericType( final Source< ? > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
+				
+				final SourceAndConverter< ? > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
 				info.setSourceAndConverter( addedSource );
 			}
 
@@ -465,10 +476,10 @@ public class BigWarpInit {
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, Dataset data, int baseId, final boolean isMoving )
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( BigWarpData bwdata, Dataset data, int baseId, final boolean isMoving )
 	{
 		boolean first = true;
-		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 
 		final AffineTransform3D res = datasetResolution( data );
 		final long nc = data.getChannels();
@@ -542,27 +553,35 @@ public class BigWarpInit {
 	}
 
 	@SuppressWarnings( { "rawtypes" } )
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData bwdata, AbstractSpimData< ? > data, int baseId, final boolean isMoving )
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( BigWarpData<?> bwdata, AbstractSpimData< ? > data, int baseId, final boolean isMoving )
 	{
 		final List< SourceAndConverter< ? > > tmpSources = new ArrayList<>();
 		final List< ConverterSetup > tmpConverterSetups = new ArrayList<>();
 		initSetups( data, tmpConverterSetups, tmpSources );
 
-		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		int setupId = baseId;
 		for ( final SourceAndConverter sac : tmpSources )
 		{
 			@SuppressWarnings("unchecked")
-			final Source< T > source = sac.getSpimSource();
+			final Source< ? > source = sac.getSpimSource();
 			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
 		}
 
 		return sourceInfoMap;
 	}
 
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( BigWarpData<?> bwdata, Source< T > src, int baseId, final boolean isMoving )
+	public static GsonBuilder gsonBuilder(boolean reverse) {
+
+		return new GsonBuilder()
+				.registerTypeAdapter(CoordinateTransformation.class, new CoordinateTransformationAdapter(reverse))
+				.registerTypeAdapter(Axis.class, new AxisAdapter())
+				.registerTypeAdapter(OmeNgffMultiScaleMetadata.class, new MultiscalesAdapter(reverse));
+	}
+
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( BigWarpData<?> bwdata, Source< ? > src, int baseId, final boolean isMoving )
 	{
-		final LinkedHashMap< Source< T >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceInfoMap = new LinkedHashMap<>();
 		sourceInfoMap.put( src, new SourceInfo( baseId, isMoving, src.getName() ) );
 		return sourceInfoMap;
 	}
@@ -597,39 +616,47 @@ public class BigWarpInit {
 		return sourcePairs;
 	}
 
-
-	private static String schemeSpecificPartWithoutQuery( URI uri )
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwData, String uri, int setupId, boolean isMoving, N5Metadata meta ) throws URISyntaxException, IOException, SpimDataException
 	{
-		return uri.getSchemeSpecificPart().replaceAll( "\\?" + uri.getQuery(), "" ).replaceAll( "//", "" );
+		return createSources(bwData, uri, setupId, isMoving, meta, Executors.newCachedThreadPool());
 	}
 
-	public static GsonBuilder gsonBuilder() {
-
-		return new GsonBuilder()
-				.registerTypeHierarchyAdapter(CoordinateTransform.class, NameConfigAdapter.getJsonAdapter("type", CoordinateTransform.class))
-				.registerTypeAdapter(OmeNgffV06MultiScaleMetadata.class, new OmeNgffV06MultiScaleMetadataAdapter());
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	{
+		return createSources(bwData, uri, setupId, isMoving, null, Executors.newCachedThreadPool());
 	}
 
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwData, String uri, int setupId, boolean isMoving ) throws URISyntaxException, IOException, SpimDataException
+	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwData, String uri, int setupId, boolean isMoving,
+			N5Metadata meta, ExecutorService exec ) throws URISyntaxException, IOException, SpimDataException
 	{
+
 		final SharedQueue sharedQueue = BigWarpData.getSharedQueue();
 		final URI encodedUri = N5URI.encodeAsUri( uri.trim() );
-		final LinkedHashMap< Source< T >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
+		final LinkedHashMap< Source< ? >, SourceInfo > sourceStateMap = new LinkedHashMap<>();
 		if ( encodedUri.isOpaque() )
 		{
 			final N5URI n5URL = new N5URI( encodedUri.getSchemeSpecificPart() );
 			final String firstScheme = encodedUri.getScheme().toLowerCase();
-			final N5Reader n5reader;
-			switch ( firstScheme.toLowerCase() )
-			{
+			N5Reader n5reader; 
+			switch (firstScheme) {
 			case "n5":
-				n5reader = new N5Factory().gsonBuilder(gsonBuilder()).openReader( n5URL.getContainerPath() );
+			case "zarr":
+			case "h5":
+			case "hdf5":
+			case "hdf":
+				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
 				break;
-			case "zarr3":
-				n5reader = new N5Factory().gsonBuilder(gsonBuilder()).openReader( n5URL.getContainerPath() );
+			default:
+				break;
+			}
+			
+			// TODO the switch statements below won't for some cloud/zarr sources for example.
+			switch (firstScheme) {
+			case "n5":
+				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
 				break;
 			case "zarr":
-				n5reader = new N5ZarrReader( n5URL.getContainerPath() );
+				n5reader = sharedN5Factory().openReader(n5URL.getContainerPath() );
 				break;
 			case "h5":
 			case "hdf5":
@@ -637,11 +664,15 @@ public class BigWarpInit {
 				n5reader = new N5HDF5Reader( n5URL.getContainerPath() );
 				break;
 			default:
-				throw new URISyntaxException( firstScheme, "Unsupported Top Level Protocol" );
+				n5reader = sharedN5Factory().openReader( n5URL.getContainerPath() );
+				break;
 			}
 
-			LinkedHashMap<Source<T>, SourceInfo> newSources = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
-			sourceStateMap.putAll(newSources);
+			if (n5reader == null)
+				throw new URISyntaxException(firstScheme, "Unsupported Top Level Protocol");
+
+			final Source< ? > source = loadN5Source( n5reader, n5URL.getGroupPath(), sharedQueue );
+			sourceStateMap.put( source, new SourceInfo( setupId, isMoving, n5URL.getGroupPath() ) );
 		}
 		else
 		{
@@ -649,12 +680,21 @@ public class BigWarpInit {
 			try
 			{
 				final String containerWithoutN5Scheme = n5URL.getContainerPath().replaceFirst( "^n5://", "" );
-				final N5Reader n5reader = new N5Factory().gsonBuilder(gsonBuilder()).openReader( containerWithoutN5Scheme );
-				LinkedHashMap<Source<T>, SourceInfo> newSources = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving );
-				sourceStateMap.putAll(newSources);
+				final N5Reader n5reader = sharedN5Factory().openReader( containerWithoutN5Scheme );
+
+				final SourceInfo[] infos;
+				if( meta == null)
+					infos = loadN5SourceInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving, exec );
+				else
+					infos = getInfo(bwData, n5reader, n5URL.getGroupPath(), sharedQueue, setupId, isMoving, meta );
+
+				for (SourceInfo info : infos)
+					sourceStateMap.put((Source<?>)info.getSourceAndConverter().getSpimSource(), info);
 			}
 			catch ( final Exception ignored )
-			{}
+			{
+				ignored.printStackTrace();
+			}
 
 			if ( sourceStateMap.isEmpty() )
 			{
@@ -693,7 +733,7 @@ public class BigWarpInit {
 		sourceStateMap.forEach( ( source, state ) -> {
 			state.setUriSupplier( () -> uri );
 		} );
-		for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sourceStateMap.entrySet() )
+		for ( final Map.Entry< Source< ? >, SourceInfo > sourceSourceInfoEntry : sourceStateMap.entrySet() )
 		{
 			sourceSourceInfoEntry.getValue().setSerializable( true );
 			/* Always break after the first */
@@ -718,20 +758,27 @@ public class BigWarpInit {
 	 *             {@code add(BigWarpData, LinkedHashMap, RealTransform)} instead.
 	 */
 	@Deprecated
-	public static < T > SpimData addToData( final BigWarpData bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
+	public static SpimData addToData( final BigWarpData<?> bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		final AtomicReference< SpimData > returnMovingSpimData = new AtomicReference<>();
-		final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData );
+		final LinkedHashMap< Source< ? >, SourceInfo > sources = createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData );
 		add( bwdata, sources );
 		return returnMovingSpimData.get();
 	}
 
-	public static < T > Map< Source< T >, SourceInfo > createSources( final BigWarpData bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
+	public static Map< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset )
 	{
 		return createSources( bwdata, isMoving, setupId, rootPath, dataset, null );
 	}
+	
+	private static LinkedHashMap< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, 
+			final AtomicReference< SpimData > returnMovingSpimData)
+	{
+		return createSources( bwdata, isMoving, setupId, rootPath, dataset, returnMovingSpimData, Executors.newCachedThreadPool());
+	}
 
-	private static < T extends NumericType<T> & NativeType<T> > LinkedHashMap< Source< T >, SourceInfo > createSources( final BigWarpData< T > bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, final AtomicReference< SpimData > returnMovingSpimData )
+	private static LinkedHashMap< Source< ? >, SourceInfo > createSources( final BigWarpData<?> bwdata, final boolean isMoving, final int setupId, final String rootPath, final String dataset, 
+			final AtomicReference< SpimData > returnMovingSpimData, ExecutorService exec )
 	{
 		final SharedQueue sharedQueue = new SharedQueue(Math.max(1, Runtime.getRuntime().availableProcessors() / 2));
 		if ( rootPath.endsWith( "xml" ) )
@@ -744,7 +791,7 @@ public class BigWarpInit {
 				{
 					returnMovingSpimData.set( spimData );
 				}
-				final LinkedHashMap< Source< T >, SourceInfo > sources = createSources( bwdata, spimData, setupId, isMoving );
+				final LinkedHashMap< Source< ? >, SourceInfo > sources = createSources( bwdata, spimData, setupId, isMoving );
 
 				sources.forEach( ( source, state ) -> {
 					state.setUriSupplier( () -> {
@@ -759,7 +806,7 @@ public class BigWarpInit {
 					} );
 				} );
 
-				for ( final Map.Entry< Source< T >, SourceInfo > sourceSourceInfoEntry : sources.entrySet() )
+				for ( final Map.Entry< Source< ? >, SourceInfo > sourceSourceInfoEntry : sources.entrySet() )
 				{
 					sourceSourceInfoEntry.getValue().setSerializable( true );
 					/* Always break after the first */
@@ -775,65 +822,124 @@ public class BigWarpInit {
 		}
 		else
 		{
-			return loadN5SourceInfo(bwdata, rootPath, dataset, sharedQueue, setupId, isMoving);
+			return makeMap( loadN5SourceInfo(bwdata, rootPath, dataset, sharedQueue, setupId, isMoving, exec));
 		}
 	}
 
-	public static < T extends NativeType<T> & NumericType<T> > LinkedHashMap< Source< T >, SourceInfo > loadN5SourceInfo( final BigWarpData<?> bwData, final String n5Root, final String n5Dataset, final SharedQueue queue,
-			final int sourceId, final boolean moving )
+	@SuppressWarnings("unchecked")
+	private static LinkedHashMap<Source<?>, SourceInfo> makeMap(final SourceInfo[] infos) {
+
+		final LinkedHashMap<Source<?>, SourceInfo> map = new LinkedHashMap<>();
+		for( SourceInfo info : infos ) {
+			info.setSerializable(true);
+			map.put(info.getSourceAndConverter().getSpimSource(), info);
+		}
+		return map;
+	}
+
+	public static < T  > SourceInfo[] loadN5SourceInfo( final BigWarpData<T> bwData, final String n5Root, final String n5Dataset, final SharedQueue queue,
+			final int sourceId, final boolean moving, ExecutorService exec )
 	{
 		final N5Reader n5;
 		try
 		{
-			n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader( n5Root );
+			n5 = sharedN5Factory().openReader( n5Root );
 		}
 		catch ( final RuntimeException e ) {
 			e.printStackTrace();
 			return null;
 		}
-		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving );
+		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving, exec );
 	}
 
-	@SuppressWarnings({"unchecked", "rawtypes"})
-	public static < T > LinkedHashMap< Source< T >, SourceInfo > loadN5SourceInfo( final BigWarpData bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
-			final int sourceId, final boolean moving )
+	@SuppressWarnings({"rawtypes", "unchecked"})
+	public static SourceInfo[] loadN5SourceInfo( final BigWarpData bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
+			final int sourceId, final boolean moving, ExecutorService exec )
 	{
-
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, exec, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
 			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
 			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
 		}
 		catch ( final IOException e )
 		{}
 
-		final List<SourceAndConverter<?>> sources;
-		CoordinateSystem cs = null;
-		if( meta instanceof OmeNgffV06MultiScaleMetadata ) {
-			sources = openNgff06DevSourceAndConverter((BigWarpData)bwData, n5, (OmeNgffV06MultiScaleMetadata)meta, queue);
-			cs = ((OmeNgffV06MultiScaleMetadata)meta).getCoordinateSystems()[0]; // TODO eventually don't use first one
-		}
-		else
-			sources = openN5VSourceAndConverter(bwData, n5, meta, queue);
+//<<<<<<< HEAD
+//		final List<SourceAndConverter<?>> sources;
+//		CoordinateSystem cs = null;
+//		if( meta instanceof OmeNgffV06MultiScaleMetadata ) {
+//			sources = openNgff06DevSourceAndConverter((BigWarpData)bwData, n5, (OmeNgffV06MultiScaleMetadata)meta, queue);
+//			cs = ((OmeNgffV06MultiScaleMetadata)meta).getCoordinateSystems()[0]; // TODO eventually don't use first one
+//||||||| abad05e
+//		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, meta, queue);
+//		if( bwData != null ) {
+//			bwData.sources.add((SourceAndConverter)sac);
+//			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+//=======
+		return getInfo(bwData, n5, n5Dataset, queue, sourceId, moving, meta);
+	}
 
-		final LinkedHashMap< Source<T>, SourceInfo > sourceStateMap = new LinkedHashMap<>();
-		for( SourceAndConverter<?> sac : sources ) {
-			if( bwData != null ) {
-				bwData.sources.add((SourceAndConverter)sac);
-				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
-			}
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	public static  <T extends NativeType<T> & NumericType<T> >  SourceInfo[] getInfo( final BigWarpData<?> bwData, final N5Reader n5, final String n5Dataset,
+			final SharedQueue queue, final int sourceId, final boolean moving, N5Metadata meta) {
+
+		final List<SourceAndConverter<T>> sacList = openN5VSourceAndConverter( bwData, n5, meta, queue);
+		final ArrayList<SourceInfo> infos = new ArrayList<>();
+		for( SourceAndConverter sac : sacList ) {
 
 			final String uri = n5.getURI().toString() + "$" + n5Dataset;
 			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 			info.setSourceAndConverter(sac);
-			if (cs != null)
-				info.setCoordinateSystem(cs);
+			infos.add(info);
 
-			sourceStateMap.put((Source<T>)sac.getSpimSource(), info);
+			if( bwData != null ) {
+				bwData.sources.add(sac);
+				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+			}
 		}
-		return sourceStateMap;
+
+		return infos.toArray(new SourceInfo[0]);
+
+//		final SourceAndConverter<?> sac = (SourceAndConverter<?>)openN5VSourceAndConverter( bwData, n5, meta, queue);
+//		if( bwData != null ) {
+//			bwData.sources.add((SourceAndConverter)sac);
+//			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+//		}
+	
+//<<<<<<< HEAD
+//		else
+//			sources = openN5VSourceAndConverter(bwData, n5, meta, queue);
+//
+//		final LinkedHashMap< Source<T>, SourceInfo > sourceStateMap = new LinkedHashMap<>();
+//		for( SourceAndConverter<?> sac : sources ) {
+//			if( bwData != null ) {
+//				bwData.sources.add((SourceAndConverter)sac);
+//				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+//			}
+//
+//			final String uri = n5.getURI().toString() + "$" + n5Dataset;
+//			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
+//			info.setSourceAndConverter(sac);
+//			if (cs != null)
+//				info.setCoordinateSystem(cs);
+//
+//			sourceStateMap.put((Source<T>)sac.getSpimSource(), info);
+//		}
+//		return sourceStateMap;
+//||||||| abad05e
+//
+//		final String uri = n5.getURI().toString() + "$" + n5Dataset;
+//		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
+//		info.setSourceAndConverter(sac);
+//		return info;
+//=======
+		
+//		final String uri = n5.getURI().toString() + "$" + n5Dataset;
+//		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
+//		info.setSourceAndConverter(sac);
+//		return info;
 	}
 
 	@Deprecated
@@ -842,7 +948,7 @@ public class BigWarpInit {
 		final N5Reader n5;
 		try
 		{
-			n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader( n5Root );
+			n5 = sharedN5Factory().openReader( n5Root );
 		}
 		catch ( final RuntimeException e ) {
 			e.printStackTrace();
@@ -930,14 +1036,13 @@ public class BigWarpInit {
 	 * @return a source
 	 */
 	@Deprecated
-	public static <T extends NumericType<T> & NativeType<T>> List<SourceAndConverter<T>> openN5V( final N5Reader n5, final MultiscaleMetadata<?> multiMeta,
-			final SharedQueue sharedQueue) {
+	public static <T extends NumericType<T> & NativeType<T>> List<SourceAndConverter<T>> openN5V( final N5Reader n5, final MultiscaleMetadata<?> multiMeta, final SharedQueue sharedQueue) {
 
 		return openN5VSourceAndConverter(null, n5, multiMeta, sharedQueue);
 	}
 
 	public static <T extends NativeType<T> & NumericType<T> > List<SourceAndConverter<T>> openN5VSourceAndConverter(
-			final BigWarpData<T> bwData,
+			final BigWarpData<?> bwData,
 			final N5Reader n5,
 			final N5Metadata multiMeta,
 			final SharedQueue sharedQueue) {
@@ -949,7 +1054,7 @@ public class BigWarpInit {
 					BdvOptions.options());
 
 			return sources;
-		} catch (final IOException e) {}
+		} catch (final IOException ignored) {}
 
 		return null;
 	}
@@ -958,7 +1063,7 @@ public class BigWarpInit {
 		openNgff06DevSourceAndConverter(
 			final BigWarpData<T> bwData,
 			final N5Reader n5,
-			final OmeNgffV06MultiScaleMetadata metadata,
+			final OmeNgffMultiScaleMetadata metadata,
 			final SharedQueue sharedQueue) {
 
 		final String srcName = metadata.getName();
@@ -982,12 +1087,14 @@ public class BigWarpInit {
 			final RandomAccessibleInterval<T> img = (RandomAccessibleInterval<T>)N5Utils.openVolatile(n5, dsetPath);
 			type = type == null ? img.getType() : type;
 
-			RandomAccessibleInterval<T> imagejImg = AxisUtils.permuteForImagePlus(img, metadata);
+			final Axis[] axes = metadata.getCoordinateSystems()[0].getAxes();
+			RandomAccessibleInterval<T> imagejImg = AxisUtils.permuteForImagePlus(img, axes);
 
 			images[s] = imagejImg;
 
-			// only use first ct for now
-			final CoordinateTransform<?>[] cts = metadata.getDatasets()[s].coordinateTransformations;
+			// only use first dataset for now
+//			final CoordinateTransform<?>[] cts = metadata.getDatasets()[s].coordinateTransformations;
+			CoordinateTransform<?>[] cts = metadata.getDatasets()[s].coordinateTransformations;
 
 			final AffineTransform3D tform = TransformUtils.toAffine3D(n5, Collections.singleton(cts[0]));
 			if (tform != null) {
@@ -1193,9 +1300,9 @@ public class BigWarpInit {
 	 *            be added.
 	 */
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
-	private static < T > void addSourceToListsGenericType( final Source< T > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< T > > sources )
+	private static void addSourceToListsGenericType( final Source< ? > source, final int setupId, final List< ConverterSetup > converterSetups, final List<?> sources )
 	{
-		final T type = source.getType();
+		final Object type = source.getType();
 		if ( type instanceof RealType || type instanceof ARGBType || type instanceof VolatileARGBType )
 			addSourceToListsNumericType( ( Source ) source, setupId, converterSetups, ( List ) sources );
 		else
@@ -1245,14 +1352,14 @@ public class BigWarpInit {
 	 *            be added.
 	 */
 	@SuppressWarnings({"rawtypes", "unchecked"})
-	private static <T, V extends Volatile<T>> void addSourceToListsGenericType(
-			final Source<T> source,
+	private static <V extends Volatile<?>> void addSourceToListsGenericType(
+			final Source<?> source,
 			final Source<V> volatileSource,
 			final int setupId,
 			final List<ConverterSetup> converterSetups,
-			final List<SourceAndConverter<T>> sources) {
+			final List<SourceAndConverter<?>> sources) {
 
-		final T type = source.getType();
+		final Object type = source.getType();
 		if (type instanceof RealType || type instanceof ARGBType || type instanceof VolatileARGBType)
 			addSourceToListsNumericType(
 					(Source)source,
@@ -1647,7 +1754,7 @@ public class BigWarpInit {
 		try
 		{
 			int id = 0;
-			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			LinkedHashMap< Source< ? >, SourceInfo > mvgSrcs;
 			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
@@ -1679,11 +1786,11 @@ public class BigWarpInit {
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static < T > BigWarpData< T > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
+	public static BigWarpData< ? > createBigWarpDataFromImages( final ImagePlus impP, final ImagePlus impQ )
 	{
 		int id = 0;
-		final BigWarpData< T > bwdata = BigWarpInit.initData();
-		final LinkedHashMap< Source< T >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
+		final BigWarpData< ? > bwdata = BigWarpInit.initData();
+		final LinkedHashMap< Source< ? >, SourceInfo > mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 		id += mvgSrcs.size();
 		BigWarpInit.add( bwdata, mvgSrcs );
 
@@ -1747,13 +1854,13 @@ public class BigWarpInit {
 	 *            fixed source ImagePlus
 	 * @return BigWarpData
 	 */
-	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
+	public static BigWarpData< ? > createBigWarpDataFromXMLImagePlus( final String xmlFilenameP, final ImagePlus impQ )
 	{
-		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		final BigWarpData< ? > bwdata = BigWarpInit.initData();
 		try
 		{
 			int id = 0;
-			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			LinkedHashMap< Source< ? >, SourceInfo > mvgSrcs;
 			mvgSrcs = BigWarpInit.createSources( bwdata, xmlFilenameP, id, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
@@ -1800,13 +1907,13 @@ public class BigWarpInit {
 	 *            fixed source XML
 	 * @return BigWarpData
 	 */
-	public static < T extends NativeType<T> > BigWarpData< T > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
+	public static BigWarpData< ? > createBigWarpDataFromImagePlusXML( final ImagePlus impP, final String xmlFilenameQ )
 	{
-		final BigWarpData< T > bwdata = BigWarpInit.initData();
+		final BigWarpData< ? > bwdata = BigWarpInit.initData();
 		try
 		{
 			int id = 0;
-			LinkedHashMap< Source< T >, SourceInfo > mvgSrcs;
+			LinkedHashMap< Source< ? >, SourceInfo > mvgSrcs;
 			mvgSrcs = BigWarpInit.createSources( bwdata, impP, id, 0, true );
 			id += mvgSrcs.size();
 			BigWarpInit.add( bwdata, mvgSrcs );
@@ -1887,6 +1994,48 @@ public class BigWarpInit {
 		for ( int i = 0; i < names.length; ++i )
 			names[ i ] = imp.getTitle() + "-" + i;
 		return names;
+	}
+	
+	/**
+	 * Creates an N5Reader from a String (uri), similar to
+	 * {@link N5ViewerReaderFun}, but using the {@link sharedN5Factory}.
+	 */
+	public static class BigWarpN5ReaderFun implements Function<String, N5Reader> {
+
+		public String message;
+
+		@Override
+		public N5Reader apply(final String n5UriOrPath) {
+
+			N5Reader n5;
+			if (n5UriOrPath == null || n5UriOrPath.isEmpty())
+				return null;
+
+			String rootPath = null;
+			if (n5UriOrPath.contains("?")) {
+
+				// need to strip off storage format for n5uri to correctly remove query;
+				final Pair<StorageFormat, URI> fmtUri = StorageFormat.parseUri(n5UriOrPath);
+				final StorageFormat format = fmtUri.getA();
+
+				final N5URI n5uri = new N5URI(URI.create(fmtUri.getB().toString()));
+				// add the format prefix back if it was present
+				rootPath = format == null ? n5uri.getContainerPath() : format.toString().toLowerCase() + ":" + n5uri.getContainerPath();
+			}
+
+			if (rootPath == null) {
+				rootPath = n5UriOrPath;
+			}
+
+			final N5Factory factory = sharedN5Factory(); // uses cache
+			try {
+				n5 = factory.openReader(rootPath);
+			} catch (final N5Exception e) {
+				IJ.error(e.getMessage());
+				return null;
+			}
+			return n5;
+		}
 	}
 
 }

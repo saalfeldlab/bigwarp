@@ -1,3 +1,24 @@
+/*-
+ * #%L
+ * BigWarp plugin for Fiji.
+ * %%
+ * Copyright (C) 2015 - 2025 Howard Hughes Medical Institute.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-2.0.html>.
+ * #L%
+ */
 package bdv.gui.sourceList;
 
 import java.awt.Component;
@@ -6,7 +27,6 @@ import java.awt.event.ActionListener;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -21,6 +41,7 @@ import javax.swing.table.TableCellRenderer;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 
 import bigwarp.transforms.NgffTransformations;
 import net.imglib2.realtransform.RealTransform;
@@ -36,6 +57,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	protected final String[] columnNames;
 	protected final ArrayList<SourceRow> sources;
 	protected final ArrayList<RemoveRowButton> rmRowButtons;
+
+	// not displayed
+	protected final ArrayList<N5Metadata> metadataList;
 
 	protected static int imageColIdx = 0;
 	protected static int movingColIdx = 1;
@@ -57,6 +81,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 		columnNames = colNames;
 		sources = new ArrayList<>();
 		rmRowButtons = new ArrayList<>();
+		metadataList = new ArrayList<>();
 		this.transformChangedCallback = transformChangedCallback;
 	}
 
@@ -131,6 +156,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			setTransform(row, (String)value);
 	}
 
+	public N5Metadata getMetadata(int row) {
+
+		return metadataList.get(row);
+	}
+
 	public void setTransform(final int row, final String value) {
 
 		if (transformChangedCallback != null) {
@@ -143,11 +173,17 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			sources.get(row).transformUrl = value;
 	}
 
-	public void add(String srcName, boolean moving, SourceType type) {
-
+	public void add(String srcName, boolean moving, SourceType type, N5Metadata metadata)
+	{
 		final RemoveRowButton rmButton = new RemoveRowButton(sources.size());
 		rmRowButtons.add(rmButton);
 		sources.add(new SourceRow(srcName, moving, "", type));
+		metadataList.add(metadata);
+	}
+
+	public void add(String srcName, boolean moving, SourceType type) {
+
+		add(srcName, moving, type, null);
 	}
 
 	public void add(String srcName, boolean moving) {
@@ -158,6 +194,11 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	public void add(String srcName) {
 
 		add(srcName, false);
+	}
+
+	public void add(String srcName, N5Metadata meta) {
+
+		add(srcName, false, SourceType.URL, meta);
 	}
 
 	public void addImagePlus(String srcName) {

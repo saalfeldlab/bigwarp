@@ -1,3 +1,24 @@
+/*-
+ * #%L
+ * BigWarp plugin for Fiji.
+ * %%
+ * Copyright (C) 2015 - 2025 Howard Hughes Medical Institute.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-2.0.html>.
+ * #L%
+ */
 package bdv.gui;
 
 import java.awt.Container;
@@ -62,7 +83,6 @@ import bigwarp.transforms.metadata.N5TransformMetadata;
 import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Macro;
 import ij.Prefs;
@@ -123,8 +143,6 @@ public class BigWarpInitDialog extends JFrame
 
 	private boolean initialRecorderState;
 
-
-
 	public BigWarpInitDialog( final String title )
 	{
 		this( title, null );
@@ -137,7 +155,7 @@ public class BigWarpInitDialog extends JFrame
 		initialPath = "";
 		imageJOpen = IJ.getInstance() != null;
 
-		buildN5SelectionDialog();
+		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
         final Container content = getContentPane();
         content.add( createContent() );
         pack();
@@ -166,30 +184,14 @@ public class BigWarpInitDialog extends JFrame
 		};
 	}
 
-	public static void main( String[] args ) {
-
-		final ImageJ ij = new ImageJ();
-//		runBigWarp( "/home/john/tmp/boats_lm.csv",
-//				new String[]{ "/home/john/tmp/boats.tif", "/home/john/tmp/boats.tif" },
-//				new String[]{ "true", "false" },
-//				null);
-
-//		runBigWarp( "/home/john/tmp/boats_lm2.csv",
-//				new String[]{ "/home/john/tmp/boats.tif", "/home/john/tmp/boats-HR.tif" },
-//				new String[]{ "true", "false" },
-//				null);
-
-//		runBigWarp( "file:///home/john/Documents/presentations/20231130_BdvCommunity/demo/boats-hr-project.json ",
-//				null,
-//				null,
-//				null);
-
-		new BigWarpInitDialog("bigwarp test").createAndShow();
-	}
-
 	public void setInitialRecorderState( final boolean initialRecorderState )
 	{
 		this.initialRecorderState = initialRecorderState;
+	}
+
+	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath)
+	{
+		return runBigWarp( projectLandmarkPath, null, null, null );
 	}
 
 	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
@@ -212,7 +214,7 @@ public class BigWarpInitDialog extends JFrame
 				// TODO better messages for exceptions?
 				try
 				{
-					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
+					final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, images[ i ], id, moving[ i ].equals( "true" ) );
 
 					RealTransform transform = null;
 					final Supplier<String> transformSupplier;
@@ -308,7 +310,7 @@ public class BigWarpInitDialog extends JFrame
 				{
 					// strip off prefix if present
 					final ImagePlus imp = WindowManager.getImage( tableRow.srcName.replaceAll( "^"+ImageJPrefix, "" ) );
-					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
+					final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 					id += infos.size();
 				}
@@ -317,16 +319,17 @@ public class BigWarpInitDialog extends JFrame
 					final Dataset dataset = datasetService.getDatasets().stream()
 							.filter( x -> x.getSource().equals( tableRow.srcName ) )
 							.findFirst().get();
-					final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
+					final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 					id += infos.size();
 				}
-				else
+				else // URI
 				{
 					// deal with exceptions differently?
 					try
 					{
-						final LinkedHashMap< Source< T >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+						final N5Metadata metadata = sourceTableModel.getMetadata(i);
+						final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
 						BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
 						id += infos.size();
 					}
@@ -462,7 +465,6 @@ public class BigWarpInitDialog extends JFrame
 		containerPathText = new JTextField();
 		containerPathText.setText( initialPath );
 		containerPathText.setPreferredSize( new Dimension( frameSizeX / 3, containerPathText.getPreferredSize().height ) );
-//		containerPathText.addActionListener( e -> openContainer( n5Fun, () -> getN5RootPath(), pathFun ) );
 		panel.add(containerPathText, gbcBar);
 
 		cadd.gridy = 2;
@@ -493,7 +495,7 @@ public class BigWarpInitDialog extends JFrame
 
 		addN5Button.addActionListener( e -> {
 
-			selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
+			selectionDialog = new DatasetSelectorDialog( new BigWarpInit.BigWarpN5ReaderFun(), new N5BasePathFun(),
 					lastOpenedContainer,
 					BigWarpInit.GROUP_PARSERS,
 					BigWarpInit.PARSERS);
@@ -595,13 +597,15 @@ public class BigWarpInitDialog extends JFrame
 		clist.fill = GridBagConstraints.BOTH;
 		clist.insets = new Insets(OUTER_PAD, BUTTON_PAD, MID_PAD, BUTTON_PAD);
 
-		sourceTableModel = new BigWarpSourceTableModel( t -> {
+		sourceTableModel = new BigWarpSourceTableModel(t -> {
 			String val = null;
 			try {
 				val = NgffTransformations.detectTransforms(t);
 			} catch (Exception ignored) {}
 
 			if (val != null)
+				showMessage(1000, "Found transformation");
+			else
 				showMessage(1000, "Found transformation");
 
 			return val;
@@ -653,59 +657,22 @@ public class BigWarpInitDialog extends JFrame
 		return panel;
 	}
 
+	/**
+	 * This method is a no-op.
+	 *
+	 * @deprecated
+	 */
+	@Deprecated
 	public void buildN5SelectionDialog()
 	{
-		exec = Executors.newFixedThreadPool( Prefs.getThreads() );
-
-
-		/*
-		 * The Dialogs need to be created anew by the action listener
-		 */
-
-//		selectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-//				lastOpenedContainer,
-//				n5vGroupParsers,
-//				n5Parsers);
-//
-//		selectionDialog.setLoaderExecutor( exec );
-//		selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
-//
-//		selectionDialog.setContainerPathUpdateCallback( x -> {
-//			if ( x != null )
-//				lastOpenedContainer = x;
-//		} );
-//
-//		// figure this out
-////		selectionDialog.setCancelCallback( x -> {
-////			// set back recorder state if canceled
-////			Recorder.record = initialRecorderState;
-////		} );
-//
-//		selectionDialog.setVirtualOption( false );
-//		selectionDialog.setCropOption( false );
-
-
-//		// transform
-//
-//		final N5MetadataParser<?>[] tformParsers = new N5MetadataParser<?>[]{ new N5TransformMetadataParser() };
-//
-//		transformSelectionDialog = new DatasetSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
-//				lastOpenedContainer, new N5MetadataParser[] {}, tformParsers );
-//
-//		transformSelectionDialog.setLoaderExecutor( exec );
-//		transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
-//		transformSelectionDialog.setContainerPathUpdateCallback( x -> {
-//			if ( x != null )
-//				lastOpenedContainer = x;
-//		} );
-
+		// NoOp 
 	}
 
 	public void n5DialogCallback( final DataSelection selection )
 	{
 		final String n5RootPath = selectionDialog.getN5RootPath();
-		for( final N5Metadata m : selection.metadata )
-			sourceTableModel.add( n5RootPath + "?" + m.getPath() );
+		for (final N5Metadata m : selection.metadata)
+			sourceTableModel.add(n5RootPath + "?" + m.getPath(), m);
 
 		repaint();
 	}
@@ -941,7 +908,7 @@ public class BigWarpInitDialog extends JFrame
 		return s;
 	}
 
-	public void setParameters( final String projectLandmarkPath, final String images, final String moving, final String transforms ) {
+	public void setParameters( final String projectLaBigWarpInitDialogndmarkPath, final String images, final String moving, final String transforms ) {
 		this.projectLandmarkPath = projectLandmarkPath;
 		this.imageList = images;
 		this.movingList = moving;

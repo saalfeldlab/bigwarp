@@ -5,17 +5,17 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>40.0.0</version>
+		<version>44.0.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>sc.fiji</groupId>
 	<artifactId>bigwarp_fiji</artifactId>
-	<version>9.3.1-SNAPSHOT</version>
+	<version>9.4.1-SNAPSHOT</version>
 
 	<name>BigWarp plugin for Fiji</name>
 	<description>A tool for manual pointwise deformable registration using bigdataviewer.</description>
-	<url>https://imagej.net/BigWarp</url>
+	<url>https://imagej.net/plugins/bigwarp</url>
 	<inceptionYear>2015</inceptionYear>
 	<organization>
 		<name>Fiji</name>
@@ -33,7 +33,7 @@
 		<developer>
 			<id>bogovicj</id>
 			<name>John Bogovic</name>
-			<url>https://imagej.net/User:Bogovic</url>
+			<url>https://imagej.net/people/bogovicj</url>
 			<roles>
 				<role>founder</role>
 				<role>lead</role>
@@ -47,7 +47,7 @@
 		<developer>
 			<id>axtimwalde</id>
 			<name>Stephan Saalfeld</name>
-			<url>https://imagej.net/User:Saalfeld</url>
+			<url>https://imagej.net/people/axtimwalde</url>
 			<roles>
 				<role>founder</role>
 				<role>lead</role>
@@ -62,28 +62,28 @@
 	<contributors>
 		<contributor>
 			<name>Curtis Rueden</name>
-			<url>https://imagej.net/User:Rueden</url>
+			<url>https://imagej.net/people/ctrueden</url>
 			<properties>
 				<id>ctrueden</id>
 			</properties>
 		</contributor>
 		<contributor>
 			<name>Mark Hiner</name>
-			<url>https://imagej.net/User:Hinerm</url>
+			<url>https://imagej.net/people/hinerm</url>
 			<properties>
 				<id>hinerm</id>
 			</properties>
 		</contributor>
 		<contributor>
 			<name>Philipp Hanslovsky</name>
-			<url>https://imagej.net/User:Hanslovsky</url>
+			<url>https://imagej.net/people/hanslovsky</url>
 			<properties>
 				<id>hanslovsky</id>
 			</properties>
 		</contributor>
 		<contributor>
 			<name>Christian Tischer</name>
-			<url>https://imagej.net/User:EMBL-CBA</url>
+			<url>https://imagej.net/people/tischi</url>
 			<properties>
 				<id>tischi</id>
 			</properties>
@@ -118,6 +118,9 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
+		<scijava.jvm.version>8</scijava.jvm.version>
+		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
+
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 
@@ -133,6 +136,22 @@
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
+
+		<bigdataviewer-core.version>10.6.1</bigdataviewer-core.version>
+		<bigdataviewer-vistools.version>1.0.0-beta-36</bigdataviewer-vistools.version>
+
+		<n5.version>4.0.0</n5.version>
+		<n5-aws-s3.version>5.0.0</n5-aws-s3.version>
+		<n5-blosc.version>2.0.0</n5-blosc.version>
+		<n5-google-cloud.version>6.0.0</n5-google-cloud.version>
+		<n5-hdf5.version>3.0.0</n5-hdf5.version>
+		<n5-ij.version>5.0.0</n5-ij.version>
+		<n5-imglib2.version>8.0.0</n5-imglib2.version>
+		<n5-universe.version>3.0.0</n5-universe.version>
+        <n5-viewer_fiji.version>6.2.0</n5-viewer_fiji.version>
+		<n5-zarr.version>2.0.0</n5-zarr.version>
+		<n5-zstandard.version>2.0.0</n5-zstandard.version>
+
 	</properties>
 
 	<repositories>
@@ -343,7 +362,6 @@
 			<artifactId>xmlunit</artifactId>
 			<version>1.5</version>
 		</dependency>
-
 	</dependencies>
 
 	<profiles>

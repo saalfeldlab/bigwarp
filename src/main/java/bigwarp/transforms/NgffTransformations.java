@@ -1,3 +1,24 @@
+/*-
+ * #%L
+ * BigWarp plugin for Fiji.
+ * %%
+ * Copyright (C) 2015 - 2025 Howard Hughes Medical Institute.
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation, either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/gpl-2.0.html>.
+ * #L%
+ */
 package bigwarp.transforms;
 
 import java.io.FileWriter;
@@ -21,17 +42,19 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.SpacesTransforms;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AbstractAffineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.DisplacementFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.IdentityCoordinateTransform;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertedCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InverseCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertibleAffineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InvertibleCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ParametrizedTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.ReferencedCoordinateTransform;
@@ -49,6 +72,7 @@ import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
+import net.imglib2.realtransform.AffineTransform3D;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
 import net.imglib2.realtransform.ScaleGet;
@@ -63,6 +87,18 @@ public class NgffTransformations
 {
 	public static final String inverseSuffix = "<inverse>";
 
+	public static void main( String[] args ) {
+
+		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform(
+				"name", "inspace", "outspace", TransformUtils.affineToMatrix(new AffineTransform3D()));
+
+		final N5Writer n5 = new N5Factory().gsonBuilder(gsonBuilder()).openWriter(
+				"/home/john/tests/bw-tform-graph/fly-templates.n5");
+		final String dset = "transforms/test";
+
+		addCoordinateTransformations(n5, dset, ct);
+	}
+	
 	public enum TransformField {
 		DISPLACEMENT, COORDINATE
 	};
@@ -111,8 +147,8 @@ public class NgffTransformations
 
 		boolean found = false;
 		for (final CoordinateTransform<?> ct : transforms) {
-			System.out.println(ct);
-			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
+			// TODO generalize input to use path
+			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput().getName());
 			if (nrmInput.equals(normGrp)) {
 				found = true;
 			}
@@ -132,8 +168,8 @@ public class NgffTransformations
 
 		final boolean found = false;
 		for (final CoordinateTransform<?> ct : transforms) {
-			System.out.println(ct);
-			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput());
+			// TODO generalize input to use path
+			final String nrmInput = N5URI.normalizeGroupPath(ct.getInput().getName());
 			if (nrmInput.equals(normGrp) && ct.getOutput().equals(output) ) {
 				return ct.getTransform(n5);
 			}
@@ -179,7 +215,6 @@ public class NgffTransformations
 //				return N5URI.from(uri.getContainerPath(), grp, "coordinateTransformations[0]").toString();
 //			} catch (final URISyntaxException e) {}
 
-
 		return null;
 	}
 
@@ -197,7 +232,7 @@ public class NgffTransformations
 		try {
 			final N5URI n5url = new N5URI(url);
 			final String loc = n5url.getContainerPath();
-			final N5Reader n5 = new N5Factory().gsonBuilder(BigWarpInit.gsonBuilder()).openReader(loc);
+			final N5Reader n5 = new N5Factory().gsonBuilder(BigWarpInit.gsonBuilder(true)).openReader(loc);
 			return openTransformN5(n5, url);
 		} catch (final URISyntaxException e) {}
 
@@ -231,7 +266,7 @@ public class NgffTransformations
 					if( isInverse ) {
 
 						if(ct instanceof InvertibleCoordinateTransform) {
-							ct = new InvertedCoordinateTransform((InvertibleCoordinateTransform)ct);
+							ct = new InverseCoordinateTransform((InvertibleCoordinateTransform)ct);
 						}
 						else
 							System.err.println("Inverse of non-invertible transform requested: " + fullUrl +
@@ -285,7 +320,7 @@ public class NgffTransformations
 			return null;
 		}
 
-		final Gson gson = BigWarpInit.gsonBuilder().create();
+		final Gson gson = BigWarpInit.gsonBuilder(true).create();
 		final JsonElement elem = gson.fromJson( string, JsonElement.class );
 
 		final CoordinateTransform<?> ct = gson.fromJson( elem, CoordinateTransform.class );
@@ -363,7 +398,7 @@ public class NgffTransformations
 		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
 	}
 
-	public static final <T extends NativeType<T> & RealType<T>> AffineCoordinateTransform saveAffine(
+	public static final <T extends NativeType<T> & RealType<T>> InvertibleAffineCoordinateTransform saveAffine(
 			final N5Writer n5Writer,
 			final String dataset,
 			final String metadataDataset,
@@ -391,7 +426,7 @@ public class NgffTransformations
 		else
 			metapath = metadataDataset;
 
-		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
+		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform( null, metapath,
 				inputCoordinates != null ? inputCoordinates.getName() : null,
 				outputCoordinates != null ? outputCoordinates.getName() : null);
 
@@ -400,7 +435,7 @@ public class NgffTransformations
 		return ct;
 	}
 
-	public static final <T extends NativeType<T> & RealType<T>> AffineCoordinateTransform saveAffine(
+	public static final <T extends NativeType<T> & RealType<T>> InvertibleAffineCoordinateTransform saveAffine(
 			final N5Writer n5Writer,
 			final String dataset,
 			final String metadataDataset,
@@ -420,7 +455,7 @@ public class NgffTransformations
 		else
 			metapath = metadataDataset;
 
-		final AffineCoordinateTransform ct = new AffineCoordinateTransform( null, metapath,
+		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform( null, metapath,
 				inputCoordinates != null ? inputCoordinates.getName() : null,
 				outputCoordinates != null ? outputCoordinates.getName() : null);
 
@@ -630,7 +665,7 @@ public class NgffTransformations
 	public static GsonBuilder gsonBuilder() {
 
 		final GsonBuilder gb = new GsonBuilder();
-		gb.registerTypeAdapter(AffineCoordinateTransform.class, new AffineCoordinateTransformAdapter());
+		gb.registerTypeHierarchyAdapter(AbstractAffineCoordinateTransform.class, new AffineCoordinateTransformAdapter());
 		gb.registerTypeAdapter(CoordinateTransform.class, new CoordinateTransformAdapter());
 		return gb;
 	}
@@ -642,7 +677,7 @@ public class NgffTransformations
 		} else if (transform instanceof ScaleGet) {
 			return new ScaleCoordinateTransform(((ScaleGet)transform).getScaleCopy());
 		} else {
-			return new AffineCoordinateTransform(transform.getRowPackedCopy());
+			return new InvertibleAffineCoordinateTransform(TransformUtils.affineToMatrix(transform));
 		}
 	}
 

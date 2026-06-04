@@ -9,4 +9,7 @@ JA Bogovic, P Hanslovsky, A Wong, S Saalfeld, "Robust registration of calcium im
 
 See the main [bigwarp page](http://fiji.sc/BigWarp) for details.
 
+## Resources
+
+* [I2K 2025 workshop sample data](doc/BigWarpI2K2025.md)
 * [I2K 2024 workshop instructions](doc/BigWarpI2K2024.md)

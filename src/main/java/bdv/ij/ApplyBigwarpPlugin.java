@@ -2,18 +2,18 @@
  * #%L
  * BigWarp plugin for Fiji.
  * %%
- * Copyright (C) 2015 - 2022 Howard Hughes Medical Institute.
+ * Copyright (C) 2015 - 2025 Howard Hughes Medical Institute.
  * %%
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as
  * published by the Free Software Foundation, either version 2 of the
  * License, or (at your option) any later version.
- *
+ * 
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
+ * 
  * You should have received a copy of the GNU General Public
  * License along with this program.  If not, see
  * <http://www.gnu.org/licenses/gpl-2.0.html>.
@@ -44,8 +44,8 @@ import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v04.OmeNgffMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 
 import bdv.export.ProgressWriter;
 import bdv.ij.util.ProgressWriterIJ;
@@ -1375,6 +1375,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// build metadata
 		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String omeZarrVersion = "0.5";
 		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
 		final Axis[] axes = new Axis[nd];
 		for (int i = 0; i < nd; i++)
@@ -1426,7 +1427,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 				imgToWrite = img;
 
 			final String name = originalMovingSource.getSpimSource().getName();
-			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, axes, new String[]{"s0"},
+			final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, name, omeZarrVersion, axes, new String[]{"s0"},
 					new double[][]{resolution}, new double[][]{offset});
 
 			try
@@ -1492,6 +1493,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		// build metadata
 		final OmeNgffMetadataParser parser = new OmeNgffMetadataParser();
+		final String omeZarrVersion = "0.5";
 		final String[] axesLabels = nd == 2 ? new String[]{"x", "y"} : new String[]{"x", "y", "z"};
 		final Axis[] axes = new Axis[nd];
 		for (int i = 0; i < nd; i++)
@@ -1534,7 +1536,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 			imgToWrite = img;
 
 		final String destDataset = dataset;
-		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, axes, new String[]{"s0"},
+		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, omeZarrVersion, axes, new String[]{"s0"},
 				new double[][]{resolution}, new double[][]{offsetPhysical});
 
 		try
