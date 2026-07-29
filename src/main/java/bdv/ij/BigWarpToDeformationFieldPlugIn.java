@@ -78,13 +78,8 @@ import ij.WindowManager;
 import ij.plugin.PlugIn;
 import ij.plugin.frame.Recorder;
 import jitk.spline.ThinPlateR2LogRSplineKernelTransform;
-import mpicbg.models.AffineModel2D;
-import mpicbg.models.AffineModel3D;
 import mpicbg.models.InvertibleCoordinateTransform;
-import mpicbg.models.RigidModel2D;
-import mpicbg.models.RigidModel3D;
-import mpicbg.models.SimilarityModel2D;
-import mpicbg.models.SimilarityModel3D;
+import mpicbg.models.Model;
 import mpicbg.models.TranslationModel2D;
 import mpicbg.models.TranslationModel3D;
 import net.imglib2.Cursor;
@@ -563,7 +558,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		case BigWarpTransform.SIMILARITY:
 		case BigWarpTransform.ROTATION:
 		case BigWarpTransform.AFFINE:
-			final double[][] simparams = TransformUtils.affineToMatrix((AffineGet)tform);
+			final double[][] simparams = TransformUtils.affineToMatrix(bwTransform.toImglib2((Model<?>)tform));
 			ct = new InvertibleAffineCoordinateTransform(name, output, input, simparams);
 			break;
 		}
