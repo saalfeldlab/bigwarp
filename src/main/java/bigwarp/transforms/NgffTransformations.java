@@ -42,11 +42,13 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.SpacesTransforms;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AbstractAffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AbstractParametrizedFieldTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
@@ -68,8 +70,13 @@ import com.google.gson.JsonElement;
 
 import bigwarp.BigWarpInit;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.view.Views;
+import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImg;
+import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.array.ArrayImgs;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.util.Util;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
@@ -524,9 +531,16 @@ public class NgffTransformations
 			}
 		}
 
+		// zarr containers store arrays and coordinate systems in reversed (C-order)
+		// axis order, matching OmeNgffMetadataParser.reverse and the v05 field reader
+		// (AbstractParametrizedFieldTransform), which reverses both on read. n5-zarr
+		// already reverses the array's spatial dimensions transparently, so here we
+		// only need to reverse the vector components and the coordinate-system axes.
+		final boolean reverse = OmeNgffMetadataParser.reverse( n5Writer );
+		final RandomAccessibleInterval<T> dfieldToSave = reverse ? AbstractParametrizedFieldTransform.reverseCoordinates(dfield) : dfield;
 		try
 		{
-			N5Utils.save(dfield, n5Writer, dataset, vecBlkSz, compression, exec);
+			N5Utils.save(dfieldToSave, n5Writer, dataset, vecBlkSz, compression, exec);
 		}
 		catch ( final InterruptedException | ExecutionException e )
 		{
@@ -536,11 +550,14 @@ public class NgffTransformations
 		final String vecFieldCsName =  inputCoordinates.getName();
 		final CoordinateSystem[] cs = new CoordinateSystem[] {
 				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates, type ) };
-		n5Writer.setAttribute(dataset, CoordinateSystem.KEY, cs);
+		// write under the "ome/" namespace so the v05 readers (which look up
+		// "ome/coordinateSystems" and "ome/coordinateTransformations") can find them
+		final CoordinateSystem[] csOut = reverse ? new CoordinateSystem[] { cs[0].reverseAxes() } : cs;
+		n5Writer.setAttribute(dataset, "ome/" + CoordinateSystem.KEY, csOut);
 
 		final CoordinateTransform[] ct = new CoordinateTransform[] {
 				createTransformation( "", spacing, offset, dataset, cs[0] ) };
-		n5Writer.setAttribute(dataset, CoordinateTransform.KEY, ct );
+		n5Writer.setAttribute(dataset, "ome/" + CoordinateTransform.KEY, ct );
 
 		if( type.equals( TransformField.DISPLACEMENT ))
 			return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
