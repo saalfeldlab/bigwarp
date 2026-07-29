@@ -46,13 +46,11 @@ import java.util.function.Supplier;
 import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
-import org.janelia.saalfeldlab.n5.NameConfigAdapter;
 import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
+import org.janelia.saalfeldlab.n5.bdv.N5ViewerCreator;
 import org.janelia.saalfeldlab.n5.hdf5.N5HDF5Reader;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
-import org.janelia.saalfeldlab.n5.metadata.N5ViewerMultichannelMetadata;
-import org.janelia.saalfeldlab.n5.metadata.imagej.ImagePlusLegacyMetadataParser;
 import org.janelia.saalfeldlab.n5.metadata.imagej.N5ImagePlusMetadata;
 import org.janelia.saalfeldlab.n5.ui.DataSelection;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
@@ -61,23 +59,17 @@ import org.janelia.saalfeldlab.n5.universe.N5FactoryWithCache;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
 import org.janelia.saalfeldlab.n5.universe.StorageFormat;
 import org.janelia.saalfeldlab.n5.universe.metadata.MultiscaleMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5CosemMultiScaleMetadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5GenericSingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5SingleScaleMetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.N5ViewerMultiscaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.SpatialMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.AxisUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
-import org.janelia.saalfeldlab.n5.universe.metadata.canonical.CanonicalMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AbstractAffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.AffineCoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.InverseCoordinateTransform;
-import org.janelia.saalfeldlab.n5.zarr.N5ZarrReader;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.MultiscalesAdapter;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata.OmeNgffDataset;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.axes.AxisAdapter;
@@ -169,22 +161,6 @@ import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
 public class BigWarpInit {
-
-	public static final N5MetadataParser<?>[] PARSERS = new N5MetadataParser[]{
-			new N5CosemMetadataParser(),
-			new N5SingleScaleMetadataParser(),
-			new CanonicalMetadataParser(),
-			new ImagePlusLegacyMetadataParser(),
-			new N5GenericSingleScaleMetadataParser()
-	};
-
-	public static final N5MetadataParser<?>[] GROUP_PARSERS = new N5MetadataParser[]{
-			new OmeNgffMetadataParser(),
-			new N5CosemMultiScaleMetadata.CosemMultiScaleParser(),
-			new N5ViewerMultiscaleMetadataParser(),
-			new CanonicalMetadataParser(),
-			new N5ViewerMultichannelMetadata.N5ViewerMultichannelMetadataParser()
-	};
 
 	private static N5FactoryWithCache factory = null;
 
@@ -575,6 +551,8 @@ public class BigWarpInit {
 
 		return new GsonBuilder()
 				.registerTypeAdapter(CoordinateTransformation.class, new CoordinateTransformationAdapter(reverse))
+				.registerTypeHierarchyAdapter(AbstractAffineCoordinateTransform.class, new AffineCoordinateTransformAdapter())
+				.registerTypeAdapter(CoordinateTransform.class, new CoordinateTransformAdapter(reverse))
 				.registerTypeAdapter(Axis.class, new AxisAdapter())
 				.registerTypeAdapter(OmeNgffMultiScaleMetadata.class, new MultiscalesAdapter(reverse));
 	}
@@ -856,7 +834,9 @@ public class BigWarpInit {
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, exec, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, exec, 
+					N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vParsers ),
+					N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vGroupParsers ));
 			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
 			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
 		}
@@ -962,7 +942,9 @@ public class BigWarpInit {
 		N5Metadata meta = null;
 		try
 		{
-			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5, N5DatasetDiscoverer.fromParsers( PARSERS ), N5DatasetDiscoverer.fromParsers( GROUP_PARSERS ) );
+			final N5DatasetDiscoverer discoverer = new N5DatasetDiscoverer( n5,
+					N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vParsers ),
+					N5DatasetDiscoverer.fromParsers( N5ViewerCreator.n5vGroupParsers ));
 			final N5TreeNode node = discoverer.discoverAndParseRecursive("");
 			meta = node.getDescendant(n5Dataset).map(N5TreeNode::getMetadata).orElse(null);
 		}
