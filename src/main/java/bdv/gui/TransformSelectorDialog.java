@@ -723,9 +723,12 @@ public class TransformSelectorDialog {
 						node.setMetadata(x.getMetadata());
 						addTransformsToNode(node);
 
-						// sort children, update ui
+						// sort children, update ui. When the transform is on the root
+						// node, its parent is null; sort (and announce the structure
+						// change for) the node itself so the added transform children
+						// become visible and selectable.
 						final N5SwingTreeNode parent = (N5SwingTreeNode)node.getParent();
-						sortRecursive(parent);
+						sortRecursive(parent != null ? parent : node);
 
 						treeModel.nodeChanged(node);
 						expandTree();
