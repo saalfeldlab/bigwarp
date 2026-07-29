@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>44.0.0</version>
+		<version>45.0.0</version>
 		<relativePath />
 	</parent>
 
@@ -118,39 +118,18 @@
 		<license.projectName>BigWarp plugin for Fiji.</license.projectName>
 		<license.excludes>**/resources/*.xml</license.excludes>
 
-		<scijava.jvm.version>8</scijava.jvm.version>
-		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
+<!--		<scijava.jvm.version>8</scijava.jvm.version>-->
+<!--		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>-->
 
 		<jcommander.version>1.48</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 
-		<n5.version>4.0.0-SNAPSHOT</n5.version>
-		<n5-ij.version>4.4.0</n5-ij.version>
-		<n5-zarr.version>2.0.0-SNAPSHOT</n5-zarr.version>
-		<n5-universe.version>2.3.1-SNAPSHOT</n5-universe.version>
-		<n5-viewer_fiji.version>6.1.3-SNAPSHOT</n5-viewer_fiji.version>
-
-		<imglib2-algorithm.version>0.18.0</imglib2-algorithm.version>
-
-		<enforcer.skip>true</enforcer.skip>
-
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
 		<releaseProfiles>sign,deploy-to-scijava</releaseProfiles>
 
-		<bigdataviewer-core.version>10.6.1</bigdataviewer-core.version>
-		<bigdataviewer-vistools.version>1.0.0-beta-36</bigdataviewer-vistools.version>
-
-		<n5.version>4.0.0</n5.version>
-		<n5-aws-s3.version>5.0.0</n5-aws-s3.version>
-		<n5-blosc.version>2.0.0</n5-blosc.version>
-		<n5-google-cloud.version>6.0.0</n5-google-cloud.version>
-		<n5-hdf5.version>3.0.0</n5-hdf5.version>
-		<n5-ij.version>5.0.0</n5-ij.version>
-		<n5-imglib2.version>8.0.0</n5-imglib2.version>
 		<n5-universe.version>3.1.0-SNAPSHOT</n5-universe.version>
-        <n5-viewer_fiji.version>6.2.0</n5-viewer_fiji.version>
-		<n5-zarr.version>2.0.0</n5-zarr.version>
-		<n5-zstandard.version>2.0.0</n5-zstandard.version>
+		<n5-viewer_fiji.version>6.2.1-SNAPSHOT</n5-viewer_fiji.version>
+		<n5-ij.version>5.0.1-SNAPSHOT</n5-ij.version>
 
 	</properties>
 
@@ -250,7 +229,6 @@
 		<dependency>
 			<groupId>org.janelia</groupId>
 			<artifactId>n5-zstandard</artifactId>
-			<version>1.0.3-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.janelia.saalfeldlab</groupId>
@@ -309,6 +287,15 @@
 		<dependency>
 			<groupId>ome</groupId>
 			<artifactId>formats-bsd</artifactId>
+			<exclusions>
+				<!-- xml-apis re-bundles org.xml.sax / org.w3c.dom / javax.xml,
+				     which are already provided by the JDK's java.xml module.
+				     The split package breaks Eclipse (ecj) compilation. -->
+				<exclusion>
+					<groupId>xml-apis</groupId>
+					<artifactId>xml-apis</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 
 		<!-- Third-party dependencies -->
