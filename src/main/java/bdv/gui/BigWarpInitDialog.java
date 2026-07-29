@@ -55,7 +55,9 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
-
+import org.janelia.saalfeldlab.n5.bdv.N5VSources;
+import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
+import org.janelia.saalfeldlab.n5.bdv.N5ViewerCreator;
 import org.janelia.saalfeldlab.n5.bdv.N5ViewerTreeCellRenderer;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5BasePathFun;
 import org.janelia.saalfeldlab.n5.ij.N5Importer.N5ViewerReaderFun;
@@ -497,8 +499,8 @@ public class BigWarpInitDialog extends JFrame
 
 			selectionDialog = new DatasetSelectorDialog( new BigWarpInit.BigWarpN5ReaderFun(), new N5BasePathFun(),
 					lastOpenedContainer,
-					BigWarpInit.GROUP_PARSERS,
-					BigWarpInit.PARSERS);
+					N5ViewerCreator.n5vGroupParsers,
+					N5ViewerCreator.n5vParsers);
 
 			selectionDialog.setLoaderExecutor( exec );
 			selectionDialog.setTreeRenderer(new N5ViewerTreeCellRenderer(false));
@@ -671,8 +673,19 @@ public class BigWarpInitDialog extends JFrame
 	public void n5DialogCallback( final DataSelection selection )
 	{
 		final String n5RootPath = selectionDialog.getN5RootPath();
-		for (final N5Metadata m : selection.metadata)
-			sourceTableModel.add(n5RootPath + "?" + m.getPath(), m);
+
+		// A single selected metadata entry can map to several sources once parsed by
+		// n5-viewer, so add a row per source it expands into:
+		//  - unwrapMultichannelSelections expands a multichannel / generic group into
+		//    one child dataset per channel (each with its own path);
+		//  - N5VSources.expandSelection expands a scene into the datasets it references
+		//    (each with its own path), and passes a plain dataset through unchanged.
+		// Each has a distinct path/URI, so BigWarp's by-URI loader loads it independently.
+		// (A channel axis *within* a single dataset shares one path/URI and is fanned out
+		// at load time instead, so it stays a single row.)
+		for (final N5Metadata m : N5Viewer.unwrapMultichannelSelections( selection ))
+			for (final N5Metadata dataset : N5VSources.expandSelection( selection.n5, m ))
+				sourceTableModel.add(n5RootPath + "?" + dataset.getPath(), dataset);
 
 		repaint();
 	}
