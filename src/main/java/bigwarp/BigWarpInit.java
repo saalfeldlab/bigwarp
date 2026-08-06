@@ -551,7 +551,7 @@ public class BigWarpInit {
 
 		return new GsonBuilder()
 				.registerTypeAdapter(CoordinateTransformation.class, new CoordinateTransformationAdapter(reverse))
-				.registerTypeHierarchyAdapter(AbstractAffineCoordinateTransform.class, new AffineCoordinateTransformAdapter())
+				.registerTypeHierarchyAdapter(AbstractAffineCoordinateTransform.class, new AffineCoordinateTransformAdapter(reverse))
 				.registerTypeAdapter(CoordinateTransform.class, new CoordinateTransformAdapter(reverse))
 				.registerTypeAdapter(Axis.class, new AxisAdapter())
 				.registerTypeAdapter(OmeNgffMultiScaleMetadata.class, new MultiscalesAdapter(reverse));
