@@ -21,7 +21,10 @@
  */
 package bigwarp.dfield;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -58,6 +61,7 @@ import net.imglib2.RealPoint;
 import net.imglib2.img.display.imagej.ImageJFunctions;
 import net.imglib2.img.imageplus.ImagePlusImgs;
 import net.imglib2.iterator.RealIntervalIterator;
+import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.DisplacementFieldTransform;
 import net.imglib2.realtransform.InvertibleRealTransform;
 import net.imglib2.realtransform.RealTransform;
@@ -173,6 +177,80 @@ public class DfieldExportTest {
 		final InvertibleRealTransform tform = bwTransform.getTransformation();
 
 		assertTrue("split affine forward", compare(tform, total, it, 1e-3));
+	}
+
+	/**
+	 * {@link #dfieldIgnoreAffineExportTest} recomposes the split parts in memory, so it
+	 * only shows that the field had the affine removed - it never checks that the affine
+	 * survived being written. This one goes through {@code writeN5} and reads both parts
+	 * back out of the container.
+	 */
+	@Test
+	public void dfieldSplitAffineN5ExportTest() throws IOException {
+
+		final BigWarpTransform bwTransform = new BigWarpTransform(ltm);
+		final InvertibleRealTransform tform = bwTransform.getTransformation();
+
+		// constant parameters
+		final boolean flatten = false;
+		final boolean inverse = false;
+		final double inverseTolerance = 0.01;
+		final int inverseMaxIters = 1;
+
+		final long[] dims = new long[]{47, 56, 7};
+		final double[] spacing = new double[]{0.8, 0.8, 1.6};
+		final double[] offset = new double[]{0, 0, 0};
+
+		final int[] blkSize = new int[]{32, 32, 32};
+		final RawCompression compression = new RawCompression();
+
+		final String format = ExportDisplacementFieldFrame.FMT_N5;
+		final int nThreads = 1;
+
+		final FinalRealInterval testItvl = new FinalRealInterval(
+				new double[]{3.6, 3.6, 1.6},
+				new double[]{32.0, 40.0, 9.6});
+
+		final File tmpFile = Files.createTempDirectory("bw-dfield-test-").toFile();
+		tmpFile.deleteOnExit();
+		final String n5BasePath = tmpFile.getCanonicalPath() + ".n5";
+
+		final String splitDset = "dfieldSplitAffine";
+		BigWarpToDeformationFieldPlugIn.writeN5(n5BasePath, splitDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSize, compression, nThreads, format, true, flatten, DTYPE.FLOAT, Double.MAX_VALUE, inverse, inverseTolerance, inverseMaxIters);
+
+		final String wholeDset = "dfieldWhole";
+		BigWarpToDeformationFieldPlugIn.writeN5(n5BasePath, wholeDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSize, compression, nThreads, format, false, flatten, DTYPE.FLOAT, Double.MAX_VALUE, inverse, inverseTolerance, inverseMaxIters);
+
+		try (final N5Writer n5 = new N5Factory().openWriter(n5BasePath)) {
+
+			final AffineGet storedAffine = N5DisplacementField.openAffine(n5, splitDset);
+			assertNotNull("split export must store the affine part", storedAffine);
+			assertArrayEquals("stored affine is the affine part of the tps",
+					bwTransform.affinePartOfTps().getRowPackedCopy(), storedAffine.getRowPackedCopy(), 1e-9);
+
+			assertNull("un-split export must not store an affine",
+					N5DisplacementField.openAffine(n5, wholeDset));
+
+			// open() recomposes as dfield-then-affine, matching the order writeN5 uses
+			final RealTransform recomposed = N5DisplacementField.open(n5, splitDset, false);
+			final RealIntervalIterator it = new RealIntervalIterator(testItvl, spacing);
+			assertTrue("split affine round trip", compare(tform, recomposed, it, 1e-3));
+
+			// peeling the stored affine back off leaves the residual field, which must not
+			// be the whole transformation - otherwise nothing was actually split out and the
+			// assertion above would hold for the wrong reason
+			final RealTransformSequence residual = new RealTransformSequence();
+			residual.add(recomposed);
+			residual.add(storedAffine.inverse());
+
+			it.reset();
+			assertFalse("the stored field alone is not the whole transformation (the printed distance above is expected)",
+					compare(tform, residual, it, 1e-3));
+
+			n5.remove();
+		}
 	}
 
 	@Test
