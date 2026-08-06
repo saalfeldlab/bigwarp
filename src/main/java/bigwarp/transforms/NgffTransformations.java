@@ -42,7 +42,10 @@ import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.CoordinateSystem;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.NgffSingleScaleAxesMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.Common;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.SpacesTransforms;
@@ -70,13 +73,8 @@ import com.google.gson.JsonElement;
 
 import bigwarp.BigWarpInit;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.view.Views;
-import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImg;
-import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.img.array.ArrayImgs;
-import net.imglib2.loops.LoopBuilder;
-import net.imglib2.util.Util;
 import net.imglib2.img.basictypeaccess.array.DoubleArray;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.AffineTransform3D;
@@ -99,8 +97,9 @@ public class NgffTransformations
 		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform(
 				"name", "inspace", "outspace", TransformUtils.affineToMatrix(new AffineTransform3D()));
 
-		final N5Writer n5 = new N5Factory().gsonBuilder(gsonBuilder()).openWriter(
-				"/home/john/tests/bw-tform-graph/fly-templates.n5");
+		final N5Writer n5 = new N5Factory()
+				.options( opts -> { opts.gsonBuilder(gsonBuilder()); })
+				.openWriter("/home/john/tests/bw-tform-graph/fly-templates.n5");
 		final String dset = "transforms/test";
 
 		addCoordinateTransformations(n5, dset, ct);
@@ -383,6 +382,22 @@ public class NgffTransformations
 		final DisplacementFieldCoordinateTransform<?> ngffDfield = saveDisplacementFieldNgff( n5, dataset, "/", inputCoordinates, outputCoordinates,
 				dfield, spacing, offset, blockSize, compression, threadPool );
 
+		// N5Utils.save( ..., ExecutorService ) returns before its submitted block-write
+		// tasks complete, so the pool must be joined here; otherwise the field array is
+		// incompletely written when this method returns (missing blocks read back as
+		// zeros), which is especially likely with a single-thread pool. See
+		// bigwarp.dfield.N5UtilsExecutorSaveTest.
+		threadPool.shutdown();
+		try
+		{
+			threadPool.awaitTermination( Long.MAX_VALUE, TimeUnit.MILLISECONDS );
+		}
+		catch ( final InterruptedException e )
+		{
+			Thread.currentThread().interrupt();
+			throw new RuntimeException( "Interrupted while writing displacement field to " + dataset, e );
+		}
+
 		return ngffDfield;
 	}
 
@@ -531,11 +546,10 @@ public class NgffTransformations
 			}
 		}
 
-		// zarr containers store arrays and coordinate systems in reversed (C-order)
-		// axis order, matching OmeNgffMetadataParser.reverse and the v05 field reader
-		// (AbstractParametrizedFieldTransform), which reverses both on read. n5-zarr
-		// already reverses the array's spatial dimensions transparently, so here we
-		// only need to reverse the vector components and the coordinate-system axes.
+		// the ome-zarr spec for displacement and position field transforms 
+		// reverses the indexing order of coordinates relative to what we store for imglib2
+		// as a result, we need to reverse the indexes of the vector components
+		// when that is the case.
 		final boolean reverse = OmeNgffMetadataParser.reverse( n5Writer );
 		final RandomAccessibleInterval<T> dfieldToSave = reverse ? AbstractParametrizedFieldTransform.reverseCoordinates(dfield) : dfield;
 		try
@@ -550,14 +564,12 @@ public class NgffTransformations
 		final String vecFieldCsName =  inputCoordinates.getName();
 		final CoordinateSystem[] cs = new CoordinateSystem[] {
 				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates, type ) };
-		// write under the "ome/" namespace so the v05 readers (which look up
-		// "ome/coordinateSystems" and "ome/coordinateTransformations") can find them
-		final CoordinateSystem[] csOut = reverse ? new CoordinateSystem[] { cs[0].reverseAxes() } : cs;
-		n5Writer.setAttribute(dataset, "ome/" + CoordinateSystem.KEY, csOut);
 
 		final CoordinateTransform[] ct = new CoordinateTransform[] {
 				createTransformation( "", spacing, offset, dataset, cs[0] ) };
-		n5Writer.setAttribute(dataset, "ome/" + CoordinateTransform.KEY, ct );
+
+		// write the fields's coordinate system and transform in an OME-Zarr multiscales
+		writeFieldMultiscales( n5Writer, dataset, cs, ct );
 
 		if( type.equals( TransformField.DISPLACEMENT ))
 			return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
@@ -565,6 +577,44 @@ public class NgffTransformations
 		else
 			return new CoordinateFieldCoordinateTransform<T>( "", dataset, "linear",
 					inputCoordinates.getName(), outputCoordinates.getName() );
+	}
+
+	/**
+	 * Writes NGFF multiscales metadata that
+	 * holds the field's coordinate system(s) and its single dataset's
+	 * pixel-&gt;physical transform(s). The one dataset entry self-references the
+	 * field array with the path {@code "."} (see the scene-export plan, Option A).
+	 * <p>
+	 * The coordinate systems and transforms are passed in imglib2 (x,y,z) order;
+	 * the reverse-aware {@link OmeNgffMetadataParser} reverses them for zarr.
+	 *
+	 * @param n5Writer the writer
+	 * @param dataset the field array group (also the multiscales group)
+	 * @param coordinateSystems the field coordinate system(s)
+	 * @param datasetTransforms the array's pixel-&gt;physical transform(s)
+	 */
+	private static void writeFieldMultiscales(final N5Writer n5Writer, final String dataset,
+			final CoordinateSystem[] coordinateSystems, final CoordinateTransform<?>[] datasetTransforms) {
+
+		final OmeNgffMultiScaleMetadata.OmeNgffDataset dset = new OmeNgffMultiScaleMetadata.OmeNgffDataset();
+		dset.path = ".";
+		dset.coordinateTransformations = datasetTransforms;
+
+		final int nd = coordinateSystems[0].getAxes().length;
+		// base path "/" so the constructor's dataset relativization preserves the
+		// "." self-reference (relativizing "." against "" would collapse it to "").
+		final OmeNgffMultiScaleMetadata ms = new OmeNgffMultiScaleMetadata(
+				nd, "/", null, null, "0.5", null,
+				new OmeNgffMultiScaleMetadata.OmeNgffDataset[] { dset },
+				coordinateSystems, null, null, null,
+				new NgffSingleScaleAxesMetadata[ 0 ] );
+
+		final OmeNgffMetadata meta = new OmeNgffMetadata( "", new OmeNgffMultiScaleMetadata[] { ms } );
+		try {
+			new OmeNgffMetadataParser( n5Writer ).writeMetadata( meta, n5Writer, dataset );
+		} catch ( final Exception e ) {
+			e.printStackTrace();
+		}
 	}
 
 
