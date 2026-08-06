@@ -708,6 +708,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
+				awaitShutdown(exec); // N5Utils.save(...exec) returns before the block writes finish; join before continuing
 				SlicerTransformations.saveAffine(n5, dataset, affine);
 			} else if (format.equals(ExportDisplacementFieldFrame.FMT_N5)) {
 				// TODO Implement me
@@ -743,6 +744,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
+				awaitShutdown(exec); // N5Utils.save(...exec) returns before the block writes finish; join before continuing
 
 				// for slicer, this affine represents the pixel to physical transformation
 				SlicerTransformations.saveAffine(n5, dataset, new ScaleAndTranslation(spacing, offset));
@@ -851,6 +853,27 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					out[ i ] = blockSize[ j ];
 			}
 			return out;
+		}
+	}
+
+	/**
+	 * Shuts down {@code exec} and blocks until all its tasks complete. Necessary
+	 * because {@code N5Utils.save( ..., ExecutorService )} returns before its
+	 * submitted block-write tasks finish; without joining, the field array is read
+	 * / the container closed while blocks are still being written, so blocks are
+	 * lost (read back as zeros). See {@code bigwarp.dfield.N5UtilsExecutorSaveTest}.
+	 */
+	private static void awaitShutdown( final ExecutorService exec )
+	{
+		exec.shutdown();
+		try
+		{
+			exec.awaitTermination( Long.MAX_VALUE, TimeUnit.MILLISECONDS );
+		}
+		catch ( final InterruptedException e )
+		{
+			Thread.currentThread().interrupt();
+			throw new RuntimeException( "Interrupted while writing displacement field", e );
 		}
 	}
 
