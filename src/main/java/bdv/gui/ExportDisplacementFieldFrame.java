@@ -325,9 +325,18 @@ public class ExportDisplacementFieldFrame extends JFrame
 		{
 			if( data != null )
 			{
-				// set default resolution to target image resolution
-				final double[] res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.TARGET, null );
-				fovPanel.setSpacing(res);
+				/*
+				 * Set default resolution to target image resolution, falling back to the
+				 * moving image's when no target source was loaded - getResolution returns
+				 * null in that case, which used to throw here.
+				 */
+				double[] res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.TARGET, null );
+				if( res == null )
+					res = ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.MOVING, null );
+
+				if( res != null )
+					fovPanel.setSpacing( res );
+
 				fovPanel.updateFieldsFromReference();
 			}
 			else
