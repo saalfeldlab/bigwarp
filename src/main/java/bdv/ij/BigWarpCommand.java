@@ -77,6 +77,8 @@ public class BigWarpCommand implements Command, PlugIn
 
 	public static void main( String[] a ) throws IOException
 	{
+		System.out.println("BigWarpCommand.main()");
+
 //		String options = "images=mri-stack.tif,mri-stack.tif moving=true,false transforms=,";
 //
 //		String images = Macro.getValue(options, "images", "");
@@ -87,8 +89,8 @@ public class BigWarpCommand implements Command, PlugIn
 //		System.out.println( moving );
 //		System.out.println( transforms );
 
-		final ImageJ ij2 = new ImageJ();
-		ij2.ui().showUI();
+//		final ImageJ ij2 = new ImageJ();
+//		ij2.ui().showUI();
 
 //		final Object im1 = ij2.io().open( "/home/john/tmp/mri-stack.tif" );
 //		final Object im2 = ij2.io().open( "/home/john/tmp/t1-head.tif" );
@@ -100,8 +102,8 @@ public class BigWarpCommand implements Command, PlugIn
 //		ij2.ui().show( im2 );
 
 
-		final Object im1 = ij2.io().open( "/home/john/tmp/boats.tif" );
-		ij2.ui().show( im1 );
+//		final Object im1 = ij2.io().open( "/home/john/tmp/boats.tif" );
+//		ij2.ui().show( im1 );
 
 
 //		String args = "images=[a, b, c], isMoving=[true, true, false], transforms=[,,]";
@@ -109,6 +111,9 @@ public class BigWarpCommand implements Command, PlugIn
 //		String imagesList = null;
 //		String isMovingList = null;
 //		String transformsList = null;
+		
+		ij.ImageJ ij1 = new ij.ImageJ();
+		new BigWarpCommand().run();
 	}
 
 }

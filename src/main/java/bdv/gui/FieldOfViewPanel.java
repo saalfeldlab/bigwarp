@@ -33,7 +33,9 @@ import java.util.List;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -77,7 +79,21 @@ public class FieldOfViewPanel extends JPanel
 
 	private JComboBox<String> referenceComboBox;
 	private JTextField unitField;
+	private JLabel minLabel;
 	private JLabel sizeLabel;
+	private JLabel spacingLabel;
+
+	/**
+	 * When true, the panel additionally exposes the landmark point filter and the
+	 * bounding box estimation options, and offers the {@code MOVING} and
+	 * {@code UNION_TARGET_MOVING} reference options.
+	 */
+	private final boolean showAdvanced;
+
+	private JLabel pointFilterLabel;
+	private JTextField pointFilterField;
+	private JComboBox<String> bboxMethodComboBox;
+	private JSpinner bboxSamplesSpinner;
 
 	private ImprovedFormattedTextField[] minFields;
 	private ImprovedFormattedTextField[] sizeFields;
@@ -93,8 +109,15 @@ public class FieldOfViewPanel extends JPanel
 	public FieldOfViewPanel( final BigWarpData<?> data, final LandmarkTableModel ltm, final BigWarpTransform bwTransform, final String unit, final int textFieldWidth,
 			final double[] initMin, final double[] initSpacing, final long[] initPixsize )
 	{
+		this( data, ltm, bwTransform, unit, textFieldWidth, initMin, initSpacing, initPixsize, false );
+	}
+
+	public FieldOfViewPanel( final BigWarpData<?> data, final LandmarkTableModel ltm, final BigWarpTransform bwTransform, final String unit, final int textFieldWidth,
+			final double[] initMin, final double[] initSpacing, final long[] initPixsize, final boolean showAdvanced )
+	{
 		super();
 
+		this.showAdvanced = showAdvanced;
 		this.data = data;
 		this.ltm = ltm;
 		this.bwTransform = bwTransform;
@@ -121,6 +144,93 @@ public class FieldOfViewPanel extends JPanel
 			size[ i ] = spacing[ i ] * pixSize[ i ];
 
 		create();
+	}
+
+	/**
+	 * Sets the {@link BigWarpData} whose sources the reference options resolve against.
+	 * <p>
+	 * Callers that change the data after construction should follow this with
+	 * {@link #updateFieldsFromReference()}.
+	 *
+	 * @param data the bigwarp data
+	 */
+	public void setData( final BigWarpData<?> data )
+	{
+		this.data = data;
+	}
+
+	/**
+	 * Sets the landmarks used to resolve the landmark-based reference options.
+	 *
+	 * @param ltm the landmark table model
+	 */
+	public void setLandmarks( final LandmarkTableModel ltm )
+	{
+		this.ltm = ltm;
+	}
+
+	/**
+	 * Sets the transformation used to estimate the warped moving field of view.
+	 *
+	 * @param bwTransform the transformation
+	 */
+	public void setTransform( final BigWarpTransform bwTransform )
+	{
+		this.bwTransform = bwTransform;
+	}
+
+	/**
+	 * @return the regular expression filtering landmark points by name, or the empty
+	 *         string when this panel was built without the advanced options
+	 */
+	public String getPointFilter()
+	{
+		return pointFilterField == null ? "" : pointFilterField.getText();
+	}
+
+	/**
+	 * @return the selected reference option, or {@code SPECIFIED} when there is no
+	 *         reference dropdown
+	 */
+	public String getReference()
+	{
+		if ( referenceComboBox == null )
+			return ApplyBigwarpPlugin.SPECIFIED;
+
+		final String selected = ( String ) referenceComboBox.getSelectedItem();
+		return selected == null ? ApplyBigwarpPlugin.SPECIFIED : selected;
+	}
+
+	/**
+	 * @return the name of the selected bounding box estimation method
+	 */
+	public String getBoundingBoxMethod()
+	{
+		if ( bboxMethodComboBox == null )
+			return BoundingBoxEstimation.Method.FACES.toString();
+
+		return ( String ) bboxMethodComboBox.getSelectedItem();
+	}
+
+	/**
+	 * @return the number of samples per dimension used by the bounding box estimator
+	 */
+	public int getBoundingBoxSamples()
+	{
+		return bboxSamplesSpinner == null ? 5 : ( Integer ) bboxSamplesSpinner.getValue();
+	}
+
+	/**
+	 * @return the bounding box estimator described by the current options
+	 */
+	public BoundingBoxEstimation getBoundingBoxEstimation()
+	{
+		if ( bboxMethodComboBox == null )
+			return new BoundingBoxEstimation();
+
+		return new BoundingBoxEstimation(
+				BoundingBoxEstimation.Method.valueOf( ( String ) bboxMethodComboBox.getSelectedItem() ),
+				( Integer ) bboxSamplesSpinner.getValue() );
 	}
 
 	public double[] getMin()
@@ -196,12 +306,25 @@ public class FieldOfViewPanel extends JPanel
 	public void setUnit( String unit )
 	{
 		unitField.setText( unit );
-		updateSizeLabel();
+		updateUnitLabels();
 	}
 
-	private void updateSizeLabel()
+	/**
+	 * Refreshes every column header that mentions the unit.
+	 * <p>
+	 * The labels are created after the listener that calls this, so tolerate nulls.
+	 */
+	private void updateUnitLabels()
 	{
-		sizeLabel.setText( String.format( "size (%s)", unitField.getText() ) );
+		final String u = unitField.getText();
+		if ( minLabel != null )
+			minLabel.setText( String.format( "min (%s)", u ) );
+
+		if ( sizeLabel != null )
+			sizeLabel.setText( String.format( "size (%s)", u ) );
+
+		if ( spacingLabel != null )
+			spacingLabel.setText( String.format( "spacing (%s/px)", u ) );
 	}
 
 	public void create()
@@ -219,11 +342,22 @@ public class FieldOfViewPanel extends JPanel
 		gbc.fill = GridBagConstraints.NONE;
 		gbc.insets = new Insets( DEFAULT_OUTER_PAD, DEFAULT_OUTER_PAD, DEFAULT_MID_PAD, DEFAULT_BUTTON_PAD );
 
-		int j = 1;
+		/*
+		 * Row 0 always holds the units field, row 1 the column headers, so the value
+		 * fields always start at row 2 - whether or not a reference dropdown exists.
+		 */
+		final int j = 2;
 		if( data != null )
 		{
 			add( new JLabel( "reference:" ), gbc );
 
+			/*
+			 * Deliberately not offering MOVING or UNION_TARGET_MOVING:
+			 * ApplyBigwarpPlugin.getPixelInterval has no MOVING branch at all and returns
+			 * null for it, and its UNION_TARGET_MOVING branch computes both halves of the
+			 * union from the moving source (see ApplyBigwarpPlugin:487), so it ignores the
+			 * target. Both would look like working options while doing nothing useful.
+			 */
 			final String[] fovOpts = new String[]{
 					ApplyBigwarpPlugin.SPECIFIED,
 					ApplyBigwarpPlugin.TARGET,
@@ -232,13 +366,12 @@ public class FieldOfViewPanel extends JPanel
 			referenceComboBox = new JComboBox<>( fovOpts );
 			referenceComboBox.setSelectedItem( ApplyBigwarpPlugin.MOVING_WARPED );
 			referenceComboBox.addActionListener( e -> {
+				updatePointFilterEnabled();
 				updateFieldsFromReference();
 			});
 
 			gbc.gridx = 1;
 			add( referenceComboBox, gbc );
-
-			j = 2;
 		}
 		else if( IJ.getInstance() != null )
 		{
@@ -264,8 +397,6 @@ public class FieldOfViewPanel extends JPanel
 
 			gbc.gridx = 1;
 			add( referenceComboBox, gbc );
-
-			j = 2;
 		}
 
 		final JLabel unitLabel = new JLabel( "units:" );
@@ -285,23 +416,23 @@ public class FieldOfViewPanel extends JPanel
 			@Override
 			public void insertUpdate( DocumentEvent e )
 			{
-				updateSizeLabel();
+				updateUnitLabels();
 			}
 
 			@Override
 			public void removeUpdate( DocumentEvent e )
 			{
-				updateSizeLabel();
+				updateUnitLabels();
 			}
 		});
 		add( unitField, gbc );
 
-		final JLabel minLabel = new JLabel( String.format("min (%s)", unit ));
+		minLabel = new JLabel( String.format("min (%s)", unit ));
 		sizeLabel = new JLabel( String.format( "size (%s)", unit ) );
-		final JLabel spacingLabel = new JLabel( String.format( "spacing (%s/px)", unit ));
+		spacingLabel = new JLabel( String.format( "spacing (%s/px)", unit ));
 		final JLabel pixelLabel = new JLabel( "size (px)" );
 
-		gbc.gridy++;
+		gbc.gridy = 1;
 		gbc.gridx = 1;
 		add( minLabel, gbc );
 		gbc.gridx = 2;
@@ -311,23 +442,14 @@ public class FieldOfViewPanel extends JPanel
 		gbc.gridx = 4;
 		add( pixelLabel, gbc );
 
-		final JLabel yLabel = new JLabel("y");
-
+		// axis labels, on the same rows as the value fields below
+		final String[] axisNames = new String[] { "x", "y", "z" };
 		gbc.gridx = 0;
-		gbc.gridy++;
 		gbc.anchor = GridBagConstraints.LINE_END;
-
-		final JLabel xLabel = new JLabel("x");
-		add( xLabel, gbc );
-
-		gbc.gridy++;
-		add( yLabel, gbc );
-
-		if( ndims >= 3 )
+		for( int i = 0; i < ndims; i++ )
 		{
-			gbc.gridy++;
-			final JLabel zLabel = new JLabel("z");
-			add( zLabel, gbc );
+			gbc.gridy = i + j;
+			add( new JLabel( i < axisNames.length ? axisNames[ i ] : "d" + i ), gbc );
 		}
 
 		/*
@@ -414,12 +536,111 @@ public class FieldOfViewPanel extends JPanel
 //				updateSpacingFromPixels( idx ); // an alternative update
 			});
 		}
+
+		if( showAdvanced )
+			addAdvancedOptions( gbc, j + ndims );
+	}
+
+	/**
+	 * Adds the landmark point filter and bounding box estimation controls, starting at
+	 * the given row.
+	 *
+	 * @param gbc the constraints, mutated
+	 * @param row the first free row below the value fields
+	 */
+	private void addAdvancedOptions( final GridBagConstraints gbc, final int row )
+	{
+		gbc.gridy = row;
+		gbc.gridx = 0;
+		gbc.gridwidth = 1;
+		gbc.fill = GridBagConstraints.NONE;
+		gbc.anchor = GridBagConstraints.LINE_END;
+		pointFilterLabel = new JLabel( "point filter:" );
+		pointFilterLabel.setToolTipText( POINT_FILTER_HELP_TEXT );
+		add( pointFilterLabel, gbc );
+
+		gbc.gridx = 1;
+		gbc.gridwidth = 2;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		pointFilterField = new JTextField();
+		pointFilterField.setToolTipText( POINT_FILTER_HELP_TEXT );
+		add( pointFilterField, gbc );
+
+		gbc.gridwidth = 1;
+		gbc.gridx = 3;
+		gbc.fill = GridBagConstraints.NONE;
+		gbc.anchor = GridBagConstraints.LINE_END;
+		final JLabel bboxLabel = new JLabel( "bounding box:" );
+		bboxLabel.setToolTipText( BBOX_HELP_TEXT );
+		add( bboxLabel, gbc );
+
+		gbc.gridx = 4;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		bboxMethodComboBox = new JComboBox<>( new String[] {
+				BoundingBoxEstimation.Method.CORNERS.toString(),
+				BoundingBoxEstimation.Method.FACES.toString(),
+				BoundingBoxEstimation.Method.VOLUME.toString() } );
+		bboxMethodComboBox.setSelectedItem( BoundingBoxEstimation.Method.FACES.toString() );
+		bboxMethodComboBox.setToolTipText( BBOX_HELP_TEXT );
+		bboxMethodComboBox.addActionListener( e -> updateFieldsFromReference() );
+		add( bboxMethodComboBox, gbc );
+
+		gbc.gridy = row + 1;
+		gbc.gridx = 3;
+		gbc.fill = GridBagConstraints.NONE;
+		gbc.anchor = GridBagConstraints.LINE_END;
+		final JLabel samplesLabel = new JLabel( "samples per dim:" );
+		samplesLabel.setToolTipText( BBOX_SAMPLES_HELP_TEXT );
+		add( samplesLabel, gbc );
+
+		gbc.gridx = 4;
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		bboxSamplesSpinner = new JSpinner( new SpinnerNumberModel( 5, 1, 9999, 1 ) );
+		bboxSamplesSpinner.setToolTipText( BBOX_SAMPLES_HELP_TEXT );
+		bboxSamplesSpinner.addChangeListener( e -> updateFieldsFromReference() );
+		add( bboxSamplesSpinner, gbc );
+
+		// the filter only means anything for the landmark-based reference
+		pointFilterField.getDocument().addDocumentListener( new DocumentListener() {
+
+			@Override
+			public void changedUpdate( DocumentEvent e ) { }
+
+			@Override
+			public void insertUpdate( DocumentEvent e )
+			{
+				updateFieldsFromReference();
+			}
+
+			@Override
+			public void removeUpdate( DocumentEvent e )
+			{
+				updateFieldsFromReference();
+			}
+		} );
+
+		updatePointFilterEnabled();
+	}
+
+	/**
+	 * The point filter only affects the landmark-based reference options, so gray it out
+	 * otherwise rather than letting it look load-bearing.
+	 */
+	private void updatePointFilterEnabled()
+	{
+		if ( pointFilterField == null || referenceComboBox == null )
+			return;
+
+		final Object selected = referenceComboBox.getSelectedItem();
+		final boolean enabled = ApplyBigwarpPlugin.LANDMARK_POINTS.equals( selected );
+		pointFilterField.setEnabled( enabled );
+		pointFilterLabel.setEnabled( enabled );
 	}
 
 	protected void updatePixelsFromSize( int i )
 	{
 		pixSize[ i ] = ( long ) Math.ceil( size[ i ] / spacing[ i ] );
-		SwingUtilities.invokeLater( () -> { pixelFields[ i ].setValueNoCallback( new Double( pixSize[ i ] ) ); });
+		SwingUtilities.invokeLater( () -> { pixelFields[ i ].setValueNoCallback( Long.valueOf( pixSize[ i ] ) ); });
 	}
 
 	protected void updatePixelsFromSpacing( int i )
@@ -440,32 +661,39 @@ public class FieldOfViewPanel extends JPanel
 		SwingUtilities.invokeLater( () -> { sizeFields[ i ].setValueNoCallback( new Double( size[ i ] ) ); });
 	}
 
-	protected void updateFieldsFromReference()
+	public void updateFieldsFromReference()
 	{
-		if ( data == null || bwTransform == null )
+		if ( data == null || bwTransform == null || referenceComboBox == null )
 			return;
 
 		final String referenceOption = ( String ) referenceComboBox.getSelectedItem();
 		if ( referenceOption.equals( ApplyBigwarpPlugin.SPECIFIED ) )
 			return;
 
-		final double[] res = ApplyBigwarpPlugin.getResolution( data, referenceOption, null );
+		final double[] res = resolutionForReference( referenceOption );
 		if ( res != null )
 			setSpacing( res );
 
+		final String filter = getPointFilter();
+		final BoundingBoxEstimation bboxEst = getBoundingBoxEstimation();
+
 		final List< Interval > itvl = ApplyBigwarpPlugin.getPixelInterval( data, ltm, bwTransform.getTransformation( false ),
-				referenceOption, "", new BoundingBoxEstimation(), null, null, getSpacing() );
+				referenceOption, filter, bboxEst, null, null, getSpacing() );
+
+		// nothing usable to show, e.g. no landmark matched the filter
+		if ( itvl == null || itvl.isEmpty() )
+			return;
 
 		final double[] offset = ApplyBigwarpPlugin.getPhysicalOffset(
 				referenceOption,
 				null,
 				ltm,
 				bwTransform.getTransformation( true ),
-				"",
-				new BoundingBoxEstimation(),
-				res,
+				filter,
+				bboxEst,
+				getSpacing(),
 				data.getMovingSource(0).getSpimSource(),
-				data.getTargetSource(0).getSpimSource());
+				data.numTargetSources() > 0 ? data.getTargetSource(0).getSpimSource() : null);
 
 		setPixelSize( itvl.get( 0 ).dimensionsAsLongArray() );
 		setMin( offset );
@@ -473,6 +701,26 @@ public class FieldOfViewPanel extends JPanel
 
 		for ( int i = 0; i < size.length; i++ )
 			updateSize( i );
+	}
+
+	/**
+	 * Resolves the reference option to an output resolution.
+	 * <p>
+	 * {@link ApplyBigwarpPlugin#getResolution(BigWarpData, String, double[])} only knows
+	 * {@code TARGET}, {@code MOVING} and {@code SPECIFIED}, and returns null otherwise.
+	 * The warped moving image has no resolution of its own, so fall back to the moving
+	 * image's rather than silently leaving a stale spacing in the fields.
+	 * {@code LANDMARK_POINTS} genuinely has none, so there keep whatever the user typed.
+	 *
+	 * @param referenceOption the reference option
+	 * @return the resolution, or null to leave the current spacing alone
+	 */
+	private double[] resolutionForReference( final String referenceOption )
+	{
+		if ( referenceOption.equals( ApplyBigwarpPlugin.MOVING_WARPED ) )
+			return ApplyBigwarpPlugin.getResolution( data, ApplyBigwarpPlugin.MOVING, null );
+
+		return ApplyBigwarpPlugin.getResolution( data, referenceOption, null );
 	}
 
 	protected String[] getImagePlusTitles()
@@ -485,10 +733,13 @@ public class FieldOfViewPanel extends JPanel
 			return null;
 	}
 
-	protected void updateFieldsFromImageJReference()
+	public void updateFieldsFromImageJReference()
 	{
+		if( referenceComboBox == null )
+			return;
+
 		final String referenceOption = (String)referenceComboBox.getSelectedItem();
-		if( referenceOption.equals( ApplyBigwarpPlugin.SPECIFIED ))
+		if( referenceOption == null || referenceOption.equals( ApplyBigwarpPlugin.SPECIFIED ))
 			return;
 
 		if( IJ.getInstance() != null )
@@ -513,8 +764,22 @@ public class FieldOfViewPanel extends JPanel
 			});
 
 			setUnit( refImp.getCalibration().getUnit() );
+
+			// the setters above deliberately skip callbacks, so bring the physical size
+			// column in line with the new spacing and pixel counts
+			for ( int i = 0; i < size.length; i++ )
+				updateSize( i );
 		}
 	}
+
+	private static final String POINT_FILTER_HELP_TEXT = "Regular expression matching the names of the landmark points "
+			+ "used to estimate the field of view. Only applies to the \"" + ApplyBigwarpPlugin.LANDMARK_POINTS + "\" reference.";
+
+	private static final String BBOX_HELP_TEXT = "How the bounding box of the warped image is estimated. \"Corners\" is "
+			+ "fastest but can be too small for strongly nonlinear transformations; \"Volume\" is most conservative.";
+
+	private static final String BBOX_SAMPLES_HELP_TEXT = "Number of samples per dimension used by the \"Faces\" and "
+			+ "\"Volume\" bounding box estimators.";
 
 //	public static void main( String[] args ) throws IOException, URISyntaxException, SpimDataException
 //	{

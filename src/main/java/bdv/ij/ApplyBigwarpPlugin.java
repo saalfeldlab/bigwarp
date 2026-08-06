@@ -1462,13 +1462,61 @@ public class ApplyBigwarpPlugin implements PlugIn
 			final WriteDestinationOptions writeOpts,
 			final ExecutorService exec )
 	{
+		final int nd = BigWarp.detectNumDims(data.sources);
+		final double[] resolution = limit(nd, resolutionArg);
+
+		final double[] offset = ApplyBigwarpPlugin.getPixelOffset(fieldOfViewOption, offsetArg, resolution,
+				outputInterval);
+
+		ApplyBigwarpPlugin.<S, T>runN5Export(data, sourceAndConverter, outputInterval, interp, offset, resolutionArg,
+				unit, progressWriter, writeOpts, exec);
+	}
+
+	/**
+	 * Renders a source through its transformation and writes it to an n5/zarr/hdf5
+	 * container, given the output offset directly.
+	 * <p>
+	 * {@link BigWarpExporter#setOffset(double...)} and the ome-ngff {@code translation}
+	 * this writes are both in physical units - see
+	 * {@link BigWarpExporter#buildTotalRenderTransform()}, which applies the offset after
+	 * the resolution scaling. Prefer this overload over the one taking a
+	 * {@code fieldOfViewOption}: that one derives the offset with
+	 * {@link #getPixelOffset(String, double[], double[], Interval)}, which yields pixel
+	 * units, so the resulting metadata is off by the voxel spacing whenever the spacing is
+	 * not 1.
+	 *
+	 * @param <S> the source type
+	 * @param <T> the type written
+	 * @param data the bigwarp data
+	 * @param sourceAndConverter the source to render
+	 * @param outputInterval the output interval, in pixels
+	 * @param interp the interpolation
+	 * @param offsetPhysical the origin of the output, in physical units
+	 * @param resolutionArg the output pixel spacing
+	 * @param unit the physical unit
+	 * @param progressWriter the progress writer
+	 * @param writeOpts where and how to write
+	 * @param exec the executor used to write blocks
+	 */
+	public static <S,T extends NativeType<T> & NumericType<T>> void runN5Export(
+			final BigWarpData<S> data,
+			final SourceAndConverter<S> sourceAndConverter,
+			final Interval outputInterval,
+			final Interpolation interp,
+			final double[] offsetPhysical,
+			final double[] resolutionArg,
+			final String unit,
+			final ProgressWriter progressWriter,
+			final WriteDestinationOptions writeOpts,
+			final ExecutorService exec )
+	{
 
 		final int nd = BigWarp.detectNumDims(data.sources);
 		final double[] resolution = limit(nd, resolutionArg);
 
-		// physical offset
-		final double[] offsetPhysical = ApplyBigwarpPlugin.getPixelOffset(fieldOfViewOption, offsetArg, resolution,
-				outputInterval);
+		// the 3d transforms below index up to three dimensions regardless of nd
+		final double[] offset3d = new double[ 3 ];
+		System.arraycopy( offsetPhysical, 0, offset3d, 0, Math.min( 3, offsetPhysical.length ) );
 
 		// setup n5 parameters
 		final String dataset = writeOpts.n5Dataset;
@@ -1508,11 +1556,11 @@ public class ApplyBigwarpPlugin implements PlugIn
 			resolutionTransform.set( resolution[ 2 ], 2, 2 );
 
 		final AffineTransform3D offsetTransform = new AffineTransform3D();
-		offsetTransform.set( offsetPhysical[ 0 ], 0, 3 );
-		offsetTransform.set( offsetPhysical[ 1 ], 1, 3 );
+		offsetTransform.set( offset3d[ 0 ], 0, 3 );
+		offsetTransform.set( offset3d[ 1 ], 1, 3 );
 
 		if( resolution.length > 2 )
-			offsetTransform.set( offsetPhysical[ 2 ], 2, 3 );
+			offsetTransform.set( offset3d[ 2 ], 2, 3 );
 
 		final AffineTransform3D pixelRenderToPhysical = new AffineTransform3D();
 		pixelRenderToPhysical.concatenate( resolutionTransform );
@@ -1523,7 +1571,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 		final BigWarpExporter<?> exporter = BigWarpExporter.getExporter( data,
 				sourceAndConverter, interp, progressWriter );
 		exporter.setRenderResolution( resolution );
-		exporter.setOffset( offsetPhysical );
+		exporter.setOffset( offset3d );
 		exporter.setInterval(Intervals.zeroMin(outputInterval));
 		exporter.setSingleChannelNoStack(true);
 		final RandomAccessibleInterval<T> imgExp = (RandomAccessibleInterval<T>)exporter.exportRai((Source<T>)sourceAndConverter.getSpimSource());
@@ -1537,7 +1585,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 		final String destDataset = dataset;
 		final OmeNgffMetadata metadata = OmeNgffMetadata.buildForWriting(nd, srcName, omeZarrVersion, axes, new String[]{"s0"},
-				new double[][]{resolution}, new double[][]{offsetPhysical});
+				new double[][]{resolution}, new double[][]{limit(nd, offsetPhysical)});
 
 		try
 		{

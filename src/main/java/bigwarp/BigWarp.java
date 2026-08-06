@@ -98,6 +98,7 @@ import bdv.gui.BigWarpLandmarkPanel;
 import bdv.gui.BigWarpMessageAnimator;
 import bdv.gui.BigWarpViewerFrame;
 import bdv.gui.BigWarpViewerOptions;
+import bdv.gui.ApplyTransformFrame;
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.LandmarkKeyboardProcessor;
 import bdv.gui.MaskOptionsPanel;
@@ -1209,6 +1210,10 @@ public class BigWarp< T >
 		exportToImagePlus.setText( "Export moving image..." );
 		fileMenu.add( exportToImagePlus );
 
+		final JMenuItem applyTransform = new JMenuItem( actionMap.get( BigWarpActions.APPLY_TRANSFORM ));
+		applyTransform.setText( "Apply transformation..." );
+		fileMenu.add( applyTransform );
+
 		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ));
 		exportWarpField.setText( "Export transformation..." );
 		fileMenu.add( exportWarpField );
@@ -1262,6 +1267,10 @@ public class BigWarp< T >
 		final JMenuItem exportToImagePlus = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_IMAGE ) );
 		exportToImagePlus.setText( "Export moving image" );
 		fileMenu.add( exportToImagePlus );
+
+		final JMenuItem applyTransform = new JMenuItem( actionMap.get( BigWarpActions.APPLY_TRANSFORM ) );
+		applyTransform.setText( "Apply transformation" );
+		fileMenu.add( applyTransform );
 
 		final JMenuItem exportWarpField = new JMenuItem( actionMap.get( BigWarpActions.EXPORT_WARP ) );
 		exportWarpField.setText( "Export warp field" );
@@ -1417,8 +1426,18 @@ public class BigWarp< T >
 
 	public void exportAsImagePlus( boolean virtual, String path )
 	{
+		/*
+		 * ij is IJ.getInstance() as of construction, which is null when the ImageJ1
+		 * legacy instance is not up. Say so - returning silently makes the menu item
+		 * look broken.
+		 */
 		if( ij == null )
+		{
+			IJ.showMessage( "Export moving image",
+					"No ImageJ instance is available, so the result could not be displayed.\n"
+					+ "Run BigWarp from Fiji or ImageJ to export an image." );
 			return;
+		}
 
 		final GenericDialogPlus gd = new GenericDialogPlus( "Apply Big Warp transform" );
 
@@ -1542,6 +1561,17 @@ public class BigWarp< T >
 	public void exportWarpField()
 	{
 		ExportDisplacementFieldFrame.createAndShow( this );
+	}
+
+	/**
+	 * Shows the interactive dialog for applying the current transformation to images.
+	 * <p>
+	 * The counterpart to {@link #exportAsImagePlus(boolean, String)}, which asks for the
+	 * field of view indirectly through a {@code GenericDialogPlus}.
+	 */
+	public void applyTransformInteractive()
+	{
+		ApplyTransformFrame.createAndShow( this );
 	}
 
 	protected void setUpLandmarkMenus()

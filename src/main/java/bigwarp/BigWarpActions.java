@@ -243,6 +243,9 @@ public class BigWarpActions extends Actions
 	public static final String EXPORT_IMAGE = "export image";
 	public static final String[] EXPORT_IMAGE_KEYS = new String[] { "ctrl E" };
 
+	public static final String APPLY_TRANSFORM = "apply transform";
+	public static final String[] APPLY_TRANSFORM_KEYS = new String[] { "ctrl shift A" };
+
 	public static final String EXPORT_WARP = "export warp field";
 	public static final String[] EXPORT_WARP_KEYS = new String[] { "ctrl W" };
 
@@ -348,6 +351,7 @@ public class BigWarpActions extends Actions
 
 			// export
 			descriptions.add( EXPORT_IMAGE, EXPORT_IMAGE_KEYS, "Export the image" );
+			descriptions.add( APPLY_TRANSFORM, APPLY_TRANSFORM_KEYS, "Show the interactive dialog to apply the transformation to images." );
 			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
 			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
@@ -444,6 +448,7 @@ public class BigWarpActions extends Actions
 
 			// export
 			descriptions.add( EXPORT_IMAGE, EXPORT_IMAGE_KEYS, "Export the image" );
+			descriptions.add( APPLY_TRANSFORM, APPLY_TRANSFORM_KEYS, "Show the interactive dialog to apply the transformation to images." );
 			descriptions.add( SAVE_WARPED_XML, SAVE_WARPED_XML_KEYS, "Export moving image to BigDataViewer xml/h5." );
 			descriptions.add( EXPORT_WARP, EXPORT_WARP_KEYS, "Show the dialog to export the displacement field." );
 			descriptions.add( EXPORT_AFFINE, EXPORT_AFFINE_KEYS, "Print the affine transformation." );
@@ -501,6 +506,7 @@ public class BigWarpActions extends Actions
 
 		// export
 		actions.runnableAction( () -> { bw.exportAsImagePlus( false ); }, EXPORT_IMAGE, EXPORT_IMAGE_KEYS );
+		actions.runnableAction( bw::applyTransformInteractive, APPLY_TRANSFORM, APPLY_TRANSFORM_KEYS );
 		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
 		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
 
@@ -593,6 +599,7 @@ public class BigWarpActions extends Actions
 
 		// export
 		actions.runnableAction( () -> { bw.exportAsImagePlus( false ); }, EXPORT_IMAGE, EXPORT_IMAGE_KEYS );
+		actions.runnableAction( bw::applyTransformInteractive, APPLY_TRANSFORM, APPLY_TRANSFORM_KEYS );
 		actions.runnableAction( bw::exportWarpField, EXPORT_WARP, EXPORT_WARP_KEYS );
 		actions.runnableAction( () -> { bw.getBwTransform().printAffine(); }, EXPORT_AFFINE, EXPORT_AFFINE_KEYS );
 
@@ -709,6 +716,7 @@ public class BigWarpActions extends Actions
 		map.put( JUMP_TO_NEAREST_POINT, "E" );
 
 		map.put( EXPORT_IMAGE, "ctrl E" );
+		map.put( APPLY_TRANSFORM, "ctrl shift A" );
 		map.put( EXPORT_WARP, "ctrl W" );
 		map.put( EXPORT_AFFINE, "ctrl A" );
 

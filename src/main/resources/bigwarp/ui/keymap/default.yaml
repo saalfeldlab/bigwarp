@@ -124,6 +124,10 @@
   contexts: [bigwarp]
   triggers: [ctrl W]
 - !mapping
+  action: apply transform
+  contexts: [bigwarp]
+  triggers: [shift ctrl A]
+- !mapping
   action: load landmarks
   contexts: [bw-table, bigwarp]
   triggers: [ctrl O]
