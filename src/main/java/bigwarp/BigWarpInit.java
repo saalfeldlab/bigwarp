@@ -1067,7 +1067,7 @@ public class BigWarpInit {
 			type = type == null ? img.getType() : type;
 
 			final Axis[] axes = metadata.getCoordinateSystems()[0].getAxes();
-			RandomAccessibleInterval<T> imagejImg = AxisUtils.permuteForImagePlus(img, axes);
+			RandomAccessibleInterval<T> imagejImg = AxisUtils.permute(img, axes, "x", "y", "c", "z", "t");
 
 			images[s] = imagejImg;
 
