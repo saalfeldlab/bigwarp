@@ -866,7 +866,7 @@ public class BigWarpInit {
 		final ArrayList<SourceInfo> infos = new ArrayList<>();
 		for( SourceAndConverter sac : sacList ) {
 
-			final String uri = n5.getURI().toString() + "$" + n5Dataset;
+			final String uri = n5.getURI().toString() + "?" + n5Dataset;
 			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
 			info.setSourceAndConverter(sac);
 			infos.add(info);
