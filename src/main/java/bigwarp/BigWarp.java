@@ -2322,30 +2322,42 @@ public class BigWarp< T >
 
 		System.out.println( "  : " + destCsName );
 
+		// coordinate systems are identified by name only. A scene's graph nodes are
+		// path-qualified (JRC2018F/JRC2018F) while sources are named plainly (JRC2018F),
+		// so both ends are mapped back onto their nodes before the graph is asked for a path.
+		final String destNode = isDefault ? null
+				: TransformGraphPanel.resolveCoordinateSystem( graph, destCsName );
+
 		boolean anyUpdated = false;
 		for( SourceInfo srcInfo : data.sourceInfos.values() )
 		{
 			final String csName = srcInfo.getSourceAndConverter().getSpimSource().getName();
-			Optional<TransformPath> p = graph.path(destCsName, csName);	
-			if( isDefault || csName.equals(destCsName)) 
+
+			if( isDefault || TransformGraphPanel.nameOf(csName).equals(TransformGraphPanel.nameOf(destCsName)) )
 			{
 				data.setTransformation(srcInfo, null, null);
 				anyUpdated = true;
+				continue;
 			}
-			else if( !p.isPresent())
+
+			final String srcNode = TransformGraphPanel.resolveCoordinateSystem( graph, csName );
+			final Optional<TransformPath> p = ( destNode == null || srcNode == null )
+					? Optional.<TransformPath>empty()
+					: graph.path(destNode, srcNode);
+
+			if( !p.isPresent())
 			{
 				// presenting coordinate systems in "forward" direction even though we need an "inverse"
 				System.err.println( String.format( "WARNING: no suitable transformation found from %s to %s", csName, destCsName ));
 			}
-			else if( !csName.equals(destCsName)) 
+			else
 			{
 				final RealTransform tform = p.get().totalTransform(warpVisDialog.transformGraphPanel.getN5());
 				// TODO make appropriate uri
-				// but this is not trivil when the transform is a sequence that is not explicitly stored 
+				// but this is not trivial when the transform is a sequence that is not explicitly stored
 				data.setTransformation(srcInfo, tform, null);
 				anyUpdated = true;
 			}
-			// do nothing 
 		}
 
 		if( anyUpdated )

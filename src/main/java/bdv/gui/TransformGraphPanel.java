@@ -29,8 +29,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.MessageFormat;
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.TreeSet;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -118,31 +119,31 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		transformGraphSourceText.setCallback( () -> {
 
 			active = false;
-			try { 
+			try {
 
 				final N5URI n5uri = new N5URI(transformGraphSourceText.getText());
-				n5 = new N5Factory().gsonBuilder(Common.gsonBuilder()).openReader(n5uri.getContainerPath());
-				graph = Common.openGraph(n5, n5uri.getGroupPath());
+				n5 = new N5Factory()
+						.options(o -> o.gsonBuilder(Common.gsonBuilder()))
+						.openReader(n5uri.getContainerPath());
+
+				graph = openGraph(n5, n5uri.getGroupPath());
 			} catch(Exception e ) {
+				System.err.println("TransformGraphPanel: could not read a transformation graph from \""
+						+ transformGraphSourceText.getText() + "\": " + e);
 				graph = null;
 			}
 
+			destCoordinateSystemsDropdown.removeAllItems();
+			destCoordinateSystemsDropdown.addItem( DEFAULT_COORDINATE_SYSTEM );
+
 			if( graph != null )
 			{
-				destCoordinateSystemsDropdown.removeAllItems();
-				HashSet<String> coordinateSystems = new HashSet<>();
-				graph.getTransforms().stream().forEach( t -> {
-					coordinateSystems.add( t.getInput().getName() );
-					coordinateSystems.add( t.getOutput().getName() );
-				});
-
-				destCoordinateSystemsDropdown.addItem( DEFAULT_COORDINATE_SYSTEM );
-				coordinateSystems.forEach( x -> { 
+				coordinateSystemNames( graph ).forEach( x -> {
 					destCoordinateSystemsDropdown.addItem(x); });
-
-				// make sure default is selected after update
-				destCoordinateSystemsDropdown.setSelectedIndex(0);
 			}
+
+			// make sure default is selected after update
+			destCoordinateSystemsDropdown.setSelectedIndex(0);
 			active = true;
 		});
 
@@ -236,6 +237,116 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		add(destCoordinateSystemsDropdown, gbc);
 	}
 
+	/**
+	 * Reads the transformation graph at {@code group}, preferring an NGFF scene
+	 * ({@link NgffScene#SCENE_KEY}) when one is present there.
+	 *
+	 * @param n5
+	 *            the reader
+	 * @param group
+	 *            the group to read a graph from
+	 * @return the graph, never null
+	 */
+	private static TransformGraph openGraph( final N5Reader n5, final String group ) {
+
+		// NgffScene resolves its dataset references against basePath by
+		// concatenation, so "/" has to be normalized away first
+		final String basePath = N5URI.normalizeGroupPath( group );
+
+		final NgffScene scene = new OmeNgffSceneParser( n5 ).parseMetadata( n5, basePath )
+				.map( NgffSceneMetadata::getScene ).orElse( null );
+
+		if ( scene != null )
+			return scene.getGraph( n5, basePath );
+
+		return Common.openGraph( n5, group );
+	}
+
+	/**
+	 * The names to offer as destination coordinate systems for {@code graph}.
+	 * <p>
+	 * Coordinate systems are identified by <b>name only</b>: a scene's graph nodes are
+	 * path-qualified (e.g. {@code JRC2018F/JRC2018F}), but sources are named plainly
+	 * (e.g. {@code JRC2018F}), so the path is dropped here and re-attached during lookup by
+	 * {@link #resolveCoordinateSystem(TransformGraph, String)}.
+	 *
+	 * @param graph
+	 *            the graph
+	 * @return the coordinate system names, unqualified and sorted
+	 */
+	private static Collection< String > coordinateSystemNames( final TransformGraph graph ) {
+
+		final TreeSet< String > names = new TreeSet<>();
+		graph.getCoordinateSystems().coordinateSystems().forEach( cs -> names.add( nameOf( cs.getName() ) ) );
+
+		// a graph built from transforms alone may register no coordinate systems
+		if ( names.isEmpty() )
+			graph.getTransforms().forEach( t -> {
+				names.add( nameOf( t.getInput().getQualifiedName() ) );
+				names.add( nameOf( t.getOutput().getQualifiedName() ) );
+			} );
+
+		return names;
+	}
+
+	/**
+	 * The name part of a possibly path-qualified coordinate system name --
+	 * {@code JRC2018F/JRC2018F} to {@code JRC2018F}.
+	 *
+	 * @param coordinateSystem
+	 *            a (possibly qualified) coordinate system name
+	 * @return its name part
+	 */
+	public static String nameOf( final String coordinateSystem ) {
+
+		if (coordinateSystem == null)
+			return null;
+
+		final int i = coordinateSystem.lastIndexOf('/');
+		return i < 0 ? coordinateSystem : coordinateSystem.substring(i + 1);
+	}
+
+	/**
+	 * The node of {@code graph} identified by {@code name}, matching on the coordinate
+	 * system's name only and ignoring path qualification.
+	 * <p>
+	 * {@link TransformGraph#addTransform} registers every edge under its endpoints'
+	 * {@code getQualifiedName()}, and {@link TransformGraph#path(String, String)} looks
+	 * them up the same way, so a bare name taken from a source or from this panel's
+	 * dropdown has to be mapped back to the qualified node before it can resolve.
+	 * <p>
+	 * Matching by name alone is ambiguous when several datasets of one scene declare a
+	 * coordinate system of the same name (an NGFF scene relating datasets that each call
+	 * their own space {@code physical} is the usual case). The first match in sorted
+	 * order is used, and the ambiguity is reported.
+	 *
+	 * @param graph
+	 *            the graph to look in
+	 * @param name
+	 *            a coordinate system name, qualified or not
+	 * @return the matching qualified node name, or null if the graph has no such node
+	 */
+	public static String resolveCoordinateSystem( final TransformGraph graph, final String name ) {
+
+		if ( graph == null || name == null )
+			return null;
+
+		final TreeSet< String > matches = new TreeSet<>();
+		graph.getCoordinateSystems().coordinateSystems().forEach( cs -> {
+			if ( cs.getName().equals( name ) || nameOf( cs.getName() ).equals( nameOf( name ) ) )
+				matches.add( cs.getName() );
+		} );
+
+		if ( matches.isEmpty() )
+			return null;
+
+		if ( matches.size() > 1 )
+			System.err.println( "TransformGraphPanel: coordinate system \"" + name
+					+ "\" is ambiguous, matching " + matches + "; using \"" + matches.first() + "\"" );
+
+		return matches.first();
+	}
+
 	public TransformGraph getGraph() {
 
 		return graph;
@@ -307,13 +418,6 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 	public void viewerStateChanged(ViewerStateChange change) {
 
 		// TODO this will be important when the UI is finished, for now, a no-op
-
-//		switch( change )
-//		{
-//		case CURRENT_SOURCE_CHANGED:
-//			SwingUtilities.invokeLater( this::updateSourceDropdownOnSourceChange );
-//			break;
-//		}
 	}
 
 }
