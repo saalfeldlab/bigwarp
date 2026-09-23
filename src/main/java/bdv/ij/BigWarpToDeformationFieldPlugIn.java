@@ -163,10 +163,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 	public <T> void runFromBigWarpInstance( final BigWarp<?> bw )
 	{
-//		ImageJ ij = IJ.getInstance();
-//		if ( ij == null )
-//			return;
-//
 		ExportDisplacementFieldFrame.createAndShow( bw );
 	}
 
@@ -697,6 +693,14 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 
 
+		// ngff stores a quantized field through a dataset codec: the array's own type
+		// stays real-valued and the codec narrows it, so the field is built as float
+		// rather than at the stored integral type. Every other format quantizes the
+		// values themselves, and builds the field at the type it was asked for.
+		final boolean isNgff = !format.equals(ExportDisplacementFieldFrame.FMT_SLICER)
+				&& !format.equals(ExportDisplacementFieldFrame.FMT_N5);
+		final DTYPE fieldDtype = (isNgff && isQuantized(dtype)) ? DTYPE.FLOAT : dtype;
+
 		final RandomAccessibleInterval<T> dfield;
 		if (splitAffine) {
 
@@ -704,7 +708,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final AffineGet affine = bwXfm.affinePartOfTps();
 			final InvertibleAffineCoordinateTransform ngffAffine = new InvertibleAffineCoordinateTransform(TransformUtils.affineToMatrix(affine));
 
-			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
+			dfield = buildDisplacementField(fieldDtype, transform, new FinalInterval(dims), spacing, offset);
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
 				SlicerTransformations.saveDisplacementField(n5, dataset, dfield, blockSize, compression, exec);
@@ -725,7 +729,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 			} else {
 				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(n5, dataset, dfield, inputSpace, outputSpace, spacing, offset,
-						unit, blockSize, compression, nThreads);
+						unit, blockSize, compression, dtype, maxError, nThreads);
 
 				// the transform sequence needs to have a reference to whatever transform was imported, if requested
 				final CoordinateTransform[] ctList = refCt == null ? new CoordinateTransform[]{dfieldTform, ngffAffine}
@@ -739,7 +743,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		}
 		else {
 
-			dfield = buildDisplacementField(dtype, transform, new FinalInterval(dims), spacing, offset);
+			dfield = buildDisplacementField(fieldDtype, transform, new FinalInterval(dims), spacing, offset);
 
 			if (format.equals(ExportDisplacementFieldFrame.FMT_SLICER)) {
 				final ThreadPoolExecutor exec = new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
@@ -760,8 +764,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 							q, maxError);
 
 			} else {
-				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(n5, dataset, dfield, inputSpace, outputSpace, spacing, offset,
-						unit, blockSize, compression, nThreads);
+
+				final DisplacementFieldCoordinateTransform<?> dfieldTform = NgffTransformations.save(
+						n5, dataset, dfield, inputSpace, outputSpace, spacing, offset, unit, blockSize, compression, dtype, maxError, nThreads);
 
 				final CoordinateTransform<?> ngffTform;
 				if (refCt == null)
@@ -798,6 +803,11 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		return DisplacementFieldTransform.createDisplacementField(transform, interval, spacing, offset,
 				() -> FloatType.createVector(transform.numTargetDimensions()));
+	}
+
+	private static boolean isQuantized(final DTYPE dtype) {
+
+		return DTYPE.BYTE.equals(dtype) || DTYPE.SHORT.equals(dtype);
 	}
 
 	@SuppressWarnings("unchecked")
