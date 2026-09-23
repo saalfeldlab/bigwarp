@@ -22,6 +22,7 @@
 package bigwarp.dfield;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -38,9 +39,11 @@ import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.RawCompression;
+import org.janelia.saalfeldlab.n5.codec.DatasetCodecInfo;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import bdv.gui.ExportDisplacementFieldFrame;
@@ -53,6 +56,7 @@ import bigwarp.FieldOfView;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import ij.ImagePlus;
 import net.imglib2.FinalRealInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -403,6 +407,160 @@ public class DfieldExportTest {
 			final RealTransform dfieldF = N5DisplacementField.open(n5, fDset, false);
 			final RealIntervalIterator it = new RealIntervalIterator(testItvl, spacing);
 			assertTrue("test over offset field-of-view", compare(tform, dfieldF, it, 1e-3));
+
+			n5.remove();
+		}
+	}
+
+	@Test
+	public void dfieldNgffExportTest() throws IOException {
+
+		final BigWarpTransform bwTransform = new BigWarpTransform(ltm);
+		final InvertibleRealTransform tform = bwTransform.getTransformation();
+
+		// constant parameters
+		final boolean inverse = false;
+		final double inverseTolerance = 0.01;
+		final int inverseMaxIters = 1;
+
+		final long[] dims = new long[]{47, 56, 7};
+		final double[] spacing = new double[]{0.8, 0.8, 1.6};
+		final double[] offset = new double[]{0, 0, 0};
+
+		final int[] blkSsize = new int[]{64, 64, 64};
+		final RawCompression compression = new RawCompression();
+
+		final String format = ExportDisplacementFieldFrame.FMT_NGFF;
+		final int nThreads = 1;
+
+		final FinalRealInterval testItvl = new FinalRealInterval(
+				new double[]{3.6, 3.6, 1.6},
+				new double[]{32.0, 40.0, 9.6});
+
+		final File tmpFile = Files.createTempDirectory("bw-dfield-ngff-test-").toFile();
+		tmpFile.deleteOnExit();
+		final String zarrBasePath = tmpFile.getCanonicalPath() + ".zarr";
+
+		final String fDset = "dfield";
+		BigWarpToDeformationFieldPlugIn.writeN5(zarrBasePath, fDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSsize, compression, nThreads, format, false, DTYPE.FLOAT, Double.MAX_VALUE, inverse, inverseTolerance, inverseMaxIters);
+
+		// read back with the same gson adapters the export wrote with, so the v05
+		// CoordinateTransform interface can be deserialized
+		try (final N5Writer n5 = new N5Factory().gsonBuilder(NgffTransformations.gsonBuilder()).openWriter(zarrBasePath)) {
+
+			assertTrue(n5.exists(fDset));
+
+			// the NGFF export writes the displacement field at fDset and references it
+			// from a coordinate transformation stored on the root group
+			final RealTransform dfieldF = NgffTransformations.open(n5, zarrBasePath + "?/#coordinateTransformations[0]");
+			assertNotNull("ngff transform", dfieldF);
+
+			final RealIntervalIterator it = new RealIntervalIterator(testItvl, spacing);
+			assertTrue("ngff dfield matches transform", compare(tform, dfieldF, it, 1e-3));
+
+			n5.remove();
+		}
+	}
+
+	/**
+	 * The quantized counterpart of {@link #dfieldNgffExportTest}: the same NGFF export,
+	 * but asking for {@link DTYPE#SHORT} with a bounded quantization error, as
+	 * {@link #dfieldQuantizationTest} does for the N5 format.
+	 * <p>
+	 * <b>This test is expected to fail.</b> The NGFF branch of
+	 * {@code BigWarpToDeformationFieldPlugIn.writeN5} ignores {@code dtype} and
+	 * {@code maxError} entirely - it hands the field to
+	 * {@code NgffTransformations.save}, which writes it at its in-memory type - so
+	 * nothing is quantized and the array is stored at full float width.
+	 * <p>
+	 * NGFF has no equivalent of the {@code multiplier}/{@code offset} attributes
+	 * {@link N5DisplacementField} uses, so the quantization must live in the array's
+	 * codec chain: a {@code scale_offset_cast} codec
+	 * ({@code org.janelia.saalfeldlab.n5.codec.dataset.ScaleOffsetCastCodec}) that
+	 * narrows to {@code int16} on encode and restores real-valued displacements on
+	 * decode. That is what the assertions below are written against: readers still
+	 * see a floating-point dataset, but the stored blocks are {@code int16}.
+	 * <p>
+	 * Ignored until the dataset codecs land in a released {@code n5-zarr}: the write
+	 * path is already correct - {@code NgffTransformations.quantizationCodecs} builds
+	 * the {@code ScaleOffsetCastCodecInfo} and {@code N5Writer.createDataset} returns
+	 * it on the attributes it hands back - but the released {@code n5-zarr 2.0.2}
+	 * drops array-to-array codecs when it serializes the array metadata. The written
+	 * {@code zarr.json} carries only {@code "codecs":[{"name":"bytes",...}]}, so
+	 * {@code getDatasetCodecInfos()} reads back empty and the assertion below fails.
+	 * Re-enable once {@code n5-zarr.version} in the pom points at a build that
+	 * serializes them.
+	 */
+	@Ignore("needs dataset codec (scale_offset_cast) support from a dev n5-zarr; 2.0.2 drops it on write")
+	@Test
+	public void dfieldNgffQuantizedExportTest() throws IOException {
+
+		final BigWarpTransform bwTransform = new BigWarpTransform(ltm);
+		final InvertibleRealTransform tform = bwTransform.getTransformation();
+
+		// constant parameters
+		final boolean inverse = false;
+		final double inverseTolerance = 0.01;
+		final int inverseMaxIters = 1;
+
+		final long[] dims = new long[]{47, 56, 7};
+		final double[] spacing = new double[]{0.8, 0.8, 1.6};
+		final double[] offset = new double[]{0, 0, 0};
+
+		final DTYPE quantizedType = DTYPE.SHORT;
+		final double maxQuantizationError = 0.01;
+
+		final int[] blkSsize = new int[]{64, 64, 64};
+		final RawCompression compression = new RawCompression();
+
+		final String format = ExportDisplacementFieldFrame.FMT_NGFF;
+		final int nThreads = 1;
+
+		final FinalRealInterval testItvl = new FinalRealInterval(
+				new double[]{3.6, 3.6, 1.6},
+				new double[]{32.0, 40.0, 9.6});
+
+		final File tmpFile = Files.createTempDirectory("bw-dfield-ngff-quant-test-").toFile();
+		tmpFile.deleteOnExit();
+		final String zarrBasePath = tmpFile.getCanonicalPath() + ".zarr";
+
+		final String fDset = "dfield";
+		BigWarpToDeformationFieldPlugIn.writeN5(zarrBasePath, fDset, ltm, bwTransform, data, dims, spacing, offset, "mm",
+				blkSsize, compression, nThreads, format, false, quantizedType, maxQuantizationError, inverse, inverseTolerance, inverseMaxIters);
+
+		try (final N5Writer n5 = new N5Factory().gsonBuilder(NgffTransformations.gsonBuilder()).openWriter(zarrBasePath)) {
+
+			assertTrue(n5.exists(fDset));
+
+			// the field group holds the multiscales metadata; the array is the child s0
+			final String fArray = fDset + "/" + NgffTransformations.FIELD_SCALE_DATASET;
+			final DatasetAttributes attrs = n5.getDatasetAttributes(fArray);
+
+			// the dataset's own type is what readers get back, so it must stay real-valued
+			final DataType decodedType = attrs.getDataType();
+			assertTrue("quantized ngff dfield must still decode to a floating point type, was " + decodedType,
+					decodedType == DataType.FLOAT32 || decodedType == DataType.FLOAT64);
+
+			// ... while the blocks actually written are int16. Walk the dataset codec
+			// chain to get the on-disk type: each codec reports what it encodes to.
+			final DatasetCodecInfo[] codecs = attrs.getDatasetCodecInfos();
+			assertTrue("quantized ngff export must add a dataset codec", codecs != null && codecs.length > 0);
+
+			DataType encodedType = decodedType;
+			for (final DatasetCodecInfo codec : codecs)
+				encodedType = codec.encodedDataType(encodedType);
+
+			assertEquals("quantized ngff dfield must be stored as int16", DataType.INT16, encodedType);
+
+			// and the values must survive the round trip to within the requested error
+			// (plus the interpolation error the un-quantized export is held to)
+			final RealTransform dfieldF = NgffTransformations.open(n5, zarrBasePath + "?/#coordinateTransformations[0]");
+			assertNotNull("ngff transform", dfieldF);
+
+			final RealIntervalIterator it = new RealIntervalIterator(testItvl, spacing);
+			assertTrue("quantized ngff dfield matches transform",
+					compare(tform, dfieldF, it, 1e-3 + 2 * maxQuantizationError));
 
 			n5.remove();
 		}

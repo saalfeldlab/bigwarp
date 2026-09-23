@@ -34,10 +34,16 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import org.janelia.saalfeldlab.n5.Compression;
+import org.janelia.saalfeldlab.n5.DatasetAttributes;
 import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.N5Writer;
+import org.janelia.saalfeldlab.n5.DataType;
+import org.janelia.saalfeldlab.n5.codec.BlockCodecInfo;
+import org.janelia.saalfeldlab.n5.codec.DatasetCodecInfo;
+import org.janelia.saalfeldlab.n5.codec.dataset.CastValueCodecInfo.Rounding;
+import org.janelia.saalfeldlab.n5.codec.dataset.ScaleOffsetCastCodecInfo;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
@@ -46,6 +52,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.NgffSingleScaleAxes
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffReference;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.Common;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.SpacesTransforms;
@@ -71,6 +78,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 
+import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
 import bigwarp.BigWarpInit;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.array.ArrayImg;
@@ -91,6 +99,12 @@ import net.imglib2.util.ValuePair;
 public class NgffTransformations
 {
 	public static final String inverseSuffix = "<inverse>";
+
+	/**
+	 * The dataset a coordinate or displacement field array is written to, relative to
+	 * its multiscales group. Fields are single-resolution, so there is only ever one.
+	 */
+	public static final String FIELD_SCALE_DATASET = "s0";
 
 	public static void main( String[] args ) {
 
@@ -374,13 +388,46 @@ public class NgffTransformations
 			final Compression compression,
 			final int nThreads )
 	{
+		return save( n5, dataset, dfield, inName, outName, spacing, offset, unit, blockSize, compression,
+				DTYPE.FLOAT, Double.MAX_VALUE, nThreads );
+	}
+
+	/**
+	 * As {@link #save(N5Writer, String, RandomAccessibleInterval, String, String, double[], double[], String, int[], Compression, int)},
+	 * but stores the field quantized when {@code dtype} is an integral type.
+	 *
+	 * @param dtype
+	 *            the type the field is stored as; {@link DTYPE#BYTE} and
+	 *            {@link DTYPE#SHORT} quantize, the floating point types do not
+	 * @param maxError
+	 *            the maximum permitted magnitude of the quantization error, in
+	 *            physical units; ignored for the floating point types
+	 */
+	public static < T extends NativeType< T > & RealType< T > > DisplacementFieldCoordinateTransform<?> save(
+			final N5Writer n5,
+			final String dataset,
+			final RandomAccessibleInterval< T > dfield,
+			final String inName,
+			final String outName,
+			final double[] spacing,
+			final double[] offset,
+			final String unit,
+			final int[] blockSize,
+			final Compression compression,
+			final DTYPE dtype,
+			final double maxError,
+			final int nThreads )
+	{
 		final String[] axisNames = ( spacing.length == 2 ) ? new String[] { "x", "y" } : new String[] { "x", "y", "z"};
 		final CoordinateSystem inputCoordinates = new CoordinateSystem( inName, Axis.space( unit, axisNames ) );
 		final CoordinateSystem outputCoordinates = new CoordinateSystem( outName, Axis.space( unit, axisNames ) );
 
+		// the vector dimension is not one of the field's spatial dimensions
+		final DatasetCodecInfo[] codecs = quantizationCodecs( dtype, maxError, dfield.numDimensions() - 1 );
+
 		final ThreadPoolExecutor threadPool = new ThreadPoolExecutor( nThreads, nThreads, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>()	);
 		final DisplacementFieldCoordinateTransform<?> ngffDfield = saveDisplacementFieldNgff( n5, dataset, "/", inputCoordinates, outputCoordinates,
-				dfield, spacing, offset, blockSize, compression, threadPool );
+				dfield, spacing, offset, blockSize, compression, codecs, threadPool );
 
 		// N5Utils.save( ..., ExecutorService ) returns before its submitted block-write
 		// tasks complete, so the pool must be joined here; otherwise the field array is
@@ -499,8 +546,68 @@ public class NgffTransformations
 			final Compression compression,
 			ExecutorService exec ) {
 
+		return saveDisplacementFieldNgff( n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates,
+				field, spacing, offset, blockSize, compression, null, exec );
+	}
+
+	public static final <T extends NativeType<T> & RealType<T>> DisplacementFieldCoordinateTransform<?> saveDisplacementFieldNgff(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final RandomAccessibleInterval<T> field,
+			final double[] spacing,
+			final double[] offset,
+			final int[] blockSize,
+			final Compression compression,
+			final DatasetCodecInfo[] datasetCodecs,
+			ExecutorService exec ) {
+
 		return (DisplacementFieldCoordinateTransform<?>)saveFieldNgff( n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates,
-				TransformField.DISPLACEMENT, field, spacing, offset, blockSize, compression, exec );
+				TransformField.DISPLACEMENT, field, spacing, offset, blockSize, compression, datasetCodecs, exec );
+	}
+
+	/**
+	 * The dataset codecs that store a displacement field quantized to an integral
+	 * type, or {@code null} if the requested type is not quantized.
+	 * <p>
+	 * The scale matches {@code N5DisplacementField.saveQuantized}: to hold the error
+	 * of the whole vector below {@code maxError}, each of the {@code nd} coordinates
+	 * is quantized with a step of {@code m = 2 * sqrt(maxError^2 / nd)}, so the value
+	 * stored is {@code round(displacement / m)}. Writing that as a
+	 * {@code scale_offset_cast} codec rather than as an attribute keeps the array
+	 * readable by anything that understands the codec, which an NGFF reader does and
+	 * the {@code quantization_multiplier} attribute is not.
+	 *
+	 * @param dtype
+	 *            the type to store the field as
+	 * @param maxError
+	 *            the maximum permitted magnitude of the quantization error
+	 * @param nd
+	 *            the number of spatial dimensions of the field
+	 * @return the codecs, or null if {@code dtype} is a floating point type
+	 */
+	public static DatasetCodecInfo[] quantizationCodecs( final DTYPE dtype, final double maxError, final int nd ) {
+
+		final DataType targetType;
+		switch ( dtype )
+		{
+		case BYTE:
+			targetType = DataType.INT8;
+			break;
+		case SHORT:
+			targetType = DataType.INT16;
+			break;
+		default:
+			return null;
+		}
+
+		final double m = 2 * Math.sqrt( maxError * maxError / nd );
+
+		// clamp bounds are left to their defaults: the full range of the target type
+		return new DatasetCodecInfo[] {
+				new ScaleOffsetCastCodecInfo( targetType, 1.0 / m, 0.0, null, null, Rounding.NEAREST_AWAY ) };
 	}
 
 	public static final <T extends NativeType<T> & RealType<T>> CoordinateFieldCoordinateTransform<?> savePositionFieldNgff(
@@ -534,6 +641,40 @@ public class NgffTransformations
 			final Compression compression,
 			ExecutorService exec ) {
 
+		return saveFieldNgff(n5Writer, dataset, metadataDataset, inputCoordinates, outputCoordinates, type,
+				dfield, spacing, offset, blockSize, compression, null, exec);
+	}
+
+	/**
+	 * As {@link #saveFieldNgff(N5Writer, String, String, CoordinateSystem, CoordinateSystem, TransformField, RandomAccessibleInterval, double[], double[], int[], Compression, ExecutorService)},
+	 * but writes the field array through a chain of dataset ("array -&gt; array") codecs.
+	 * <p>
+	 * The field is still built and passed in at its real-valued type; the codecs
+	 * describe how its blocks are transformed on the way to storage and back. This is
+	 * how a quantized field is written: a
+	 * {@code org.janelia.saalfeldlab.n5.codec.dataset.ScaleOffsetCastCodecInfo} narrows
+	 * the displacements to an integral type on encode and restores them on decode, so
+	 * readers still see real values.
+	 *
+	 * @param datasetCodecs
+	 *            the dataset codecs, in encode order; may be null or empty, in which
+	 *            case the field is written at its own data type
+	 */
+	public static final <T extends NativeType<T> & RealType<T>> CoordinateTransform<?> saveFieldNgff(
+			final N5Writer n5Writer,
+			final String dataset,
+			final String metadataDataset,
+			final CoordinateSystem inputCoordinates,
+			final CoordinateSystem outputCoordinates,
+			final TransformField type,
+			final RandomAccessibleInterval<T> dfield,
+			final double[] spacing,
+			final double[] offset,
+			final int[] blockSize,
+			final Compression compression,
+			final DatasetCodecInfo[] datasetCodecs,
+			ExecutorService exec ) {
+
 		int[] vecBlkSz;
 		if( blockSize.length >= dfield.numDimensions() )
 			vecBlkSz = blockSize;
@@ -552,9 +693,18 @@ public class NgffTransformations
 		// when that is the case.
 		final boolean reverse = OmeNgffMetadataParser.reverse( n5Writer );
 		final RandomAccessibleInterval<T> dfieldToSave = reverse ? AbstractParametrizedFieldTransform.reverseCoordinates(dfield) : dfield;
+
+		// the field group holds the multiscales metadata; the array is its first (and
+		// only) resolution level, as for any other ome-zarr multiscales image. A zarr
+		// node is either a group or an array, so the two cannot share one node.
+		final String arrayDataset = dataset + "/" + FIELD_SCALE_DATASET;
+		n5Writer.createGroup( dataset );
 		try
 		{
-			N5Utils.save(dfieldToSave, n5Writer, dataset, vecBlkSz, compression, exec);
+			if ( datasetCodecs == null || datasetCodecs.length == 0 )
+				N5Utils.save(dfieldToSave, n5Writer, arrayDataset, vecBlkSz, compression, exec);
+			else
+				save(dfieldToSave, n5Writer, arrayDataset, vecBlkSz, compression, datasetCodecs, exec);
 		}
 		catch ( final InterruptedException | ExecutionException e )
 		{
@@ -565,8 +715,10 @@ public class NgffTransformations
 		final CoordinateSystem[] cs = new CoordinateSystem[] {
 				createVectorFieldCoordinateSystem( vecFieldCsName, inputCoordinates, type ) };
 
+		// the dataset transform's input is the array, referenced by its path relative
+		// to the multiscales group
 		final CoordinateTransform[] ct = new CoordinateTransform[] {
-				createTransformation( "", spacing, offset, dataset, cs[0] ) };
+				createTransformation( "", spacing, offset, FIELD_SCALE_DATASET, cs[0] ) };
 
 		// write the fields's coordinate system and transform in an OME-Zarr multiscales
 		writeFieldMultiscales( n5Writer, dataset, cs, ct );
@@ -580,16 +732,51 @@ public class NgffTransformations
 	}
 
 	/**
+	 * Writes {@code source} to a new dataset whose attributes carry the given dataset
+	 * codecs.
+	 * <p>
+	 * The codecs have to be part of the dataset's attributes rather than applied to
+	 * the data on the way in: they are what tells a reader how to decode the stored
+	 * blocks. That is why this creates the dataset explicitly instead of letting
+	 * {@code N5Utils.save} derive the attributes from the source alone. The dataset's
+	 * own data type stays that of {@code source} - the type a reader gets back - while
+	 * the codecs describe what is actually stored.
+	 */
+	private static <T extends NativeType<T>> void save(
+			final RandomAccessibleInterval<T> source,
+			final N5Writer n5,
+			final String dataset,
+			final int[] blockSize,
+			final Compression compression,
+			final DatasetCodecInfo[] datasetCodecs,
+			final ExecutorService exec) throws InterruptedException, ExecutionException {
+
+		final DatasetAttributes attributes = new DatasetAttributes(
+				source.dimensionsAsLongArray(),
+				blockSize,
+				N5Utils.dataType(source.getType()),
+				(BlockCodecInfo)null,
+				datasetCodecs,
+				compression);
+
+		final DatasetAttributes writtenAttributes = n5.createDataset(dataset, attributes);
+		final long[] gridOffset = new long[source.numDimensions()];
+
+		N5Utils.saveBlock(source, n5, dataset, writtenAttributes, gridOffset, exec);
+	}
+
+	/**
 	 * Writes NGFF multiscales metadata that
 	 * holds the field's coordinate system(s) and its single dataset's
-	 * pixel-&gt;physical transform(s). The one dataset entry self-references the
-	 * field array with the path {@code "."} (see the scene-export plan, Option A).
+	 * pixel-&gt;physical transform(s). The one dataset entry references the field array
+	 * as the child {@link #FIELD_SCALE_DATASET}, the same layout any other ome-zarr
+	 * multiscales image uses.
 	 * <p>
 	 * The coordinate systems and transforms are passed in imglib2 (x,y,z) order;
 	 * the reverse-aware {@link OmeNgffMetadataParser} reverses them for zarr.
 	 *
 	 * @param n5Writer the writer
-	 * @param dataset the field array group (also the multiscales group)
+	 * @param dataset the multiscales group holding the field array
 	 * @param coordinateSystems the field coordinate system(s)
 	 * @param datasetTransforms the array's pixel-&gt;physical transform(s)
 	 */
@@ -597,14 +784,12 @@ public class NgffTransformations
 			final CoordinateSystem[] coordinateSystems, final CoordinateTransform<?>[] datasetTransforms) {
 
 		final OmeNgffMultiScaleMetadata.OmeNgffDataset dset = new OmeNgffMultiScaleMetadata.OmeNgffDataset();
-		dset.path = ".";
+		dset.path = FIELD_SCALE_DATASET;
 		dset.coordinateTransformations = datasetTransforms;
 
 		final int nd = coordinateSystems[0].getAxes().length;
-		// base path "/" so the constructor's dataset relativization preserves the
-		// "." self-reference (relativizing "." against "" would collapse it to "").
 		final OmeNgffMultiScaleMetadata ms = new OmeNgffMultiScaleMetadata(
-				nd, "/", null, null, "0.5", null,
+				nd, "", null, null, "0.6", null,
 				new OmeNgffMultiScaleMetadata.OmeNgffDataset[] { dset },
 				coordinateSystems, null, null, null,
 				new NgffSingleScaleAxesMetadata[ 0 ] );
@@ -618,22 +803,38 @@ public class NgffTransformations
 	}
 
 
+	/**
+	 * Builds the pixel-&gt;physical transform for a multiscales dataset entry.
+	 * <p>
+	 * The spec requires a transform under {@code multiscales > datasets} to name its
+	 * input by {@code path} - the array it applies to - and its output by {@code name},
+	 * the coordinate system that array maps into.
+	 *
+	 * @param name the transform's name
+	 * @param scale the pixel spacing
+	 * @param offset the pixel offset
+	 * @param dataset the array's path, relative to the multiscales group
+	 * @param output the coordinate system the array maps into
+	 */
 	public static CoordinateTransform<?> createTransformation(final String name,
 			final double[] scale, final double[] offset,
 			final String dataset, final CoordinateSystem output) {
 
+		final OmeNgffReference in = new OmeNgffReference(null, dataset);
+		final OmeNgffReference out = new OmeNgffReference(output.getName(), null);
+
 		CoordinateTransform<?> ct;
 		if ((scale != null || allOnes(scale)) && (offset != null || allZeros(offset))) {
-			ct = new SequenceCoordinateTransform(name, dataset, output.getName(),
+			ct = new SequenceCoordinateTransform(name, in, out,
 					new CoordinateTransform[]{
 							new ScaleCoordinateTransform(prepend(1, scale)),
 							new TranslationCoordinateTransform(prepend(0, offset))});
 		} else if (offset != null || !allZeros(offset))
-			ct = new TranslationCoordinateTransform(name, dataset, output.getName(), prepend(0, offset));
+			ct = new TranslationCoordinateTransform(name, in, out, prepend(0, offset));
 		else if (scale != null || !allOnes(scale))
-			ct = new ScaleCoordinateTransform(name, dataset, output.getName(), prepend(1, scale));
+			ct = new ScaleCoordinateTransform(name, in, out, prepend(1, scale));
 		else
-			ct = new IdentityCoordinateTransform(name, dataset, output.getName());
+			ct = new IdentityCoordinateTransform(name, in, out);
 
 		return ct;
 	}
