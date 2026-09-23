@@ -104,13 +104,12 @@ import org.janelia.saalfeldlab.n5.ui.N5SpatialKeySpecDialog;
 import org.janelia.saalfeldlab.n5.ui.N5SwingTreeNode;
 import org.janelia.saalfeldlab.n5.ui.TranslationResultPanel;
 import org.janelia.saalfeldlab.n5.universe.N5DatasetDiscoverer;
-import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
 import org.janelia.saalfeldlab.n5.universe.StorageFormat;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5GenericSingleScaleMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v05.transformations.CoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.translation.TranslatedN5Reader;
 
 import com.formdev.flatlaf.util.UIScale;
@@ -838,7 +837,7 @@ public class TransformSelectorDialog {
 
 		int i = 0;
 		final N5TransformMetadata tformMetadata = (N5TransformMetadata)metadata;
-		for (CoordinateTransform<?> tform : tformMetadata.getTransforms()) {
+		for (CoordinateTransform< ? > tform : tformMetadata.getTransforms()) {
 
 			final String path = node.getPath() + "/" +
 					String.format("coordinateTransformations[%d]", i);
