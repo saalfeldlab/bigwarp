@@ -56,6 +56,7 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.SequenceCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.ThinPlateSplineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.TranslationCoordinateTransform;
+import org.janelia.scicomp.n5.zstandard.ZstandardCompression;
 
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
@@ -140,7 +141,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			N5ScalePyramidExporter.GZIP_COMPRESSION,
 			N5ScalePyramidExporter.LZ4_COMPRESSION,
 			N5ScalePyramidExporter.XZ_COMPRESSION,
-			N5ScalePyramidExporter.BLOSC_COMPRESSION};
+			N5ScalePyramidExporter.BLOSC_COMPRESSION,
+			N5ScalePyramidExporter.ZSTD_COMPRESSION
+			};
 
 	public static final String flattenOption = "Flat";
 	public static final String sequenceOption = "Sequence";
@@ -1216,6 +1219,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			return new RawCompression();
 		case N5ScalePyramidExporter.BLOSC_COMPRESSION:
 			return new BloscCompression();
+		case N5ScalePyramidExporter.ZSTD_COMPRESSION:
+			return new ZstandardCompression();
 		default:
 			return new RawCompression();
 		}
