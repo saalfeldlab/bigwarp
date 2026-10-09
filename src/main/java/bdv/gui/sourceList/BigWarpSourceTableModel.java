@@ -43,6 +43,7 @@ import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 
+import bdv.gui.BigWarpInitDialog;
 import bigwarp.transforms.NgffTransformations;
 import net.imglib2.realtransform.RealTransform;
 
@@ -52,7 +53,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	private static final long serialVersionUID = 5923947651732788341L;
 
 	public static enum SourceType { IMAGEPLUS, DATASET, URL };
-	protected final static String[] colNames = new String[] { "Name", "Moving", "Transform", " " };
+	protected final static String[] colNames = new String[] { "Name", "Location", "Moving", "Transform", " " };
 
 	protected final String[] columnNames;
 	protected final ArrayList<SourceRow> sources;
@@ -61,10 +62,17 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	// not displayed
 	protected final ArrayList<N5Metadata> metadataList;
 
-	protected static int imageColIdx = 0;
-	protected static int movingColIdx = 1;
-	protected static int transformColIdx = 2;
-	protected static int removeColIdx = 3;
+	protected static int nameColIdx = 0;
+	protected static int locationColIdx = 1;
+	protected static int movingColIdx = 2;
+	protected static int transformColIdx = 3;
+	protected static int removeColIdx = 4;
+
+	/**
+	 * Storage format extensions removed from a container's file name when it is used as a
+	 * source's default name, longest first so ".ome.zarr" is removed whole.
+	 */
+	private static final String[] CONTAINER_EXTENSIONS = { ".ome.zarr", ".zarr", ".n5", ".hdf5", ".h5" };
 
 	protected Function<String,String> transformChangedCallback;
 
@@ -122,7 +130,7 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	@Override
 	public Object getValueAt(int r, int c) {
 
-		if (c == 3)
+		if (c == removeColIdx)
 			return rmRowButtons.get(r);
 		else
 			return sources.get(r).get(c);
@@ -131,9 +139,9 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 	@Override
 	public Class<?> getColumnClass(int col) {
 
-		if (col == 1)
+		if (col == movingColIdx)
 			return Boolean.class;
-		else if (col == 3)
+		else if (col == removeColIdx)
 			return JButton.class;
 		else
 			return String.class;
@@ -150,8 +158,10 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 		if (col == movingColIdx)
 			sources.get(row).moving = (Boolean)value;
-		else if (col == imageColIdx)
-			sources.get(row).srcName = (String)value;
+		else if (col == nameColIdx)
+			sources.get(row).name = (String)value;
+		else if (col == locationColIdx)
+			sources.get(row).location = (String)value;
 		else if (col == transformColIdx)
 			setTransform(row, (String)value);
 	}
@@ -173,11 +183,24 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 			sources.get(row).transformUrl = value;
 	}
 
-	public void add(String srcName, boolean moving, SourceType type, N5Metadata metadata)
+	/**
+	 * Adds a row with the default name for its location (see {@link #defaultName}).
+	 *
+	 * @param location the source's location: a url, an ImagePlus title, or a Dataset's source
+	 * @param moving whether the source is moving
+	 * @param type the kind of location
+	 * @param metadata the source's metadata, may be null
+	 */
+	public void add(String location, boolean moving, SourceType type, N5Metadata metadata)
+	{
+		add(defaultName(location, type, metadata), location, moving, type, metadata);
+	}
+
+	public void add(String name, String location, boolean moving, SourceType type, N5Metadata metadata)
 	{
 		final RemoveRowButton rmButton = new RemoveRowButton(sources.size());
 		rmRowButtons.add(rmButton);
-		sources.add(new SourceRow(srcName, moving, "", type));
+		sources.add(new SourceRow(name, location, moving, "", type));
 		metadataList.add(metadata);
 	}
 
@@ -228,12 +251,68 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 		sources.remove(i);
 		rmRowButtons.remove(i);
+		metadataList.remove(i);
 		updateRmButtonIndexes();
 
 		if (container != null)
 			container.repaint();
 
 		return true;
+	}
+
+	/**
+	 * The short name a source gets when it is added, used as its source and coordinate
+	 * system name.
+	 * <ul>
+	 * <li>an ImagePlus: its title, without the "imagej:" prefix</li>
+	 * <li>a Dataset: its location</li>
+	 * <li>a url: the last part of the dataset's path, or the container's file name without
+	 * its storage extension when the url names the container's root</li>
+	 * </ul>
+	 *
+	 * @param location the source's location
+	 * @param type the kind of location
+	 * @param metadata the source's metadata, may be null
+	 * @return the default name
+	 */
+	public static String defaultName(final String location, final SourceType type, final N5Metadata metadata) {
+
+		if (location == null)
+			return "";
+
+		if (type == SourceType.IMAGEPLUS)
+			return location.replaceAll("^" + BigWarpInitDialog.ImageJPrefix, "");
+		else if (type == SourceType.DATASET)
+			return location;
+
+		String group = metadata != null ? metadata.getPath() : null;
+		String container = location;
+		try {
+			final N5URI n5uri = new N5URI(location.trim());
+			container = n5uri.getContainerPath();
+			if (group == null)
+				group = n5uri.getGroupPath();
+		} catch (final URISyntaxException e) {}
+
+		final String groupName = lastPathPart(group);
+		if (!groupName.isEmpty())
+			return groupName;
+
+		final String containerName = lastPathPart(container);
+		for (final String ext : CONTAINER_EXTENSIONS)
+			if (containerName.toLowerCase().endsWith(ext))
+				return containerName.substring(0, containerName.length() - ext.length());
+
+		return containerName;
+	}
+
+	private static String lastPathPart(final String path) {
+
+		if (path == null)
+			return "";
+
+		final String trimmed = path.replaceAll("/+$", "");
+		return trimmed.substring(trimmed.lastIndexOf('/') + 1);
 	}
 
 	private void updateRmButtonIndexes() {
@@ -244,32 +323,38 @@ public class BigWarpSourceTableModel extends AbstractTableModel
 
 	public static class SourceRow {
 
-		public String srcName;
+		/** the short name used as the source and coordinate system name */
+		public String name;
+		/** a url, an ImagePlus title, or a Dataset's source */
+		public String location;
 		public boolean moving;
 		public String transformUrl;
 
 		public SourceType type;
 
-		public SourceRow(String srcName, boolean moving, String transformUrl, SourceType type) {
+		public SourceRow(String name, String location, boolean moving, String transformUrl, SourceType type) {
 
-			this.srcName = srcName;
+			this.name = name;
+			this.location = location;
 			this.moving = moving;
 			this.transformUrl = transformUrl;
 			this.type = type;
 		}
 
-		public SourceRow(String srcName, boolean moving, String transformName) {
+		public SourceRow(String location, boolean moving, String transformName) {
 
-			this(srcName, moving, transformName, SourceType.URL);
+			this(defaultName(location, SourceType.URL, null), location, moving, transformName, SourceType.URL);
 		}
 
 		public Object get(int c) {
 
-			if (c == 0)
-				return srcName;
-			else if (c == 1)
+			if (c == nameColIdx)
+				return name;
+			else if (c == locationColIdx)
+				return location;
+			else if (c == movingColIdx)
 				return moving;
-			else if (c == 2)
+			else if (c == transformColIdx)
 				return transformUrl;
 			else
 				return null;

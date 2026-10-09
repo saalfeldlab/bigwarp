@@ -417,7 +417,7 @@ public class BigWarpInit {
 	 *             call {{@code add(BigWarpData, LinkedHashMap, RealTransform)}}
 	 *             instead
 	 */
-	@SuppressWarnings( { "unchecked", "rawtypes" } )
+	@SuppressWarnings( { "rawtypes" } )
 	@Deprecated
 	public static BigWarpData< ? > add( BigWarpData bwdata, Source< ? > src, int setupId, int numTimepoints, boolean isMoving, RealTransform transform )
 	{
@@ -437,8 +437,6 @@ public class BigWarpInit {
 			if( info.getSourceAndConverter() == null ) {
 				addSourceToListsGenericType( source, info.getId(), bwdata.converterSetups, bwdata.sources );
 
-//				private static void addSourceToListsGenericType( final Source< ? > source, final int setupId, final List< ConverterSetup > converterSetups, final List< SourceAndConverter< ? > > sources )
-				
 				final SourceAndConverter< ? > addedSource = bwdata.sources.get( bwdata.sources.size() - 1 );
 				info.setSourceAndConverter( addedSource );
 			}
@@ -449,6 +447,53 @@ public class BigWarpInit {
 			bwdata.sourceInfos.put( info.getId(), info );
 		}
 		return bwdata;
+	}
+
+	/**
+	 * Names the sources created from one location, after they are added with
+	 * {@link #add(BigWarpData, LinkedHashMap, RealTransform, Supplier)}. A single source is
+	 * given {@code name}; several (e.g. one per channel) are given {@code name_ch<i>}, the
+	 * convention n5-viewer uses for channels.
+	 * <p>
+	 * Each source is wrapped in a {@link RenamableSource}, replacing it in place, so the
+	 * pairing of sources and converter setups by index is kept.
+	 *
+	 * @param bwdata the data the sources were added to
+	 * @param sources the sources created from one location
+	 * @param name the name, if null or blank the sources keep their names
+	 */
+	@SuppressWarnings( { "rawtypes", "unchecked" } )
+	public static void renameSources( final BigWarpData< ? > bwdata, final LinkedHashMap< Source< ? >, SourceInfo > sources, final String name )
+	{
+		if ( name == null || name.trim().isEmpty() )
+			return;
+
+		final int n = sources.size();
+		int c = 0;
+		for ( final SourceInfo info : sources.values() )
+		{
+			final String srcName = n > 1 ? name.trim() + "_ch" + c : name.trim();
+			c++;
+
+			final SourceAndConverter< ? > sac = info.getSourceAndConverter();
+			if ( sac == null )
+				continue;
+
+			if ( sac.getSpimSource() instanceof RenamableSource )
+				( ( RenamableSource< ? > ) sac.getSpimSource() ).setName( srcName );
+			else
+			{
+				final SourceAndConverter< ? > renamed = wrapSourceAsRenamable( sac );
+				( ( RenamableSource< ? > ) renamed.getSpimSource() ).setName( srcName );
+
+				final int idx = bwdata.sources.indexOf( sac );
+				if ( idx >= 0 )
+					( ( List ) bwdata.sources ).set( idx, renamed );
+
+				info.setSourceAndConverter( renamed );
+			}
+			info.setName( srcName );
+		}
 	}
 
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
@@ -539,7 +584,6 @@ public class BigWarpInit {
 		int setupId = baseId;
 		for ( final SourceAndConverter sac : tmpSources )
 		{
-			@SuppressWarnings("unchecked")
 			final Source< ? > source = sac.getSpimSource();
 			sourceInfoMap.put( source, new SourceInfo( setupId++, isMoving, source.getName() ) );
 		}
@@ -801,7 +845,6 @@ public class BigWarpInit {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
 	private static LinkedHashMap<Source<?>, SourceInfo> makeMap(final SourceInfo[] infos) {
 
 		final LinkedHashMap<Source<?>, SourceInfo> map = new LinkedHashMap<>();
@@ -827,7 +870,7 @@ public class BigWarpInit {
 		return loadN5SourceInfo( bwData, n5, n5Dataset, queue, sourceId, moving, exec );
 	}
 
-	@SuppressWarnings({"rawtypes", "unchecked"})
+	@SuppressWarnings({"rawtypes"})
 	public static SourceInfo[] loadN5SourceInfo( final BigWarpData bwData, final N5Reader n5, final String n5Dataset, final SharedQueue queue, 
 			final int sourceId, final boolean moving, ExecutorService exec )
 	{
@@ -843,18 +886,6 @@ public class BigWarpInit {
 		catch ( final IOException e )
 		{}
 
-//<<<<<<< HEAD
-//		final List<SourceAndConverter<?>> sources;
-//		CoordinateSystem cs = null;
-//		if( meta instanceof OmeNgffV06MultiScaleMetadata ) {
-//			sources = openNgff06DevSourceAndConverter((BigWarpData)bwData, n5, (OmeNgffV06MultiScaleMetadata)meta, queue);
-//			cs = ((OmeNgffV06MultiScaleMetadata)meta).getCoordinateSystems()[0]; // TODO eventually don't use first one
-//||||||| abad05e
-//		final SourceAndConverter<T> sac = (SourceAndConverter<T>)openN5VSourceAndConverter( bwData, n5, meta, queue);
-//		if( bwData != null ) {
-//			bwData.sources.add((SourceAndConverter)sac);
-//			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
-//=======
 		return getInfo(bwData, n5, n5Dataset, queue, sourceId, moving, meta);
 	}
 
@@ -864,59 +895,23 @@ public class BigWarpInit {
 
 		final List<SourceAndConverter<T>> sacList = openN5VSourceAndConverter( bwData, n5, meta, queue);
 		final ArrayList<SourceInfo> infos = new ArrayList<>();
+		int id = sourceId;
 		for( SourceAndConverter sac : sacList ) {
 
+			// each source (e.g. channel) needs a unique id, otherwise sourceInfos entries overwrite each other
 			final String uri = n5.getURI().toString() + "?" + n5Dataset;
-			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
+			final SourceInfo info = new SourceInfo(id, moving, sac.getSpimSource().getName(), () -> uri );
 			info.setSourceAndConverter(sac);
 			infos.add(info);
 
 			if( bwData != null ) {
 				bwData.sources.add(sac);
-				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
+				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, id));
 			}
+			id++;
 		}
 
 		return infos.toArray(new SourceInfo[0]);
-
-//		final SourceAndConverter<?> sac = (SourceAndConverter<?>)openN5VSourceAndConverter( bwData, n5, meta, queue);
-//		if( bwData != null ) {
-//			bwData.sources.add((SourceAndConverter)sac);
-//			bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
-//		}
-	
-//<<<<<<< HEAD
-//		else
-//			sources = openN5VSourceAndConverter(bwData, n5, meta, queue);
-//
-//		final LinkedHashMap< Source<T>, SourceInfo > sourceStateMap = new LinkedHashMap<>();
-//		for( SourceAndConverter<?> sac : sources ) {
-//			if( bwData != null ) {
-//				bwData.sources.add((SourceAndConverter)sac);
-//				bwData.converterSetups.add( BigDataViewer.createConverterSetup(sac, sourceId));
-//			}
-//
-//			final String uri = n5.getURI().toString() + "$" + n5Dataset;
-//			final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
-//			info.setSourceAndConverter(sac);
-//			if (cs != null)
-//				info.setCoordinateSystem(cs);
-//
-//			sourceStateMap.put((Source<T>)sac.getSpimSource(), info);
-//		}
-//		return sourceStateMap;
-//||||||| abad05e
-//
-//		final String uri = n5.getURI().toString() + "$" + n5Dataset;
-//		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
-//		info.setSourceAndConverter(sac);
-//		return info;
-//=======
-		
-//		final String uri = n5.getURI().toString() + "$" + n5Dataset;
-//		final SourceInfo info = new SourceInfo(sourceId, moving, sac.getSpimSource().getName(), () -> uri );
-//		info.setSourceAndConverter(sac);
-//		return info;
 	}
 
 	@Deprecated
@@ -1179,11 +1174,11 @@ public class BigWarpInit {
 	}
 
 	protected static boolean isForward(final String input, final String output, CoordinateTransform<?> ct) {
-		return ct.getInput().equals(input) && ct.getOutput().equals(output);
+		return ct.getInput().getName().equals(input) && ct.getOutput().getName().equals(output);
 	}
 
 	protected static boolean isInverse(final String input, final String output, CoordinateTransform<?> ct) {
-		return ct.getOutput().equals(input) && ct.getInput().equals(output);
+		return ct.getOutput().getName().equals(input) && ct.getInput().getName().equals(output);
 	}
 
 	protected static RealTransform ensure3D(RealTransform tform) {

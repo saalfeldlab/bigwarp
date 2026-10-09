@@ -135,6 +135,7 @@ public class BigWarpInitDialog extends JFrame
 	private static final String imagesKey = "images";
 	private static final String movingKey = "moving";
 	private static final String transformsKey = "transforms";
+	private static final String namesKey = "names";
 
 	public static final String ImageJPrefix = "imagej://";
 
@@ -142,6 +143,7 @@ public class BigWarpInitDialog extends JFrame
 	private String imageList;
 	private String movingList;
 	private String transformList;
+	private String nameList;
 
 	private boolean initialRecorderState;
 
@@ -198,6 +200,17 @@ public class BigWarpInitDialog extends JFrame
 
 	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms )
 	{
+		return runBigWarp( projectLandmarkPath, images, moving, transforms, null );
+	}
+
+	/**
+	 * @param names
+	 *            the name of the source(s) at each image location, may be null, and a null or
+	 *            empty entry keeps the name the source was loaded with
+	 */
+	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms,
+			final String[] names )
+	{
 		final String projectLandmarkPathTrim = projectLandmarkPath == null ? null : projectLandmarkPath.trim();
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProjectLandmarkArg = projectLandmarkPathTrim != null && !projectLandmarkPathTrim.isEmpty();
@@ -239,6 +252,8 @@ public class BigWarpInitDialog extends JFrame
 
 					// add performs a null check on transform
 					BigWarpInit.add( data, infos, transform, transformSupplier );
+					if( names != null && names.length > i )
+						BigWarpInit.renameSources( data, infos, names[ i ] );
 
 					id += infos.size();
 				}
@@ -311,18 +326,20 @@ public class BigWarpInitDialog extends JFrame
 				if( tableRow.type.equals( SourceType.IMAGEPLUS )  )
 				{
 					// strip off prefix if present
-					final ImagePlus imp = WindowManager.getImage( tableRow.srcName.replaceAll( "^"+ImageJPrefix, "" ) );
+					final ImagePlus imp = WindowManager.getImage( tableRow.location.replaceAll( "^"+ImageJPrefix, "" ) );
 					final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, imp, id, 0, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
+					BigWarpInit.renameSources( data, infos, tableRow.name );
 					id += infos.size();
 				}
 				else if( tableRow.type.equals( SourceType.DATASET ))
 				{
 					final Dataset dataset = datasetService.getDatasets().stream()
-							.filter( x -> x.getSource().equals( tableRow.srcName ) )
+							.filter( x -> x.getSource().equals( tableRow.location ) )
 							.findFirst().get();
 					final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, dataset, id, tableRow.moving );
 					BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
+					BigWarpInit.renameSources( data, infos, tableRow.name );
 					id += infos.size();
 				}
 				else // URI
@@ -331,8 +348,9 @@ public class BigWarpInitDialog extends JFrame
 					try
 					{
 						final N5Metadata metadata = sourceTableModel.getMetadata(i);
-						final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.srcName, id, tableRow.moving );
+						final LinkedHashMap< Source< ? >, SourceInfo > infos = BigWarpInit.createSources( data, tableRow.location, id, tableRow.moving );
 						BigWarpInit.add( data, infos, tableRow.getTransform(), tableRow.getTransformUri() );
+						BigWarpInit.renameSources( data, infos, tableRow.name );
 						id += infos.size();
 					}
 					catch ( final URISyntaxException e )
@@ -936,9 +954,10 @@ public class BigWarpInitDialog extends JFrame
 		final String[] imageParams = imageList.split( listSeparator, -1 );
 		final String[] movingParams = movingList.split( listSeparator, -1 );
 		final String[] transformParams = transformList.split( listSeparator, -1 );
+		final String[] nameParams = nameList == null || nameList.isEmpty() ? null : nameList.split( listSeparator, -1 );
 
 		final int N = imageParams.length;
-		if( movingParams.length != N || transformParams.length != N )
+		if( movingParams.length != N || transformParams.length != N || ( nameParams != null && nameParams.length != N ) )
 		{
 			System.err.println("Parameter arrays must have identical lengths");
 			return;
@@ -947,6 +966,8 @@ public class BigWarpInitDialog extends JFrame
 		for( int i = 0; i < N; i++ )
 		{
 			sourceTableModel.add( imageParams[ i ], movingParams[ i ].trim().equals( "true" ) );
+			if( nameParams != null && !nameParams[ i ].trim().isEmpty() )
+				sourceTableModel.get( i ).name = nameParams[ i ].trim();
 			sourceTableModel.setTransform( i, transformParams[ i ] );
 		}
 	}
@@ -957,24 +978,28 @@ public class BigWarpInitDialog extends JFrame
 		final StringBuffer imageList = new StringBuffer();
 		final StringBuffer movingList = new StringBuffer();
 		final StringBuffer transformList = new StringBuffer();
+		final StringBuffer nameList = new StringBuffer();
 
 		final int N = sourceTable.getRowCount();
 		for( int i = 0; i < N; i++ )
 		{
-			imageList.append( sourceTableModel.get( i ).srcName );
+			imageList.append( sourceTableModel.get( i ).location );
 			movingList.append( sourceTableModel.get( i ).moving );
 			transformList.append( sourceTableModel.get( i ).transformUrl );
+			nameList.append( sourceTableModel.get( i ).name );
 			if( i < N -1 )
 			{
 				imageList.append( listSeparator );
 				movingList.append( listSeparator );
 				transformList.append( listSeparator );
+				nameList.append( listSeparator );
 			}
 		}
 
 		this.imageList = imageList.toString();
 		this.movingList = movingList.toString();
 		this.transformList = transformList.toString();
+		this.nameList = nameList.toString();
 	}
 
 	public String macroRecord()
@@ -992,6 +1017,9 @@ public class BigWarpInitDialog extends JFrame
 
 		if( transformList != null )
 			Recorder.recordOption(transformsKey, transformList.toString());
+
+		if( nameList != null )
+			Recorder.recordOption(namesKey, nameList);
 
 		return Recorder.getCommandOptions();
 	}
@@ -1016,6 +1044,8 @@ public class BigWarpInitDialog extends JFrame
 		final String[] images = Macro.getValue( args, imagesKey, "" ).split( ",", -1 );
 		final String[] moving = Macro.getValue( args, movingKey, "" ).split( ",", -1 );
 		final String[] transforms = Macro.getValue( args, transformsKey, "" ).split( ",", -1 );
+		final String namesArg = Macro.getValue( args, namesKey, "" );
+		final String[] names = namesArg.isEmpty() ? null : namesArg.split( ",", -1 );
 
 		if( !project.isEmpty())
 		{
@@ -1029,7 +1059,7 @@ public class BigWarpInitDialog extends JFrame
 				return;
 			}
 			// TODO fix transforms
-			runBigWarp( null, images, moving, transforms );
+			runBigWarp( null, images, moving, transforms, names );
 		}
 
 //		System.out.println( "BigWarpInitDialog runMacro");
