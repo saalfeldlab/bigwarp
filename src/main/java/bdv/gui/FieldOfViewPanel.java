@@ -27,6 +27,7 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -41,6 +42,7 @@ import javax.swing.event.DocumentListener;
 import com.formdev.flatlaf.util.UIScale;
 
 import bdv.ij.ApplyBigwarpPlugin;
+import bdv.viewer.SourceAndConverter;
 import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
 import bigwarp.transforms.BigWarpTransform;
@@ -224,12 +226,14 @@ public class FieldOfViewPanel extends JPanel
 		{
 			add( new JLabel( "reference:" ), gbc );
 
-			final String[] fovOpts = new String[]{
-					ApplyBigwarpPlugin.SPECIFIED,
-					ApplyBigwarpPlugin.TARGET,
-					ApplyBigwarpPlugin.MOVING_WARPED,
-					ApplyBigwarpPlugin.LANDMARK_POINTS };
-			referenceComboBox = new JComboBox<>( fovOpts );
+			// only offer the target image as a reference when there is one
+			final List< String > fovOpts = new ArrayList<>();
+			fovOpts.add( ApplyBigwarpPlugin.SPECIFIED );
+			if ( data.numTargetSources() > 0 )
+				fovOpts.add( ApplyBigwarpPlugin.TARGET );
+			fovOpts.add( ApplyBigwarpPlugin.MOVING_WARPED );
+			fovOpts.add( ApplyBigwarpPlugin.LANDMARK_POINTS );
+			referenceComboBox = new JComboBox<>( fovOpts.toArray( new String[ 0 ] ) );
 			referenceComboBox.setSelectedItem( ApplyBigwarpPlugin.MOVING_WARPED );
 			referenceComboBox.addActionListener( e -> {
 				updateFieldsFromReference();
@@ -455,7 +459,11 @@ public class FieldOfViewPanel extends JPanel
 
 		final List< Interval > itvl = ApplyBigwarpPlugin.getPixelInterval( data, ltm, bwTransform.getTransformation( false ),
 				referenceOption, "", new BoundingBoxEstimation(), null, null, getSpacing() );
+		if ( itvl == null || itvl.isEmpty() )
+			return;
 
+		// the target source is only needed for the TARGET reference, and may not exist
+		final SourceAndConverter< ? > tgt = data.getTargetSource( 0 );
 		final double[] offset = ApplyBigwarpPlugin.getPhysicalOffset(
 				referenceOption,
 				null,
@@ -465,7 +473,7 @@ public class FieldOfViewPanel extends JPanel
 				new BoundingBoxEstimation(),
 				res,
 				data.getMovingSource(0).getSpimSource(),
-				data.getTargetSource(0).getSpimSource());
+				tgt == null ? null : tgt.getSpimSource() );
 
 		setPixelSize( itvl.get( 0 ).dimensionsAsLongArray() );
 		setMin( offset );
