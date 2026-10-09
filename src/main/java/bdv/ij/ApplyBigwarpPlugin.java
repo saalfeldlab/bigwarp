@@ -680,7 +680,7 @@ public class ApplyBigwarpPlugin implements PlugIn
 
 			if (bwData.numTargetSources() <= 0) {
 				System.err.println("Requested union of moving and target FOV but target image is missing. Returning moving FOV.");
-				FieldOfView.getPhysicaInterval(bwData.getMovingSource(0).getSpimSource());
+				return Collections.singletonList(FieldOfView.getPhysicaInterval(bwData.getMovingSource(0).getSpimSource()));
 			}
 
 			final RealInterval tgtItvl = FieldOfView.getPhysicaInterval(bwData.getTargetSource(0).getSpimSource());
@@ -952,10 +952,15 @@ public class ApplyBigwarpPlugin implements PlugIn
 		}
 		else if( fieldOfViewOption.equals( LANDMARK_POINTS ) )
 		{
-			Arrays.fill(offset, Double.MAX_VALUE);
-			List<Double[]> pts = getMatchedPoints(ltm, fieldOfViewPointFilter);
+			final List<Double[]> pts = getMatchedPoints(ltm, fieldOfViewPointFilter);
+			if( pts.isEmpty() )
+				return offset;
+
+			// points may be 2D, leave the offset for any remaining dimensions at zero
+			final int ND = Math.min( nd, pts.get(0).length );
+			Arrays.fill(offset, 0, ND, Double.MAX_VALUE);
 			for( int i = 0; i < pts.size(); i++ ) {
-				for( int d = 0; d < nd; d++ ) {
+				for( int d = 0; d < ND; d++ ) {
 					final double v = pts.get(i)[d];
 					offset[d] = v < offset[d] ? v : offset[d];
 				}
