@@ -952,8 +952,9 @@ public class LandmarkTableModel extends AbstractTableModel implements TransformL
 					if( error > inverseThreshold )
 					{
 						movingDisplayPointUnreliable.set( i, true );
-						message.showMessage( String.format(
-							"Warning: location of moving point %s in warped space is innacurate", names.get( i )));
+						if( message != null )
+							message.showMessage( String.format(
+								"Warning: location of moving point %s in warped space is innacurate", names.get( i )));
 					}
 					else
 						movingDisplayPointUnreliable.set( i, false );
