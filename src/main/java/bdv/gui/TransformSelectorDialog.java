@@ -357,6 +357,16 @@ public class TransformSelectorDialog {
 		this.loaderThread = loaderThread;
 	}
 
+	private java.awt.Window anchor;
+
+	/**
+	 * Place the dialog to the right of the given window when {@link #run} is called.
+	 */
+	void setAnchor(final java.awt.Window anchor) {
+
+		this.anchor = anchor;
+	}
+
 	public void run(final Consumer<DataSelection> okCallback) {
 
 		this.okCallback = okCallback;
@@ -370,6 +380,8 @@ public class TransformSelectorDialog {
 		// ok and cancel buttons
 		okBtn.addActionListener(e -> ok());
 		cancelBtn.addActionListener(e -> cancel());
+		if (anchor != null)
+			dialog.setLocation(WindowPlacement.rightOf(anchor, dialog.getSize()));
 		dialog.setVisible(true);
 	}
 
@@ -837,13 +849,17 @@ public class TransformSelectorDialog {
 
 		int i = 0;
 		final N5TransformMetadata tformMetadata = (N5TransformMetadata)metadata;
+		final String key = tformMetadata.getKey();
 		for (CoordinateTransform< ? > tform : tformMetadata.getTransforms()) {
 
+			// tree-display path only; the real attribute location (group + key + index)
+			// is carried in the metadata so a multi-segment key such as
+			// "ome/scene/coordinateTransformations" is neither lost nor mis-split.
 			final String path = node.getPath() + "/" +
 					String.format("coordinateTransformations[%d]", i);
 
 			final N5SwingTreeNode child = new N5SwingTreeNode(path, node);
-			child.setMetadata(new N5TransformMetadata(path, new CoordinateTransform[]{tform}));
+			child.setMetadata(new N5TransformMetadata(path, node.getPath(), key, i, new CoordinateTransform[]{tform}));
 			node.add(child);
 
 			i++;

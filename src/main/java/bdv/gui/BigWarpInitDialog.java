@@ -48,6 +48,7 @@ import javax.swing.JPanel;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.JTree;
+import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -538,6 +539,7 @@ public class BigWarpInitDialog extends JFrame
 			selectionDialog.setCropOption( false );
 
 			selectionDialog.run( this::n5DialogCallback );
+			moveRightOfThis( SwingUtilities.getWindowAncestor( selectionDialog.getJTree() ) );
 		});
 
 		// add transforms
