@@ -21,28 +21,86 @@
  */
 package bigwarp.transforms.metadata;
 
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.N5TreeNode;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffScene;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransform;
+
+import com.google.gson.JsonParseException;
 
 import bigwarp.transforms.NgffTransformations;
 
 public class N5TransformMetadataParser implements N5MetadataParser<N5TransformMetadata> {
 
+	/**
+	 * The attribute keys searched for coordinate transformations by default, in order:
+	 * <ul>
+	 * <li>{@code coordinateTransformations} - BigWarp's own exports</li>
+	 * <li>{@code ome/coordinateTransformations} - written by {@code SpacesTransforms.serialize}</li>
+	 * <li>{@code ome/scene/coordinateTransformations} - an NGFF scene</li>
+	 * </ul>
+	 */
+	public static final String[] DEFAULT_TRANSFORM_KEYS = {
+			CoordinateTransform.KEY,
+			"ome/" + CoordinateTransform.KEY,
+			NgffScene.SCENE_KEY + "/" + CoordinateTransform.KEY };
+
+	private final String[] transformKeys;
+
+	public N5TransformMetadataParser() {
+
+		this(DEFAULT_TRANSFORM_KEYS);
+	}
+
+	/**
+	 * @param transformKeys
+	 *            the attribute keys to search for coordinate transformations, in order
+	 */
+	public N5TransformMetadataParser(final String... transformKeys) {
+
+		this.transformKeys = transformKeys;
+	}
+
+	/**
+	 * Parses the coordinate transformations found under the first of this parser's transform
+	 * keys that holds any at the given node.
+	 */
 	@Override
 	public Optional<N5TransformMetadata> parseMetadata(N5Reader n5, N5TreeNode node) {
 
 		final N5Reader n5Tform = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() ).openReader( n5.getURI().toString() );
-		final CoordinateTransform<?>[] cts = n5Tform.getAttribute(node.getPath(), "coordinateTransformations", CoordinateTransform[].class);
+		for (final String key : transformKeys) {
 
-		if( cts != null )
-			return Optional.of( new N5TransformMetadata(node.getPath(), cts));
-		else
-			return Optional.empty();
+			final CoordinateTransform<?>[] cts;
+			try {
+				cts = n5Tform.getAttribute(node.getPath(), key, CoordinateTransform[].class);
+			} catch (final N5Exception | JsonParseException | ClassCastException e) {
+				// something is at this key, but not an array of transforms
+				continue;
+			}
+
+			if (cts == null || cts.length == 0)
+				continue;
+
+			// the adapter returns null for a transform it can't read (e.g. an unknown type).
+			// nulls can't be dropped since transforms are later addressed by their index here
+			if (Arrays.stream(cts).anyMatch(Objects::isNull)) {
+				System.err.println("N5TransformMetadataParser: skipping " + key + " at \"" + node.getPath()
+						+ "\", some transforms could not be read (check their \"type\")");
+				continue;
+			}
+
+			return Optional.of(new N5TransformMetadata(node.getPath(), node.getPath(), key, cts));
+		}
+
+		return Optional.empty();
 	}
 
 }

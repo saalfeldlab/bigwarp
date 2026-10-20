@@ -48,6 +48,7 @@ import org.janelia.saalfeldlab.n5.blosc.BloscCompression;
 import org.janelia.saalfeldlab.n5.ij.N5ScalePyramidExporter;
 import org.janelia.saalfeldlab.n5.imglib2.N5DisplacementField;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.DisplacementFieldCoordinateTransform;
@@ -57,6 +58,8 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.ThinPlateSplineCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.TranslationCoordinateTransform;
 import org.janelia.scicomp.n5.zstandard.ZstandardCompression;
+
+import com.google.gson.JsonObject;
 
 import bdv.gui.ExportDisplacementFieldFrame;
 import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
@@ -234,24 +237,24 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		{
 			if( !bwTransform.isNonlinear() ) // is linear
 			{
-				writeAffineN5(params.n5Base, params.n5Dataset, params.inverseOption, data, bwTransform);
+				writeAffineN5(params.n5Base, params.n5Dataset, params.inverseOption, data, bwTransform, params.createScene);
 			}
 			else if ( params.format.equals(ExportDisplacementFieldFrame.FMT_BIGWARP_TPS))
 			{
-				writeTpsN5(params.n5Base, params.n5Dataset, data, bwTransform );
+				writeTpsN5(params.n5Base, params.n5Dataset, data, bwTransform, params.createScene );
 			}
 			else if ( params.inverseOption.equals( INVERSE_OPTIONS.BOTH.toString() ) )
 			{
 				writeN5( params.n5Base, params.n5Dataset + "/dfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						params.dataType, params.maxQuantizationError, false, params.inverseTolerance, params.inverseMaxIterations);
+						params.dataType, params.maxQuantizationError, false, params.inverseTolerance, params.inverseMaxIterations, params.createScene);
 				writeN5( params.n5Base, params.n5Dataset + "/invdfield", ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						params.dataType, params.maxQuantizationError, true, params.inverseTolerance, params.inverseMaxIterations);
+						params.dataType, params.maxQuantizationError, true, params.inverseTolerance, params.inverseMaxIterations, params.createScene);
 			}
 			else
 			{
 				final boolean inverse = params.inverseOption.equals( INVERSE_OPTIONS.INVERSE.toString() );
 				writeN5( params.n5Base, params.n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, params.blockSize, params.compression, params.nThreads, params.format, params.ignoreAffine, params.flatten(),
-						params.dataType, params.maxQuantizationError, inverse, params.inverseTolerance, params.inverseMaxIterations);
+						params.dataType, params.maxQuantizationError, inverse, params.inverseTolerance, params.inverseMaxIterations, params.createScene);
 			}
 		}
 	}
@@ -476,6 +479,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final BigWarpData<?> data,
 			final BigWarpTransform bwTransform) {
 
+		writeTpsN5(n5BasePath, n5Dataset, data, bwTransform, false);
+	}
+
+	public static void writeTpsN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final BigWarpData<?> data,
+			final BigWarpTransform bwTransform,
+			final boolean createScene) {
+
 		if (!bwTransform.getTransformType().equals(BigWarpTransform.TPS)) {
 			System.err.println(String.format("Can not write tranform type (%s) as Bigwarp Thin-plate-spline",
 					bwTransform.getTransformType()));
@@ -499,6 +512,16 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 
 		// also add reference to root
 		NgffTransformations.addCoordinateTransformations(n5, "", ct);
+
+		if (createScene) {
+			// the TPS maps target to moving, and the moving source's fixed transform comes after it
+			final String refUri = movingTransformUri(data);
+			final CoordinateTransform<?> sceneCt = refUri == null ? ct
+					: new SequenceCoordinateTransform(name, ct.getInput(), ct.getOutput(), ct, new ReferencedCoordinateTransform(refUri));
+			writeScene(n5, n5BasePath, data, sceneCt, true);
+		}
+
+		n5.close();
 	}
 
 	public static void writeAffineN5(
@@ -516,6 +539,17 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final String inverseOption,
 			final BigWarpData<?> data,
 			final BigWarpTransform bwTransform )
+	{
+		writeAffineN5(n5BasePath, n5Dataset, inverseOption, data, bwTransform, false);
+	}
+
+	public static void writeAffineN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final String inverseOption,
+			final BigWarpData<?> data,
+			final BigWarpTransform bwTransform,
+			final boolean createScene )
 	{
 		final String mvgSpaceName = data != null && data.numMovingSources() > 0 ? data.getMovingSource( 0 ).getSpimSource().getName() : "moving";
 		final String tgtSpaceName = data != null  && data.numTargetSources() > 0 ? data.getTargetSource( 0 ).getSpimSource().getName() : "target";
@@ -536,6 +570,18 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final N5Factory factory = new N5Factory().gsonBuilder(NgffTransformations.gsonBuilder());
 		final N5Writer n5 = factory.openWriter(n5BasePath);
 		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
+
+		if (createScene) {
+			// the forward direction maps target to moving (see buildLinearCoordinateTransformation),
+			// and the fixed transform of the moving source comes after it
+			final String refUri = movingTransformUri(data);
+			if (refUri == null)
+				writeScene(n5, n5BasePath, data, ct, !isInverse);
+			else if (!isInverse)
+				writeScene(n5, n5BasePath, data, new SequenceCoordinateTransform(ct.getName(), ct.getInput(), ct.getOutput(), ct, new ReferencedCoordinateTransform(refUri)), true);
+			else // a reference can not be inverted
+				IJ.log("NGFF scene not written: the moving source has a fixed transform, which can only be included in the target to moving direction");
+		}
 		n5.close();
 
 		// TODO: should the transform also be added to the root of the container?
@@ -612,7 +658,6 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				flatten, dtype, maxError, inverse, invTolerance, invMaxIters);
 	}
 
-	@SuppressWarnings("rawtypes")
 	public static <T extends NativeType<T> & RealType<T>, Q extends NativeType<Q> & IntegerType<Q>> void writeN5(
 			final String n5BasePath,
 			final String n5Dataset,
@@ -634,6 +679,34 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final boolean inverse,
 			final double invTolerance,
 			final int invMaxIters) {
+
+		writeN5(n5BasePath, n5Dataset, ltm, bwTransform, data, dims, spacing, offset, unit, spatialBlockSizeArg, compression, nThreads, format, splitAffine,
+				flatten, dtype, maxError, inverse, invTolerance, invMaxIters, false);
+	}
+
+	@SuppressWarnings("rawtypes")
+	public static <T extends NativeType<T> & RealType<T>, Q extends NativeType<Q> & IntegerType<Q>> void writeN5(
+			final String n5BasePath,
+			final String n5Dataset,
+			final LandmarkTableModel ltm,
+			final BigWarpTransform bwTransform,
+			final BigWarpData<?> data,
+			final long[] dims,
+			final double[] spacing,
+			final double[] offset,
+			final String unit,
+			final int[] spatialBlockSizeArg,
+			final Compression compression,
+			final int nThreads,
+			final String format,
+			final boolean splitAffine,
+			final boolean flatten,
+			final DTYPE dtype,
+			final double maxError,
+			final boolean inverse,
+			final double invTolerance,
+			final int invMaxIters,
+			final boolean createScene) {
 
 		final String dataset = (n5Dataset == null || n5Dataset.isEmpty()) ? N5DisplacementField.FORWARD_ATTR : n5Dataset;
 
@@ -742,6 +815,9 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform(inputSpace, outputSpace, ctList);
 
 				NgffTransformations.addCoordinateTransformations(n5, "/", totalTform);
+
+				if (createScene)
+					writeSceneField(n5, n5BasePath, data, totalTform, inverse, refCt);
 			}
 		}
 		else {
@@ -778,10 +854,80 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					ngffTform = new SequenceCoordinateTransform(null, refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{dfieldTform, refCt});
 
 				NgffTransformations.addCoordinateTransformations(n5, "/", ngffTform);
+
+				if (createScene)
+					writeSceneField(n5, n5BasePath, data, ngffTform, inverse, refCt);
 			}
 		}
 
 		n5.close();
+	}
+
+	/**
+	 * @param data the data
+	 * @return the transform uri of the first moving source that has one, or null
+	 */
+	private static String movingTransformUri(final BigWarpData<?> data) {
+
+		if (data == null)
+			return null;
+
+		final SourceInfo mvg = firstSourceInfo(data, true);
+		if (mvg != null && mvg.getTransformUri() != null && !mvg.getTransformUri().isEmpty())
+			return mvg.getTransformUri();
+
+		return null;
+	}
+
+	// not getSourceInfo(sac), which compares by identity and fails after a source is wrapped
+	private static SourceInfo firstSourceInfo(final BigWarpData<?> data, final boolean moving) {
+
+		for (final Entry<Integer, SourceInfo> e : data.sourceInfos.entrySet()) {
+			if (e.getValue().isMoving() == moving)
+				return e.getValue();
+		}
+		return null;
+	}
+
+	/**
+	 * Writes a field transform to the scene. A fixed transform of the moving source is
+	 * appended after the field, so the transform can only be written in the target to moving direction.
+	 */
+	private static void writeSceneField(final N5Writer n5, final String n5BasePath, final BigWarpData<?> data,
+			final CoordinateTransform<?> ct, final boolean inverse, final ReferencedCoordinateTransform<?> refCt) {
+
+		if (inverse && refCt != null) {
+			IJ.log("NGFF scene not written: the moving source has a fixed transform, which can only be included in the target to moving direction");
+			return;
+		}
+		writeScene(n5, n5BasePath, data, ct, !inverse);
+	}
+
+	/**
+	 * Adds the transform to the scene at the root of the container, referencing the moving and target sources.
+	 * Logs a message and writes nothing if the sources can not be referenced.
+	 *
+	 * @param inputIsTarget true if the transform's input is the target
+	 */
+	private static void writeScene(final N5Writer n5, final String n5BasePath, final BigWarpData<?> data,
+			final CoordinateTransform<?> ct, final boolean inputIsTarget) {
+
+		final SourceInfo mvg = data == null ? null : firstSourceInfo(data, true);
+		final SourceInfo tgt = data == null ? null : firstSourceInfo(data, false);
+
+		final String refusal = NgffTransformations.sceneRefusal(mvg, tgt);
+		if (refusal != null) {
+			IJ.log(refusal);
+			return;
+		}
+
+		final JsonObject mvgRef = NgffTransformations.sceneReference(mvg, n5BasePath, "/");
+		final JsonObject tgtRef = NgffTransformations.sceneReference(tgt, n5BasePath, "/");
+		final JsonObject input = inputIsTarget ? tgtRef : mvgRef;
+		final JsonObject output = inputIsTarget ? mvgRef : tgtRef;
+
+		NgffTransformations.addScene(n5, "/",
+				NgffTransformations.sceneTransform(ct, input, output, OmeNgffMetadataParser.reverse(n5)));
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})
@@ -1257,6 +1403,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		public final double inverseTolerance;
 		public final int inverseMaxIterations;
 
+		public final boolean createScene;
+
 		public DeformationFieldExportParameters(
 				final String landmarkPath,
 				final boolean ignoreAffine,
@@ -1277,6 +1425,32 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				final String n5Dataset,
 				final int[] blockSize,
 				final Compression compression )
+		{
+			this( landmarkPath, ignoreAffine, option, dataType, maxQuantizationError, inverseOption, inverseTolerance, inverseMaxIterations,
+					virtual, nThreads, format, size, spacing, offset, unit, n5Base, n5Dataset, blockSize, compression, false );
+		}
+
+		public DeformationFieldExportParameters(
+				final String landmarkPath,
+				final boolean ignoreAffine,
+				final String option,
+				final DTYPE dataType,
+				final double maxQuantizationError,
+				final String inverseOption,
+				final double inverseTolerance,
+				final int inverseMaxIterations,
+				final boolean virtual,
+				final int nThreads,
+				final String format,
+				final long[] size,
+				final double[] spacing,
+				final double[] offset,
+				final String unit,
+				final String n5Base,
+				final String n5Dataset,
+				final int[] blockSize,
+				final Compression compression,
+				final boolean createScene )
 		{
 			this.landmarkPath = landmarkPath;
 			this.ignoreAffine = ignoreAffine;
@@ -1302,6 +1476,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			this.n5Dataset = n5Dataset;
 			this.blockSize  = blockSize;
 			this.compression = compression;
+
+			this.createScene = createScene;
 		}
 
 		public boolean flatten()
@@ -1365,6 +1541,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			gd.addStringField( "n5 dataset", N5DisplacementField.FORWARD_ATTR );
 			gd.addStringField( "n5 block size", "32,32,32");
 			gd.addChoice( "n5 compression", compressionOptions, N5ScalePyramidExporter.GZIP_COMPRESSION );
+			gd.addCheckbox( "create_ngff_scene", false );
 			gd.showDialog();
 
 			if ( gd.wasCanceled() )
@@ -1402,6 +1579,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			final String n5Dataset = gd.getNextString();
 			final String n5BlockSizeString = gd.getNextString();
 			final String n5CompressionString = gd.getNextChoice();
+			final boolean createScene = gd.getNextBoolean();
 
 			final Compression compression = getCompression( n5CompressionString );
 			final int[] blockSize = n5BlockSizeString.isEmpty() ? null :
@@ -1471,7 +1649,8 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 					n5Base,
 					n5Dataset,
 					blockSize,
-					compression );
+					compression,
+					createScene );
 		}
 
 		public JFrame makeDialog()

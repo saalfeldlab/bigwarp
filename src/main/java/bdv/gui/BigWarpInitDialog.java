@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -56,6 +57,7 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
+import org.janelia.saalfeldlab.n5.N5URI;
 import org.janelia.saalfeldlab.n5.bdv.N5VSources;
 import org.janelia.saalfeldlab.n5.bdv.N5Viewer;
 import org.janelia.saalfeldlab.n5.bdv.N5ViewerCreator;
@@ -67,6 +69,8 @@ import org.janelia.saalfeldlab.n5.ui.DatasetSelectorDialog;
 import org.janelia.saalfeldlab.n5.ui.N5SwingTreeNode;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5Metadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.N5MetadataParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffScene;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffSceneMetadata;
 import org.jdom2.JDOMException;
 
 import com.formdev.flatlaf.util.UIScale;
@@ -86,6 +90,7 @@ import bigwarp.transforms.metadata.N5TransformMetadata;
 import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import bigwarp.transforms.metadata.N5TransformTreeCellRenderer;
 import ij.IJ;
+import ij.ImageJ;
 import ij.ImagePlus;
 import ij.Macro;
 import ij.Prefs;
@@ -209,9 +214,16 @@ public class BigWarpInitDialog extends JFrame
 	 *            the name of the source(s) at each image location, may be null, and a null or
 	 *            empty entry keeps the name the source was loaded with
 	 */
-	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] images, final String[] moving, final String[] transforms,
-			final String[] names )
+	public static < T extends NativeType<T> > BigWarp<?> runBigWarp( final String projectLandmarkPath, final String[] imagesArg, final String[] movingArg, final String[] transformsArg,
+			final String[] namesArg )
 	{
+		// an image location that is an NGFF scene stands for the sources it references
+		final String[][] expanded = imagesArg == null ? null : expandScenes( imagesArg, movingArg, transformsArg, namesArg );
+		final String[] images = expanded == null ? null : expanded[ 0 ];
+		final String[] moving = expanded == null ? null : expanded[ 1 ];
+		final String[] transforms = expanded == null ? null : expanded[ 2 ];
+		final String[] names = expanded == null ? null : expanded[ 3 ];
+
 		final String projectLandmarkPathTrim = projectLandmarkPath == null ? null : projectLandmarkPath.trim();
 		final BigWarpData< T > data = BigWarpInit.initData();
 		final boolean haveProjectLandmarkArg = projectLandmarkPathTrim != null && !projectLandmarkPathTrim.isEmpty();
@@ -299,6 +311,89 @@ public class BigWarpInitDialog extends JFrame
 		}
 
 		return bw;
+	}
+
+	/**
+	 * Replaces each image location that is an NGFF scene with the sources the scene
+	 * references (see {@link BigWarpInit#sceneSources}). The scene decides which of those
+	 * are moving and their transforms, so the moving, transform and name entries given for
+	 * the scene's location are ignored.
+	 *
+	 * @return the images, moving flags, transforms and names, in that order
+	 */
+	private static String[][] expandScenes( final String[] images, final String[] moving, final String[] transforms, final String[] names )
+	{
+		final List< String > imagesOut = new ArrayList<>();
+		final List< String > movingOut = new ArrayList<>();
+		final List< String > transformsOut = new ArrayList<>();
+		final List< String > namesOut = new ArrayList<>();
+		for ( int i = 0; i < images.length; i++ )
+		{
+			final List< BigWarpInit.SceneSource > sceneSources = sceneSources( images[ i ] );
+			if ( sceneSources == null )
+			{
+				imagesOut.add( images[ i ] );
+				movingOut.add( moving != null && moving.length > i ? moving[ i ] : "false" );
+				transformsOut.add( transforms != null && transforms.length > i ? transforms[ i ] : "" );
+				namesOut.add( names != null && names.length > i ? names[ i ] : "" );
+			}
+			else
+			{
+				for ( final BigWarpInit.SceneSource src : sceneSources )
+				{
+					imagesOut.add( src.location );
+					movingOut.add( Boolean.toString( src.moving ) );
+					transformsOut.add( src.transform );
+					namesOut.add( "" );
+				}
+			}
+		}
+		return new String[][] {
+			imagesOut.toArray( new String[ 0 ] ),
+			movingOut.toArray( new String[ 0 ] ),
+			transformsOut.toArray( new String[ 0 ] ),
+			namesOut.toArray( new String[ 0 ] ) };
+	}
+
+	/**
+	 * @param location an image location
+	 * @return the sources referenced by the NGFF scene at {@code location}, or null if
+	 *         {@code location} is not a scene
+	 */
+	private static List< BigWarpInit.SceneSource > sceneSources( final String location )
+	{
+		if ( location == null || location.trim().isEmpty() || location.startsWith( ImageJPrefix ) )
+			return null;
+
+		final NgffScene scene = BigWarpInit.readScene( location );
+		if ( scene == null )
+			return null;
+
+		try
+		{
+			final N5URI n5uri = new N5URI( N5URI.encodeAsUri( location.trim() ) );
+			return BigWarpInit.sceneSources( n5uri.getContainerPath(), n5uri.getGroupPath(), scene );
+		}
+		catch ( final URISyntaxException e )
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * Adds a row for each source in {@code sceneSources}.
+	 */
+	private void addSceneRows( final List< BigWarpInit.SceneSource > sceneSources )
+	{
+		if ( sceneSources.isEmpty() )
+			IJ.log( "BigWarp: the NGFF scene references no images" );
+
+		for ( final BigWarpInit.SceneSource src : sceneSources )
+		{
+			sourceTableModel.add( src.location, src.moving, SourceType.URL, null );
+			if ( !src.transform.isEmpty() )
+				sourceTableModel.setTransform( sourceTableModel.getRowCount() - 1, src.transform );
+		}
 	}
 
 	public <T extends NativeType<T>> void runBigWarp()
@@ -575,6 +670,7 @@ public class BigWarpInitDialog extends JFrame
 				transformSelectionDialog = new TransformSelectorDialog( new N5ViewerReaderFun(), new N5BasePathFun(),
 						lastOpenedContainer, tformParsers );
 
+				transformSelectionDialog.setAnchor( this );
 				transformSelectionDialog.setLoaderExecutor( exec );
 				transformSelectionDialog.setTreeRenderer( new N5TransformTreeCellRenderer( true ) );
 				transformSelectionDialog.setContainerPathUpdateCallback( x -> {
@@ -587,11 +683,25 @@ public class BigWarpInitDialog extends JFrame
 					final int i = sourceTable.getSelectedRow();
 					if( selection.metadata.size() > 0 ) {
 
-						final String path = selection.metadata.get(0).getPath();
-						final int idx = path.lastIndexOf("/");
+						final N5Metadata selected = selection.metadata.get(0);
 
-						final String group = idx > 0 ? path.substring(0, idx) : "";
-						final String attributePath = idx > 0 ? path.substring(idx+1) : path;
+						final String group;
+						final String attributePath;
+						if (selected instanceof N5TransformMetadata
+								&& ((N5TransformMetadata)selected).getAttributePath() != null) {
+							// use the group and attribute key the transform was actually found
+							// under (e.g. "ome/scene/coordinateTransformations[0]"), rather than
+							// inferring them by splitting the display path at the last "/", which
+							// cannot recover a multi-segment key
+							final N5TransformMetadata tmd = (N5TransformMetadata)selected;
+							group = tmd.getGroup();
+							attributePath = tmd.getAttributePath();
+						} else {
+							final String path = selected.getPath();
+							final int idx = path.lastIndexOf("/");
+							group = idx > 0 ? path.substring(0, idx) : "";
+							attributePath = idx > 0 ? path.substring(idx+1) : path;
+						}
 						sourceTableModel.setTransform(i, n5RootPath + "?" + group + "#" + attributePath);
 					}
 
@@ -679,15 +789,10 @@ public class BigWarpInitDialog extends JFrame
 		return panel;
 	}
 
-	/**
-	 * This method is a no-op.
-	 *
-	 * @deprecated
-	 */
-	@Deprecated
-	public void buildN5SelectionDialog()
+	private void moveRightOfThis( final java.awt.Window w )
 	{
-		// NoOp 
+		if ( w != null )
+			w.setLocation( WindowPlacement.rightOf( this, w.getSize() ) );
 	}
 
 	public void n5DialogCallback( final DataSelection selection )
@@ -698,14 +803,21 @@ public class BigWarpInitDialog extends JFrame
 		// n5-viewer, so add a row per source it expands into:
 		//  - unwrapMultichannelSelections expands a multichannel / generic group into
 		//    one child dataset per channel (each with its own path);
-		//  - N5VSources.expandSelection expands a scene into the datasets it references
-		//    (each with its own path), and passes a plain dataset through unchanged.
+		//  - a scene is expanded into the sources it references (see BigWarpInit.sceneSources),
+		//    not with N5VSources.expandSelection, which drops references that are not
+		//    ome-zarr (e.g. tifs by absolute path) and doesn't say which source is moving;
+		//  - N5VSources.expandSelection passes a plain dataset through unchanged.
 		// Each has a distinct path/URI, so BigWarp's by-URI loader loads it independently.
 		// (A channel axis *within* a single dataset shares one path/URI and is fanned out
 		// at load time instead, so it stays a single row.)
 		for (final N5Metadata m : N5Viewer.unwrapMultichannelSelections( selection ))
-			for (final N5Metadata dataset : N5VSources.expandSelection( selection.n5, m ))
-				sourceTableModel.add(n5RootPath + "?" + dataset.getPath(), dataset);
+		{
+			if ( m instanceof NgffSceneMetadata )
+				addSceneRows( BigWarpInit.sceneSources( n5RootPath, m.getPath(), ( ( NgffSceneMetadata ) m ).getScene() ) );
+			else
+				for (final N5Metadata dataset : N5VSources.expandSelection( selection.n5, m ))
+					sourceTableModel.add(n5RootPath + "?" + dataset.getPath(), dataset);
+		}
 
 		repaint();
 	}
@@ -769,7 +881,12 @@ public class BigWarpInitDialog extends JFrame
 		final String path = containerPathText.getText();
 		if( !path.isEmpty() )
 		{
-			sourceTableModel.add( path );
+			final List< BigWarpInit.SceneSource > sceneSources = sceneSources( path );
+			if ( sceneSources != null )
+				addSceneRows( sceneSources );
+			else
+				sourceTableModel.add( path );
+
 			repaint();
 		}
 	}
@@ -850,6 +967,16 @@ public class BigWarpInitDialog extends JFrame
 		// Create and set up the window.
 		final BigWarpInitDialog frame = new BigWarpInitDialog( "BigWarp", datasets );
 		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+
+		// place just below the ImageJ/Fiji window, if there is one
+		final ImageJ ij = IJ.getInstance();
+		if ( ij != null && ij.isShowing() )
+		{
+			final java.awt.Point p = ij.getLocationOnScreen();
+			frame.setLocation( WindowPlacement.clampToScreen(
+					new java.awt.Point( p.x, p.y + ij.getHeight() ), frame.getSize() ) );
+		}
+
 		frame.setVisible( true );
 		return frame;
 	}

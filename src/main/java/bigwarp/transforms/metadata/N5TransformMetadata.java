@@ -26,16 +26,72 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations
 
 public class N5TransformMetadata extends AbstractN5Metadata {
 
-	private CoordinateTransform<?>[] transforms;
+	private final CoordinateTransform<?>[] transforms;
+
+	/** The group the transforms were found at. */
+	private final String group;
+
+	/**
+	 * The attribute key the transforms were found under, e.g.
+	 * {@code coordinateTransformations} or {@code ome/scene/coordinateTransformations},
+	 * or {@code null} if unknown.
+	 */
+	private final String key;
+
+	/**
+	 * The index of this transform within that key's array, or {@code -1} for
+	 * group-level metadata that holds every transform at the key.
+	 */
+	private final int index;
 
 	public N5TransformMetadata(String path, CoordinateTransform<?>[] transforms) {
+		this(path, path, null, -1, transforms);
+	}
+
+	public N5TransformMetadata(String path, String group, String key, CoordinateTransform<?>[] transforms) {
+		this(path, group, key, -1, transforms);
+	}
+
+	public N5TransformMetadata(String path, String group, String key, int index, CoordinateTransform<?>[] transforms) {
 		super(path);
+		this.group = group;
+		this.key = key;
+		this.index = index;
 		this.transforms = transforms;
 	}
 
 	public CoordinateTransform<?>[] getTransforms()
 	{
 		return transforms;
+	}
+
+	public String getGroup()
+	{
+		return group;
+	}
+
+	public String getKey()
+	{
+		return key;
+	}
+
+	public int getIndex()
+	{
+		return index;
+	}
+
+	/**
+	 * The attribute path addressing this single transform, i.e. {@code key[index]}
+	 * (for example {@code ome/scene/coordinateTransformations[0]}), or {@code null}
+	 * when this is group-level metadata or the key is unknown.
+	 *
+	 * @return the attribute path, or null
+	 */
+	public String getAttributePath()
+	{
+		if (key == null || index < 0)
+			return null;
+		return key + "[" + index + "]";
 	}
 
 }

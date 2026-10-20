@@ -27,6 +27,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -58,7 +59,9 @@ import bdv.viewer.Source;
 import bigwarp.BigWarp;
 import bigwarp.BigWarpData;
 import bigwarp.landmarks.LandmarkTableModel;
+import bigwarp.source.SourceInfo;
 import bigwarp.transforms.BigWarpTransform;
+import bigwarp.transforms.NgffTransformations;
 import ij.IJ;
 import ij.Macro;
 import ij.plugin.frame.Recorder;
@@ -99,6 +102,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 	protected static final String n5DatasetKey = "n5_dataset";
 	protected static final String n5BlockSizeKey = "n5_block_size";
 	protected static final String n5CompressionKey = "n5_compression";
+	protected static final String createSceneKey = "create_scene";
 
 	private String lastBrowsePath = null;
 	private String initialPath = null;
@@ -129,6 +133,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 	private JComboBox< String > n5CompressionDropdown;
 	private JCheckBox splitAffineCheckBox;
 	private JCheckBox virtualCheckBox;
+	private JCheckBox createSceneCheckBox;
+	private JLabel sceneNoteLabel;
 
 	private JComboBox<DTYPE> dataTypeComboBox;
 	private JSpinner quantizationErrorSpinner;
@@ -642,10 +648,89 @@ public class ExportDisplacementFieldFrame extends JFrame
 		gbcBar.gridy = 3;
 		gbcBar.fill = GridBagConstraints.NONE;
 		gbcBar.anchor = GridBagConstraints.LINE_START;
+		gbcBar.gridwidth = 1;
 		n5CompressionDropdown = new JComboBox< String >( BigWarpToDeformationFieldPlugIn.compressionOptions );
 		panel.add( n5CompressionDropdown, gbcBar );
 
+		gbcBar.gridx = 2;
+		gbcBar.gridwidth = 5;
+		createSceneCheckBox = new JCheckBox( "Create NGFF Scene" );
+		panel.add( createSceneCheckBox, gbcBar );
+
+		// says when the scene will reference a source by absolute path, or why there will be no scene
+		ctxt.gridy = 4;
+		panel.add( new JLabel( "" ), ctxt );
+
+		gbcBar.gridx = 1;
+		gbcBar.gridy = 4;
+		gbcBar.gridwidth = 6;
+		sceneNoteLabel = new JLabel( "" );
+		panel.add( sceneNoteLabel, gbcBar );
+
+		n5RootTxt.getDocument().addDocumentListener( new DocumentListener() {
+			@Override
+			public void changedUpdate( DocumentEvent e ) { updateSceneControls(); }
+
+			@Override
+			public void insertUpdate( DocumentEvent e ) { updateSceneControls(); }
+
+			@Override
+			public void removeUpdate( DocumentEvent e ) { updateSceneControls(); }
+		} );
+		createSceneCheckBox.addActionListener( e -> updateSceneControls() );
+		if( formatComboBox != null )
+			formatComboBox.addActionListener( e -> updateSceneControls() );
+		updateSceneControls();
+
 		return panel;
+	}
+
+	/**
+	 * Enables the scene checkbox only when an NGFF transform will be written, and updates
+	 * the note on how sources are referenced from the scene.
+	 */
+	private void updateSceneControls()
+	{
+		if( createSceneCheckBox == null || sceneNoteLabel == null )
+			return;
+
+		final String format = formatComboBox == null ? FMT_NGFF : (String)formatComboBox.getSelectedItem();
+		final boolean writesNgff = ( bwTransform != null && !bwTransform.isNonlinear() )
+				|| FMT_NGFF.equals( format ) || FMT_BIGWARP_TPS.equals( format );
+		createSceneCheckBox.setEnabled( writesNgff );
+
+		String note = "";
+		if( writesNgff && createSceneCheckBox.isSelected() && data != null )
+		{
+			SourceInfo mvg = null;
+			SourceInfo tgt = null;
+			for( final SourceInfo info : data.sourceInfos.values() )
+			{
+				if( info.isMoving() && mvg == null )
+					mvg = info;
+				else if( !info.isMoving() && tgt == null )
+					tgt = info;
+			}
+
+			final String refusal = NgffTransformations.sceneRefusal( mvg, tgt );
+			if( refusal != null )
+				note = refusal;
+			else
+			{
+				final String root = n5RootTxt.getText().trim();
+				final ArrayList< String > absolute = new ArrayList<>();
+				if( !root.isEmpty() )
+				{
+					if( NgffTransformations.scenePath( mvg, root, "/" ).equals( mvg.getUri() ) )
+						absolute.add( "moving" );
+					if( NgffTransformations.scenePath( tgt, root, "/" ).equals( tgt.getUri() ) )
+						absolute.add( "target" );
+				}
+				if( !absolute.isEmpty() )
+					note = "Scene references the " + String.join( " and ", absolute ) + " image by absolute path";
+			}
+		}
+		sceneNoteLabel.setText( note );
 	}
 
 	private void addDefaultN5DatasetAction()
@@ -781,7 +866,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 				n5RootTxt.getText(),
 				n5DatasetTxt.getText(),
 				blockSize,
-				BigWarpToDeformationFieldPlugIn.getCompression( (String)n5CompressionDropdown.getSelectedItem() ) );
+				BigWarpToDeformationFieldPlugIn.getCompression( (String)n5CompressionDropdown.getSelectedItem() ),
+				createSceneCheckBox.isEnabled() && createSceneCheckBox.isSelected() );
 	}
 
 	public void run()
@@ -820,6 +906,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 			Recorder.recordOption( n5DatasetKey, n5DatasetTxt.getText().trim() );
 			Recorder.recordOption( n5BlockSizeKey, n5BlockSizeTxt.getText().trim() );
 			Recorder.recordOption( n5CompressionKey, ( String ) n5CompressionDropdown.getSelectedItem() );
+			if( createSceneCheckBox.isSelected() )
+				Recorder.recordOption( createSceneKey );
 		}
 
 		Recorder.saveCommand();
@@ -852,6 +940,7 @@ public class ExportDisplacementFieldFrame extends JFrame
 		final String n5Dataset = Macro.getValue( args, n5DatasetKey, "" );
 		final String n5BlockSizeString = Macro.getValue( args, n5BlockSizeKey, "" );
 		final String n5Compression = Macro.getValue( args, n5CompressionKey, "" );
+		final boolean createScene = args.contains(" " + createSceneKey);
 
 		final int[] blockSize = n5BlockSizeString.isEmpty() ? null :
 			Arrays.stream( n5BlockSizeString.split( "," ) ).mapToInt( Integer::parseInt ).toArray();
@@ -865,7 +954,8 @@ public class ExportDisplacementFieldFrame extends JFrame
 				n5Root,
 				n5Dataset,
 				blockSize,
-				BigWarpToDeformationFieldPlugIn.getCompression(n5Compression));
+				BigWarpToDeformationFieldPlugIn.getCompression(n5Compression),
+				createScene);
 
 		BigWarpToDeformationFieldPlugIn.runFromParameters( params, null, null, null );
 	}

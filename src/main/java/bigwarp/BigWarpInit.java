@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import org.janelia.saalfeldlab.n5.N5Exception;
 import org.janelia.saalfeldlab.n5.N5Reader;
@@ -68,8 +69,14 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.AffineCoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransformAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.IdentityCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.InverseCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.MultiscalesAdapter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffReference;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffSceneParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffScene;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffSceneMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata.OmeNgffDataset;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.axes.AxisAdapter;
@@ -496,6 +503,94 @@ public class BigWarpInit {
 		}
 	}
 
+	/**
+	 * One source a scene references, as a row of the source table.
+	 */
+	public static class SceneSource
+	{
+		/** the source's location, loadable with {@link #createSources(BigWarpData, String, int, boolean)} */
+		public final String location;
+
+		public final boolean moving;
+
+		/** the scene transform to apply to this source, or an empty string */
+		public final String transform;
+
+		public SceneSource( final String location, final boolean moving, final String transform )
+		{
+			this.location = location;
+			this.moving = moving;
+			this.transform = transform;
+		}
+	}
+
+	private static final Pattern URI_SCHEME = Pattern.compile( "^[a-zA-Z][a-zA-Z0-9+.-]*:" );
+
+	/**
+	 * Reads the NGFF scene at {@code uri}, if there is one.
+	 *
+	 * @param uri a container and group, e.g. {@code /path/to/container.zarr?group}
+	 * @return the scene, or null if {@code uri} can not be opened or has no scene
+	 */
+	public static NgffScene readScene( final String uri )
+	{
+		try
+		{
+			final N5URI n5uri = new N5URI( N5URI.encodeAsUri( uri.trim() ) );
+			final N5Reader n5 = sharedN5Factory().openReader( n5uri.getContainerPath() );
+			return new OmeNgffSceneParser( n5 ).parseMetadata( n5, n5uri.getGroupPath() )
+					.map( NgffSceneMetadata::getScene ).orElse( null );
+		}
+		catch ( final Exception e )
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * The sources a scene references, one per distinct path. Following the direction BigWarp
+	 * writes transforms in (target to moving), the output of the scene's first transform is
+	 * the moving source, and every other source is a target. The moving source is given the
+	 * first transform, unless it is an identity.
+	 * <p>
+	 * An absolute path or URI is used as is, and a relative path is resolved against the
+	 * scene's group. References without a path (to coordinate systems of the scene itself)
+	 * are ignored.
+	 *
+	 * @param container the scene's container
+	 * @param sceneGroup the group holding the scene
+	 * @param scene the scene
+	 * @return the sources, empty if the scene references none
+	 */
+	public static List< SceneSource > sceneSources( final String container, final String sceneGroup, final NgffScene scene )
+	{
+		final List< SceneSource > out = new ArrayList<>();
+		final CoordinateTransform< ? >[] cts = scene == null ? null : scene.getCoordinateTransformations();
+		if ( cts == null || cts.length == 0 )
+			return out;
+
+		final String group = N5URI.normalizeGroupPath( sceneGroup == null ? "" : sceneGroup );
+		final CoordinateTransform< ? > first = cts[ 0 ];
+		final String movingPath = first.getOutput() == null ? "" : first.getOutput().getPath();
+		final String transform = IdentityCoordinateTransform.TYPE.equals( first.getType() ) ? ""
+				: container + "?" + ( group.isEmpty() ? "/" : group ) + "#" + NgffScene.SCENE_KEY + "/" + CoordinateTransform.KEY + "[0]";
+
+		for ( final String path : scene.getPaths() )
+		{
+			final boolean moving = path.equals( movingPath );
+			out.add( new SceneSource( sceneLocation( container, group, path ), moving, moving ? transform : "" ) );
+		}
+		return out;
+	}
+
+	private static String sceneLocation( final String container, final String group, final String path )
+	{
+		if ( path.startsWith( "/" ) || URI_SCHEME.matcher( path ).find() )
+			return path;
+
+		return container + "?" + ( group.isEmpty() ? path : group + "/" + path );
+	}
+
 	@SuppressWarnings( { "rawtypes", "unchecked" } )
 	public static LinkedHashMap< Source< ? >, SourceInfo > createSources( BigWarpData bwdata, Dataset data, int baseId, final boolean isMoving )
 	{
@@ -902,6 +997,7 @@ public class BigWarpInit {
 			final String uri = n5.getURI().toString() + "?" + n5Dataset;
 			final SourceInfo info = new SourceInfo(id, moving, sac.getSpimSource().getName(), () -> uri );
 			info.setSourceAndConverter(sac);
+			info.setCoordinateSystem(ngffCoordinateSystem(meta));
 			infos.add(info);
 
 			if( bwData != null ) {
@@ -912,6 +1008,49 @@ public class BigWarpInit {
 		}
 
 		return infos.toArray(new SourceInfo[0]);
+	}
+
+	/**
+	 * Finds the coordinate system an NGFF image is displayed in: the output of the
+	 * last transform of its first dataset, or the first coordinate system if there is none.
+	 *
+	 * @param meta the metadata
+	 * @return the coordinate system, or null if the metadata is not NGFF with coordinate systems
+	 */
+	private static CoordinateSystem ngffCoordinateSystem( final N5Metadata meta )
+	{
+		final OmeNgffMultiScaleMetadata ms;
+		if( meta instanceof OmeNgffMetadata )
+		{
+			// the parsers wrap the multiscales; only the first one is opened
+			final OmeNgffMultiScaleMetadata[] mss = ( ( OmeNgffMetadata ) meta ).multiscales;
+			ms = ( mss == null || mss.length == 0 ) ? null : mss[ 0 ];
+		}
+		else if( meta instanceof OmeNgffMultiScaleMetadata )
+			ms = ( OmeNgffMultiScaleMetadata ) meta;
+		else
+			return null;
+
+		if( ms == null )
+			return null;
+
+		final CoordinateSystem[] css = ms.getCoordinateSystems();
+		if( css == null || css.length == 0 )
+			return null;
+
+		final OmeNgffDataset[] dsets = ms.getDatasets();
+		if( dsets != null && dsets.length > 0 && dsets[ 0 ].coordinateTransformations != null && dsets[ 0 ].coordinateTransformations.length > 0 )
+		{
+			final CoordinateTransform< ? >[] cts = dsets[ 0 ].coordinateTransformations;
+			final OmeNgffReference out = cts[ cts.length - 1 ].getOutput();
+			if( out != null )
+			{
+				for( final CoordinateSystem cs : css )
+					if( cs.getName().equals( out.getName() ) )
+						return cs;
+			}
+		}
+		return css[ 0 ];
 	}
 
 	@Deprecated

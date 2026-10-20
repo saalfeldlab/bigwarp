@@ -23,15 +23,21 @@ package bigwarp.transforms;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.janelia.saalfeldlab.n5.Compression;
 import org.janelia.saalfeldlab.n5.DatasetAttributes;
@@ -42,8 +48,8 @@ import org.janelia.saalfeldlab.n5.N5Writer;
 import org.janelia.saalfeldlab.n5.DataType;
 import org.janelia.saalfeldlab.n5.codec.BlockCodecInfo;
 import org.janelia.saalfeldlab.n5.codec.DatasetCodecInfo;
-import org.janelia.saalfeldlab.n5.codec.dataset.CastValueCodecInfo.Rounding;
-import org.janelia.saalfeldlab.n5.codec.dataset.ScaleOffsetCastCodecInfo;
+//import org.janelia.saalfeldlab.n5.codec.dataset.CastValueCodecInfo.Rounding;
+//import org.janelia.saalfeldlab.n5.codec.dataset.ScaleOffsetCastCodecInfo;
 import org.janelia.saalfeldlab.n5.imglib2.N5Utils;
 import org.janelia.saalfeldlab.n5.universe.N5Factory;
 import org.janelia.saalfeldlab.n5.universe.metadata.axes.Axis;
@@ -53,20 +59,23 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMetadataParser;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffMultiScaleMetadata;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffReference;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffSceneParser;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.OmeNgffSceneWriter;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.scene.NgffScene;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.coordinateTransformations.TransformUtils;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.Common;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.SpacesTransforms;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.graph.TransformGraph;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.AbstractAffineCoordinateTransform;
-import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.AbstractParametrizedFieldTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.AffineCoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateFieldCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.CoordinateTransformAdapter;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.DisplacementFieldCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.FieldTransformParsing;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.IdentityCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.InverseCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.InvertibleAffineCoordinateTransform;
+import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.ParameterBinding;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.InvertibleCoordinateTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.ParametrizedTransform;
 import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations.ReferencedCoordinateTransform;
@@ -76,10 +85,15 @@ import org.janelia.saalfeldlab.n5.universe.metadata.ome.ngff.v06.transformations
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import bdv.gui.ExportDisplacementFieldFrame.DTYPE;
 import bigwarp.BigWarpInit;
+import bigwarp.source.SourceInfo;
+import bigwarp.transforms.metadata.N5TransformMetadata;
+import bigwarp.transforms.metadata.N5TransformMetadataParser;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.array.ArrayImg;
 import net.imglib2.img.array.ArrayImgs;
@@ -99,6 +113,12 @@ import net.imglib2.util.ValuePair;
 public class NgffTransformations
 {
 	public static final String inverseSuffix = "<inverse>";
+
+	/**
+	 * An attribute path naming one transform of an array, e.g. "coordinateTransformations[1]"
+	 * gives the key "coordinateTransformations" and index 1.
+	 */
+	private static final Pattern INDEXED_ATTRIBUTE = Pattern.compile( "^/?(.+)\\[(\\d+)\\]$" );
 
 	/**
 	 * The dataset a coordinate or displacement field array is written to, relative to
@@ -218,7 +238,6 @@ public class NgffTransformations
 			return url;
 
 		if (!uri.getAttributePath().equals("coordinateTransformations[0]")) {
-
 			String defaultUri;
 			try {
 				defaultUri = N5URI.from(uri.getContainerPath(), uri.getGroupPath(), "coordinateTransformations[0]").toString();
@@ -226,14 +245,6 @@ public class NgffTransformations
 					return defaultUri;
 			} catch (final URISyntaxException e) { }
 		}
-
-//		final N5Reader n5 = new N5Factory().gsonBuilder(gsonBuilder()).openReader(uri.getContainerPath());
-//		final CoordinateTransform<?>[] cts = n5.getAttribute(grp, attr, CoordinateTransform[].class);
-//
-//		if (cts != null && cts.length > 0)
-//			try {
-//				return N5URI.from(uri.getContainerPath(), grp, "coordinateTransformations[0]").toString();
-//			} catch (final URISyntaxException e) {}
 
 		return null;
 	}
@@ -281,8 +292,29 @@ public class NgffTransformations
 				final String dataset = n5url.getGroupPath() != null ? n5url.getGroupPath() : "/";
 				final String attribute = n5url.getAttributePath();
 				try {
-					final SpacesTransforms st = SpacesTransforms.deserializeSingle(n5, dataset, "ome", attribute);
-					CoordinateTransform<?> ct = st.transforms[0];
+//					final SpacesTransforms st = SpacesTransforms.deserializeSingle(n5, dataset, "ome", attribute);
+
+					// the attribute path selects the transform: its key and index into that array.
+					// An empty attribute searches the default keys and takes the first transform.
+					final N5TransformMetadataParser parser;
+					final int index;
+					final Matcher m = INDEXED_ATTRIBUTE.matcher( attribute == null ? "" : attribute );
+					if( m.matches() ) {
+						parser = new N5TransformMetadataParser( m.group( 1 ) );
+						index = Integer.parseInt( m.group( 2 ) );
+					} else if( attribute == null || attribute.isEmpty() || attribute.equals( "/" ) ) {
+						parser = new N5TransformMetadataParser();
+						index = 0;
+					} else {
+						parser = new N5TransformMetadataParser( attribute.replaceFirst( "^/", "" ) );
+						index = 0;
+					}
+
+					final Optional<N5TransformMetadata> tformMeta = parser.parseMetadata(n5, dataset);
+					if( tformMeta.isEmpty() || index >= tformMeta.get().getTransforms().length )
+						return null;
+
+					CoordinateTransform<?> ct = tformMeta.get().getTransforms()[index];
 					if( isInverse ) {
 
 						if(ct instanceof InvertibleCoordinateTransform) {
@@ -293,7 +325,9 @@ public class NgffTransformations
 									"\nReturning transform directly.");
 					}
 
-					resolveAbsolutePath(ct, dataset);
+					// resolve parameter paths against this group, including those of
+					// transforms nested in a sequence or inverse
+					ParameterBinding.bind(ct, n5, dataset);
 					return new ValuePair<>( ct, n5 );
 				} catch (N5Exception | ClassCastException e) {}
 
@@ -467,6 +501,224 @@ public class NgffTransformations
 		n5.setAttribute(groupPath, CoordinateTransform.KEY, ctsOut);
 	}
 
+	/**
+	 * The path with which a source is referenced from the scene at the given location.
+	 * <p>
+	 * This is the source's path relative to the scene's group if the source is NGFF
+	 * (i.e. its coordinate system is known) and lies under the scene's group.
+	 * Otherwise, it is the source's absolute location.
+	 *
+	 * @param info the source
+	 * @param sceneContainer the container the scene is written to
+	 * @param sceneGroup the group in that container the scene is written to
+	 * @return the path, or null if the source has no location
+	 */
+	public static String scenePath( final SourceInfo info, final String sceneContainer, final String sceneGroup )
+	{
+		final String uri = info.getUri();
+		if( uri == null )
+			return null;
+
+		if( info.getCoordinateSystem() == null )
+			return uri;
+
+		try
+		{
+			final N5URI src = new N5URI( N5URI.encodeAsUri( uri ).toString() );
+			final URI srcContainer = normalizeContainer( src.getContainerPath() );
+			final URI sceneCont = normalizeContainer( sceneContainer );
+			if( srcContainer == null || sceneCont == null
+					|| !Objects.equals( srcContainer.getScheme(), sceneCont.getScheme() )
+					|| !Objects.equals( srcContainer.getAuthority(), sceneCont.getAuthority() ) )
+				return uri;
+
+			final String srcFull = joinPath( srcContainer.getPath(), normalizeGroup( src.getGroupPath() ) );
+			final String sceneFull = joinPath( sceneCont.getPath(), normalizeGroup( sceneGroup ) );
+
+			if( srcFull.startsWith( sceneFull + "/" ) )
+				return srcFull.substring( sceneFull.length() + 1 );
+		}
+		catch( final URISyntaxException | RuntimeException e )
+		{
+			// not parseable, treat it as an opaque location
+		}
+		return uri;
+	}
+
+	private static final Pattern URI_SCHEME = Pattern.compile( "^[a-zA-Z][a-zA-Z0-9+.-]*:.*" );
+
+	/**
+	 * @return an absolute URI with "." and ".." resolved and no trailing slash
+	 */
+	private static URI normalizeContainer( String container )
+	{
+		if( container == null )
+			return null;
+
+		// drop a leading storage format, e.g. "zarr:"
+		container = container.replaceFirst( "^(n5|zarr|hdf5):(?=[a-zA-Z][a-zA-Z0-9+.-]*:)", "" );
+		try
+		{
+			final URI uri;
+			if( URI_SCHEME.matcher( container ).matches() && !container.matches( "^[a-zA-Z]:[\\\\/].*" ) )
+				uri = N5URI.encodeAsUri( container ).normalize();
+			else
+				uri = Paths.get( container ).toAbsolutePath().normalize().toUri();
+
+			final String path = uri.getPath() == null ? "" : uri.getPath().replaceAll( "/+$", "" );
+			return new URI( uri.getScheme(), uri.getAuthority(), path, null, null );
+		}
+		catch( final URISyntaxException | RuntimeException e )
+		{
+			return null;
+		}
+	}
+
+	/**
+	 * @return the group path with "." and ".." resolved, no leading and no trailing slash
+	 */
+	private static String normalizeGroup( final String group )
+	{
+		final ArrayList< String > parts = new ArrayList<>();
+		if( group != null )
+		{
+			for( final String part : group.split( "/" ) )
+			{
+				if( part.isEmpty() || part.equals( "." ) )
+					continue;
+				if( part.equals( ".." ) )
+				{
+					if( !parts.isEmpty() )
+						parts.remove( parts.size() - 1 );
+				}
+				else
+					parts.add( part );
+			}
+		}
+		return String.join( "/", parts );
+	}
+
+	private static String joinPath( final String containerPath, final String group )
+	{
+		return group.isEmpty() ? containerPath : containerPath + "/" + group;
+	}
+
+	/**
+	 * A reference to the given source for use as the input or output of a scene transform.
+	 * The name is the coordinate system of an NGFF source, and is empty for any other source.
+	 *
+	 * @param info the source
+	 * @param sceneContainer the container the scene is written to
+	 * @param sceneGroup the group in that container the scene is written to
+	 * @return the reference as a json object with fields "path" and "name"
+	 */
+	public static JsonObject sceneReference( final SourceInfo info, final String sceneContainer, final String sceneGroup )
+	{
+		final CoordinateSystem cs = info.getCoordinateSystem();
+		final JsonObject ref = new JsonObject();
+		ref.addProperty( "path", scenePath( info, sceneContainer, sceneGroup ) );
+		ref.addProperty( "name", cs == null ? "" : cs.getName() );
+		return ref;
+	}
+
+	/**
+	 * Serializes a transform for a scene, with the given references as its input and output.
+	 * The references of transforms nested inside it are left alone.
+	 *
+	 * @param ct the transform
+	 * @param input the input reference
+	 * @param output the output reference
+	 * @param reverse true if parameters are stored in reversed order (zarr)
+	 * @return the transform as json
+	 */
+	public static JsonObject sceneTransform( final CoordinateTransform< ? > ct, final JsonObject input, final JsonObject output, final boolean reverse )
+	{
+		final Gson gson = new OmeNgffSceneWriter( reverse ).gsonBuilder().create();
+		final JsonObject json = gson.toJsonTree( ct, CoordinateTransform.class ).getAsJsonObject();
+		json.add( "input", input );
+		json.add( "output", output );
+		return json;
+	}
+
+	/**
+	 * Adds transforms to the scene at the given group, creating the scene if necessary.
+	 * An existing transform with the same input, output and name is replaced, otherwise
+	 * the new transform is appended. Everything else in the scene is left as is.
+	 *
+	 * @param n5 the writer
+	 * @param group the group
+	 * @param transforms the transforms, as produced by
+	 *        {@link #sceneTransform(CoordinateTransform, JsonObject, JsonObject, boolean)}
+	 */
+	public static void addScene( final N5Writer n5, final String group, final JsonObject... transforms )
+	{
+		JsonObject scene = n5.getAttribute( group, NgffScene.SCENE_KEY, JsonObject.class );
+		if( scene == null )
+		{
+			scene = new JsonObject();
+			scene.add( "coordinateSystems", new JsonArray() );
+		}
+
+		final JsonArray cts = scene.has( "coordinateTransformations" ) && scene.get( "coordinateTransformations" ).isJsonArray()
+				? scene.getAsJsonArray( "coordinateTransformations" )
+				: new JsonArray();
+
+		for( final JsonObject t : transforms )
+		{
+			int match = -1;
+			for( int i = 0; i < cts.size(); i++ )
+			{
+				if( !cts.get( i ).isJsonObject() )
+					continue;
+				final JsonObject e = cts.get( i ).getAsJsonObject();
+				if( Objects.equals( e.get( "input" ), t.get( "input" ) )
+						&& Objects.equals( e.get( "output" ), t.get( "output" ) )
+						&& Objects.equals( e.get( "name" ), t.get( "name" ) ) )
+				{
+					match = i;
+					break;
+				}
+			}
+			if( match >= 0 )
+				cts.set( match, t );
+			else
+				cts.add( t );
+		}
+		scene.add( "coordinateTransformations", cts );
+
+		if( !n5.exists( group ) )
+			n5.createGroup( group );
+
+		n5.setAttribute( group, NgffScene.SCENE_KEY, scene );
+		if( n5.getAttribute( group, OmeNgffSceneParser.VERSION_KEY, String.class ) == null )
+			n5.setAttribute( group, OmeNgffSceneParser.VERSION_KEY, OmeNgffSceneParser.VERSION );
+	}
+
+	/**
+	 * Returns a message saying why a scene can not be written for the given sources, or null if it can.
+	 *
+	 * @param mvg the moving source
+	 * @param tgt the target source
+	 * @return the message or null
+	 */
+	public static String sceneRefusal( final SourceInfo mvg, final SourceInfo tgt )
+	{
+		if( mvg == null || tgt == null )
+			return "NGFF scene not written: need both a moving and a target source";
+
+		if( mvg.getUri() == null || tgt.getUri() == null )
+			return "NGFF scene not written: a source has no location (was it saved?)";
+
+		final CoordinateSystem mcs = mvg.getCoordinateSystem();
+		final CoordinateSystem tcs = tgt.getCoordinateSystem();
+		final String mname = mcs == null ? "" : mcs.getName();
+		final String tname = tcs == null ? "" : tcs.getName();
+		if( mvg.getUri().equals( tgt.getUri() ) && mname.equals( tname ) )
+			return "NGFF scene not written: moving and target are the same image and coordinate system";
+
+		return null;
+	}
+
 	public static final <T extends NativeType<T> & RealType<T>> InvertibleAffineCoordinateTransform saveAffine(
 			final N5Writer n5Writer,
 			final String dataset,
@@ -605,9 +857,10 @@ public class NgffTransformations
 
 		final double m = 2 * Math.sqrt( maxError * maxError / nd );
 
+		throw new N5Exception("unsupported quantization codec");
 		// clamp bounds are left to their defaults: the full range of the target type
-		return new DatasetCodecInfo[] {
-				new ScaleOffsetCastCodecInfo( targetType, 1.0 / m, 0.0, null, null, Rounding.NEAREST_AWAY ) };
+//		return new DatasetCodecInfo[] {
+//				new ScaleOffsetCastCodecInfo( targetType, 1.0 / m, 0.0, null, null, Rounding.NEAREST_AWAY ) };
 	}
 
 	public static final <T extends NativeType<T> & RealType<T>> CoordinateFieldCoordinateTransform<?> savePositionFieldNgff(
@@ -692,7 +945,7 @@ public class NgffTransformations
 		// as a result, we need to reverse the indexes of the vector components
 		// when that is the case.
 		final boolean reverse = OmeNgffMetadataParser.reverse( n5Writer );
-		final RandomAccessibleInterval<T> dfieldToSave = reverse ? AbstractParametrizedFieldTransform.reverseCoordinates(dfield) : dfield;
+		final RandomAccessibleInterval<T> dfieldToSave = reverse ? FieldTransformParsing.reverseCoordinates(dfield) : dfield;
 
 		// the field group holds the multiscales metadata; the array is its first (and
 		// only) resolution level, as for any other ome-zarr multiscales image. A zarr
