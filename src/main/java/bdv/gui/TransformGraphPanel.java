@@ -71,10 +71,6 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 	private final BigWarp< ? > bw;
 
 	private final ImprovedFormattedTextField transformGraphSourceText;
-	
-//	private final JLabel srcCoordinateSystemLabel;
-//
-//	private final JComboBox<String> srcCoordinateSystemsDropdown;
 
 	private final JLabel destCoordinateSystemLabel;
 
@@ -102,15 +98,10 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		BorderFactory.createCompoundBorder(
 				BorderFactory.createTitledBorder(
 						BorderFactory.createEtchedBorder(),
-						"Transformation database" ),
+						"Active scene" ),
 				BorderFactory.createEmptyBorder( 2, 2, 2, 2 ))));
 
-//		autoDetectTransforms = new JCheckBox("Auto-detect transformations");
-//		srcCoordinateSystemsDropdown = new JComboBox<>( new String[] { DEFAULT_COORDINATE_SYSTEM });
 		destCoordinateSystemsDropdown = new JComboBox<>( new String[] { DEFAULT_COORDINATE_SYSTEM });
-
-//		sourceToCoordinateSystems = new HashMap<>();
-//		initializeSourceCoordinateSystems();
 
 		// browse and directory
 		final JLabel srcDirLabel = new JLabel("Directory");
@@ -159,12 +150,6 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 			{
 				final File folder = fileChooser.getSelectedFile();
 				transformGraphSourceText.setText( folder.getAbsolutePath() );
-//				N5URI n5uri;
-//				try {
-//					n5uri = new N5URI(folder.getAbsolutePath());
-//					n5 = new N5Factory().openReader( n5uri.getContainerPath() );
-//					graph = Common.openGraph(n5, n5uri.getGroupPath() );
-//				} catch (Exception e1) { }
 			}
 		});
 
@@ -223,12 +208,6 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 		gbc.weightx = 0.0;
 		gbc.anchor = GridBagConstraints.LINE_END;
 		add(browseBtn, gbc);
-
-//		gbc.gridx = 0;
-//		gbc.gridy = 1;
-//		add(srcCoordinateSystemLabel, gbc);
-//		gbc.gridx = 1;
-//		add(srcCoordinateSystemsDropdown, gbc);
 
 		gbc.gridx = 0;
 		gbc.gridy = 1;
@@ -292,6 +271,10 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 	/**
 	 * The name part of a possibly path-qualified coordinate system name --
 	 * {@code JRC2018F/JRC2018F} to {@code JRC2018F}.
+	 * <p>
+	 * A qualified name that ends in a slash has an empty name, e.g. the default coordinate
+	 * system of an image referenced from a scene by path. The path part is returned
+	 * for these, without its trailing slash.
 	 *
 	 * @param coordinateSystem
 	 *            a (possibly qualified) coordinate system name
@@ -301,6 +284,11 @@ public class TransformGraphPanel extends JPanel implements ViewerStateChangeList
 
 		if (coordinateSystem == null)
 			return null;
+
+		if (coordinateSystem.endsWith("/")) {
+			final String path = coordinateSystem.substring(0, coordinateSystem.length() - 1);
+			return path.isEmpty() ? coordinateSystem : path;
+		}
 
 		final int i = coordinateSystem.lastIndexOf('/');
 		return i < 0 ? coordinateSystem : coordinateSystem.substring(i + 1);
