@@ -892,6 +892,7 @@ public class BigWarp< T >
 		}
 
 		landmarkModel = new LandmarkTableModel( ndims );
+		landmarkModel.setMessage( message );
 		landmarkModellistener = new LandmarkTableListener();
 		landmarkModel.addTableModelListener( landmarkModellistener );
 		addTransformListener( landmarkModel );
@@ -1139,6 +1140,7 @@ public class BigWarp< T >
 	public void invertPointCorrespondences()
 	{
 		landmarkModel = landmarkModel.invert();
+		landmarkModel.setMessage( message );
 		landmarkPanel.setTableModel( landmarkModel );
 	}
 
