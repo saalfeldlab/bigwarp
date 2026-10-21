@@ -121,7 +121,7 @@
 		<scijava.jvm.version>8</scijava.jvm.version>
 		<scijava.jvm.build.version>[1.8.0-101,)</scijava.jvm.build.version>
 
-		<jcommander.version>1.48</jcommander.version>
+		<jcommander.version>1.85</jcommander.version>
 		<alphanumeric-comparator.version>1.4.1</alphanumeric-comparator.version>
 
 		<!-- NB: Deploy releases to the SciJava Maven repository. -->
@@ -318,7 +318,7 @@
 			<artifactId>slf4j-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.beust</groupId>
+			<groupId>org.jcommander</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>${jcommander.version}</version>
 		</dependency>
