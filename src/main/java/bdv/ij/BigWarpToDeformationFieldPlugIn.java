@@ -507,7 +507,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final N5Factory factory = new N5Factory().gsonBuilder( NgffTransformations.gsonBuilder() );
 		final N5Writer n5 = factory.openWriter( n5BasePath );
 
-		final ThinPlateSplineCoordinateTransform ct = new ThinPlateSplineCoordinateTransform(name, input, output, bwTransform.getTpsBase());
+		final ThinPlateSplineCoordinateTransform ct = ThinPlateSplineCoordinateTransform.options()
+				.name(name).input(input).output(output)
+				.transform(bwTransform.getTpsBase())
+				.build();
 		NgffTransformations.addCoordinateTransformations(n5, dataset, ct);
 
 		// also add reference to root
@@ -517,7 +520,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			// the TPS maps target to moving, and the moving source's fixed transform comes after it
 			final String refUri = movingTransformUri(data);
 			final CoordinateTransform<?> sceneCt = refUri == null ? ct
-					: new SequenceCoordinateTransform(name, ct.getInput(), ct.getOutput(), ct, new ReferencedCoordinateTransform(refUri));
+					: SequenceCoordinateTransform.options()
+							.name(name).input(ct.getInput()).output(ct.getOutput())
+							.transformations(ct, new ReferencedCoordinateTransform(refUri))
+							.build();
 			writeScene(n5, n5BasePath, data, sceneCt, true);
 		}
 
@@ -578,7 +584,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 			if (refUri == null)
 				writeScene(n5, n5BasePath, data, ct, !isInverse);
 			else if (!isInverse)
-				writeScene(n5, n5BasePath, data, new SequenceCoordinateTransform(ct.getName(), ct.getInput(), ct.getOutput(), ct, new ReferencedCoordinateTransform(refUri)), true);
+				writeScene(n5, n5BasePath, data, SequenceCoordinateTransform.options()
+						.name(ct.getName()).input(ct.getInput()).output(ct.getOutput())
+						.transformations(ct, new ReferencedCoordinateTransform(refUri))
+						.build(), true);
 			else // a reference can not be inverted
 				IJ.log("NGFF scene not written: the moving source has a fixed transform, which can only be included in the target to moving direction");
 		}
@@ -596,15 +605,24 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		switch( bwTransform.getTransformType()) {
 		case BigWarpTransform.TRANSLATION:
 			if (tform instanceof TranslationModel2D)
-				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel2D)tform).getTranslation());
+				ct = TranslationCoordinateTransform.options()
+						.name(name).input(output).output(input)
+						.translation(((TranslationModel2D)tform).getTranslation())
+						.build();
 			else if (tform instanceof TranslationModel3D)
-				ct = new TranslationCoordinateTransform(name, output, input, ((TranslationModel3D)tform).getTranslation());
+				ct = TranslationCoordinateTransform.options()
+						.name(name).input(output).output(input)
+						.translation(((TranslationModel3D)tform).getTranslation())
+						.build();
 			break;
 		case BigWarpTransform.SIMILARITY:
 		case BigWarpTransform.ROTATION:
 		case BigWarpTransform.AFFINE:
 			final double[][] simparams = TransformUtils.affineToMatrix(bwTransform.toImglib2((Model<?>)tform));
-			ct = new InvertibleAffineCoordinateTransform(name, output, input, simparams);
+			ct = InvertibleAffineCoordinateTransform.options()
+					.name(name).input(output).output(input)
+					.affine(simparams)
+					.build();
 			break;
 		}
 
@@ -812,7 +830,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 						: new CoordinateTransform[]{dfieldTform, ngffAffine, refCt};
 
 				// the total transform
-				final SequenceCoordinateTransform totalTform = new SequenceCoordinateTransform(inputSpace, outputSpace, ctList);
+				final SequenceCoordinateTransform totalTform = SequenceCoordinateTransform.options()
+						.name("").input(inputSpace).output(outputSpace)
+						.transformations(ctList)
+						.build();
 
 				NgffTransformations.addCoordinateTransformations(n5, "/", totalTform);
 
@@ -851,7 +872,10 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 				if (refCt == null)
 					ngffTform = dfieldTform;
 				else
-					ngffTform = new SequenceCoordinateTransform(null, refCt.getInput(), dfieldTform.getOutput(), new CoordinateTransform[]{dfieldTform, refCt});
+					ngffTform = SequenceCoordinateTransform.options()
+							.input(refCt.getInput()).output(dfieldTform.getOutput())
+							.transformations(dfieldTform, refCt)
+							.build();
 
 				NgffTransformations.addCoordinateTransformations(n5, "/", ngffTform);
 
@@ -927,7 +951,7 @@ public class BigWarpToDeformationFieldPlugIn implements PlugIn
 		final JsonObject output = inputIsTarget ? mvgRef : tgtRef;
 
 		NgffTransformations.addScene(n5, "/",
-				NgffTransformations.sceneTransform(ct, input, output, OmeNgffMetadataParser.reverse(n5)));
+				NgffTransformations.sceneTransform(ct, input, output, OmeNgffMetadataParser.storesDimensionsReversed(n5)));
 	}
 
 	@SuppressWarnings({"unchecked", "rawtypes"})

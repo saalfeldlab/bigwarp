@@ -128,8 +128,10 @@ public class NgffTransformations
 
 	public static void main( String[] args ) {
 
-		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform(
-				"name", "inspace", "outspace", TransformUtils.affineToMatrix(new AffineTransform3D()));
+		final InvertibleAffineCoordinateTransform ct = InvertibleAffineCoordinateTransform.options()
+				.name("name").input("inspace").output("outspace")
+				.affine(TransformUtils.affineToMatrix(new AffineTransform3D()))
+				.build();
 
 		final N5Writer n5 = new N5Factory()
 				.options( opts -> { opts.gsonBuilder(gsonBuilder()); })
@@ -345,7 +347,7 @@ public class NgffTransformations
 	public static void resolveAbsolutePath( CoordinateTransform<?> ct, final String groupPath )
 	{
 		if( ct instanceof ParametrizedTransform )
-			((ParametrizedTransform)ct).resolveAbsoluePath(groupPath);
+			((ParametrizedTransform)ct).resolveAbsolutePath(groupPath);
 	}
 
 	public static Pair<CoordinateTransform<?>,N5Reader> openReference( final String url, final N5Reader n5, final String dataset, final String attribute) {
@@ -380,7 +382,7 @@ public class NgffTransformations
 		final CoordinateTransform<?> ct = gson.fromJson( elem, CoordinateTransform.class );
 		if( ct != null )
 		{
-			final CoordinateTransform< ? > nct = CoordinateTransform.create( ct );
+			final CoordinateTransform< ? > nct = ct.copy();
 			return nct;
 		} else if( elem.isJsonObject()) {
 			// TODO figure out what should be returned here
@@ -747,9 +749,11 @@ public class NgffTransformations
 		else
 			metapath = metadataDataset;
 
-		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform( null, metapath,
-				inputCoordinates != null ? inputCoordinates.getName() : null,
-				outputCoordinates != null ? outputCoordinates.getName() : null);
+		final InvertibleAffineCoordinateTransform ct = InvertibleAffineCoordinateTransform.options()
+				.path(metapath)
+				.input(inputCoordinates != null ? inputCoordinates.getName() : null)
+				.output(outputCoordinates != null ? outputCoordinates.getName() : null)
+				.build();
 
 		addCoordinateTransformations(n5Writer, metadataDataset, ct);
 
@@ -776,9 +780,11 @@ public class NgffTransformations
 		else
 			metapath = metadataDataset;
 
-		final InvertibleAffineCoordinateTransform ct = new InvertibleAffineCoordinateTransform( null, metapath,
-				inputCoordinates != null ? inputCoordinates.getName() : null,
-				outputCoordinates != null ? outputCoordinates.getName() : null);
+		final InvertibleAffineCoordinateTransform ct = InvertibleAffineCoordinateTransform.options()
+				.path(metapath)
+				.input(inputCoordinates != null ? inputCoordinates.getName() : null)
+				.output(outputCoordinates != null ? outputCoordinates.getName() : null)
+				.build();
 
 		addCoordinateTransformations(n5Writer, metadataDataset, ct);
 
@@ -944,7 +950,7 @@ public class NgffTransformations
 		// reverses the indexing order of coordinates relative to what we store for imglib2
 		// as a result, we need to reverse the indexes of the vector components
 		// when that is the case.
-		final boolean reverse = OmeNgffMetadataParser.reverse( n5Writer );
+		final boolean reverse = OmeNgffMetadataParser.storesDimensionsReversed( n5Writer );
 		final RandomAccessibleInterval<T> dfieldToSave = reverse ? FieldTransformParsing.reverseCoordinates(dfield) : dfield;
 
 		// the field group holds the multiscales metadata; the array is its first (and
@@ -977,11 +983,15 @@ public class NgffTransformations
 		writeFieldMultiscales( n5Writer, dataset, cs, ct );
 
 		if( type.equals( TransformField.DISPLACEMENT ))
-			return new DisplacementFieldCoordinateTransform<T>( "", dataset, "linear",
-					inputCoordinates.getName(), outputCoordinates.getName() );
+			return DisplacementFieldCoordinateTransform.<T>options()
+					.name( "" ).path( dataset ).interpolation( "linear" )
+					.input( inputCoordinates.getName() ).output( outputCoordinates.getName() )
+					.build();
 		else
-			return new CoordinateFieldCoordinateTransform<T>( "", dataset, "linear",
-					inputCoordinates.getName(), outputCoordinates.getName() );
+			return CoordinateFieldCoordinateTransform.<T>options()
+					.name( "" ).path( dataset ).interpolation( "linear" )
+					.input( inputCoordinates.getName() ).output( outputCoordinates.getName() )
+					.build();
 	}
 
 	/**
@@ -1078,16 +1088,26 @@ public class NgffTransformations
 
 		CoordinateTransform<?> ct;
 		if ((scale != null || allOnes(scale)) && (offset != null || allZeros(offset))) {
-			ct = new SequenceCoordinateTransform(name, in, out,
-					new CoordinateTransform[]{
+			ct = SequenceCoordinateTransform.options()
+					.name(name).input(in).output(out)
+					.transformations(
 							new ScaleCoordinateTransform(prepend(1, scale)),
-							new TranslationCoordinateTransform(prepend(0, offset))});
+							new TranslationCoordinateTransform(prepend(0, offset)))
+					.build();
 		} else if (offset != null || !allZeros(offset))
-			ct = new TranslationCoordinateTransform(name, in, out, prepend(0, offset));
+			ct = TranslationCoordinateTransform.options()
+					.name(name).input(in).output(out)
+					.translation(prepend(0, offset))
+					.build();
 		else if (scale != null || !allOnes(scale))
-			ct = new ScaleCoordinateTransform(name, in, out, prepend(1, scale));
+			ct = ScaleCoordinateTransform.options()
+					.name(name).input(in).output(out)
+					.scale(prepend(1, scale))
+					.build();
 		else
-			ct = new IdentityCoordinateTransform(name, in, out);
+			ct = IdentityCoordinateTransform.options()
+					.name(name).input(in).output(out)
+					.build();
 
 		return ct;
 	}
