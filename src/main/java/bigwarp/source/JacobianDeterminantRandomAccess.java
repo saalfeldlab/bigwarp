@@ -80,8 +80,19 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 		localize( x3 );
 		System.arraycopy(x3, 0, x, 0, x.length);
 
-		final AffineTransform jacobian = transform.jacobian( x );
+		value.setReal( determinant( transform.jacobian( x ) ) );
 
+		return value;
+	}
+
+	/**
+	 * The determinant of the linear part of a jacobian.
+	 *
+	 * @param jacobian the jacobian
+	 * @return its determinant
+	 */
+	public static double determinant( final AffineTransform jacobian )
+	{
 		// copy the (nd x nd) linear part of the jacobian into a square matrix.
 		final int nd = jacobian.numDimensions();
 		final DMatrixRMaj jacMtx = new DMatrixRMaj( nd, nd );
@@ -89,9 +100,7 @@ public class JacobianDeterminantRandomAccess< T extends RealType<T>> extends Abs
 			for ( int c = 0; c < nd; c++ )
 				jacMtx.set( r, c, jacobian.get( r, c ) );
 
-		value.setReal( CommonOps_DDRM.det( jacMtx ) );
-
-		return value;
+		return CommonOps_DDRM.det( jacMtx );
 	}
 
 	public RealRandomAccess<T> copy() 
